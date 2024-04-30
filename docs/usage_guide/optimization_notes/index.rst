@@ -4,7 +4,38 @@ Optimization Notes
 Modin has chosen default values for a lot of the configurations here that provide excellent performance in most
 cases. This page is for those who love to optimize their code and those who are curious about existing optimizations
 within Modin. Here you can find more information about Modin's optimizations both for a pipeline of operations as
-well as for specific operations.
+well as for specific operations. If you want to go ahead and tune the Modin behavior on your own, refer to
+:doc:`Modin Configuration Settings </flow/modin/config>` page for the full set of configurations available in Modin.
+
+Range-partitioning in Modin
+"""""""""""""""""""""""""""
+
+Modin utilizes a range-partitioning approach for specific operations, significantly enhancing
+parallelism and reducing memory consumption in certain scenarios. Range-partitioning is typically
+engaged for operations that has key columns (to group on, to merge on, etc).
+
+You can enable `range-partitioning`_ by specifying ``cfg.RangePartitioning`` :doc:`configuration variable: </flow/modin/config>`
+
+.. code-block:: python
+
+    import modin.pandas as pd
+    import modin.config as cfg
+
+    cfg.RangePartitioning.put(True) # past this point methods that support range-partitioning
+                                    # will use it
+
+    pd.DataFrame(...).groupby(...).mean() # use range-partitioning for groupby.mean()
+
+    cfg.Range-partitioning.put(False)
+
+    pd.DataFrame(...).groupby(...).mean() # use MapReduce implementation for groupby.mean()
+
+Building range-partitioning assumes data reshuffling, which may result into breaking the original
+order of rows, for some operation, it will mean that the result will be different from Pandas.
+
+Range-partitioning is not a silver bullet, meaning that enabling it is not always beneficial. Below you find
+a link to the list of operations that have support for range-partitioning and practical advices on when one should
+enable it: :doc:`operations that support range-partitioning </usage_guide/optimization_notes/range_partitioning_ops>`.
 
 Understanding Modin's partitioning mechanism
 """"""""""""""""""""""""""""""""""""""""""""
@@ -275,3 +306,5 @@ an inner join you may want to swap left and right DataFrames.
   1.22 s  40.1 ms per loop (mean  std. dev. of 7 runs, 1 loop each)
 
 Note that result columns order may differ for first and second ``merge``.
+
+.. _range-partitioning: https://www.techopedia.com/definition/31994/range-partitioning

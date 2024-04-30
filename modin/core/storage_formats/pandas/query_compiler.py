@@ -43,7 +43,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
-from modin.config import CpuCount, RangePartitioning, RangePartitioningGroupby
+from modin.config import CpuCount, RangePartitioning, use_range_partitioning_groupby
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -63,7 +63,7 @@ from modin.core.dataframe.pandas.metadata import (
     ModinIndex,
     extract_dtype,
 )
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import get_logger
 from modin.utils import (
@@ -528,13 +528,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         on = kwargs.get("on", None)
         how = kwargs.get("how", "left")
         sort = kwargs.get("sort", False)
-        right_to_broadcast = right._modin_frame.combine()
 
         if how in ["left", "inner"]:
 
             def map_func(left, right, kwargs=kwargs):  # pragma: no cover
                 return pandas.DataFrame.join(left, right, **kwargs)
 
+            right_to_broadcast = right._modin_frame.combine()
             new_self = self.__constructor__(
                 self._modin_frame.broadcast_apply_full_axis(
                     axis=1,
@@ -1023,7 +1023,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Reduce operations
 
     def _resample_func(
-        self, resample_kwargs, func_name, new_columns=None, df_op=None, *args, **kwargs
+        self,
+        resample_kwargs,
+        func_name,
+        new_columns=None,
+        df_op=None,
+        allow_range_impl=True,
+        *args,
+        **kwargs,
     ):
         """
         Resample underlying time-series data and apply aggregation on it.
@@ -1039,6 +1046,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Modin frame. If not specified will be computed automaticly.
         df_op : callable(pandas.DataFrame) -> [pandas.DataFrame, pandas.Series], optional
             Preprocessor function to apply to the passed frame before resampling.
+        allow_range_impl : bool, default: True
+            Whether to use range-partitioning if ``RangePartitioning.get() is True``.
         *args : args
             Arguments to pass to the aggregation function.
         **kwargs : kwargs
@@ -1049,9 +1058,35 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             New QueryCompiler containing the result of resample aggregation.
         """
+        from modin.core.dataframe.pandas.dataframe.utils import ShuffleResample
 
         def map_func(df, resample_kwargs=resample_kwargs):  # pragma: no cover
             """Resample time-series data of the passed frame and apply aggregation function on it."""
+            if len(df) == 0:
+                if resample_kwargs["on"] is not None:
+                    df = df.set_index(resample_kwargs["on"])
+                return df
+            if "bin_bounds" in df.attrs:
+                timestamps = df.attrs["bin_bounds"]
+                if isinstance(df.index, pandas.MultiIndex):
+                    level_to_keep = resample_kwargs["level"]
+                    if isinstance(level_to_keep, int):
+                        to_drop = [
+                            lvl
+                            for lvl in range(df.index.nlevels)
+                            if lvl != level_to_keep
+                        ]
+                    else:
+                        to_drop = [
+                            lvl for lvl in df.index.names if lvl != level_to_keep
+                        ]
+                    df.index = df.index.droplevel(to_drop)
+                    resample_kwargs = resample_kwargs.copy()
+                    resample_kwargs["level"] = None
+                filler = pandas.DataFrame(
+                    np.NaN, index=pandas.Index(timestamps), columns=df.columns
+                )
+                df = pandas.concat([df, filler], copy=False)
             if df_op is not None:
                 df = df_op(df)
             resampled_val = df.resample(**resample_kwargs)
@@ -1072,13 +1107,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 return val
 
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis=0, func=map_func, new_columns=new_columns
-        )
+        if resample_kwargs["on"] is None:
+            level = [
+                0 if resample_kwargs["level"] is None else resample_kwargs["level"]
+            ]
+            key_columns = []
+        else:
+            level = None
+            key_columns = [resample_kwargs["on"]]
+
+        if (
+            not allow_range_impl
+            or resample_kwargs["axis"] not in (0, "index")
+            or not RangePartitioning.get()
+        ):
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                axis=0, func=map_func, new_columns=new_columns
+            )
+        else:
+            new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
+                key_columns=key_columns,
+                level=level,
+                func=map_func,
+                shuffle_func_cls=ShuffleResample,
+                resample_kwargs=resample_kwargs,
+            )
         return self.__constructor__(new_modin_frame)
 
     def resample_get_group(self, resample_kwargs, name, obj):
-        return self._resample_func(resample_kwargs, "get_group", name=name, obj=obj)
+        return self._resample_func(
+            resample_kwargs, "get_group", name=name, allow_range_impl=False, obj=obj
+        )
 
     def resample_app_ser(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(
@@ -1110,24 +1169,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs, "transform", arg=arg, *args, **kwargs
+            resample_kwargs,
+            "transform",
+            arg=arg,
+            allow_range_impl=False,
+            *args,
+            **kwargs,
         )
 
     def resample_pipe(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(resample_kwargs, "pipe", func=func, *args, **kwargs)
 
     def resample_ffill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "ffill", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "ffill", limit=limit, allow_range_impl=False
+        )
 
     def resample_bfill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "bfill", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "bfill", limit=limit, allow_range_impl=False
+        )
 
     def resample_nearest(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "nearest", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "nearest", limit=limit, allow_range_impl=False
+        )
 
     def resample_fillna(self, resample_kwargs, method, limit):
         return self._resample_func(
-            resample_kwargs, "fillna", method=method, limit=limit
+            resample_kwargs,
+            "fillna",
+            method=method,
+            limit=limit,
+            allow_range_impl=method is None,
         )
 
     def resample_asfreq(self, resample_kwargs, fill_value):
@@ -1154,6 +1228,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
+            allow_range_impl=False,
             **kwargs,
         )
 
@@ -1164,16 +1239,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self._resample_func(resample_kwargs, "nunique", *args, **kwargs)
 
     def resample_first(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "first", *args, **kwargs)
+        return self._resample_func(
+            resample_kwargs, "first", allow_range_impl=False, *args, **kwargs
+        )
 
     def resample_last(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "last", *args, **kwargs)
+        return self._resample_func(
+            resample_kwargs, "last", allow_range_impl=False, *args, **kwargs
+        )
 
     def resample_max(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(resample_kwargs, "max", *args, **kwargs)
 
     def resample_mean(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "median", *args, **kwargs)
+        return self._resample_func(resample_kwargs, "mean", *args, **kwargs)
 
     def resample_median(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(resample_kwargs, "median", *args, **kwargs)
@@ -1204,7 +1283,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_size(self, resample_kwargs):
         return self._resample_func(
-            resample_kwargs, "size", new_columns=[MODIN_UNNAMED_SERIES_LABEL]
+            resample_kwargs,
+            "size",
+            new_columns=[MODIN_UNNAMED_SERIES_LABEL],
+            allow_range_impl=False,
         )
 
     def resample_sem(self, resample_kwargs, *args, **kwargs):
@@ -1936,7 +2018,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def unique(self, keep="first", ignore_index=True, subset=None):
         # kernels with 'pandas.Series.unique()' work faster
         can_use_unique_kernel = (
-            subset is None and ignore_index and len(self.columns) == 1 and keep
+            subset is None
+            and ignore_index
+            and len(self.columns) == 1
+            and keep is not False
         )
 
         if not can_use_unique_kernel and not RangePartitioning.get():
@@ -1946,7 +2031,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
                 key_columns=self.columns.tolist() if subset is None else subset,
                 func=(
-                    (lambda df: pandas.DataFrame(df.squeeze(axis=1).unique()))
+                    (
+                        lambda df: pandas.DataFrame(
+                            df.squeeze(axis=1).unique(), columns=["__reduced__"]
+                        )
+                    )
                     if can_use_unique_kernel
                     else (
                         lambda df: df.drop_duplicates(
@@ -1957,6 +2046,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 preserve_columns=True,
             )
         else:
+            # return self.to_pandas().squeeze(axis=1).unique() works faster
+            # but returns pandas type instead of query compiler
+            # TODO: https://github.com/modin-project/modin/issues/7182
             new_modin_frame = self._modin_frame.apply_full_axis(
                 0,
                 lambda x: x.squeeze(axis=1).unique(),
@@ -2506,7 +2598,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         q = kwargs.get("q")
         numeric_only = kwargs.get("numeric_only", True)
-        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
+        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list, tuple))
 
         if numeric_only:
             new_columns = self._modin_frame.numeric_columns()
@@ -2826,7 +2918,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def setitem(self, axis, key, value):
-        if axis == 1:
+        if axis == 0:
             value = self._wrap_column_data(value)
         return self._setitem(axis=axis, key=key, value=value, how=None)
 
@@ -3455,7 +3547,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return result
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
-        if RangePartitioningGroupby.get():
+        if use_range_partitioning_groupby():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3526,7 +3618,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
-        if RangePartitioningGroupby.get():
+        if use_range_partitioning_groupby():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3701,12 +3793,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        if groupby_kwargs.get("level") is not None:
-            raise NotImplementedError(
-                "Grouping on an index level is not yet supported by range-partitioning groupby implementation: "
-                + "https://github.com/modin-project/modin/issues/5926"
-            )
-
+        grouping_on_level = groupby_kwargs.get("level") is not None
         if any(
             isinstance(obj, pandas.Grouper)
             for obj in (by if isinstance(by, list) else [by])
@@ -3716,7 +3803,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
-        external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
+        if grouping_on_level:
+            external_by, internal_by, by_positions = [], [], []
+        else:
+            external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
 
         all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
         if not all_external_are_qcs:
@@ -3947,9 +4037,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         # 'group_wise' means 'groupby.apply()'. We're certain that range-partitioning groupby
-        # always works better for '.apply()', so we're using it regardless of the 'RangePartitioningGroupby'
+        # always works better for '.apply()', so we're using it regardless of the 'RangePartitioning'
         # value
-        if how == "group_wise" or RangePartitioningGroupby.get():
+        if how == "group_wise" or use_range_partitioning_groupby():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3970,7 +4060,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     + "\nFalling back to a full-axis implementation."
                 )
                 get_logger().info(message)
-                if RangePartitioningGroupby.get():
+                if use_range_partitioning_groupby():
                     ErrorMessage.warn(message)
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
@@ -4501,4 +4591,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 ),
                 other._modin_frame,
             )
+        )
+
+    def case_when(self, caselist):
+        qc_type = type(self)
+        caselist = [
+            tuple(
+                data._modin_frame if isinstance(data, qc_type) else data
+                for data in case_tuple
+            )
+            for case_tuple in caselist
+        ]
+        return self.__constructor__(
+            self._modin_frame.case_when(caselist),
+            shape_hint=self._shape_hint,
         )

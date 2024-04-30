@@ -45,6 +45,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 )
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.logging.config import LogLevel
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 
 from . import doc_utils
@@ -99,7 +100,9 @@ def _set_axis(axis):
 # Currently actual arguments are placed in the methods docstrings, but since they're
 # not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
-class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
+class BaseQueryCompiler(
+    ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER", log_level=LogLevel.DEBUG
+):
     """
     Abstract class that handles the queries to Modin dataframes.
 
@@ -697,6 +700,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
             Correlation matrix.
         """
         return DataFrameDefault.register(pandas.DataFrame.corr)(self, **kwargs)
+
+    @doc_utils.add_refer_to("Series.corr")
+    def series_corr(self, **kwargs):  # noqa: PR01
+        """
+        Compute correlation with `other` Series, excluding missing values.
+
+        The two `Series` objects are not required to be the same length and will be
+        aligned internally before the correlation function is applied.
+
+        Returns
+        -------
+        float
+            Correlation with other.
+        """
+        return SeriesDefault.register(pandas.Series.corr)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.corrwith")
     def corrwith(self, **kwargs):  # noqa: PR01
@@ -1845,7 +1863,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
 
         Parameters
         ----------
-        col_dtypes : dict
+        col_dtypes : dict or str
             Map for column names and new dtypes.
         errors : {'raise', 'ignore'}, default: 'raise'
             Control raising of exceptions on invalid data for provided dtype.
@@ -6715,6 +6733,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
         """
         Replace values where the conditions are True.
         """
+        # A workaround for https://github.com/modin-project/modin/issues/7041
+        qc_type = type(self)
+        caselist = [
+            tuple(
+                data.to_pandas().squeeze(axis=1) if isinstance(data, qc_type) else data
+                for data in case_tuple
+            )
+            for case_tuple in caselist
+        ]
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
     def repartition(self, axis=None):

@@ -15,6 +15,7 @@
 
 import io
 
+import numpy as np
 import pandas
 from pandas.io.common import get_handle, stringify_path
 
@@ -62,6 +63,7 @@ class PandasOnUnidistIO(UnidistIO):
     """Factory providing methods for performing I/O operations using pandas as storage format on unidist as engine."""
 
     frame_cls = PandasOnUnidistDataframe
+    frame_partition_cls = PandasOnUnidistDataframePartition
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
         frame_partition_cls=PandasOnUnidistDataframePartition,
@@ -258,3 +260,45 @@ class PandasOnUnidistIO(UnidistIO):
         UnidistWrapper.materialize(
             [part.list_of_blocks[0] for row in result for part in row]
         )
+
+    @classmethod
+    def from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        func = cls.frame_cls._partition_mgr_cls.preprocess_func(func)
+        partitions = np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        UnidistWrapper.deploy(
+                            func,
+                            f_args=(obj,) + args,
+                            f_kwargs=kwargs,
+                            return_pandas_df=True,
+                        )
+                    )
+                ]
+                for obj in iterable
+            ]
+        )
+        return cls.query_compiler_cls(cls.frame_cls(partitions))

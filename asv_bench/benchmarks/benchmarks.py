@@ -1029,20 +1029,17 @@ class TimeDropDuplicatesDataframe:
     param_names = ["shape"]
 
     def setup(self, shape):
-        from pandas import DataFrame
-
         rows, cols = shape
         N = rows // 10
         K = 10
-        # Assigning a large number of columns - inefficient in Modin, so use pandas
-        temp_df = DataFrame()
-        # dataframe would  have cols-1 keys(strings) and one value(int) column
+        data = {}
+        # dataframe would have cols-1 keys(strings) and one value(int) column
         for col in range(cols - 1):
-            temp_df["key" + str(col + 1)] = IMPL.Index(
+            data["key" + str(col + 1)] = IMPL.Index(
                 [f"i-{i}" for i in range(N)], dtype=object
             ).values.repeat(K)
-        self.df = IMPL.DataFrame(temp_df)
-        self.df["value"] = np.random.randn(N * K)
+        data["value"] = np.random.randn(N * K)
+        self.df = IMPL.DataFrame(data)
         execute(self.df)
 
     def time_drop_dups(self, shape):

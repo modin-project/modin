@@ -122,9 +122,9 @@ Now that we have finished the computation, we need to shut down the cluster with
 .. _`Ray's autoscaler options`: https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-config
 .. _`Ray's cluster docs`: https://docs.ray.io/en/latest/cluster/getting-started.html
 .. _`NYC Taxi dataset`: https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
-.. _`Modin's Ray cluster setup config`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml
+.. _`Modin's Ray cluster setup config`: https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml
 .. _`Amazon EC2 pricing`: https://aws.amazon.com/ec2/pricing/on-demand/
-.. _`exercise_5.py`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.py
+.. _`exercise_5.py`: https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.py
 .. _`Ray client`: https://docs.ray.io/en/latest/cluster/running-applications/job-submission/ray-client.html
 .. _`Ray CLI`: https://docs.ray.io/en/latest/cluster/vms/getting-started.html#running-applications-on-a-ray-cluster
 .. _`AWS CLI environment variables`: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html

@@ -23,14 +23,14 @@ runs:
       shell: bash
     - name: Cache conda
       id: cache-conda
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/conda_pkgs_dir
           ~/.cache/pip
         key:
           ${{ runner.os }}-conda-${{ steps.get-week.outputs.thisweek }}-${{ hashFiles(inputs.environment-file) }}
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v3
       with:
         miniforge-variant: Mambaforge
         miniforge-version: latest

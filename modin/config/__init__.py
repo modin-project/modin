@@ -47,21 +47,25 @@ from modin.config.envvars import (
     ProgressBar,
     RangePartitioning,
     RangePartitioningGroupby,
+    RayInitCustomResources,
     RayRedisAddress,
     RayRedisPassword,
+    RayTaskCustomResources,
     ReadSqlEngine,
     StorageFormat,
     TestDatasetSize,
     TestReadFromPostgres,
     TestReadFromSqlServer,
     TrackFileLeaks,
+    use_range_partitioning_groupby,
 )
-from modin.config.pubsub import Parameter, ValueSource
+from modin.config.pubsub import Parameter, ValueSource, context
 
 __all__ = [
     "EnvironmentVariable",
     "Parameter",
     "ValueSource",
+    "context",
     # General settings
     "IsDebug",
     "Engine",
@@ -73,6 +77,8 @@ __all__ = [
     "IsRayCluster",
     "RayRedisAddress",
     "RayRedisPassword",
+    "RayInitCustomResources",
+    "RayTaskCustomResources",
     "LazyExecution",
     # Dask specific
     "DaskThreadsPerWorker",
@@ -95,6 +101,7 @@ __all__ = [
     "ExperimentalNumPyAPI",
     "RangePartitioningGroupby",
     "RangePartitioning",
+    "use_range_partitioning_groupby",
     "ExperimentalGroupbyImpl",
     "AsyncReadMode",
     "ReadSqlEngine",

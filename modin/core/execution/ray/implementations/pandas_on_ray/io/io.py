@@ -15,10 +15,12 @@
 
 import io
 
+import numpy as np
 import pandas
 from pandas.io.common import get_handle, stringify_path
 from ray.data import from_pandas_refs
 
+from modin.config import RayTaskCustomResources
 from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
 from modin.core.io import (
@@ -67,6 +69,7 @@ class PandasOnRayIO(RayIO):
     """Factory providing methods for performing I/O operations using pandas as storage format on Ray as engine."""
 
     frame_cls = PandasOnRayDataframe
+    frame_partition_cls = PandasOnRayDataframePartition
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
         frame_partition_cls=PandasOnRayDataframePartition,
@@ -188,7 +191,9 @@ class PandasOnRayIO(RayIO):
         if not cls._to_csv_check_support(kwargs):
             return RayIO.to_csv(qc, **kwargs)
 
-        signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
+        signals = SignalActor.options(resources=RayTaskCustomResources.get()).remote(
+            len(qc._modin_frame._partitions) + 1
+        )
 
         def func(df, **kw):  # pragma: no cover
             """
@@ -299,3 +304,42 @@ class PandasOnRayIO(RayIO):
         """
         parts = unwrap_partitions(modin_obj, axis=0)
         return from_pandas_refs(parts)
+
+    @classmethod
+    def from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        func = cls.frame_cls._partition_mgr_cls.preprocess_func(func)
+        partitions = np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        RayWrapper.deploy(
+                            func, f_args=(obj,) + args, return_pandas_df=True, **kwargs
+                        )
+                    )
+                ]
+                for obj in iterable
+            ]
+        )
+        return cls.query_compiler_cls(cls.frame_cls(partitions))

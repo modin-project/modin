@@ -7,8 +7,8 @@ Installation
   | If you already installed Modin on your machine, you can skip this section.
 
 There are several ways to install Modin. Most users will want to install with
-``pip`` or using ``conda`` tool, but some users may want to build from the master branch
-on the `GitHub repo`_. The master branch has the most recent patches, but may be less
+``pip`` or using ``conda`` tool, but some users may want to build from the main branch
+on the `GitHub repo`_. The main branch has the most recent patches, but may be less
 stable than a release installed from ``pip`` or ``conda``.
 
 Installing with pip
@@ -73,6 +73,15 @@ storage formats or for different functionalities of Modin. Here is a list of dep
 .. code-block:: bash
 
   pip install "modin[mpi]" # If you want to use MPI through unidist execution engine
+
+
+Consortium Standard-compatible implementation based on Modin
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. code-block:: bash
+
+  pip install "modin[consortium-standard]"
+
 
 Installing on Google Colab
 """""""""""""""""""""""""""
@@ -168,10 +177,10 @@ With ``conda`` it is also possible to install `Intel Distribution of Modin`_, a 
 that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`HDK</development/using_hdk>`
 engine that contains a bunch of optimizations for Intel hardware. More details to get started can be found in the `Intel Distribution of Modin Getting Started`_ guide.
 
-Installing from the GitHub master branch
-----------------------------------------
+Installing from the GitHub main branch
+--------------------------------------
 
-If you'd like to try Modin using the most recent updates from the master branch, you can
+If you'd like to try Modin using the most recent updates from the main branch, you can
 also use ``pip``.
 
 .. code-block:: bash
@@ -219,7 +228,7 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
   pip install -e .
   pip install -e ".[all]"  # will install dependencies for all engines
 
-.. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
+.. _`GitHub repo`: https://github.com/modin-project/modin/tree/main
 .. _issue: https://github.com/modin-project/modin/issues
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io

@@ -23,7 +23,7 @@ import pandas
 from pandas._libs.lib import no_default
 from pandas.util._decorators import doc
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.pandas.io import ExcelFile
@@ -162,6 +162,34 @@ class BaseIO:
         """
         raise RuntimeError(
             "Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine."
+        )
+
+    @classmethod
+    def from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        raise RuntimeError(
+            "Modin DataFrame can only be created if Modin uses Ray, Dask or MPI engine."
         )
 
     @classmethod

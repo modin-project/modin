@@ -20,6 +20,7 @@ from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 
+from modin.config import MinPartitionSize
 from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
     GPU_MANAGERS,
 )
@@ -39,7 +40,9 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     Returns:
         A list of pandas DataFrames.
     """
-    splits = split_result_of_axis_func_pandas(axis, num_splits, df)
+    splits = split_result_of_axis_func_pandas(
+        axis, num_splits, df, min_block_size=MinPartitionSize.get()
+    )
     if not isinstance(splits, list):
         splits = [splits]
     return splits

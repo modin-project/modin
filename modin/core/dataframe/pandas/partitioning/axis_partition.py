@@ -18,6 +18,7 @@ import warnings
 import numpy as np
 import pandas
 
+from modin.config import MinPartitionSize
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
@@ -276,6 +277,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                             for part in axis_partition.list_of_blocks
                         ]
                     ),
+                    min_block_size=MinPartitionSize.get(),
                 )
             )
         result = self._wrap_partitions(
@@ -287,8 +289,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                 num_splits,
                 maintain_partitioning,
                 *self.list_of_blocks,
-                manual_partition=manual_partition,
+                min_block_size=MinPartitionSize.get(),
                 lengths=lengths,
+                manual_partition=manual_partition,
             )
         )
         if self.full_axis:
@@ -377,6 +380,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             A list of pandas DataFrames.
         """
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
+        # to reduce peak memory consumption
+        del partitions
         return split_func(dataframe, *f_args, **f_kwargs)
 
     @classmethod
@@ -389,6 +394,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         num_splits,
         maintain_partitioning,
         *partitions,
+        min_block_size,
         lengths=None,
         manual_partition=False,
         return_generator=False,
@@ -413,6 +419,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
         lengths : list, optional
             The list of lengths to shuffle the object.
         manual_partition : bool, default: False
@@ -426,7 +434,15 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list | Generator
             A list or generator of pandas DataFrames.
         """
+        len_partitions = len(partitions)
+        lengths_partitions = [len(part) for part in partitions]
+        widths_partitions = [len(part.columns) for part in partitions]
+
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
+
+        # to reduce peak memory consumption
+        del partitions
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
             try:
@@ -436,6 +452,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     result = func(dataframe.copy(), *f_args, **f_kwargs)
                 else:
                     raise err
+
+        # to reduce peak memory consumption
+        del dataframe
 
         if num_splits == 1:
             # If we're not going to split the result, we don't need to specify
@@ -447,23 +466,29 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # We set lengths to None so we don't use the old lengths for the resulting partition
         # layout. This is done if the number of splits is changing or we are told not to
         # keep the old partitioning.
-        elif num_splits != len(partitions) or not maintain_partitioning:
+        elif num_splits != len_partitions or not maintain_partitioning:
             lengths = None
         else:
             if axis == 0:
-                lengths = [len(part) for part in partitions]
+                lengths = lengths_partitions
                 if sum(lengths) != len(result):
                     lengths = None
             else:
-                lengths = [len(part.columns) for part in partitions]
+                lengths = widths_partitions
                 if sum(lengths) != len(result.columns):
                     lengths = None
         if return_generator:
             return generate_result_of_axis_func_pandas(
-                axis, num_splits, result, lengths
+                axis,
+                num_splits,
+                result,
+                min_block_size,
+                lengths,
             )
         else:
-            return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
+            return split_result_of_axis_func_pandas(
+                axis, num_splits, result, min_block_size, lengths
+            )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
@@ -476,6 +501,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         len_of_left,
         other_shape,
         *partitions,
+        min_block_size,
         return_generator=False,
     ):
         """
@@ -500,6 +526,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
         return_generator : bool, default: False
             Return a generator from the function, set to `True` for Ray backend
             as Ray remote functions can return Generators.
@@ -513,6 +541,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         rt_parts = partitions[len_of_left:]
 
+        # to reduce peak memory consumption
+        del partitions
+
         # reshaping flattened `rt_parts` array into a frame with shape `other_shape`
         combined_axis = [
             pandas.concat(
@@ -522,21 +553,35 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             )
             for i in range(1, len(other_shape))
         ]
+
+        # to reduce peak memory consumption
+        del rt_parts
+
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
+
+        # to reduce peak memory consumption
+        del combined_axis
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
             result = func(lt_frame, rt_frame, *f_args, **f_kwargs)
+
+        # to reduce peak memory consumption
+        del lt_frame, rt_frame
+
         if return_generator:
             return generate_result_of_axis_func_pandas(
                 axis,
                 num_splits,
                 result,
+                min_block_size,
             )
         else:
             return split_result_of_axis_func_pandas(
                 axis,
                 num_splits,
                 result,
+                min_block_size,
             )
 
     @classmethod

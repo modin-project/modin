@@ -16,7 +16,7 @@ from __future__ import annotations
 import pickle as pkl
 import re
 import warnings
-from typing import Any, Hashable, Literal, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Hashable, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas
@@ -66,6 +66,9 @@ from modin.pandas.utils import is_scalar
 from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
 
 from .utils import _doc_binary_op, is_full_grab_slice
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -174,6 +177,7 @@ class BasePandasDataset(ClassLogger):
     # Pandas class that we pretend to be; usually it has the same name as our class
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
+    _query_compiler: BaseQueryCompiler
 
     @pandas.util.cache_readonly
     def _is_dataframe(self) -> bool:
@@ -577,7 +581,7 @@ class BasePandasDataset(ClassLogger):
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     @pandas.util.cache_readonly
-    def __constructor__(self):
+    def __constructor__(self) -> BasePandasDataset:
         """
         Construct DataFrame or Series object depending on self type.
 
@@ -1001,7 +1005,7 @@ class BasePandasDataset(ClassLogger):
         """
         if copy is None:
             copy = True
-        # dtype can be a series, a dict, or a scalar. If it's series or scalar,
+        # dtype can be a series, a dict, or a scalar. If it's series,
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
             if not dtype.index.is_unique:
@@ -1022,24 +1026,24 @@ class BasePandasDataset(ClassLogger):
                     "Only a column name can be used for the key in "
                     + "a dtype mappings argument."
                 )
-            col_dtypes = dtype
-        else:
-            # Assume that the dtype is a scalar.
-            col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
         if not copy:
             # If the new types match the old ones, then copying can be avoided
             if self._query_compiler._modin_frame.has_materialized_dtypes:
                 frame_dtypes = self._query_compiler._modin_frame.dtypes
-                for col in col_dtypes:
-                    if col_dtypes[col] != frame_dtypes[col]:
+                if isinstance(dtype, dict):
+                    for col in dtype:
+                        if dtype[col] != frame_dtypes[col]:
+                            copy = True
+                            break
+                else:
+                    if not (frame_dtypes == dtype).all():
                         copy = True
-                        break
             else:
                 copy = True
 
         if copy:
-            new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
+            new_query_compiler = self._query_compiler.astype(dtype, errors=errors)
             return self._create_or_update_from_compiler(new_query_compiler)
         return self
 
@@ -1864,8 +1868,6 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of maximum over requested axis.
         """
-        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
-            raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.idxmax(
@@ -1877,8 +1879,6 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of minimum over requested axis.
         """
-        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
-            raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.idxmin(
@@ -2300,6 +2300,7 @@ class BasePandasDataset(ClassLogger):
         def check_dtype(t):
             return is_numeric_dtype(t) or lib.is_np_dtype(t, "mM")
 
+        numeric_only_df = self
         if not numeric_only:
             # If not numeric_only and columns, then check all columns are either
             # numeric, timestamp, or timedelta
@@ -2318,31 +2319,33 @@ class BasePandasDataset(ClassLogger):
                             )
                         )
         else:
-            # Normally pandas returns this near the end of the quantile, but we
-            # can't afford the overhead of running the entire operation before
-            # we error.
-            if not any(is_numeric_dtype(t) for t in self._get_dtypes()):
-                raise ValueError("need at least one array to concatenate")
+            numeric_only_df = self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
+            )
 
         # check that all qs are between 0 and 1
         validate_percentile(q)
-        axis = self._get_axis_number(axis)
-        if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list)):
-            return self.__constructor__(
-                query_compiler=self._query_compiler.quantile_for_list_of_values(
+        axis = numeric_only_df._get_axis_number(axis)
+        if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list, tuple)):
+            return numeric_only_df.__constructor__(
+                query_compiler=numeric_only_df._query_compiler.quantile_for_list_of_values(
                     q=q,
                     axis=axis,
-                    numeric_only=numeric_only,
+                    # `numeric_only=True` has already been processed by using `self.drop` function
+                    numeric_only=False,
                     interpolation=interpolation,
                     method=method,
                 )
             )
         else:
-            result = self._reduce_dimension(
-                self._query_compiler.quantile_for_single_value(
+            result = numeric_only_df._reduce_dimension(
+                numeric_only_df._query_compiler.quantile_for_single_value(
                     q=q,
                     axis=axis,
-                    numeric_only=numeric_only,
+                    # `numeric_only=True` has already been processed by using `self.drop` function
+                    numeric_only=False,
                     interpolation=interpolation,
                     method=method,
                 )

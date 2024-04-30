@@ -13,6 +13,7 @@
 
 """Module houses ``Parameter`` class - base class for all configs."""
 
+import contextlib
 import warnings
 from collections import defaultdict
 from enum import IntEnum
@@ -21,6 +22,7 @@ from typing import (
     Any,
     Callable,
     DefaultDict,
+    Iterator,
     NamedTuple,
     Optional,
     Tuple,
@@ -449,4 +451,49 @@ class Parameter(object):
         raise TypeError("Cannot add a choice to a parameter where choices is None")
 
 
-__all__ = ["Parameter"]
+@contextlib.contextmanager
+def context(**config: dict[str, Any]) -> Iterator[None]:
+    """
+    Set a value(s) for the specified config(s) from ``modin.config`` in the scope of the context.
+
+    Parameters
+    ----------
+    **config : dict[str, Any]
+        Keyword describing a name of a config variable from ``modin.config`` as a key
+        and a new value as a value.
+
+    Examples
+    --------
+    >>> RangePartitioning.get()
+    False
+    >>> with context(RangePartitioning=True):
+    ...     print(RangePartitioning.get()) # True
+    True
+    False
+    >>> RangePartitioning.get()
+    False
+    >>> with context(RangePartitioning=True, AsyncReadMode=True):
+    ...     print(RangePartitioning.get()) # True
+    ...     print(AsyncReadMode.get()) # True
+    True
+    True
+    >>> RangePartitioning.get()
+    False
+    >>> AsyncReadMode.get()
+    False
+    """
+    import modin.config as cfg
+
+    old_values = {}
+    for name, val in config.items():
+        var = getattr(cfg, name)
+        old_values[var] = var.get()
+        var.put(val)
+    try:
+        yield
+    finally:
+        for var, val in old_values.items():
+            var.put(val)
+
+
+__all__ = ["Parameter", "context"]

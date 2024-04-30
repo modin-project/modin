@@ -295,6 +295,49 @@ class RayRedisPassword(EnvironmentVariable, type=ExactStr):
     default = secrets.token_hex(32)
 
 
+class RayInitCustomResources(EnvironmentVariable, type=dict):
+    """
+    Ray node's custom resources to initialize with.
+
+    Visit Ray documentation for more details:
+    https://docs.ray.io/en/latest/ray-core/scheduling/resources.html#custom-resources
+
+    Notes
+    -----
+    Relying on Modin to initialize Ray, you should set this config
+    for the proper initialization with custom resources.
+    """
+
+    varname = "MODIN_RAY_INIT_CUSTOM_RESOURCES"
+    default = None
+
+
+class RayTaskCustomResources(EnvironmentVariable, type=dict):
+    """
+    Ray node's custom resources to request them in tasks or actors.
+
+    Visit Ray documentation for more details:
+    https://docs.ray.io/en/latest/ray-core/scheduling/resources.html#custom-resources
+
+    Notes
+    -----
+    You can use this config to limit the parallelism for the entire workflow
+    by setting the config at the very beginning.
+    >>> import modin.config as cfg
+    >>> cfg.RayTaskCustomResources.put({"special_hardware": 0.001})
+    This way each single remote task or actor will require 0.001 of "special_hardware" to run.
+    You can also use this config to limit the parallelism for a certain operation
+    by setting the config with context.
+    >>> with context(RayTaskCustomResources={"special_hardware": 0.001}):
+    ...     df.<op>
+    This way each single remote task or actor will require 0.001 of "special_hardware" to run
+    within the context only.
+    """
+
+    varname = "MODIN_RAY_TASK_CUSTOM_RESOURCES"
+    default = None
+
+
 class CpuCount(EnvironmentVariable, type=int):
     """How many CPU cores to use during initialization of the Modin engine."""
 
@@ -312,6 +355,20 @@ class CpuCount(EnvironmentVariable, type=int):
         import multiprocessing
 
         return multiprocessing.cpu_count()
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``CpuCount`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        cpu_count = super().get()
+        if cpu_count <= 0:
+            raise ValueError(f"`CpuCount` should be > 0; current value: {cpu_count}")
+        return cpu_count
 
 
 class GpuCount(EnvironmentVariable, type=int):
@@ -369,6 +426,20 @@ class NPartitions(EnvironmentVariable, type=int):
             return GpuCount.get()
         else:
             return CpuCount.get()
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``NPartitions`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        nparts = super().get()
+        if nparts <= 0:
+            raise ValueError(f"`NPartitions` should be > 0; current value: {nparts}")
+        return nparts
 
 
 class HdkFragmentSize(EnvironmentVariable, type=int):
@@ -473,7 +544,7 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     """Set ``LogMode`` value if users want to opt-in."""
 
     varname = "MODIN_LOG_MODE"
-    choices = ("enable", "disable", "enable_api_only")
+    choices = ("enable", "disable")
     default = "disable"
 
     @classmethod
@@ -485,15 +556,6 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     def disable(cls) -> None:
         """Disable logging feature."""
         cls.put("disable")
-
-    @classmethod
-    def enable_api_only(cls) -> None:
-        """Enable API level logging."""
-        warnings.warn(
-            "'enable_api_only' value for LogMode is deprecated and"
-            + "will be removed in a future version."
-        )
-        cls.put("enable_api_only")
 
 
 class LogMemoryInterval(EnvironmentVariable, type=int):
@@ -526,7 +588,10 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         int
         """
         log_memory_interval = super().get()
-        assert log_memory_interval > 0, "`LogMemoryInterval` should be > 0"
+        if log_memory_interval <= 0:
+            raise ValueError(
+                f"`LogMemoryInterval` should be > 0; current value: {log_memory_interval}"
+            )
         return log_memory_interval
 
 
@@ -560,7 +625,10 @@ class LogFileSize(EnvironmentVariable, type=int):
         int
         """
         log_file_size = super().get()
-        assert log_file_size > 0, "`LogFileSize` should be > 0"
+        if log_file_size <= 0:
+            raise ValueError(
+                f"`LogFileSize` should be > 0; current value: {log_file_size}"
+            )
         return log_file_size
 
 
@@ -673,7 +741,10 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         int
         """
         min_partition_size = super().get()
-        assert min_partition_size > 0, "`min_partition_size` should be > 0"
+        if min_partition_size <= 0:
+            raise ValueError(
+                f"`MinPartitionSize` should be > 0; current value: {min_partition_size}"
+            )
         return min_partition_size
 
 
@@ -733,14 +804,23 @@ ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
+class RangePartitioning(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's range-partitioning implementation where possible.
+
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
+    """
+
+    varname = "MODIN_RANGE_PARTITIONING"
+    default = False
+
+
 class RangePartitioningGroupby(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
-    Experimental groupby is implemented using a range-partitioning technique,
-    note that it may not always work better than the original Modin's TreeReduce
-    and FullAxis implementations. For more information visit the according section
-    of Modin's documentation: TODO: add a link to the section once it's written.
+    This parameter is deprecated. Use ``RangePartitioning`` instead.
     """
 
     varname = "MODIN_RANGE_PARTITIONING_GROUPBY"
@@ -752,11 +832,18 @@ class RangePartitioningGroupby(EnvWithSibilings, type=bool):
         return ExperimentalGroupbyImpl
 
 
+# Let the parameter's handling logic know that this variable is deprecated and that
+# we should raise respective warnings
+RangePartitioningGroupby._deprecation_descriptor = DeprecationDescriptor(
+    RangePartitioningGroupby, RangePartitioning
+)
+
+
 class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
-    This parameter is deprecated. Use ``RangePartitioningGroupby`` instead.
+    This parameter is deprecated. Use ``RangePartitioning`` instead.
     """
 
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
@@ -775,16 +862,24 @@ ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
-class RangePartitioning(EnvironmentVariable, type=bool):
+def use_range_partitioning_groupby() -> bool:
     """
-    Set to true to use Modin's range-partitioning implementation where possible.
+    Determine whether range-partitioning implementation for groupby was enabled by a user.
 
-    Please refer to documentation for cases where enabling this options would be beneficial:
-    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
+    This is a temporary helper function that queries ``RangePartitioning`` and deprecated
+    ``RangePartitioningGroupby`` config variables in order to determine whether to range-part
+    impl for groupby is enabled. Eventially this function should be removed together with
+    ``RangePartitioningGroupby`` variable.
+
+    Returns
+    -------
+    bool
     """
-
-    varname = "MODIN_RANGE_PARTITIONING"
-    default = False
+    with warnings.catch_warnings():
+        # filter deprecation warning, it was already showed when a user set the variable
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        old_range_part_var = RangePartitioningGroupby.get()
+    return RangePartitioning.get() or old_range_part_var
 
 
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
