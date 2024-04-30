@@ -24,7 +24,6 @@ from typing import Sequence
 
 import pandas
 import ray
-from ray.util.client.common import ClientObjectRef
 
 from modin.config import RayTaskCustomResources
 from modin.error_message import ErrorMessage
@@ -332,5 +331,5 @@ class MaterializationHook:
         return int, (data,)
 
 
-RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
+RayObjectRefTypes = (ray.ObjectRef,)
 ObjectRefTypes = (*RayObjectRefTypes, MaterializationHook)
