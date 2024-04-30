@@ -192,6 +192,11 @@ class FactoryDispatcher(object):
         return cls.get_factory()._from_dask(dask_obj)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_map)
+    def from_map(cls, func, iterable, *args, **kwargs):
+        return cls.get_factory()._from_map(func, iterable, *args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)
     def read_parquet(cls, **kwargs):
         return cls.get_factory()._read_parquet(**kwargs)

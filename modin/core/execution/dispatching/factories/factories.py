@@ -222,6 +222,32 @@ class BaseFactory(object):
         return cls.io_cls.from_dask(dask_obj)
 
     @classmethod
+    def _from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        return cls.io_cls.from_map(func, iterable, *args, **kwargs)
+
+    @classmethod
     @doc(
         _doc_io_method_template,
         source="a Parquet file",

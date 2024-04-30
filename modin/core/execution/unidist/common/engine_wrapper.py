@@ -19,11 +19,14 @@ To be used as a piece of building a unidist-based engine.
 
 import asyncio
 
+import pandas
 import unidist
 
 
 @unidist.remote
-def _deploy_unidist_func(func, *args, **kwargs):  # pragma: no cover
+def _deploy_unidist_func(
+    func, *args, return_pandas_df=None, **kwargs
+):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
 
@@ -33,6 +36,8 @@ def _deploy_unidist_func(func, *args, **kwargs):  # pragma: no cover
         A local function that we want to call remotely.
     *args : iterable
         Positional arguments to pass to `func` when calling remotely.
+    return_pandas_df : bool, optional
+        Whether to convert the result of `func` to a pandas DataFrame or not.
     **kwargs : dict
         Keyword arguments to pass to `func` when calling remotely.
 
@@ -41,14 +46,19 @@ def _deploy_unidist_func(func, *args, **kwargs):  # pragma: no cover
     unidist.ObjectRef or list[unidist.ObjectRef]
         Unidist identifier of the result being put to object store.
     """
-    return func(*args, **kwargs)
+    result = func(*args, **kwargs)
+    if return_pandas_df and not isinstance(result, pandas.DataFrame):
+        result = pandas.DataFrame(result)
+    return result
 
 
 class UnidistWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
-    def deploy(cls, func, f_args=None, f_kwargs=None, num_returns=1):
+    def deploy(
+        cls, func, f_args=None, f_kwargs=None, return_pandas_df=None, num_returns=1
+    ):
         """
         Run local `func` remotely.
 
@@ -60,6 +70,8 @@ class UnidistWrapper:
             Positional arguments to pass to ``func``.
         f_kwargs : dict, optional
             Keyword arguments to pass to ``func``.
+        return_pandas_df : bool, optional
+            Whether to convert the result of `func` to a pandas DataFrame or not.
         num_returns : int, default: 1
             Amount of return values expected from `func`.
 
@@ -71,7 +83,7 @@ class UnidistWrapper:
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
         return _deploy_unidist_func.options(num_returns=num_returns).remote(
-            func, *args, **kwargs
+            func, *args, return_pandas_df=return_pandas_df, **kwargs
         )
 
     @classmethod

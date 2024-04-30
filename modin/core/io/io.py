@@ -165,6 +165,34 @@ class BaseIO:
         )
 
     @classmethod
+    def from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        raise RuntimeError(
+            "Modin DataFrame can only be created if Modin uses Ray, Dask or MPI engine."
+        )
+
+    @classmethod
     @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
     @doc(
         _doc_default_io_method,

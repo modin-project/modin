@@ -22,6 +22,7 @@ import os
 from types import FunctionType
 from typing import Sequence
 
+import pandas
 import ray
 from ray.util.client.common import ClientObjectRef
 
@@ -30,7 +31,7 @@ from modin.error_message import ErrorMessage
 
 
 @ray.remote
-def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
+def _deploy_ray_func(func, *args, return_pandas_df=None, **kwargs):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
 
@@ -40,6 +41,8 @@ def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
         A local function that we want to call remotely.
     *args : iterable
         Positional arguments to pass to `func` when calling remotely.
+    return_pandas_df : bool, optional
+        Whether to convert the result of `func` to a pandas DataFrame or not.
     **kwargs : dict
         Keyword arguments to pass to `func` when calling remotely.
 
@@ -48,7 +51,10 @@ def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     ray.ObjectRef or list
         Ray identifier of the result being put to Plasma store.
     """
-    return func(*args, **kwargs)
+    result = func(*args, **kwargs)
+    if return_pandas_df and not isinstance(result, pandas.DataFrame):
+        result = pandas.DataFrame(result)
+    return result
 
 
 class RayWrapper:
@@ -57,7 +63,9 @@ class RayWrapper:
     _func_cache = {}
 
     @classmethod
-    def deploy(cls, func, f_args=None, f_kwargs=None, num_returns=1):
+    def deploy(
+        cls, func, f_args=None, f_kwargs=None, return_pandas_df=None, num_returns=1
+    ):
         """
         Run local `func` remotely.
 
@@ -69,6 +77,8 @@ class RayWrapper:
             Positional arguments to pass to ``func``.
         f_kwargs : dict, optional
             Keyword arguments to pass to ``func``.
+        return_pandas_df : bool, optional
+            Whether to convert the result of `func` to a pandas DataFrame or not.
         num_returns : int, default: 1
             Amount of return values expected from `func`.
 
@@ -81,7 +91,7 @@ class RayWrapper:
         kwargs = {} if f_kwargs is None else f_kwargs
         return _deploy_ray_func.options(
             num_returns=num_returns, resources=RayTaskCustomResources.get()
-        ).remote(func, *args, **kwargs)
+        ).remote(func, *args, return_pandas_df=return_pandas_df, **kwargs)
 
     @classmethod
     def is_future(cls, item):
