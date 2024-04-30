@@ -811,6 +811,41 @@ def test_merge_partitioning(
     )
 
 
+def test_merge_with_bad_partitioning():
+    # https://github.com/modin-project/modin/pull/7229
+
+    left_partitioning = [256]
+    right_partitioning = [32, 32, 32, 32]
+
+    left_df = pandas.DataFrame(
+        [np.arange(sum(left_partitioning)) for _ in range(sum(left_partitioning))]
+    )
+    right_df = pandas.DataFrame(
+        [np.arange(sum(right_partitioning)) for _ in range(sum(right_partitioning))]
+    )
+
+    left = construct_modin_df_by_scheme(
+        left_df, {"row_lengths": left_partitioning, "column_widths": left_partitioning}
+    )
+    right = construct_modin_df_by_scheme(
+        right_df,
+        {"row_lengths": right_partitioning, "column_widths": right_partitioning},
+    )
+
+    left_frame = left._query_compiler._modin_frame
+    right_frame = right._query_compiler._modin_frame
+    assert left_frame.row_lengths == left_frame.column_widths == left_partitioning
+    assert right_frame.row_lengths == right_frame.column_widths == right_partitioning
+
+    # just a dummy value
+    return_value = pd.DataFrame([1, 2, 3, 4])._query_compiler
+    with mock.patch.object(
+        left._query_compiler, "repartition", return_value=return_value
+    ) as repartition:
+        _ = left.merge(right)
+        repartition.assert_called_once_with(axis=0)
+
+
 def test_groupby_with_empty_partition():
     # see #5461 for details
     md_df = construct_modin_df_by_scheme(

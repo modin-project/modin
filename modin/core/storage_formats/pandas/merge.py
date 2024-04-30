@@ -13,14 +13,22 @@
 
 """Contains implementations for Merge/Join."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas
 from pandas.core.dtypes.common import is_list_like
 from pandas.errors import MergeError
 
+from modin.config import MinPartitionSize, NPartitions
 from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.pandas.metadata import ModinDtypes
 
 from .utils import merge_partitioning
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 # TODO: add methods for 'join' here
@@ -93,7 +101,9 @@ class MergeImpl:
         ).reset_index(drop=True)
 
     @classmethod
-    def row_axis_merge(cls, left, right, kwargs):
+    def row_axis_merge(
+        cls, left: PandasQueryCompiler, right: PandasQueryCompiler, kwargs: dict
+    ):
         """
         Execute merge using row-axis implementation.
 
@@ -163,6 +173,16 @@ class MergeImpl:
             new_columns, new_dtypes = cls._compute_result_metadata(
                 left, right, on, left_on, right_on, kwargs.get("suffixes", ("_x", "_y"))
             )
+
+            # We rebalance when the ratio of the number of existing partitions to
+            # the ideal number of partitions is smaller than this threshold. The
+            # threshold is a heuristic that may need to be tuned for performance.
+            if (
+                left._modin_frame._partitions.shape[0] < 0.3 * NPartitions.get()
+                # to avoid empty partitions after repartition; can materialize index
+                and len(left._modin_frame) > NPartitions.get() * MinPartitionSize.get()
+            ):
+                left = left.repartition(axis=0)
 
             new_left = left.__constructor__(
                 left._modin_frame.broadcast_apply_full_axis(
