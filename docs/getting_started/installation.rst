@@ -41,6 +41,7 @@ Otherwise, installation of ``modin[mpi]`` may fail. Refer to
 `Installing with pip`_ section of the unidist documentation for more details about installation.
 
 **Note:** Since Modin 0.30.0 we use a reduced set of Ray dependencies: ray-core instead of ray-default.
+This means that the dashboard and cluster launcher are no longer installed by default.
 
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation! See below for HDK engine installation.
