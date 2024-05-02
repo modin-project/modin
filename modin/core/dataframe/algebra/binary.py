@@ -179,7 +179,7 @@ def maybe_build_dtypes_series(
         First operand for which the binary operation would be performed later.
     second : PandasQueryCompiler, list-like or scalar
         Second operand for which the binary operation would be performed later.
-    dtype : np.dtype
+    dtype : pandas supported dtype
         Dtype of the result.
     trigger_computations : bool, default: False
         Whether to trigger computation of the lazy metadata for `first` and `second`.
@@ -250,10 +250,19 @@ def try_compute_new_dtypes(
 
     try:
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
-            # FIXME: https://github.com/modin-project/modin/issues/7203
-            # can be `pandas.api.types.pandas_dtype("bool[pyarrow]")` depending on the data
+            # dataframe can contain types of different backends at the same time, for example:
+            # (Pdb) (pandas.DataFrame([[1,2,3], [4,5,6]]).astype({0: "int64[pyarrow]"}) > 4).dtypes
+            # 0    bool[pyarrow]
+            # 1             bool
+            # 2             bool
+            # dtype: object
+            backend = ""
+            if any("pyarrow" in str(x) for x in first.dtypes) or any(
+                "pyarrow" in str(x) for x in second.dtypes
+            ):
+                backend = "pyarrow"
             dtypes = maybe_build_dtypes_series(
-                first, second, dtype=pandas.api.types.pandas_dtype(bool)
+                first, second, dtype=pandas.api.types.pandas_dtype(f"bool[{backend}]")
             )
         elif infer_dtypes == "common_cast":
             dtypes = maybe_compute_dtypes_common_cast(

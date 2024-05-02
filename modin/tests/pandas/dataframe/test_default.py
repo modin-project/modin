@@ -715,7 +715,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
         "callable_tree_reduce_func" in request.node.callspec.id
         and "int_data" in request.node.callspec.id
     ):
-        expected_exception = TypeError("'numpy.float64' object is not callable")
+        expected_exception = TypeError("'float' object is not callable")
 
     eval_general(
         md_df,

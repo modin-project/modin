@@ -1269,8 +1269,15 @@ class PandasDataframe(
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
             elif isinstance(self._dtypes, ModinDtypes):
                 try:
+                    supported_monotonic_col_idx = monotonic_col_idx
+                    if isinstance(monotonic_col_idx, slice):
+                        supported_monotonic_col_idx = pandas.RangeIndex(
+                            monotonic_col_idx.start,
+                            monotonic_col_idx.stop,
+                            monotonic_col_idx.step,
+                        ).to_list()
                     new_dtypes = self._dtypes.lazy_get(
-                        monotonic_col_idx, numeric_index=True
+                        supported_monotonic_col_idx, numeric_index=True
                     )
                 # can raise either on missing cache or on duplicated labels
                 except (ValueError, NotImplementedError):
