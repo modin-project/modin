@@ -12,9 +12,22 @@
 # governing permissions and limitations under the License.
 
 
-# Re-export all other pandas.api submodules
-from pandas.api import indexers, interchange, types, typing
+import pandas
 
-from modin.pandas.api import extensions
+import modin.pandas as pd
 
-__all__ = ["extensions", "interchange", "indexers", "types", "typing"]
+
+def test_extensions_does_not_overwrite_pandas_api():
+    # Ensure that importing modin.pandas.api.extensions does not overwrite our re-export
+    # of pandas.api submodules.
+    import modin.pandas.api.extensions as ext
+
+    # Top-level submodules should remain the same
+    assert set(pd.api.__all__) == set(pandas.api.__all__)
+    # Methods we define, like ext.register_dataframe_accessor should be different
+    assert (
+        ext.register_dataframe_accessor
+        is not pandas.api.extensions.register_dataframe_accessor
+    )
+    # Methods from other submodules, like pd.api.types.is_bool_dtype, should be the same
+    assert pd.api.types.is_bool_dtype is pandas.api.types.is_bool_dtype

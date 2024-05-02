@@ -13,6 +13,7 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
+import numpy as np
 from distributed.client import default_client
 
 from modin.core.execution.dask.common import DaskWrapper
@@ -68,6 +69,7 @@ class PandasOnDaskIO(BaseIO):
     """The class implements interface in ``BaseIO`` using Dask as an execution engine."""
 
     frame_cls = PandasOnDaskDataframe
+    frame_partition_cls = PandasOnDaskDataframePartition
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
         frame_cls=PandasOnDaskDataframe,
@@ -188,3 +190,45 @@ class PandasOnDaskIO(BaseIO):
             partitions = [client.submit(df_to_series, part) for part in partitions]
 
         return from_delayed(partitions)
+
+    @classmethod
+    def from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        func = cls.frame_cls._partition_mgr_cls.preprocess_func(func)
+        partitions = np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        DaskWrapper.deploy(
+                            func,
+                            f_args=(obj,) + args,
+                            f_kwargs=kwargs,
+                            return_pandas_df=True,
+                        )
+                    )
+                ]
+                for obj in iterable
+            ]
+        )
+        return cls.query_compiler_cls(cls.frame_cls(partitions))

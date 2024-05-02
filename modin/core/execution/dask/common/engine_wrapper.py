@@ -15,12 +15,13 @@
 
 from collections import UserDict
 
+import pandas
 from dask.distributed import wait
 from distributed import Future
 from distributed.client import default_client
 
 
-def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
+def _deploy_dask_func(func, *args, return_pandas_df=None, **kwargs):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
 
@@ -30,6 +31,8 @@ def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
         A local function that we want to call remotely.
     *args : iterable
         Positional arguments to pass to `func` when calling remotely.
+    return_pandas_df : bool, optional
+        Whether to convert the result of `func` to a pandas DataFrame or not.
     **kwargs : dict
         Keyword arguments to pass to `func` when calling remotely.
 
@@ -38,7 +41,10 @@ def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
     distributed.Future or list
         Dask identifier of the result being put into distributed memory.
     """
-    return func(*args, **kwargs)
+    result = func(*args, **kwargs)
+    if return_pandas_df and not isinstance(result, pandas.DataFrame):
+        result = pandas.DataFrame(result)
+    return result
 
 
 class DaskWrapper:
@@ -50,6 +56,7 @@ class DaskWrapper:
         func,
         f_args=None,
         f_kwargs=None,
+        return_pandas_df=None,
         num_returns=1,
         pure=True,
     ):
@@ -64,6 +71,8 @@ class DaskWrapper:
             Positional arguments to pass to ``func``.
         f_kwargs : dict, optional
             Keyword arguments to pass to ``func``.
+        return_pandas_df : bool, optional
+            Whether to convert the result of `func` to a pandas DataFrame or not.
         num_returns : int, default: 1
             The number of returned objects.
         pure : bool, default: True
@@ -82,7 +91,12 @@ class DaskWrapper:
         else:
             # for the case where type(func) is distributed.Future
             remote_task_future = client.submit(
-                _deploy_dask_func, func, *args, pure=pure, **kwargs
+                _deploy_dask_func,
+                func,
+                *args,
+                pure=pure,
+                return_pandas_df=return_pandas_df,
+                **kwargs,
             )
         if num_returns != 1:
             return [

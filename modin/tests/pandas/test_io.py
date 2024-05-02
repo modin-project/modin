@@ -47,7 +47,7 @@ from modin.config import (
     TestReadFromSqlServer,
 )
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.io import from_arrow, from_dask, from_ray, to_pandas
+from modin.pandas.io import from_arrow, from_dask, from_map, from_ray, to_pandas
 from modin.tests.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
@@ -3461,3 +3461,20 @@ def test_from_dask():
 
     result_df = from_dask(dask_df)
     df_equals(result_df, modin_df)
+
+
+@pytest.mark.skipif(
+    condition=Engine.get() not in ("Ray", "Dask", "Unidist"),
+    reason="Modin DataFrame can only be created from map if Modin uses Ray, Dask or MPI engine.",
+)
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+def test_from_map():
+    factor = 3
+    data = [1] * factor + [2] * factor + [3] * factor
+    expected_df = pd.DataFrame(data, index=[0, 1, 2] * factor)
+
+    def map_func(x, factor):
+        return [x] * factor
+
+    result_df = from_map(map_func, [1, 2, 3], 3)
+    df_equals(result_df, expected_df)

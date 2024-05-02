@@ -1109,6 +1109,36 @@ def from_dask(dask_obj) -> DataFrame:
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dask(dask_obj))
 
 
+def from_map(func, iterable, *args, **kwargs) -> DataFrame:
+    """
+    Create a Modin DataFrame from map function applied to an iterable object.
+
+    This method will construct a Modin DataFrame split by row partitions.
+    The number of row partitions matches the number of elements in the iterable object.
+
+    Parameters
+    ----------
+    func : callable
+        Function to map across the iterable object.
+    iterable : Iterable
+        An iterable object.
+    *args : tuple
+        Positional arguments to pass in `func`.
+    **kwargs : dict
+        Keyword arguments to pass in `func`.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.from_map(func, iterable, *args, *kwargs)
+    )
+
+
 def to_pandas(modin_obj: SupportsPublicToPandas) -> DataFrame | Series:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
