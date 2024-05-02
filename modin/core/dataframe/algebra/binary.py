@@ -260,9 +260,9 @@ def try_compute_new_dtypes(
             if any("pyarrow" in str(x) for x in first.dtypes) or any(
                 "pyarrow" in str(x) for x in second.dtypes
             ):
-                backend = "pyarrow"
+                backend = "[pyarrow]"
             dtypes = maybe_build_dtypes_series(
-                first, second, dtype=pandas.api.types.pandas_dtype(f"bool[{backend}]")
+                first, second, dtype=pandas.api.types.pandas_dtype(f"bool{backend}")
             )
         elif infer_dtypes == "common_cast":
             dtypes = maybe_compute_dtypes_common_cast(
