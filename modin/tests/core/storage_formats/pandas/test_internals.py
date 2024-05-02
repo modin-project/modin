@@ -63,7 +63,7 @@ if Engine.get() == "Ray":
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
-    partitional_manager_class = PandasOnRayDataframePartitionManager
+    partition_manager_class = PandasOnRayDataframePartitionManager
     put = RayWrapper.put
     deploy = RayWrapper.deploy
     materialize = RayWrapper.materialize
@@ -85,7 +85,7 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
-    partitional_manager_class = PandasOnDaskDataframePartitionManager
+    partition_manager_class = PandasOnDaskDataframePartitionManager
     deploy = DaskWrapper.deploy
     materialize = DaskWrapper.materialize
 elif Engine.get() == "Unidist":
@@ -100,7 +100,7 @@ elif Engine.get() == "Unidist":
     block_partition_class = PandasOnUnidistDataframePartition
     virtual_column_partition_class = PandasOnUnidistDataframeColumnPartition
     virtual_row_partition_class = PandasOnUnidistDataframeRowPartition
-    partitional_manager_class = PandasOnUnidistDataframePartitionManager
+    partition_manager_class = PandasOnUnidistDataframePartitionManager
     put = UnidistWrapper.put
 elif Engine.get() == "Python":
     from modin.core.execution.python.common import PythonWrapper
@@ -123,7 +123,7 @@ elif Engine.get() == "Python":
     block_partition_class = PandasOnPythonDataframePartition
     virtual_column_partition_class = PandasOnPythonDataframeColumnPartition
     virtual_row_partition_class = PandasOnPythonDataframeRowPartition
-    partitional_manager_class = PandasOnPythonDataframePartitionManager
+    partition_manager_class = PandasOnPythonDataframePartitionManager
 else:
     raise NotImplementedError(
         f"These test suites are not implemented for the '{Engine.get()}' engine"
@@ -2594,12 +2594,59 @@ def test_remote_function():
     )
 
 
+@pytest.mark.parametrize(
+    "partitioning_scheme,expected_map_approach",
+    [
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0] // CpuCount.get()] * CpuCount.get(),
+                "column_widths": [df.shape[1]],
+            },
+            "map_partitions",
+            id="one_column_partition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0] // (CpuCount.get() * 2)]
+                * (CpuCount.get() * 2),
+                "column_widths": [df.shape[1]],
+            },
+            "map_partitions_joined_by_column",
+            id="very_long_column_partition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0] // CpuCount.get()] * CpuCount.get(),
+                "column_widths": [df.shape[1] // CpuCount.get()] * CpuCount.get(),
+            },
+            "map_axis_partitions",
+            id="perfect_partitioning",
+        ),
+    ],
+)
+def test_map_approaches(partitioning_scheme, expected_map_approach):
+    data_size = MinPartitionSize.get() * CpuCount.get()
+    data = {f"col{i}": np.ones(data_size) for i in range(data_size)}
+    df = pandas.DataFrame(data)
+
+    modin_df = construct_modin_df_by_scheme(df, partitioning_scheme(df))
+    partition_mgr_cls = modin_df._query_compiler._modin_frame._partition_mgr_cls
+
+    with mock.patch.object(
+        partition_mgr_cls,
+        expected_map_approach,
+        wraps=getattr(partition_mgr_cls, expected_map_approach),
+    ) as expected_method:
+        try_cast_to_pandas(modin_df.map(lambda x: x * 2))
+        expected_method.assert_called()
+
+
 def test_map_partitions_joined_by_column():
     # Set the config to 'True' inside of the context-manager
     with context(NPartitions=CpuCount.get() * 2):
         ncols = MinPartitionSize.get()
         nrows = MinPartitionSize.get() * CpuCount.get() * 2
-        data = {"col{}".format(i): np.ones(nrows) for i in range(ncols)}
+        data = {f"col{i}": np.ones(nrows) for i in range(ncols)}
         df = pd.DataFrame(data)
         partitions = df._query_compiler._modin_frame._partitions
 
@@ -2612,11 +2659,11 @@ def test_map_partitions_joined_by_column():
 
         # this approach doesn't work if column_splits == 0
         with pytest.raises(ValueError):
-            partitional_manager_class.map_partitions_joined_by_column(
+            partition_manager_class.map_partitions_joined_by_column(
                 partitions, 0, map_func, map_func_args, map_func_kwargs
             )
 
-        result_partitions = partitional_manager_class.map_partitions_joined_by_column(
+        result_partitions = partition_manager_class.map_partitions_joined_by_column(
             partitions,
             column_splits,
             map_func,

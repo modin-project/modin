@@ -781,39 +781,26 @@ class PandasDataframePartitionManager(
             )
         # step cannot be less than 1
         step = max(partitions.shape[0] // column_splits, 1)
-        new_partitions = np.array(
-            [
-                cls.column_partitions(
-                    partitions[i : i + step],
-                )
-                for i in range(
-                    0,
-                    partitions.shape[0],
-                    step,
-                )
-            ]
-        )
         preprocessed_map_func = cls.preprocess_func(map_func)
         kw = {
             "num_splits": step,
         }
-        return np.concatenate(
-            [
-                np.stack(
-                    [
-                        part.apply(
-                            preprocessed_map_func,
-                            *map_func_args if map_func_args is not None else (),
-                            **kw,
-                            **map_func_kwargs if map_func_kwargs is not None else {},
-                        )
-                        for part in row_parts
-                    ],
-                    axis=-1,
+        result = np.empty(partitions.shape, dtype=cls._partition_class)
+        for i in range(
+            0,
+            partitions.shape[0],
+            step,
+        ):
+            joined_column_partitions = cls.column_partitions(partitions[i : i + step])
+            for j in range(partitions.shape[1]):
+                result[i : i + step, j] = joined_column_partitions[j].apply(
+                    preprocessed_map_func,
+                    *map_func_args if map_func_args is not None else (),
+                    **kw,
+                    **map_func_kwargs if map_func_kwargs is not None else {},
                 )
-                for row_parts in new_partitions
-            ]
-        )
+
+        return result
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
