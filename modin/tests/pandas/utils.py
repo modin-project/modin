@@ -662,9 +662,10 @@ def assert_dtypes_equal(df1, df2):
         lambda obj: isinstance(obj, pandas.PeriodDtype),
     )
 
-    for col in dtypes1.keys():
+    # `test_pivot_table_margins` failed due to usage ``pd.NA`` in column name
+    for idx in range(len(dtypes1)):
         for comparator in dtype_comparators:
-            if assert_all_act_same(comparator, dtypes1[col], dtypes2[col]):
+            if assert_all_act_same(comparator, dtypes1.iloc[idx], dtypes2.iloc[idx]):
                 # We met a dtype that both types satisfy, so we can stop iterating
                 # over comparators and compare next dtypes
                 break

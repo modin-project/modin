@@ -634,6 +634,7 @@ def test_pivot(data, index, columns, values, request):
         expected_exception = ValueError(
             "Index contains duplicate entries, cannot reshape"
         )
+    # failed because pandas doesn't preserve dtype backend
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: df.pivot(*args, **kwargs),
