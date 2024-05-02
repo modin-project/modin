@@ -76,6 +76,10 @@ Otherwise, installation of `modin[mpi]` may fail. Refer to
 [Installing with pip](https://unidist.readthedocs.io/en/latest/installation.html#installing-with-pip)
 section of the unidist documentation for more details about installation.
 
+**Note:** Since Modin 0.30.0 we use a reduced set of Ray dependencies: `ray` instead of `ray[default]`.
+This means that the dashboard and cluster launcher are no longer installed by default.
+If you need those, consider installing `ray[default]` along with `modin[ray]`.
+
 Modin automatically detects which engine(s) you have installed and uses that for scheduling computation.
 
 #### From conda-forge
@@ -96,6 +100,10 @@ conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
 conda install -c conda-forge modin-mpi # Install Modin dependencies and MPI through unidist.
 conda install -c conda-forge modin-hdk # Install Modin dependencies and HDK.
 ```
+
+**Note:** Since Modin 0.30.0 we use a reduced set of Ray dependencies: `ray-core` instead of `ray-default`.
+This means that the dashboard and cluster launcher are no longer installed by default.
+If you need those, consider installing `ray-default` along with `modin-ray`.
 
 Refer to
 [Installing with conda](https://unidist.readthedocs.io/en/latest/installation.html#installing-with-conda)
