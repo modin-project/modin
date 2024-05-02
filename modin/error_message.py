@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import warnings
-from typing import NoReturn, Set
+from typing import NoReturn, Optional, Set
 
 from modin.logging import get_logger
 from modin.utils import get_current_execution
@@ -36,7 +36,11 @@ class ErrorMessage(object):
         )
 
     @classmethod
-    def single_warning(cls, message: str) -> None:
+    def single_warning(
+        cls, message: str, category: Optional[type[Warning]] = None
+    ) -> None:
+        # note that there should not be identical messages with different categories since
+        # only the message is used as the hash key.
         message_hash = hash(message)
         logger = get_logger()
         if message_hash in cls.printed_warnings:
@@ -46,7 +50,7 @@ class ErrorMessage(object):
             return
 
         logger.debug(f"Modin Warning: Single Warning: {message} was raised.")
-        warnings.warn(message)
+        warnings.warn(message, category=category)
         cls.printed_warnings.add(message_hash)
 
     @classmethod
