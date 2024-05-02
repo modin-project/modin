@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import warnings
-from typing import NoReturn, Set
+from typing import NoReturn, Set, Union
 
 from modin.logging import get_logger
 from modin.utils import get_current_execution
@@ -37,7 +37,7 @@ class ErrorMessage(object):
 
     @classmethod
     def single_warning(
-        cls, message: str, category: type[Warning] | None = None
+        cls, message: str, category: Union[type[Warning], None] = None
     ) -> None:
         message_hash = hash(message)
         logger = get_logger()
