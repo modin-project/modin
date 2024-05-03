@@ -17,9 +17,11 @@ Module contains class ``BaseQueryCompiler``.
 ``BaseQueryCompiler`` is a parent abstract class for any other query compiler class.
 """
 
+from __future__ import annotations
+
 import abc
 import warnings
-from typing import Hashable, List, Optional
+from typing import Callable, Hashable, List, Optional
 
 import numpy as np
 import pandas
@@ -4279,6 +4281,7 @@ class BaseQueryCompiler(
                     # `Index.get_indexer_for` works much faster with numpy arrays than with python lists,
                     # so although we lose some time here on converting to numpy, `Index.get_indexer_for`
                     # speedup covers the loss that we gain here.
+                    # TODO: pyarrow backend?
                     axis_loc = np.array(axis_loc, dtype=axis_labels.dtype)
                 axis_lookup = axis_labels.get_indexer_for(axis_loc)
                 # `Index.get_indexer_for` sets -1 value for missing labels, we have to verify whether
@@ -4456,7 +4459,7 @@ class BaseQueryCompiler(
     # END Abstract methods for QueryCompiler
 
     @pandas.util.cache_readonly
-    def __constructor__(self):
+    def __constructor__(self) -> Callable[..., BaseQueryCompiler]:
         """
         Get query compiler constructor.
 

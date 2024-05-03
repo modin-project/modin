@@ -18,12 +18,14 @@ Module contains ``PandasQueryCompiler`` class.
 queries for the ``PandasDataframe``.
 """
 
+from __future__ import annotations
+
 import ast
 import hashlib
 import re
 import warnings
 from collections.abc import Iterable
-from typing import Hashable, List
+from typing import TYPE_CHECKING, Hashable, List, Optional
 
 import numpy as np
 import pandas
@@ -37,6 +39,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_list_like,
     is_numeric_dtype,
+    is_timedelta64_dtype,
 )
 from pandas.core.groupby.base import transformation_kernels
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -78,6 +81,9 @@ from .aggregations import CorrCovBuilder
 from .groupby import GroupbyReduceImpl, PivotTableImpl
 from .merge import MergeImpl
 from .utils import get_group_names, merge_partitioning
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
 def _get_axis(axis):
@@ -263,7 +269,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Shape hint for frames known to be a column or a row, otherwise None.
     """
 
-    def __init__(self, modin_frame, shape_hint=None):
+    _modin_frame: PandasDataframe
+    _shape_hint: Optional[str]
+
+    def __init__(self, modin_frame: PandasDataframe, shape_hint: Optional[str] = None):
         self._modin_frame = modin_frame
         self._shape_hint = shape_hint
 
@@ -935,6 +944,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 and any(is_numeric_dtype(t) for t in dtypes)
             ):
                 return "object"
+            # how to take into account backend here?
             return "float64"
 
         return TreeReduce.register(
@@ -1846,39 +1856,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     map = Map.register(pandas.DataFrame.map)
+    # Will it work with pyarrow backend?
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes="bool")
+    # better way to distinguish methods for NumPy API?
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
-        dtypes=np.bool_,
+        dtypes="bool",
     )
     _isinf = Map.register(  # Needed for numpy API
         lambda df, *args, **kwargs: pandas.DataFrame(np.isinf(df, *args, **kwargs)),
-        dtypes=np.bool_,
+        dtypes="bool",
     )
     _isnat = Map.register(  # Needed for numpy API
         lambda df, *args, **kwargs: pandas.DataFrame(np.isnat(df, *args, **kwargs)),
-        dtypes=np.bool_,
+        dtypes="bool",
     )
     _isneginf = Map.register(  # Needed for numpy API
         lambda df, *args, **kwargs: pandas.DataFrame(np.isneginf(df, *args, **kwargs)),
-        dtypes=np.bool_,
+        dtypes="bool",
     )
     _isposinf = Map.register(  # Needed for numpy API
         lambda df, *args, **kwargs: pandas.DataFrame(np.isposinf(df, *args, **kwargs)),
-        dtypes=np.bool_,
+        dtypes="bool",
     )
     _iscomplex = Map.register(  # Needed for numpy API
         lambda df, *args, **kwargs: pandas.DataFrame(np.iscomplex(df, *args, **kwargs)),
-        dtypes=np.bool_,
+        dtypes="bool",
     )
     _isreal = Map.register(  # Needed for numpy API
         lambda df, *args, **kwargs: pandas.DataFrame(np.isreal(df, *args, **kwargs)),
-        dtypes=np.bool_,
+        dtypes="bool",
     )
-    _logical_not = Map.register(np.logical_not, dtypes=np.bool_)  # Needed for numpy API
+    _logical_not = Map.register(np.logical_not, dtypes="bool")  # Needed for numpy API
     _tanh = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.tanh(df, *args, **kwargs))
     )  # Needed for numpy API
@@ -2122,6 +2134,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
+        # Function that can change the backend
         return self.__constructor__(
             self._modin_frame.astype(col_dtypes, errors=errors),
             shape_hint=self._shape_hint,
@@ -2280,6 +2293,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             """Compute covariance or correlation matrix for the passed frame."""
             df = df.to_numpy()
             n_rows = df.shape[0]
+            # Does it work with pyarrow backend?
             df_mask = np.isfinite(df)
 
             result = np.empty((n_rows, n_cols), dtype="float64")
@@ -2604,7 +2618,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = [
                 col
                 for col, dtype in zip(self.columns, self.dtypes)
-                if (is_numeric_dtype(dtype) or lib.is_np_dtype(dtype, "mM"))
+                if (
+                    is_numeric_dtype(dtype)
+                    or is_timedelta64_dtype(dtype)
+                    or is_datetime64_any_dtype(dtype)
+                )
             ]
         if axis == 1:
             query_compiler = self.getitem_column_array(new_columns)
@@ -2799,13 +2817,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __getitem__ methods
     __getitem_bool = Binary.register(
+        # TODO: `is_scalar` don't work with pyarrow scalars
         lambda df, r: df[[r]] if is_scalar(r) else df[r],
         join_type="left",
         labels="drop",
     )
 
     # __setitem__ methods
-    def setitem_bool(self, row_loc, col_loc, item):
+    def setitem_bool(self, row_loc: PandasQueryCompiler, col_loc, item):
         def _set_item(df, row_loc):  # pragma: no cover
             df = df.copy()
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
@@ -2814,18 +2833,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._modin_frame.has_materialized_dtypes and is_scalar(item):
             new_dtypes = self.dtypes.copy()
             old_dtypes = new_dtypes[col_loc]
-
-            if hasattr(item, "dtype"):
-                # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
-                # we would like to get its internal dtype
-                item_type = item.dtype
-            elif hasattr(item, "to_numpy"):
-                # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
-                # we would like to convert it and get its proper internal dtype
-                item_type = item.to_numpy().dtype
-            else:
-                item_type = pandas.api.types.pandas_dtype(type(item))
-
+            item_type = extract_dtype(item)
             if isinstance(old_dtypes, pandas.Series):
                 new_dtypes[col_loc] = [
                     find_common_type([dtype, item_type]) for dtype in old_dtypes.values
@@ -2893,7 +2901,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return self.getitem_column_array(key)
 
-    def getitem_column_array(self, key, numeric=False, ignore_order=False):
+    def getitem_column_array(
+        self, key, numeric=False, ignore_order=False
+    ) -> PandasQueryCompiler:
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
             if ignore_order and is_list_like(key):
@@ -3053,6 +3063,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                     # we have to keep other columns so setting their mask
                     # values with `False`
+                    # TODO: pyarrow backend?
                     mask = pandas.Series(
                         np.zeros(df.shape[1], dtype=bool), index=df.columns
                     )
@@ -3105,7 +3116,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             shape_hint=self._shape_hint,
         )
 
-    def drop(self, index=None, columns=None, errors: str = "raise"):
+    def drop(
+        self, index=None, columns=None, errors: str = "raise"
+    ) -> PandasQueryCompiler:
         # `errors` parameter needs to be part of the function signature because
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
@@ -3152,7 +3165,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             hashed_modin_frame = self._modin_frame.reduce(
                 axis=1,
                 function=_compute_hash,
-                dtypes=pandas.api.types.pandas_dtype("O"),
+                # TODO: pyarrow backend
+                dtypes="object",
             )
         else:
             hashed_modin_frame = self._modin_frame
@@ -3906,7 +3920,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             add_missing_cats=add_missing_cats,
             **groupby_kwargs,
         )
-        result_qc = self.__constructor__(result)
+        result_qc: PandasQueryCompiler = self.__constructor__(result)
 
         if not is_transform and not groupby_kwargs.get("as_index", True):
             return result_qc.reset_index(drop=True)
@@ -4440,14 +4454,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
+            # TODO: pyarrow backend
             new_modin_frame = self._modin_frame.apply_full_axis(
-                0, map_fn, new_index=self.index, dtypes=bool
+                0, map_fn, new_index=self.index, dtypes="bool"
             )
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
-            ).apply_full_axis(0, map_fn, new_index=self.index, dtypes=bool)
+            ).apply_full_axis(0, map_fn, new_index=self.index, dtypes="bool")
             untouched_frame = self.drop(columns=columns)
         # If we mapped over all the data we are done. If not, we need to
         # prepend the `new_modin_frame` with the raw data from the columns that were
@@ -4496,10 +4511,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             pandas.DataFrame
                 Partition data with updated values.
             """
-            partition = partition.copy()
             try:
                 partition.iloc[row_internal_indices, col_internal_indices] = item
             except ValueError:
+                # maybe make a copy only if there is an exception?
+                partition = partition.copy()
                 # `copy` is needed to avoid "ValueError: buffer source array is read-only" for `item`
                 # because the item may be converted to the type that is in the dataframe.
                 # TODO: in the future we will need to convert to the correct type manually according
@@ -4519,7 +4535,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         else:
             broadcasted_item, broadcasted_dtypes = item, pandas.Series(
-                [np.array(item).dtype] * len(col_numeric_index)
+                [extract_dtype(item)] * len(col_numeric_index)
             )
 
         new_dtypes = None
@@ -4572,7 +4588,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def cat_codes(self):
         def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            assert isinstance(ser.dtype, pandas.CategoricalDtype)
+            if not isinstance(ser.dtype, pandas.CategoricalDtype):
+                raise TypeError(
+                    f"Series dtype should be `CategoricalDtype`: actual dtype: {ser.dtype}"
+                )
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
         res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])

@@ -17,6 +17,9 @@ Module contains class PandasDataframe.
 PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
+
+from __future__ import annotations
+
 import datetime
 import re
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
@@ -97,15 +100,18 @@ class PandasDataframe(
     # These properties flag whether or not we are deferring the metadata synchronization
     _deferred_index = False
     _deferred_column = False
+    _index_cache: ModinIndex = None
+    _columns_cache: ModinIndex = None
+    _dtypes: Optional[ModinDtypes] = None
 
     @pandas.util.cache_readonly
-    def __constructor__(self):
+    def __constructor__(self) -> Callable[..., PandasDataframe]:
         """
         Create a new instance of this object.
 
         Returns
         -------
-        PandasDataframe
+        callable
         """
         return type(self)
 
@@ -450,9 +456,6 @@ class PandasDataframe(
         # reset name to None because we use MODIN_UNNAMED_SERIES_LABEL internally
         dtypes.name = None
         return dtypes
-
-    _index_cache = None
-    _columns_cache = None
 
     def set_index_cache(self, index):
         """
@@ -2230,6 +2233,7 @@ class PandasDataframe(
             if isinstance(new_columns, ModinIndex):
                 # Materializing lazy columns in order to build dtype's index
                 new_columns = new_columns.get(return_lengths=False)
+            # TODO: consider backend
             dtypes = pandas.Series(
                 [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
                 index=new_columns,
@@ -2894,7 +2898,7 @@ class PandasDataframe(
         enumerate_partitions : bool, default: False
             Whether pass partition index into applied `func` or not.
             Note that `func` must be able to obtain `partition_idx` kwarg.
-        dtypes : list-like, optional
+        dtypes : list-like or scalar, optional
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
@@ -2948,7 +2952,7 @@ class PandasDataframe(
         new_index=None,
         new_columns=None,
         keep_remaining=False,
-        new_dtypes=None,
+        new_dtypes: Optional[Union[pandas.Series, ModinDtypes]] = None,
     ):
         """
         Apply a function across an entire axis for a subset of the data.
@@ -3017,10 +3021,10 @@ class PandasDataframe(
         col_labels=None,
         new_index=None,
         new_columns=None,
-        new_dtypes=None,
+        new_dtypes: Optional[pandas.Series] = None,
         keep_remaining=False,
         item_to_distribute=no_default,
-    ):
+    ) -> PandasDataframe:
         """
         Apply a function for a subset of the data.
 
@@ -3405,12 +3409,12 @@ class PandasDataframe(
         new_columns : list-like, optional
             Columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
             Whether pass partition index into applied `func` or not.
             Note that `func` must be able to obtain `partition_idx` kwarg.
-        dtypes : list-like, default: None
+        dtypes : list-like or scalar, optional
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
@@ -3486,6 +3490,7 @@ class PandasDataframe(
                 if new_columns is None:
                     kw["dtypes"] = ModinDtypes(
                         DtypesDescriptor(
+                            # TODO: pyarrow backend
                             remaining_dtype=pandas.api.types.pandas_dtype(dtypes)
                         )
                     )
@@ -3494,6 +3499,7 @@ class PandasDataframe(
                         pandas.Series(dtypes, index=new_columns)
                         if is_list_like(dtypes)
                         else pandas.Series(
+                            # TODO: pyarrow backend
                             [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
                             index=new_columns,
                         )

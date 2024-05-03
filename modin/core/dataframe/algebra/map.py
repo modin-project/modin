@@ -13,7 +13,14 @@
 
 """Module houses builder class for Map operator."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from .operator import Operator
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class Map(Operator):
@@ -41,7 +48,7 @@ class Map(Operator):
             Function that takes query compiler and executes map function.
         """
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(query_compiler: PandasQueryCompiler, *args, **kwargs):
             """Execute Map function against passed query compiler."""
             shape_hint = call_kwds.pop("shape_hint", None) or query_compiler._shape_hint
             return query_compiler.__constructor__(

@@ -297,6 +297,7 @@ def broadcast_item(
     try:
         # Cast to numpy drop information about heterogeneous types (cast to common)
         # TODO: we shouldn't do that, maybe there should be the if branch
+        # TODO: what if item comes from pyarrow
         item = np.array(item)
         if dtypes is None:
             dtypes = pandas.Series([item.dtype] * len(col_lookup))

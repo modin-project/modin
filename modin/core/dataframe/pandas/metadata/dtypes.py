@@ -13,6 +13,8 @@
 
 """Module contains class ``ModinDtypes``."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import numpy as np
@@ -62,6 +64,7 @@ class DtypesDescriptor:
         self,
         known_dtypes: Optional[Union[dict[IndexLabel, np.dtype], pandas.Series]] = None,
         cols_with_unknown_dtypes: Optional[list[IndexLabel]] = None,
+        # TODO: what if there is a type of another backend
         remaining_dtype: Optional[np.dtype] = None,
         parent_df: Optional["PandasDataframe"] = None,
         columns_order: Optional[dict[int, IndexLabel]] = None,
@@ -747,9 +750,7 @@ class ModinDtypes:
 
     def __init__(
         self,
-        value: Optional[
-            Union[Callable, pandas.Series, DtypesDescriptor, "ModinDtypes"]
-        ],
+        value: Optional[Union[Callable, pandas.Series, DtypesDescriptor, ModinDtypes]],
     ):
         if callable(value) or isinstance(value, pandas.Series):
             self._value = value
@@ -779,6 +780,7 @@ class ModinDtypes:
         """
         return isinstance(self._value, pandas.Series)
 
+    # TODO: pyarrow backend
     def get_dtypes_set(self) -> set[np.dtype]:
         """
         Get a set of dtypes from the descriptor.
@@ -793,9 +795,7 @@ class ModinDtypes:
             self.get()
         return set(self._value.values)
 
-    def maybe_specify_new_frame_ref(
-        self, new_parent: "PandasDataframe"
-    ) -> "ModinDtypes":
+    def maybe_specify_new_frame_ref(self, new_parent: PandasDataframe) -> ModinDtypes:
         """
         Set a new parent for the stored value if needed.
 
@@ -817,7 +817,7 @@ class ModinDtypes:
             return new_self
         return new_self
 
-    def lazy_get(self, ids: list, numeric_index: bool = False) -> "ModinDtypes":
+    def lazy_get(self, ids: list, numeric_index: bool = False) -> ModinDtypes:
         """
         Get new ``ModinDtypes`` for a subset of columns without triggering any computations.
 
@@ -849,7 +849,7 @@ class ModinDtypes:
         return ModinDtypes(self._value.iloc[ids] if numeric_index else self._value[ids])
 
     @classmethod
-    def concat(cls, values: list, axis: int = 0) -> "ModinDtypes":
+    def concat(cls, values: list, axis: int = 0) -> ModinDtypes:
         """
         Concatenate dtypes.
 
@@ -893,7 +893,7 @@ class ModinDtypes:
             desc = pandas.concat(values)
         return ModinDtypes(desc)
 
-    def set_index(self, new_index: Union[pandas.Index, "ModinIndex"]) -> "ModinDtypes":
+    def set_index(self, new_index: Union[pandas.Index, ModinIndex]) -> ModinDtypes:
         """
         Set new column names for stored dtypes.
 
@@ -997,7 +997,7 @@ class ModinDtypes:
             self.get()
         return self._value.__getattribute__(name)
 
-    def copy(self) -> "ModinDtypes":
+    def copy(self) -> ModinDtypes:
         """
         Copy an object without materializing the internal representation.
 
@@ -1235,13 +1235,22 @@ def extract_dtype(value):
     from modin.pandas.utils import is_scalar
 
     if hasattr(value, "dtype"):
+        # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
+        # we would like to get its internal dtype
         return value.dtype
+    elif hasattr(value, "to_numpy"):
+        # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
+        # we would like to convert it and get its proper internal dtype
+        return value.to_numpy().dtype
     elif hasattr(value, "dtypes"):
         return value.dtypes
     elif is_scalar(value):
         if value is None:
             # previous type was object instead of 'float64'
             return pandas.api.types.pandas_dtype(value)
+        # TODO: backend is not taken into account
+        # pd.api.types.pandas_dtype(pd.ArrowDtype(pa.array([1,2,3]).type))
         return pandas.api.types.pandas_dtype(type(value))
     else:
+        # TODO: new way without numpy?
         return np.array(value).dtype

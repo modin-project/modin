@@ -13,8 +13,10 @@
 
 """Module houses builder class for Binary operator."""
 
+from __future__ import annotations
+
 import warnings
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas
@@ -24,9 +26,12 @@ from modin.error_message import ErrorMessage
 
 from .operator import Operator
 
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+
 
 def maybe_compute_dtypes_common_cast(
-    first,
+    first: PandasQueryCompiler,
     second,
     trigger_computations=False,
     axis=0,
@@ -80,6 +85,7 @@ def maybe_compute_dtypes_common_cast(
         # belong to the intersection, these will be NaN columns in the result
         mismatch_columns = columns_first ^ columns_second
     elif isinstance(second, dict):
+        # TODO: pyarrow backend
         dtypes_second = {
             key: pandas.api.types.pandas_dtype(type(value))
             for key, value in second.items()
@@ -92,6 +98,7 @@ def maybe_compute_dtypes_common_cast(
         mismatch_columns = columns_first.difference(columns_second)
     else:
         if isinstance(second, (list, tuple)):
+            # TODO: pyarrow backend
             second_dtypes_list = (
                 [pandas.api.types.pandas_dtype(type(value)) for value in second]
                 if axis == 1
@@ -100,6 +107,7 @@ def maybe_compute_dtypes_common_cast(
                 else [np.array(second).dtype] * len(dtypes_first)
             )
         elif is_scalar(second) or isinstance(second, np.ndarray):
+            # TODO: pyarrow backend
             try:
                 dtype = getattr(second, "dtype", None) or pandas.api.types.pandas_dtype(
                     type(second)
@@ -125,6 +133,7 @@ def maybe_compute_dtypes_common_cast(
         mismatch_columns = []
 
     # If at least one column doesn't match, the result of the non matching column would be nan.
+    # TODO: pyarrow backend
     nan_dtype = pandas.api.types.pandas_dtype(type(np.nan))
     dtypes = None
     if func is not None:
@@ -168,7 +177,7 @@ def maybe_compute_dtypes_common_cast(
 
 
 def maybe_build_dtypes_series(
-    first, second, dtype, trigger_computations=False
+    first: PandasQueryCompiler, second, dtype, trigger_computations=False
 ) -> Optional[pandas.Series]:
     """
     Build a ``pandas.Series`` describing dtypes of the result of a binary operation.
@@ -217,8 +226,13 @@ def maybe_build_dtypes_series(
 
 
 def try_compute_new_dtypes(
-    first, second, infer_dtypes=None, result_dtype=None, axis=0, func=None
-):
+    first: PandasQueryCompiler,
+    second,
+    infer_dtypes=None,
+    result_dtype=None,
+    axis=0,
+    func=None,
+) -> Optional[pandas.Series]:
     """
     Precompute resulting dtypes of the binary operation if possible.
 
@@ -235,7 +249,7 @@ def try_compute_new_dtypes(
     infer_dtypes : {"common_cast", "try_sample", "bool", None}, default: None
         How dtypes should be infered (see ``Binary.register`` doc for more info).
     result_dtype : np.dtype, optional
-        NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter.
+        NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter. Only NumPy?
     axis : int, default: 0
         Axis to perform the binary operation along.
     func : callable(pandas.DataFrame, pandas.DataFrame) -> pandas.DataFrame, optional
