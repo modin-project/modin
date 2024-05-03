@@ -56,14 +56,12 @@ if Engine.get() == "Ray":
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframePartition,
-        PandasOnRayDataframePartitionManager,
         PandasOnRayDataframeRowPartition,
     )
 
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
-    partition_manager_class = PandasOnRayDataframePartitionManager
     put = RayWrapper.put
     deploy = RayWrapper.deploy
     materialize = RayWrapper.materialize
@@ -72,7 +70,6 @@ elif Engine.get() == "Dask":
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
         PandasOnDaskDataframePartition,
-        PandasOnDaskDataframePartitionManager,
         PandasOnDaskDataframeRowPartition,
     )
 
@@ -85,7 +82,6 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
-    partition_manager_class = PandasOnDaskDataframePartitionManager
     deploy = DaskWrapper.deploy
     materialize = DaskWrapper.materialize
 elif Engine.get() == "Unidist":
@@ -93,21 +89,18 @@ elif Engine.get() == "Unidist":
     from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning import (
         PandasOnUnidistDataframeColumnPartition,
         PandasOnUnidistDataframePartition,
-        PandasOnUnidistDataframePartitionManager,
         PandasOnUnidistDataframeRowPartition,
     )
 
     block_partition_class = PandasOnUnidistDataframePartition
     virtual_column_partition_class = PandasOnUnidistDataframeColumnPartition
     virtual_row_partition_class = PandasOnUnidistDataframeRowPartition
-    partition_manager_class = PandasOnUnidistDataframePartitionManager
     put = UnidistWrapper.put
 elif Engine.get() == "Python":
     from modin.core.execution.python.common import PythonWrapper
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
         PandasOnPythonDataframeColumnPartition,
         PandasOnPythonDataframePartition,
-        PandasOnPythonDataframePartitionManager,
         PandasOnPythonDataframeRowPartition,
     )
 
@@ -123,7 +116,6 @@ elif Engine.get() == "Python":
     block_partition_class = PandasOnPythonDataframePartition
     virtual_column_partition_class = PandasOnPythonDataframeColumnPartition
     virtual_row_partition_class = PandasOnPythonDataframeRowPartition
-    partition_manager_class = PandasOnPythonDataframePartitionManager
 else:
     raise NotImplementedError(
         f"These test suites are not implemented for the '{Engine.get()}' engine"
@@ -2642,13 +2634,13 @@ def test_map_approaches(partitioning_scheme, expected_map_approach):
 
 
 def test_map_partitions_joined_by_column():
-    # Set the config to 'True' inside of the context-manager
     with context(NPartitions=CpuCount.get() * 2):
         ncols = MinPartitionSize.get()
         nrows = MinPartitionSize.get() * CpuCount.get() * 2
         data = {f"col{i}": np.ones(nrows) for i in range(ncols)}
         df = pd.DataFrame(data)
         partitions = df._query_compiler._modin_frame._partitions
+        partition_mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
 
         def map_func(df, first_arg, extra_arg=0):
             return df.map(lambda x: (x * first_arg) + extra_arg)
@@ -2659,11 +2651,11 @@ def test_map_partitions_joined_by_column():
 
         # this approach doesn't work if column_splits == 0
         with pytest.raises(ValueError):
-            partition_manager_class.map_partitions_joined_by_column(
+            partition_mgr_cls.map_partitions_joined_by_column(
                 partitions, 0, map_func, map_func_args, map_func_kwargs
             )
 
-        result_partitions = partition_manager_class.map_partitions_joined_by_column(
+        result_partitions = partition_mgr_cls.map_partitions_joined_by_column(
             partitions,
             column_splits,
             map_func,

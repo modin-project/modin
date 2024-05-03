@@ -785,7 +785,7 @@ class PandasDataframePartitionManager(
         kw = {
             "num_splits": step,
         }
-        result = np.empty(partitions.shape, dtype=cls._partition_class)
+        result = np.empty(partitions.shape, dtype=object)
         for i in range(
             0,
             partitions.shape[0],
