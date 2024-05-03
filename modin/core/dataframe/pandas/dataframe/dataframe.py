@@ -101,11 +101,13 @@ class PandasDataframe(
     _partition_mgr_cls: PandasDataframePartitionManager = None
     _query_compiler_cls = PandasQueryCompiler
     # These properties flag whether or not we are deferring the metadata synchronization
-    _deferred_index = False
-    _deferred_column = False
+    _deferred_index: bool = False
+    _deferred_column: bool = False
+
     _index_cache: ModinIndex = None
     _columns_cache: ModinIndex = None
     _dtypes: Optional[ModinDtypes] = None
+    _pandas_backend: str = None
 
     @pandas.util.cache_readonly
     def __constructor__(self) -> Callable[..., PandasDataframe]:
@@ -126,6 +128,7 @@ class PandasDataframe(
         row_lengths=None,
         column_widths=None,
         dtypes: Optional[Union[pandas.Series, ModinDtypes, Callable]] = None,
+        pandas_backend: Optional[str] = None,
     ):
         self._partitions = partitions
         self.set_index_cache(index)
@@ -133,6 +136,7 @@ class PandasDataframe(
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self.set_dtypes_cache(dtypes)
+        self._pandas_backend = pandas_backend
 
         self._validate_axes_lengths()
         self._filter_empties(compute_metadata=False)
@@ -1668,7 +1672,7 @@ class PandasDataframe(
                     if new_dtypes is None:
                         new_dtypes = self_dtypes.copy()
                     # Update the new dtype series to the proper pandas dtype
-                    # TODO: pyarrow backend?
+                    # TODO: pyarrow backend? We don't need to add an implicit backend for `astype`
                     new_dtype = pandas.api.types.pandas_dtype(dtype)
                     if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
                         # FIXME: https://github.com/dask/distributed/issues/8585
@@ -1698,8 +1702,7 @@ class PandasDataframe(
             # Assume that the dtype is a scalar.
             if not (col_dtypes == self_dtypes).all():
                 new_dtypes = self_dtypes.copy()
-                # TODO: pyarrow backend?
-                new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
+                new_dtype = self.construct_dtype(col_dtypes)
                 if Engine.get() == "Dask" and hasattr(new_dtype, "_is_materialized"):
                     # FIXME: https://github.com/dask/distributed/issues/8585
                     _ = new_dtype._materialize_categories()
@@ -2089,9 +2092,8 @@ class PandasDataframe(
         if dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
-            # TODO: pyarrow backend?
             dtypes = pandas.Series(
-                [pandas.api.types.pandas_dtype(dtypes)] * len(new_axes[1]),
+                [self.construct_dtype(dtypes, self._pandas_backend)] * len(new_axes[1]),
                 index=new_axes[1],
             )
 
@@ -2239,9 +2241,8 @@ class PandasDataframe(
             if isinstance(new_columns, ModinIndex):
                 # Materializing lazy columns in order to build dtype's index
                 new_columns = new_columns.get(return_lengths=False)
-            # TODO: consider backend
             dtypes = pandas.Series(
-                [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
+                [self.construct_dtype(dtypes, self._pandas_backend)] * len(new_columns),
                 index=new_columns,
             )
         return self.__constructor__(
@@ -3382,6 +3383,14 @@ class PandasDataframe(
             new_partitions, index=new_index, columns=new_columns
         )
 
+    def construct_dtype(dtype: str, backend: Optional[str]):
+        if backend is None:
+            return pandas.api.types.pandas_dtype(dtype)
+        elif backend == "pyarrow":
+            return pandas.api.types.pandas_dtype(f"{dtype}[{backend}]")
+        else:
+            raise NotImplementedError
+
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
         self,
@@ -3495,20 +3504,15 @@ class PandasDataframe(
             else:
                 if new_columns is None:
                     assert not is_list_like(dtypes)
-                    # need something like this utility: construct_dtype()
-                    kw["dtypes"] = ModinDtypes(
-                        DtypesDescriptor(
-                            # TODO: pyarrow backend
-                            remaining_dtype=pandas.api.types.pandas_dtype(dtypes)
-                        )
-                    )
+                    dtype = self.construct_dtype(dtypes, self._pandas_backend)
+                    kw["dtypes"] = ModinDtypes(DtypesDescriptor(remaining_dtype=dtype))
                 else:
                     kw["dtypes"] = (
                         pandas.Series(dtypes, index=new_columns)
                         if is_list_like(dtypes)
                         else pandas.Series(
-                            # TODO: pyarrow backend
-                            [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
+                            [self.construct_dtype(dtypes, self._pandas_backend)]
+                            * len(new_columns),
                             index=new_columns,
                         )
                     )
@@ -4486,8 +4490,8 @@ class PandasDataframe(
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_frame, new_lengths, new_widths = cls._partition_mgr_cls.from_pandas(
-            df, True
+        new_frame, new_lengths, new_widths, backend = (
+            cls._partition_mgr_cls.from_pandas(df, True)
         )
         return cls(
             new_frame,
@@ -4496,6 +4500,7 @@ class PandasDataframe(
             new_lengths,
             new_widths,
             dtypes=new_dtypes,
+            backend=backend,
         )
 
     @classmethod
@@ -4513,7 +4518,7 @@ class PandasDataframe(
         PandasDataframe
             New Modin DataFrame.
         """
-        new_frame, new_lengths, new_widths = cls._partition_mgr_cls.from_arrow(
+        new_frame, new_lengths, new_widths, backend = cls._partition_mgr_cls.from_arrow(
             at, return_dims=True
         )
         new_columns = Index.__new__(Index, data=at.column_names, dtype="O")
@@ -4529,6 +4534,7 @@ class PandasDataframe(
             row_lengths=new_lengths,
             column_widths=new_widths,
             dtypes=new_dtypes,
+            backend=backend,
         )
 
     @classmethod
@@ -4708,7 +4714,7 @@ class PandasDataframe(
         )
 
     @classmethod
-    def from_dataframe(cls, df: "ProtocolDataframe") -> PandasDataframe:
+    def from_dataframe(cls, df: ProtocolDataframe) -> PandasDataframe:
         """
         Convert a DataFrame implementing the dataframe exchange protocol to a Core Modin Dataframe.
 

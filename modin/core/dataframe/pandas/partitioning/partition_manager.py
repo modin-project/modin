@@ -928,10 +928,13 @@ class PandasDataframePartitionManager(
         parts = cls.split_pandas_df_into_partitions(
             df, row_chunksize, col_chunksize, update_bar
         )
+        backend = None
+        if any(isinstance(x, pandas.ArrowDtype) for x in df.dtypes):
+            backend = "pyarrow"
         if ProgressBar.get():
             pbar.close()
         if not return_dims:
-            return parts
+            return parts, backend
         else:
             row_lengths = [
                 (
@@ -949,7 +952,7 @@ class PandasDataframePartitionManager(
                 )
                 for i in range(0, len(df.columns), col_chunksize)
             ]
-            return parts, row_lengths, col_widths
+            return parts, row_lengths, col_widths, backend
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
@@ -969,6 +972,7 @@ class PandasDataframePartitionManager(
         np.ndarray or (np.ndarray, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
+        # also return backend
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
