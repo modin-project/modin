@@ -56,6 +56,9 @@ if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
         ProtocolDataframe,
     )
+    from modin.core.dataframe.pandas.partitioning.partition_manager import (
+        PandasDataframePartitionManager,
+    )
     from pandas._typing import npt
 
 from modin.logging import ClassLogger
@@ -95,7 +98,7 @@ class PandasDataframe(
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls = None
+    _partition_mgr_cls: PandasDataframePartitionManager = None
     _query_compiler_cls = PandasQueryCompiler
     # These properties flag whether or not we are deferring the metadata synchronization
     _deferred_index = False
@@ -122,7 +125,7 @@ class PandasDataframe(
         columns=None,
         row_lengths=None,
         column_widths=None,
-        dtypes=None,
+        dtypes: Optional[Union[pandas.Series, ModinDtypes, Callable]] = None,
     ):
         self._partitions = partitions
         self.set_index_cache(index)
@@ -412,13 +415,13 @@ class PandasDataframe(
             return self._dtypes.get_dtypes_set()
         return set(self.dtypes.values)
 
-    def _compute_dtypes(self, columns=None):
+    def _compute_dtypes(self, columns=None) -> pandas.Series:
         """
         Compute the data types via TreeReduce pattern for the specified columns.
 
         Parameters
         ----------
-        columns : list-like, default: None
+        columns : list-like, optional
             Columns to compute dtypes for. If not specified compute dtypes
             for all the columns in the dataframe.
 
@@ -862,7 +865,7 @@ class PandasDataframe(
 
         Parameters
         ----------
-        axis : int, default: None
+        axis : int, optional
             The deferred axis.
             0 for the index, 1 for the columns.
         """
@@ -883,7 +886,7 @@ class PandasDataframe(
 
         Parameters
         ----------
-        axis : int, default: None
+        axis : int, optional
             The axis to apply to. If it's None applies to both axes.
         """
         self._filter_empties(compute_metadata=False)
@@ -987,7 +990,7 @@ class PandasDataframe(
         row_positions: Optional[List[int]] = None,
         col_labels: Optional[List[Hashable]] = None,
         col_positions: Optional[List[int]] = None,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Lazily select columns or rows from given indices.
 
@@ -1143,7 +1146,7 @@ class PandasDataframe(
         self,
         row_positions: Optional[List[int]] = None,
         col_positions: Optional[List[int]] = None,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Lazily select columns or rows from given indices.
 
@@ -1323,10 +1326,10 @@ class PandasDataframe(
 
     def _maybe_reorder_labels(
         self,
-        intermediate: "PandasDataframe",
+        intermediate: PandasDataframe,
         row_positions,
         col_positions,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Call re-order labels on take_2d_labels_or_positional result if necessary.
 
@@ -1390,7 +1393,7 @@ class PandasDataframe(
         )
 
     @lazy_metadata_decorator(apply_axis="rows")
-    def from_labels(self) -> "PandasDataframe":
+    def from_labels(self) -> PandasDataframe:
         """
         Convert the row labels to a column of data, inserted at the first position.
 
@@ -1492,7 +1495,7 @@ class PandasDataframe(
         result.synchronize_labels(axis=0)
         return result
 
-    def to_labels(self, column_list: List[Hashable]) -> "PandasDataframe":
+    def to_labels(self, column_list: List[Hashable]) -> PandasDataframe:
         """
         Move one or more columns into the row labels. Previous labels are dropped.
 
@@ -1665,6 +1668,7 @@ class PandasDataframe(
                     if new_dtypes is None:
                         new_dtypes = self_dtypes.copy()
                     # Update the new dtype series to the proper pandas dtype
+                    # TODO: pyarrow backend?
                     new_dtype = pandas.api.types.pandas_dtype(dtype)
                     if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
                         # FIXME: https://github.com/dask/distributed/issues/8585
@@ -1694,6 +1698,7 @@ class PandasDataframe(
             # Assume that the dtype is a scalar.
             if not (col_dtypes == self_dtypes).all():
                 new_dtypes = self_dtypes.copy()
+                # TODO: pyarrow backend?
                 new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
                 if Engine.get() == "Dask" and hasattr(new_dtype, "_is_materialized"):
                     # FIXME: https://github.com/dask/distributed/issues/8585
@@ -1935,7 +1940,7 @@ class PandasDataframe(
             considered to be the first index in the `indexes` list.
         sort : boolean
             Whether or not to sort the joined index.
-        fill_value : any, default: None
+        fill_value : any, optional
             Value to use for missing values.
 
         Returns
@@ -2084,6 +2089,7 @@ class PandasDataframe(
         if dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
+            # TODO: pyarrow backend?
             dtypes = pandas.Series(
                 [pandas.api.types.pandas_dtype(dtypes)] * len(new_axes[1]),
                 index=new_axes[1],
@@ -2103,7 +2109,7 @@ class PandasDataframe(
         axis: Union[int, Axis],
         function: Callable,
         dtypes: Optional[str] = None,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton. Requires knowledge of the full axis for the reduction.
 
@@ -2141,7 +2147,7 @@ class PandasDataframe(
         map_func: Callable,
         reduce_func: Optional[Callable] = None,
         dtypes: Optional[str] = None,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Apply function that will reduce the data to a pandas Series.
 
@@ -2188,7 +2194,7 @@ class PandasDataframe(
         func_args=None,
         func_kwargs=None,
         lazy=False,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Perform a function that maps across the entire dataset.
 
@@ -2253,7 +2259,7 @@ class PandasDataframe(
         reduce_fn: Callable,
         window_size: int,
         result_schema: Optional[Dict[Hashable, type]] = None,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
 
@@ -2326,7 +2332,7 @@ class PandasDataframe(
             self._column_widths_cache,
         )
 
-    def infer_objects(self) -> "PandasDataframe":
+    def infer_objects(self) -> PandasDataframe:
         """
         Attempt to infer better dtypes for object columns.
 
@@ -2344,7 +2350,7 @@ class PandasDataframe(
         ]
         return self.infer_types(obj_cols)
 
-    def infer_types(self, col_labels: List[str]) -> "PandasDataframe":
+    def infer_types(self, col_labels: List[str]) -> PandasDataframe:
         """
         Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
 
@@ -2378,7 +2384,7 @@ class PandasDataframe(
         condition: Callable,
         other: ModinDataframe,
         join_type: Union[str, JoinType],
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Join this dataframe with the other.
 
@@ -2414,7 +2420,7 @@ class PandasDataframe(
         self,
         new_row_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
         new_col_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Replace the row and column labels with the specified new labels.
 
@@ -2670,7 +2676,7 @@ class PandasDataframe(
         columns: Union[str, List[str]],
         ascending: bool = True,
         **kwargs,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
@@ -2738,7 +2744,7 @@ class PandasDataframe(
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
-    def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
+    def filter(self, axis: Union[Axis, int], condition: Callable) -> PandasDataframe:
         """
         Filter data based on the function provided along an entire axis.
 
@@ -2780,7 +2786,7 @@ class PandasDataframe(
             self.copy_dtypes_cache() if axis == Axis.COL_WISE else None,
         )
 
-    def filter_by_types(self, types: List[Hashable]) -> "PandasDataframe":
+    def filter_by_types(self, types: List[Hashable]) -> PandasDataframe:
         """
         Allow the user to specify a type or set of types by which to filter the columns.
 
@@ -2799,7 +2805,7 @@ class PandasDataframe(
         )
 
     @lazy_metadata_decorator(apply_axis="both")
-    def explode(self, axis: Union[int, Axis], func: Callable) -> "PandasDataframe":
+    def explode(self, axis: Union[int, Axis], func: Callable) -> PandasDataframe:
         """
         Explode list-like entries along an entire axis.
 
@@ -2834,7 +2840,7 @@ class PandasDataframe(
             partitions, new_index, new_columns, row_lengths, column_widths
         )
 
-    def combine(self) -> "PandasDataframe":
+    def combine(self) -> PandasDataframe:
         """
         Create a single partition PandasDataframe from the partitions of the current dataframe.
 
@@ -2893,7 +2899,7 @@ class PandasDataframe(
         new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
             Whether pass partition index into applied `func` or not.
@@ -2963,9 +2969,9 @@ class PandasDataframe(
             The axis to apply over.
         func : callable
             The function to apply.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             The labels to apply over.
-        numeric_indices : list-like, default: None
+        numeric_indices : list-like, optional
             The indices to apply over.
         new_index : list-like, optional
             The index of the result. We may know this in advance,
@@ -3034,12 +3040,12 @@ class PandasDataframe(
             The axis to apply over.
         func : callable
             The function to apply.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             The labels to apply over. Must be given if axis is provided.
-        row_labels : list-like, default: None
+        row_labels : list-like, optional
             The row labels to apply over. Must be provided with
             `col_labels` to apply over both axes.
-        col_labels : list-like, default: None
+        col_labels : list-like, optional
             The column labels to apply over. Must be provided
             with `row_labels` to apply over both axes.
         new_index : list-like, optional
@@ -3166,7 +3172,7 @@ class PandasDataframe(
         labels : {"keep", "replace", "drop"}, default: "keep"
             Whether keep labels from `self` Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        dtypes : "copy", pandas.Series or None, default: None
+        dtypes : "copy", pandas.Series or None, optional
             Dtypes of the result. "copy" to keep old dtypes and None to compute them on demand.
 
         Returns
@@ -3318,9 +3324,9 @@ class PandasDataframe(
             Function to apply.
         other : PandasDataframe
             Partitions of which should be broadcasted.
-        apply_indices : list, default: None
+        apply_indices : list, optional
             List of labels to apply (if `numeric_indices` are not specified).
-        numeric_indices : list, default: None
+        numeric_indices : list, optional
             Numeric indices to apply (if `apply_indices` are not specified).
         keep_remaining : bool, default: False
             Whether drop the data that is not computed over or not.
@@ -3488,6 +3494,8 @@ class PandasDataframe(
                 kw["dtypes"] = dtypes.copy()
             else:
                 if new_columns is None:
+                    assert not is_list_like(dtypes)
+                    # need something like this utility: construct_dtype()
                     kw["dtypes"] = ModinDtypes(
                         DtypesDescriptor(
                             # TODO: pyarrow backend
@@ -3572,7 +3580,7 @@ class PandasDataframe(
             result.synchronize_labels(axis=1)
         return result
 
-    def _check_if_axes_identical(self, other: "PandasDataframe", axis: int = 0) -> bool:
+    def _check_if_axes_identical(self, other: PandasDataframe, axis: int = 0) -> bool:
         """
         Check whether indices/partitioning along the specified `axis` are identical when compared with `other`.
 
@@ -3626,7 +3634,7 @@ class PandasDataframe(
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
-        fill_value : any, default: None
+        fill_value : any, optional
             Value to use for missing values.
 
         Returns
@@ -3748,7 +3756,7 @@ class PandasDataframe(
         join_type="outer",
         copartition_along_columns=True,
         labels="replace",
-        dtypes=None,
+        dtypes: Optional[pandas.Series] = None,
     ):
         """
         Perform an n-opary operation by joining with other Modin DataFrame(s).
@@ -3767,7 +3775,7 @@ class PandasDataframe(
         labels : {"replace", "drop"}, default: "replace"
             Whether use labels from joined DataFrame or drop altogether to make
             them be computed lazily later.
-        dtypes : series, default: None
+        dtypes : pandas.Series, optional
             Dtypes of the resultant dataframe, this argument will be
             received if the resultant dtypes of n-opary operation is precomputed.
 
@@ -3837,10 +3845,10 @@ class PandasDataframe(
     def concat(
         self,
         axis: Union[int, Axis],
-        others: Union["PandasDataframe", List["PandasDataframe"]],
+        others: Union[PandasDataframe, List[PandasDataframe]],
         how,
         sort,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Concatenate `self` with one or more other Modin DataFrames.
 
@@ -3918,6 +3926,7 @@ class PandasDataframe(
                 new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             frames = [self] + others
+            # TODO: should we wrap all `concat` call into "try except" block?
             new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=1)
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
@@ -3961,7 +3970,13 @@ class PandasDataframe(
         )
 
     def _apply_func_to_range_partitioning_broadcast(
-        self, right, func, key, new_index=None, new_columns=None, new_dtypes=None
+        self,
+        right,
+        func,
+        key,
+        new_index=None,
+        new_columns=None,
+        new_dtypes: Optional[Union[ModinDtypes, pandas.Series]] = None,
     ):
         """
         Apply `func` against two dataframes using range-partitioning implementation.
@@ -4033,7 +4048,7 @@ class PandasDataframe(
         self,
         axis: Union[int, Axis],
         internal_by: List[str],
-        external_by: List["PandasDataframe"],
+        external_by: List[PandasDataframe],
         by_positions: List[int],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
@@ -4041,7 +4056,7 @@ class PandasDataframe(
         series_groupby: bool = False,
         add_missing_cats: bool = False,
         **kwargs: dict,
-    ) -> "PandasDataframe":
+    ) -> PandasDataframe:
         """
         Generate groups based on values in the input column(s) and perform the specified operation on each.
 
@@ -4424,7 +4439,7 @@ class PandasDataframe(
         new_columns : pandas.Index, optional
             Columns of the result. We may know this in advance,
             and if not provided it must be computed.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             Indices of `axis ^ 1` to apply groupby over.
 
         Returns
@@ -4534,6 +4549,7 @@ class PandasDataframe(
         import pyarrow
 
         try:
+            # TODO: should we map arrow types to pyarrow-backed pandas types?
             res = arrow_type.to_pandas_dtype()
         # Conversion to pandas is not implemented for some arrow types,
         # perform manual conversion for them:
@@ -4692,7 +4708,7 @@ class PandasDataframe(
         )
 
     @classmethod
-    def from_dataframe(cls, df: "ProtocolDataframe") -> "PandasDataframe":
+    def from_dataframe(cls, df: "ProtocolDataframe") -> PandasDataframe:
         """
         Convert a DataFrame implementing the dataframe exchange protocol to a Core Modin Dataframe.
 

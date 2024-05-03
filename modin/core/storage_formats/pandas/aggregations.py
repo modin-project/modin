@@ -65,6 +65,7 @@ class CorrCovBuilder:
                     qc._modin_frame.copy_columns_cache(),
                 )
                 new_dtypes = pandas.Series(
+                    # TODO: pyarrow backend?
                     np.repeat(pandas.api.types.pandas_dtype("float"), len(new_columns)),
                     index=new_columns,
                 )
@@ -74,6 +75,7 @@ class CorrCovBuilder:
                 new_columns = old_dtypes[old_dtypes.map(is_numeric_dtype)].index
                 new_index = new_columns.copy()
                 new_dtypes = pandas.Series(
+                    # TODO: pyarrow backend?
                     np.repeat(pandas.api.types.pandas_dtype("float"), len(new_columns)),
                     index=new_columns,
                 )

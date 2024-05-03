@@ -1627,6 +1627,7 @@ class DataFrame(BasePandasDataset):
             return Series(
                 [np.nan] * len(new_index),
                 index=new_index,
+                # TODO: pyarrow backend?
                 dtype=pandas.api.types.pandas_dtype("object"),
             )
 
@@ -2152,6 +2153,7 @@ class DataFrame(BasePandasDataset):
             return Series(
                 [np.nan] * len(new_index),
                 index=new_index,
+                # TODO: pyarrow backend?
                 dtype=pandas.api.types.pandas_dtype("object"),
             )
 
@@ -3061,6 +3063,7 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
+                # TODO: pyarrow backend?
                 dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
                 and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes
@@ -3097,6 +3100,7 @@ class DataFrame(BasePandasDataset):
             not axis
             and numeric_only is False
             and any(
+                # TODO: pyarrow backend?
                 dtype == pandas.api.types.pandas_dtype("datetime64[ns]")
                 for dtype in self.dtypes
             )
@@ -3117,6 +3121,7 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
+                # TODO: pyarrow backend?
                 dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
                 and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes

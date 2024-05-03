@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import numpy as np
 import pandas
-from pandas._typing import IndexLabel
+from pandas._typing import DtypeObj, IndexLabel
 from pandas.core.dtypes.cast import find_common_type
 
 if TYPE_CHECKING:
@@ -35,13 +35,13 @@ class DtypesDescriptor:
 
     Parameters
     ----------
-    known_dtypes : dict[IndexLabel, np.dtype] or pandas.Series, optional
+    known_dtypes : dict[IndexLabel, DtypeObj] or pandas.Series, optional
         Columns that we know dtypes for.
     cols_with_unknown_dtypes : list[IndexLabel], optional
         Column names that have unknown dtypes. If specified together with `remaining_dtype`, must describe all
         columns with unknown dtypes, otherwise, the missing columns will be assigned to `remaining_dtype`.
         If `cols_with_unknown_dtypes` is incomplete, you must specify `know_all_names=False`.
-    remaining_dtype : np.dtype, optional
+    remaining_dtype : DtypeObj, optional
         Dtype for columns that are not present neither in `known_dtypes` nor in `cols_with_unknown_dtypes`.
         This parameter is intended to describe columns that we known dtypes for, but don't know their
         names yet. Note, that this parameter DOESN'T describe dtypes for columns from `cols_with_unknown_dtypes`.
@@ -62,11 +62,10 @@ class DtypesDescriptor:
 
     def __init__(
         self,
-        known_dtypes: Optional[Union[dict[IndexLabel, np.dtype], pandas.Series]] = None,
+        known_dtypes: Optional[Union[dict[IndexLabel, DtypeObj], pandas.Series]] = None,
         cols_with_unknown_dtypes: Optional[list[IndexLabel]] = None,
-        # TODO: what if there is a type of another backend
-        remaining_dtype: Optional[np.dtype] = None,
-        parent_df: Optional["PandasDataframe"] = None,
+        remaining_dtype: Optional[DtypeObj] = None,
+        parent_df: Optional[PandasDataframe] = None,
         columns_order: Optional[dict[int, IndexLabel]] = None,
         know_all_names: bool = True,
         _schema_is_known: Optional[bool] = None,
@@ -76,7 +75,7 @@ class DtypesDescriptor:
                 "It's not allowed to pass 'remaining_dtype' and 'know_all_names=False' at the same time."
             )
         # columns with known dtypes
-        self._known_dtypes: dict[IndexLabel, np.dtype] = (
+        self._known_dtypes: dict[IndexLabel, DtypeObj] = (
             {} if known_dtypes is None else dict(known_dtypes)
         )
         if known_dtypes is not None and len(self._known_dtypes) != len(known_dtypes):
@@ -109,7 +108,7 @@ class DtypesDescriptor:
 
         self._know_all_names: bool = know_all_names
         # a common dtype for columns that are not present in 'known_dtypes' nor in 'cols_with_unknown_dtypes'
-        self._remaining_dtype: Optional[np.dtype] = remaining_dtype
+        self._remaining_dtype: Optional[DtypeObj] = remaining_dtype
         self._parent_df: Optional["PandasDataframe"] = parent_df
         if columns_order is None:
             self._columns_order: Optional[dict[int, IndexLabel]] = None
@@ -135,7 +134,7 @@ class DtypesDescriptor:
                 )
             self._columns_order: Optional[dict[int, IndexLabel]] = columns_order
 
-    def update_parent(self, new_parent: "PandasDataframe"):
+    def update_parent(self, new_parent: PandasDataframe):
         """
         Set new parent dataframe.
 
@@ -205,7 +204,7 @@ class DtypesDescriptor:
 
     def lazy_get(
         self, ids: list[Union[IndexLabel, int]], numeric_index: bool = False
-    ) -> "DtypesDescriptor":
+    ) -> DtypesDescriptor:
         """
         Get dtypes descriptor for a subset of columns without triggering any computations.
 
@@ -258,7 +257,7 @@ class DtypesDescriptor:
             columns_order=columns_order,
         )
 
-    def copy(self) -> "DtypesDescriptor":
+    def copy(self) -> DtypesDescriptor:
         """
         Get a copy of this descriptor.
 
@@ -280,9 +279,7 @@ class DtypesDescriptor:
             _schema_is_known=self._schema_is_known,
         )
 
-    def set_index(
-        self, new_index: Union[pandas.Index, "ModinIndex"]
-    ) -> "DtypesDescriptor":
+    def set_index(self, new_index: Union[pandas.Index, ModinIndex]) -> DtypesDescriptor:
         """
         Set new column names for this descriptor.
 
@@ -327,7 +324,7 @@ class DtypesDescriptor:
         }
         return new_self
 
-    def equals(self, other: "DtypesDescriptor") -> bool:
+    def equals(self, other: DtypesDescriptor) -> bool:
         """
         Compare two descriptors for equality.
 
@@ -444,25 +441,25 @@ class DtypesDescriptor:
         self.materialize()
         return pandas.Series(self._known_dtypes)
 
-    def get_dtypes_set(self) -> set[np.dtype]:
+    def get_dtypes_set(self) -> set[DtypeObj]:
         """
         Get a set of dtypes from the descriptor.
 
         Returns
         -------
-        set[np.dtype]
+        set[DtypeObj]
         """
         if len(self._cols_with_unknown_dtypes) > 0 or not self._know_all_names:
             self._materialize_cols_with_unknown_dtypes()
-        known_dtypes: set[np.dtype] = set(self._known_dtypes.values())
+        known_dtypes: set[DtypeObj] = set(self._known_dtypes.values())
         if self._remaining_dtype is not None:
             known_dtypes.add(self._remaining_dtype)
         return known_dtypes
 
     @classmethod
     def _merge_dtypes(
-        cls, values: list[Union["DtypesDescriptor", pandas.Series, None]]
-    ) -> "DtypesDescriptor":
+        cls, values: list[Union[DtypesDescriptor, pandas.Series, None]]
+    ) -> DtypesDescriptor:
         """
         Union columns described by ``values`` and compute common dtypes for them.
 
@@ -555,8 +552,8 @@ class DtypesDescriptor:
 
     @classmethod
     def concat(
-        cls, values: list[Union["DtypesDescriptor", pandas.Series, None]], axis: int = 0
-    ) -> "DtypesDescriptor":
+        cls, values: list[Union[DtypesDescriptor, pandas.Series, None]], axis: int = 0
+    ) -> DtypesDescriptor:
         """
         Concatenate dtypes descriptors into a single descriptor.
 
@@ -780,14 +777,13 @@ class ModinDtypes:
         """
         return isinstance(self._value, pandas.Series)
 
-    # TODO: pyarrow backend
-    def get_dtypes_set(self) -> set[np.dtype]:
+    def get_dtypes_set(self) -> set[DtypeObj]:
         """
         Get a set of dtypes from the descriptor.
 
         Returns
         -------
-        set[np.dtype]
+        set[DtypeObj]
         """
         if isinstance(self._value, DtypesDescriptor):
             return self._value.get_dtypes_set()
@@ -1201,7 +1197,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
 
 def get_categories_dtype(
     cdt: Union[LazyProxyCategoricalDtype, pandas.CategoricalDtype]
-):
+) -> DtypeObj:
     """
     Get the categories dtype.
 
@@ -1220,7 +1216,7 @@ def get_categories_dtype(
     )
 
 
-def extract_dtype(value):
+def extract_dtype(value) -> Union[DtypeObj, pandas.Series]:
     """
     Extract dtype(s) from the passed `value`.
 
@@ -1230,7 +1226,7 @@ def extract_dtype(value):
 
     Returns
     -------
-    numpy.dtype or pandas.Series of numpy.dtypes
+    DtypeObj or pandas.Series of DtypeObj
     """
     from modin.pandas.utils import is_scalar
 
