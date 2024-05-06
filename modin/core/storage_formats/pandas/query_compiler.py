@@ -1858,7 +1858,29 @@ class PandasQueryCompiler(BaseQueryCompiler):
     map = Map.register(pandas.DataFrame.map)
     # Will it work with pyarrow backend?
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+        dtype_backend: str = "numpy_nullable",
+    ):
+        result = Fold.register(pandas.DataFrame.convert_dtypes)(
+            self,
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+            convert_floating=convert_floating,
+            dtype_backend=dtype_backend,
+        )
+        if dtype_backend == "pyarrow":
+            result._modin_frame._pandas_backend = "pyarrow"
+        return result
+
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes="bool")
     # better way to distinguish methods for NumPy API?

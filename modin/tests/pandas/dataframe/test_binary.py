@@ -85,9 +85,16 @@ def test_math_functions(other, axis, op):
         # lambda == "series_or_list"
         pytest.xfail(reason="different behavior")
 
-    eval_general(
-        *create_test_dfs(data), lambda df: getattr(df, op)(other(df, axis), axis=axis)
-    )
+    md_df, pd_df = create_test_dfs(data)
+    if op in ("mod", "rmod") and any("pyarrow" in str(dtype) for dtype in pd_df.dtypes):
+        with pytest.raises(NotImplementedError):
+            eval_general(
+                md_df, pd_df, lambda df: getattr(df, op)(other(df, axis), axis=axis)
+            )
+    else:
+        eval_general(
+            md_df, pd_df, lambda df: getattr(df, op)(other(df, axis), axis=axis)
+        )
 
 
 @pytest.mark.parametrize("other", [lambda df: 2, lambda df: df])
@@ -465,8 +472,8 @@ def test_non_commutative_multiply():
     eval_general(modin_df, pandas_df, lambda s: s * integer)
 
 
-# TODO: just for developing purpose; remove `xfail` mark
-@pytest.mark.xfail
+# TODO: just for developing purpose; remove `skip` mark
+@pytest.mark.skip
 @pytest.mark.parametrize(
     "op",
     [

@@ -13,14 +13,21 @@
 
 """Module houses builder class for Fold operator."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable
+
 from .operator import Operator
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class Fold(Operator):
     """Builder class for Fold functions."""
 
     @classmethod
-    def register(cls, fold_function):
+    def register(cls, fold_function) -> Callable[..., PandasQueryCompiler]:
         """
         Build Fold operator that will be performed across rows/columns.
 
@@ -35,7 +42,9 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
-        def caller(query_compiler, fold_axis=None, *args, **kwargs):
+        def caller(
+            query_compiler: PandasQueryCompiler, fold_axis=None, *args, **kwargs
+        ) -> PandasQueryCompiler:
             """
             Execute Fold function against passed query compiler.
 

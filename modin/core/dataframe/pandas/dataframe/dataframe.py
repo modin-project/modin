@@ -881,7 +881,7 @@ class PandasDataframe(
         else:
             self._deferred_column = True
 
-    def _propagate_index_objs(self, axis=None):
+    def _propagate_index_objs(self, axis=None) -> None:
         """
         Synchronize labels by applying the index object for specific `axis` to the `self._partitions` lazily.
 
@@ -1320,6 +1320,7 @@ class PandasDataframe(
             new_row_lengths,
             new_col_widths,
             new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
         return self._maybe_reorder_labels(
@@ -1494,6 +1495,7 @@ class PandasDataframe(
             row_lengths=self._row_lengths_cache,
             column_widths=new_column_widths,
             dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
         # Set flag for propagating deferred row labels across dataframe partitions
         result.synchronize_labels(axis=0)
@@ -1620,7 +1622,13 @@ class PandasDataframe(
             col_idx = self.copy_columns_cache(copy_lengths=True)
             new_widths = self._column_widths_cache
         return self.__constructor__(
-            ordered_cols, row_idx, col_idx, new_lengths, new_widths, new_dtypes
+            ordered_cols,
+            row_idx,
+            col_idx,
+            new_lengths,
+            new_widths,
+            new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis=None)
@@ -1640,6 +1648,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             self.copy_dtypes_cache(),
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -1742,6 +1751,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def numeric_columns(self, include_bool=True):
@@ -2102,6 +2112,7 @@ class PandasDataframe(
             *new_axes,
             *new_axes_lengths,
             dtypes,
+            pandas_backend=self._pandas_backend,
         )
         return result
 
@@ -2287,6 +2298,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             dtypes=dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def window(
@@ -2366,6 +2378,7 @@ class PandasDataframe(
             self.copy_columns_cache(copy_lengths=True),
             self._row_lengths_cache,
             self._column_widths_cache,
+            pandas_backend=self._pandas_backend,
         )
 
     def infer_objects(self) -> PandasDataframe:
@@ -2412,6 +2425,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def join(
@@ -2517,6 +2531,7 @@ class PandasDataframe(
                 self._row_lengths_cache,
                 [len(self.columns)] if self.has_materialized_columns else None,
                 self.copy_dtypes_cache(),
+                pandas_backend=self._pandas_backend,
             )
         else:
             modin_frame = self
@@ -2820,6 +2835,7 @@ class PandasDataframe(
             *new_axes,
             *new_lengths,
             self.copy_dtypes_cache() if axis == Axis.COL_WISE else None,
+            pandas_backend=self._pandas_backend,
         )
 
     def filter_by_types(self, types: List[Hashable]) -> PandasDataframe:
@@ -2873,7 +2889,12 @@ class PandasDataframe(
                 1, partitions
             )
         return self.__constructor__(
-            partitions, new_index, new_columns, row_lengths, column_widths
+            partitions,
+            new_index,
+            new_columns,
+            row_lengths,
+            column_widths,
+            pandas_backend=self._pandas_backend,
         )
 
     def combine(self) -> PandasDataframe:
@@ -2901,6 +2922,7 @@ class PandasDataframe(
                 else None
             ),
             dtypes=self.copy_dtypes_cache(),
+            pandas_backend=self._pandas_backend,
         )
         result.synchronize_labels()
         return result
@@ -3050,7 +3072,13 @@ class PandasDataframe(
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
         return self.__constructor__(
-            new_partitions, new_index, new_columns, None, None, dtypes=new_dtypes
+            new_partitions,
+            new_index,
+            new_columns,
+            None,
+            None,
+            dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3145,6 +3173,7 @@ class PandasDataframe(
                 lengths_objs[0],
                 lengths_objs[1],
                 new_dtypes,
+                pandas_backend=self._pandas_backend,
             )
         else:
             # We are applying over both axes here, so make sure we have all the right
@@ -3172,6 +3201,7 @@ class PandasDataframe(
                 self._row_lengths_cache,
                 self._column_widths_cache,
                 new_dtypes,
+                pandas_backend=self._pandas_backend,
             )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3277,6 +3307,7 @@ class PandasDataframe(
             new_row_lengths,
             new_column_widths,
             dtypes=dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def _prepare_frame_to_broadcast(self, axis, indices, broadcast_all):
@@ -3415,7 +3446,10 @@ class PandasDataframe(
             keep_remaining,
         )
         return self.__constructor__(
-            new_partitions, index=new_index, columns=new_columns
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            pandas_backend=self._pandas_backend,
         )
 
     def construct_dtype(self, dtype: str, backend: Optional[str]):
@@ -3611,7 +3645,11 @@ class PandasDataframe(
                     kw["column_widths"] = self._column_widths_cache
 
         result = self.__constructor__(
-            new_partitions, index=new_index, columns=new_columns, **kw
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            **kw,
+            pandas_backend=self._pandas_backend,
         )
         if sync_labels and new_index is not None:
             result.synchronize_labels(axis=0)
@@ -3833,6 +3871,7 @@ class PandasDataframe(
                 self.copy_columns_cache(copy_lengths=True),
                 row_lengths,
                 self._column_widths_cache,
+                pandas_backend=self._pandas_backend,
             )
             new_right_frames = [
                 self.__constructor__(
@@ -3841,6 +3880,7 @@ class PandasDataframe(
                     right_frame.copy_columns_cache(copy_lengths=True),
                     row_lengths,
                     right_frame._column_widths_cache,
+                    pandas_backend=self._pandas_backend,
                 )
                 for right_parts, right_frame in zip(list_of_right_parts, right_frames)
             ]
@@ -3878,6 +3918,7 @@ class PandasDataframe(
             row_lengths,
             column_widths,
             dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -4005,7 +4046,13 @@ class PandasDataframe(
                         new_widths = None
 
         return self.__constructor__(
-            new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
+            new_partitions,
+            new_index,
+            new_columns,
+            new_lengths,
+            new_widths,
+            new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def _apply_func_to_range_partitioning_broadcast(
@@ -4080,6 +4127,7 @@ class PandasDataframe(
             index=new_index,
             columns=new_columns,
             dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -4428,6 +4476,7 @@ class PandasDataframe(
                 new_partitions,
                 index=result.copy_index_cache(),
                 row_lengths=result._row_lengths_cache,
+                pandas_backend=self._pandas_backend,
             )
 
         if (
@@ -4504,7 +4553,10 @@ class PandasDataframe(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
         return self.__constructor__(
-            new_partitions, index=new_index, columns=new_columns
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            pandas_backend=self._pandas_backend,
         )
 
     @classmethod
@@ -4689,6 +4741,7 @@ class PandasDataframe(
             self._column_widths_cache,
             self._row_lengths_cache,
             dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -4876,6 +4929,7 @@ class PandasDataframe(
                         columns,
                         row_lengths,
                         column_widths,
+                        pandas_backend=self._pandas_backend,
                     )
                     for part in list_of_right_parts
                 )
@@ -4947,4 +5001,5 @@ class PandasDataframe(
             index=self.index,
             row_lengths=lengths,
             column_widths=[1],
+            pandas_backend=self._pandas_backend,
         )
