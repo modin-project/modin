@@ -1622,6 +1622,8 @@ class DataFrame(BasePandasDataset):
             skipna is not False
             and numeric_only is False
             and min_count > len(axis_to_apply)
+            # Type inference is not so simple for pyarrow
+            and self._query_compiler.get_backend() == "default"
         ):
             new_index = self.columns if not axis else self.index
             # >>> pd.DataFrame([1,2,3,4], dtype="int64[pyarrow]").prod(min_count=10)
@@ -1630,7 +1632,6 @@ class DataFrame(BasePandasDataset):
             return Series(
                 [np.nan] * len(new_index),
                 index=new_index,
-                # TODO: pyarrow backend?
                 dtype=pandas.api.types.pandas_dtype("float64"),
             )
 
@@ -2151,12 +2152,13 @@ class DataFrame(BasePandasDataset):
             skipna is not False
             and numeric_only is False
             and min_count > len(axis_to_apply)
+            # Type inference is not so simple for pyarrow
+            and self._query_compiler.get_backend() == "default"
         ):
             new_index = self.columns if not axis else self.index
             return Series(
                 [np.nan] * len(new_index),
                 index=new_index,
-                # TODO: pyarrow backend?
                 dtype=pandas.api.types.pandas_dtype("float64"),
             )
 

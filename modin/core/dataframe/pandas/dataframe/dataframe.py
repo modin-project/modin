@@ -3418,7 +3418,7 @@ class PandasDataframe(
             new_partitions, index=new_index, columns=new_columns
         )
 
-    def construct_dtype(dtype: str, backend: Optional[str]):
+    def construct_dtype(self, dtype: str, backend: Optional[str]):
         if backend is None:
             return pandas.api.types.pandas_dtype(dtype)
         elif backend == "pyarrow":

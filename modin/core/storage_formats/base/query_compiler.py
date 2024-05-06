@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import abc
 import warnings
-from typing import Callable, Hashable, List, Optional
+from typing import TYPE_CHECKING, Callable, Hashable, List, Optional
 
 import numpy as np
 import pandas
@@ -51,6 +51,10 @@ from modin.logging.config import LogLevel
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 
 from . import doc_utils
+
+if TYPE_CHECKING:
+    # TODO: should be ModinDataframe
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
 def _get_axis(axis):
@@ -125,6 +129,8 @@ class BaseQueryCompiler(
     See the Abstract Methods and Fields section immediately below this
     for a list of requirements for subclassing this object.
     """
+
+    _modin_frame: PandasDataframe
 
     def __wrap_in_qc(self, obj):
         """
@@ -6746,6 +6752,12 @@ class BaseQueryCompiler(
             for case_tuple in caselist
         ]
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
+
+    def construct_dtype(self, dtype: str, backend: Optional[str]):
+        return self._modin_frame.construct_dtype(dtype, backend)
+
+    def get_backend(self) -> str:
+        return self._modin_frame._pandas_backend
 
     def repartition(self, axis=None):
         """
