@@ -1578,7 +1578,7 @@ class Series(BasePandasDataset):
         if min_count > len(new_index):
             return np.nan
 
-        data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
+        data = self._validate_dtypes_prod_mean(axis, numeric_only, ignore_axis=True)
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
@@ -1976,9 +1976,7 @@ class Series(BasePandasDataset):
         if min_count > len(new_index):
             return np.nan
 
-        data = self._validate_dtypes_sum_prod_mean(
-            axis, numeric_only, ignore_axis=False
-        )
+        data = self._validate_dtypes_prod_mean(axis, numeric_only, ignore_axis=False)
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
@@ -2410,11 +2408,11 @@ class Series(BasePandasDataset):
         """
         return query_compiler.to_pandas().squeeze()
 
-    def _validate_dtypes_sum_prod_mean(
+    def _validate_dtypes_prod_mean(
         self, axis, numeric_only, ignore_axis=False
     ) -> Series:
         """
-        Validate data dtype for `sum`, `prod` and `mean` methods.
+        Validate data dtype for `prod` and `mean` methods.
 
         Parameters
         ----------
