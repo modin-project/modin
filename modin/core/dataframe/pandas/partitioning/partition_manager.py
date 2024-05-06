@@ -29,6 +29,7 @@ from pandas._libs.lib import no_default
 
 from modin.config import (
     BenchmarkMode,
+    CpuCount,
     Engine,
     MinPartitionSize,
     NPartitions,
@@ -621,20 +622,53 @@ class PandasDataframePartitionManager(
         NumPy array
             An array of partitions
         """
-        preprocessed_map_func = cls.preprocess_func(map_func)
-        return np.array(
-            [
+        if np.prod(partitions.shape) <= 1.5 * CpuCount.get():
+            # block-wise map
+            preprocessed_map_func = cls.preprocess_func(map_func)
+            new_partitions = np.array(
                 [
-                    part.apply(
-                        preprocessed_map_func,
-                        *func_args if func_args is not None else (),
-                        **func_kwargs if func_kwargs is not None else {},
-                    )
-                    for part in row_of_parts
+                    [
+                        part.apply(
+                            preprocessed_map_func,
+                            *func_args if func_args is not None else (),
+                            **func_kwargs if func_kwargs is not None else {},
+                        )
+                        for part in row_of_parts
+                    ]
+                    for row_of_parts in partitions
                 ]
-                for row_of_parts in partitions
-            ]
-        )
+            )
+        else:
+            # axis-wise map
+            # we choose an axis for a combination of partitions
+            # whose size is closer to the number of CPUs
+            if abs(partitions.shape[0] - CpuCount.get()) < abs(
+                partitions.shape[1] - CpuCount.get()
+            ):
+                axis = 1
+            else:
+                axis = 0
+
+            column_splits = CpuCount.get() // partitions.shape[1]
+
+            if axis == 0 and column_splits > 1:
+                # splitting by parts of columnar partitions
+                new_partitions = cls.map_partitions_joined_by_column(
+                    partitions, column_splits, map_func, func_args, func_kwargs
+                )
+            else:
+                # splitting by full axis partitions
+                new_partitions = cls.map_axis_partitions(
+                    axis,
+                    partitions,
+                    lambda df: map_func(
+                        df,
+                        *(func_args if func_args is not None else ()),
+                        **(func_kwargs if func_kwargs is not None else {}),
+                    ),
+                    keep_partitioning=True,
+                )
+        return new_partitions
 
     @classmethod
     @wait_computations_if_benchmark_mode
