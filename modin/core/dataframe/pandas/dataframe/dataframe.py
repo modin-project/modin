@@ -1702,7 +1702,7 @@ class PandasDataframe(
             # Assume that the dtype is a scalar.
             if not (col_dtypes == self_dtypes).all():
                 new_dtypes = self_dtypes.copy()
-                new_dtype = self.construct_dtype(col_dtypes)
+                new_dtype = self.construct_dtype(col_dtypes, self._pandas_backend)
                 if Engine.get() == "Dask" and hasattr(new_dtype, "_is_materialized"):
                     # FIXME: https://github.com/dask/distributed/issues/8585
                     _ = new_dtype._materialize_categories()
@@ -4525,7 +4525,7 @@ class PandasDataframe(
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_frame, new_lengths, new_widths, backend = (
+        new_frame, new_lengths, new_widths, pandas_backend = (
             cls._partition_mgr_cls.from_pandas(df, True)
         )
         return cls(
@@ -4535,7 +4535,7 @@ class PandasDataframe(
             new_lengths,
             new_widths,
             dtypes=new_dtypes,
-            backend=backend,
+            pandas_backend=pandas_backend,
         )
 
     @classmethod
@@ -4553,8 +4553,8 @@ class PandasDataframe(
         PandasDataframe
             New Modin DataFrame.
         """
-        new_frame, new_lengths, new_widths, backend = cls._partition_mgr_cls.from_arrow(
-            at, return_dims=True
+        new_frame, new_lengths, new_widths, pandas_backend = (
+            cls._partition_mgr_cls.from_arrow(at, return_dims=True)
         )
         new_columns = Index.__new__(Index, data=at.column_names, dtype="O")
         new_index = Index.__new__(RangeIndex, data=range(at.num_rows))
@@ -4569,7 +4569,7 @@ class PandasDataframe(
             row_lengths=new_lengths,
             column_widths=new_widths,
             dtypes=new_dtypes,
-            backend=backend,
+            pandas_backend=pandas_backend,
         )
 
     @classmethod
