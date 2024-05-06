@@ -20,7 +20,14 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, MinPartitionSize, NPartitions, RangePartitioning
+from modin.config import (
+    CpuCount,
+    Engine,
+    MinPartitionSize,
+    NPartitions,
+    RangePartitioning,
+    context,
+)
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
@@ -2612,3 +2619,88 @@ def test_remote_function():
         + materialize(deploy(get_capturing_func(2)))
         == 3
     )
+
+
+@pytest.mark.parametrize(
+    "partitioning_scheme,expected_map_approach",
+    [
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0] // CpuCount.get()] * CpuCount.get(),
+                "column_widths": [df.shape[1]],
+            },
+            "map_partitions",
+            id="one_column_partition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0] // (CpuCount.get() * 2)]
+                * (CpuCount.get() * 2),
+                "column_widths": [df.shape[1]],
+            },
+            "map_partitions_joined_by_column",
+            id="very_long_column_partition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0] // CpuCount.get()] * CpuCount.get(),
+                "column_widths": [df.shape[1] // CpuCount.get()] * CpuCount.get(),
+            },
+            "map_axis_partitions",
+            id="perfect_partitioning",
+        ),
+    ],
+)
+def test_map_approaches(partitioning_scheme, expected_map_approach):
+    data_size = MinPartitionSize.get() * CpuCount.get()
+    data = {f"col{i}": np.ones(data_size) for i in range(data_size)}
+    df = pandas.DataFrame(data)
+
+    modin_df = construct_modin_df_by_scheme(df, partitioning_scheme(df))
+    partition_mgr_cls = modin_df._query_compiler._modin_frame._partition_mgr_cls
+
+    with mock.patch.object(
+        partition_mgr_cls,
+        expected_map_approach,
+        wraps=getattr(partition_mgr_cls, expected_map_approach),
+    ) as expected_method:
+        try_cast_to_pandas(modin_df.map(lambda x: x * 2))
+        expected_method.assert_called()
+
+
+def test_map_partitions_joined_by_column():
+    with context(NPartitions=CpuCount.get() * 2):
+        ncols = MinPartitionSize.get()
+        nrows = MinPartitionSize.get() * CpuCount.get() * 2
+        data = {f"col{i}": np.ones(nrows) for i in range(ncols)}
+        df = pd.DataFrame(data)
+        partitions = df._query_compiler._modin_frame._partitions
+        partition_mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
+
+        def map_func(df, first_arg, extra_arg=0):
+            return df.map(lambda x: (x * first_arg) + extra_arg)
+
+        column_splits = 2
+        map_func_args = (2,)
+        map_func_kwargs = {"extra_arg": 1}
+
+        # this approach doesn't work if column_splits == 0
+        with pytest.raises(ValueError):
+            partition_mgr_cls.map_partitions_joined_by_column(
+                partitions, 0, map_func, map_func_args, map_func_kwargs
+            )
+
+        result_partitions = partition_mgr_cls.map_partitions_joined_by_column(
+            partitions,
+            column_splits,
+            map_func,
+            map_func_args,
+            map_func_kwargs,
+        )
+        assert (
+            result_partitions.shape == partitions.shape
+        ), "The result has a different split than the original."
+        for i in range(result_partitions.shape[0]):
+            assert np.all(
+                result_partitions[i][0].to_numpy() == 3
+            ), "Invalid map function result."

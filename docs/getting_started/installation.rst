@@ -40,6 +40,10 @@ it is required to have a working MPI implementation installed beforehand.
 Otherwise, installation of ``modin[mpi]`` may fail. Refer to
 `Installing with pip`_ section of the unidist documentation for more details about installation.
 
+**Note:** Since Modin 0.30.0 we use a reduced set of Ray dependencies: ``ray`` instead of ``ray[default]``.
+This means that the dashboard and cluster launcher are no longer installed by default.
+If you need those, consider installing ``ray[default]`` along with ``modin[ray]``.
+
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation! See below for HDK engine installation.
 
@@ -128,6 +132,10 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 +---------------------------------+---------------------------+-----------------------------+
 | modin-all                       | Dask, Ray, Unidist, HDK   |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
+
+**Note:** Since Modin 0.30.0 we use a reduced set of Ray dependencies: ``ray-core`` instead of ``ray-default``.
+This means that the dashboard and cluster launcher are no longer installed by default.
+If you need those, consider installing ``ray-default`` along with ``modin-ray``.
 
 For installing Dask, Ray and MPI through unidist engines into conda environment following command should be used:
 

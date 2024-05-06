@@ -747,6 +747,63 @@ class PandasDataframePartitionManager(
         )
 
     @classmethod
+    def map_partitions_joined_by_column(
+        cls,
+        partitions,
+        column_splits,
+        map_func,
+        map_func_args=None,
+        map_func_kwargs=None,
+    ):
+        """
+        Combine several blocks by column into one virtual partition and apply "map_func" to them.
+
+        Parameters
+        ----------
+        partitions : NumPy 2D array
+            Partitions of Modin Frame.
+        column_splits : int
+            The number of splits by column.
+        map_func : callable
+            Function to apply.
+        map_func_args : iterable, optional
+            Positional arguments for the 'map_func'.
+        map_func_kwargs : dict, optional
+            Keyword arguments for the 'map_func'.
+
+        Returns
+        -------
+        NumPy array
+            An array of new partitions for Modin Frame.
+        """
+        if column_splits < 1:
+            raise ValueError(
+                "The value of columns_splits must be greater than or equal to 1."
+            )
+        # step cannot be less than 1
+        step = max(partitions.shape[0] // column_splits, 1)
+        preprocessed_map_func = cls.preprocess_func(map_func)
+        kw = {
+            "num_splits": step,
+        }
+        result = np.empty(partitions.shape, dtype=object)
+        for i in range(
+            0,
+            partitions.shape[0],
+            step,
+        ):
+            joined_column_partitions = cls.column_partitions(partitions[i : i + step])
+            for j in range(partitions.shape[1]):
+                result[i : i + step, j] = joined_column_partitions[j].apply(
+                    preprocessed_map_func,
+                    *map_func_args if map_func_args is not None else (),
+                    **kw,
+                    **map_func_kwargs if map_func_kwargs is not None else {},
+                )
+
+        return result
+
+    @classmethod
     def concat(cls, axis, left_parts, right_parts):
         """
         Concatenate the blocks of partitions with another set of blocks.

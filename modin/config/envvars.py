@@ -254,6 +254,26 @@ class Engine(EnvironmentVariable, type=str):
         )
 
     @classmethod
+    def get(cls) -> str:
+        """
+        Get value of the Engine.
+
+        Returns
+        -------
+        str
+        """
+        value = super().get()
+        if value == "Native":
+            from modin.error_message import ErrorMessage
+
+            ErrorMessage.single_warning(
+                "HDK engine is deprecated and will be removed in a future version. "
+                + "Consider switching to Ray, Dask or MPI engine.",
+                FutureWarning,
+            )
+        return value
+
+    @classmethod
     @doc(Parameter.add_option.__doc__)
     def add_option(cls, choice: Any) -> Any:
         choice = super().add_option(choice)

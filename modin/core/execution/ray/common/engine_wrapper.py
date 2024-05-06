@@ -24,7 +24,6 @@ from typing import Sequence
 
 import pandas
 import ray
-from ray.util.client.common import ClientObjectRef
 
 from modin.config import RayTaskCustomResources
 from modin.error_message import ErrorMessage
@@ -129,14 +128,14 @@ class RayWrapper:
             obj = obj_id.pre_materialize()
             return (
                 obj_id.post_materialize(ray.get(obj))
-                if isinstance(obj, RayObjectRefTypes)
+                if isinstance(obj, ray.ObjectRef)
                 else obj
             )
 
         if not isinstance(obj_id, Sequence):
-            return ray.get(obj_id) if isinstance(obj_id, RayObjectRefTypes) else obj_id
+            return ray.get(obj_id) if isinstance(obj_id, ray.ObjectRef) else obj_id
 
-        if all(isinstance(obj, RayObjectRefTypes) for obj in obj_id):
+        if all(isinstance(obj, ray.ObjectRef) for obj in obj_id):
             return ray.get(obj_id)
 
         ids = {}
@@ -147,7 +146,7 @@ class RayWrapper:
                 continue
             if isinstance(obj, MaterializationHook):
                 oid = obj.pre_materialize()
-                if isinstance(oid, RayObjectRefTypes):
+                if isinstance(oid, ray.ObjectRef):
                     hook = obj
                     obj = oid
                 else:
@@ -231,7 +230,7 @@ class RayWrapper:
         for obj in obj_ids:
             if isinstance(obj, MaterializationHook):
                 obj = obj.pre_materialize()
-            if isinstance(obj, RayObjectRefTypes):
+            if isinstance(obj, ray.ObjectRef):
                 ids.add(obj)
 
         if num_ids := len(ids):
@@ -332,5 +331,4 @@ class MaterializationHook:
         return int, (data,)
 
 
-RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
-ObjectRefTypes = (*RayObjectRefTypes, MaterializationHook)
+ObjectRefTypes = (ray.ObjectRef, MaterializationHook)
