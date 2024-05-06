@@ -4522,7 +4522,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # to the following warning. Example: "FutureWarning: Setting an item of incompatible
                 # dtype is deprecated and will raise in a future error of pandas. Value '[1.38629436]'
                 # has dtype incompatible with int64, please explicitly cast to a compatible dtype first."
-                partition.iloc[row_internal_indices, col_internal_indices] = item.copy()
+                partition.iloc[row_internal_indices, col_internal_indices] = (
+                    item.copy() if hasattr(item, "copy") else item
+                )
             return partition
 
         if not is_scalar(item):
