@@ -2272,6 +2272,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     corr = CorrCovBuilder.build_corr_method()
 
     def cov(self, min_periods=None, ddof=1):
+        if self._modin_frame._pandas_backend == "pyarrow":
+            return super().cov(min_periods=min_periods, ddof=ddof)
+        # _nancorr use numpy which incompatible with pandas dataframes on pyarrow
         return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
 
     def _nancorr(self, min_periods=1, cov=False, ddof=1):

@@ -3453,7 +3453,7 @@ class PandasDataframe(
         )
 
     def construct_dtype(self, dtype: str, backend: Optional[str]):
-        if backend is None:
+        if backend is None or dtype == "category":
             return pandas.api.types.pandas_dtype(dtype)
         elif backend == "pyarrow":
             return pandas.api.types.pandas_dtype(f"{dtype}[{backend}]")
