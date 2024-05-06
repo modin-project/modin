@@ -1624,11 +1624,14 @@ class DataFrame(BasePandasDataset):
             and min_count > len(axis_to_apply)
         ):
             new_index = self.columns if not axis else self.index
+            # >>> pd.DataFrame([1,2,3,4], dtype="int64[pyarrow]").prod(min_count=10)
+            # 0    <NA>
+            # dtype: int64[pyarrow]
             return Series(
                 [np.nan] * len(new_index),
                 index=new_index,
                 # TODO: pyarrow backend?
-                dtype=pandas.api.types.pandas_dtype("object"),
+                dtype=pandas.api.types.pandas_dtype("float64"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
@@ -2154,7 +2157,7 @@ class DataFrame(BasePandasDataset):
                 [np.nan] * len(new_index),
                 index=new_index,
                 # TODO: pyarrow backend?
-                dtype=pandas.api.types.pandas_dtype("object"),
+                dtype=pandas.api.types.pandas_dtype("float64"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(
