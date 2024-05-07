@@ -23,7 +23,7 @@ import numpy as np
 import pandas
 import pyarrow as pa
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
-from pandas.core.dtypes.common import _get_dtype
+from pandas.core.dtypes.common import _get_dtype, is_string_dtype
 from pyarrow.types import is_dictionary
 
 from modin.pandas.indexing import is_range_like
@@ -504,7 +504,9 @@ def to_arrow_type(dtype) -> pa.lib.DataType:
     -------
     pa.lib.DataType
     """
-    return pandas.api.types.pandas_dtype(dtype).pyarrow_dtype
+    if is_string_dtype(dtype):
+        return pa.from_numpy_dtype(str)
+    return pa.from_numpy_dtype(dtype)
 
 
 def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.DataType:

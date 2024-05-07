@@ -415,7 +415,7 @@ def value_counts(
     )
 
 
-# @_inherit_docstrings(pandas.concat, apilink="pandas.concat")
+@_inherit_docstrings(pandas.concat, apilink="pandas.concat")
 @enable_logging
 def concat(
     objs: "Iterable[DataFrame | Series] | Mapping[Hashable, DataFrame | Series]",

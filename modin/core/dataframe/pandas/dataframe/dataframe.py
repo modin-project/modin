@@ -21,8 +21,8 @@ for pandas storage format.
 from __future__ import annotations
 
 import datetime
-from functools import cached_property
 import re
+from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
