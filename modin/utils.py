@@ -296,7 +296,7 @@ def _replace_doc(
     parent_cls : class, optional
         If `target_obj` is an attribute of a class, `parent_cls` should be that class.
         This is used for generating the API URL as well as for handling special cases
-        like `target_obj` being a property.
+        like `target_obj` being a property or a cached_property.
     attr_name : str, optional
         Gives the name to `target_obj` if it's an attribute of `parent_cls`.
         Needed to handle some special cases and in most cases could be determined automatically.
@@ -314,6 +314,8 @@ def _replace_doc(
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
             attr_name = target_obj.fget.__name__  # type: ignore[union-attr]
+        elif isinstance(target_obj, functools.cached_property):
+            attr_name = target_obj.func.__name__
         elif isinstance(target_obj, (staticmethod, classmethod)):
             attr_name = target_obj.__func__.__name__
         else:
@@ -354,6 +356,16 @@ def _replace_doc(
             parent_cls,
             attr_name,
             property(target_obj.fget, target_obj.fset, target_obj.fdel, doc),
+        )
+    elif parent_cls and isinstance(target_obj, functools.cached_property):
+        if overwrite:
+            target_obj.func.__doc_inherited__ = True  # type: ignore[attr-defined]
+        assert attr_name is not None
+        target_obj.func.__doc__ = doc
+        setattr(
+            parent_cls,
+            attr_name,
+            functools.cached_property(target_obj.func),
         )
     else:
         if overwrite:
@@ -421,6 +433,7 @@ def _inherit_docstrings(
         return bool(
             callable(obj)
             or (isinstance(obj, property) and obj.fget)
+            or (isinstance(obj, functools.cached_property))
             or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
         )
 

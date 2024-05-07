@@ -17,8 +17,12 @@ Module contains class PandasDataframe.
 PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
+
+from __future__ import annotations
+
 import datetime
 import re
+from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -98,8 +102,8 @@ class PandasDataframe(
     _deferred_index = False
     _deferred_column = False
 
-    @pandas.util.cache_readonly
-    def __constructor__(self):
+    @cached_property
+    def __constructor__(self) -> type[PandasDataframe]:
         """
         Create a new instance of this object.
 

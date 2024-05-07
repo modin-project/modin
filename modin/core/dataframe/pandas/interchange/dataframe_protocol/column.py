@@ -25,6 +25,9 @@ Notes
   this is worth looking at again.
 """
 
+from __future__ import annotations
+
+from functools import cached_property
 from typing import Any, Dict, Iterable, Optional, Tuple
 
 import numpy as np
@@ -118,15 +121,8 @@ class PandasProtocolColumn(ProtocolColumn):
     def offset(self) -> int:
         return 0
 
-    _dtype_cache = None
-
-    # TODO: since python 3.9:
-    # @cached_property
-    @property
+    @cached_property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
-        if self._dtype_cache is not None:
-            return self._dtype_cache
-
         dtype = self._col.dtypes.iloc[0]
 
         if isinstance(dtype, pandas.CategoricalDtype):
@@ -149,8 +145,7 @@ class PandasProtocolColumn(ProtocolColumn):
         else:
             dtype_cache = self._dtype_from_primitive_pandas_dtype(dtype)
 
-        self._dtype_cache = dtype_cache
-        return self._dtype_cache
+        return dtype_cache
 
     def _dtype_from_primitive_pandas_dtype(
         self, dtype
@@ -228,14 +223,8 @@ class PandasProtocolColumn(ProtocolColumn):
 
         return null, value
 
-    _null_count_cache = None
-
-    # TODO: since python 3.9:
-    # @cached_property
-    @property
+    @cached_property
     def null_count(self) -> int:
-        if self._null_count_cache is not None:
-            return self._null_count_cache
 
         def map_func(df):
             return df.isna()
@@ -252,8 +241,7 @@ class PandasProtocolColumn(ProtocolColumn):
         # Otherwise, we get mismatching internal and external indices for both axes
         intermediate_df.index = pandas.RangeIndex(1)
         intermediate_df.columns = pandas.RangeIndex(1)
-        self._null_count_cache = intermediate_df.to_pandas().squeeze(axis=1).item()
-        return self._null_count_cache
+        return intermediate_df.to_pandas().squeeze(axis=1).item()
 
     @property
     def metadata(self) -> Dict[str, Any]:

@@ -10,12 +10,15 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
+
 """Implement DataFrame/Series public API as pandas does."""
+
 from __future__ import annotations
 
 import pickle as pkl
 import re
 import warnings
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Hashable, Literal, Optional, Sequence, Union
 
 import numpy as np
@@ -179,7 +182,7 @@ class BasePandasDataset(ClassLogger):
     _pandas_class = pandas.core.generic.NDFrame
     _query_compiler: BaseQueryCompiler
 
-    @pandas.util.cache_readonly
+    @cached_property
     def _is_dataframe(self) -> bool:
         """
         Tell whether this is a dataframe.
@@ -580,8 +583,8 @@ class BasePandasDataset(ClassLogger):
 
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
-    @pandas.util.cache_readonly
-    def __constructor__(self) -> BasePandasDataset:
+    @cached_property
+    def __constructor__(self) -> type[BasePandasDataset]:
         """
         Construct DataFrame or Series object depending on self type.
 

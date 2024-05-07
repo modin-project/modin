@@ -2615,9 +2615,8 @@ class DataFrame(BasePandasDataset):
         # - `_query_compiler`, which Modin initializes before it appears in
         #   __dict__
         # - `_siblings`, which Modin initializes before it appears in __dict__
-        # - `_cache`, which pandas.cache_readonly uses to cache properties
         #   before it appears in __dict__.
-        if key in ("_query_compiler", "_siblings", "_cache") or key in self.__dict__:
+        if key in ("_query_compiler", "_siblings") or key in self.__dict__:
             pass
         # we have to check for the key in `dir(self)` first in order not to trigger columns computation
         elif key not in dir(self) and key in self:
