@@ -57,6 +57,9 @@ if TYPE_CHECKING:
         ProtocolDataframe,
     )
     from pandas._typing import npt
+    from modin.core.dataframe.pandas.partitioning.partition_manager import (
+        PandasDataframePartitionManager,
+    )
 
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
@@ -95,7 +98,7 @@ class PandasDataframe(
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls = None
+    _partition_mgr_cls: PandasDataframePartitionManager
     _query_compiler_cls = PandasQueryCompiler
     # These properties flag whether or not we are deferring the metadata synchronization
     _deferred_index = False
@@ -874,7 +877,7 @@ class PandasDataframe(
         else:
             self._deferred_column = True
 
-    def _propagate_index_objs(self, axis=None):
+    def _propagate_index_objs(self, axis=None) -> None:
         """
         Synchronize labels by applying the index object for specific `axis` to the `self._partitions` lazily.
 
