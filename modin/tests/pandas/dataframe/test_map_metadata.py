@@ -1429,6 +1429,9 @@ def test_insert_4407():
         elif idx == 2:
             # FIXME: https://github.com/modin-project/modin/issues/7080
             expected_exception = False
+
+        if any("pyarrow" in str(dtype) for dtype in pandas_df.dtypes):
+            pytest.xfail(reason="ValueError(2)")
         eval_insert(
             modin_df,
             pandas_df,
@@ -1683,12 +1686,13 @@ def test___neg__(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___invert__(data, request):
     expected_exception = None
+    md_df, pd_df = create_test_dfs(data)
     if "float_nan_data" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7081
         expected_exception = False
-    eval_general(
-        *create_test_dfs(data), lambda df: ~df, expected_exception=expected_exception
-    )
+        if any("pyarrow" in str(dtype) for dtype in pd_df.dtypes):
+            pytest.xfail(reason="pyarrow.lib.ArrowNotImplementedError")
+    eval_general(md_df, pd_df, lambda df: ~df, expected_exception=expected_exception)
 
 
 def test___invert___bool():

@@ -1681,7 +1681,7 @@ class PandasDataframe(
                     if new_dtypes is None:
                         new_dtypes = self_dtypes.copy()
                     # Update the new dtype series to the proper pandas dtype
-                    # TODO: pyarrow backend? We don't need to add an implicit backend for `astype`
+                    # We don't need to add an implicit backend for `astype`
                     new_dtype = pandas.api.types.pandas_dtype(dtype)
                     if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
                         # FIXME: https://github.com/dask/distributed/issues/8585
@@ -1711,7 +1711,8 @@ class PandasDataframe(
             # Assume that the dtype is a scalar.
             if not (col_dtypes == self_dtypes).all():
                 new_dtypes = self_dtypes.copy()
-                new_dtype = self.construct_dtype(col_dtypes, self._pandas_backend)
+                # We don't need to add an implicit backend for `astype`
+                new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
                 if Engine.get() == "Dask" and hasattr(new_dtype, "_is_materialized"):
                     # FIXME: https://github.com/dask/distributed/issues/8585
                     _ = new_dtype._materialize_categories()
