@@ -188,18 +188,9 @@ def check_spelling_words(doc: Validator) -> list:
     ]
 
     docstring_start_line = None
-    code_obj = doc.code_obj
-    if isinstance(code_obj, property):
-        # inspect.getsourcelines doesn't work with property
-        code_obj = code_obj.fget
-    elif isinstance(code_obj, functools.cached_property):
-        # inspect.getsourcelines doesn't work with cached_property
-        code_obj = code_obj.func
-
-    rows, starting_line = inspect.getsourcelines(code_obj)
-    for idx, line in enumerate(rows):
+    for idx, line in enumerate(inspect.getsourcelines(doc.code_obj)[0]):
         if '"""' in line or "'''" in line:
-            docstring_start_line = starting_line + idx
+            docstring_start_line = doc.source_file_def_line + idx
             break
 
     errors = []
@@ -295,20 +286,11 @@ def skip_check_if_noqa(doc: Validator, err_code: str, noqa_checks: list) -> bool
 
     # GL08 - missing docstring in an arbitary object; numpydoc code
     if err_code == "GL08":
-        try:
-            name = doc.name.split(".")[-1]
-            # Numpydoc recommends to add docstrings of __init__ method in class docstring.
-            # So there is no error if docstring is missing in __init__
-            if name == "__init__":
-                return True
-        except AttributeError as exc:
-            # Cashed properties are not used for constructors, so we can safely ignore this exception
-            if (
-                not len(exc.args) > 0
-                and exc.args[0]
-                == "'cached_property' object has no attribute '__name__'"
-            ):
-                raise exc
+        name = doc.name.split(".")[-1]
+        # Numpydoc recommends to add docstrings of __init__ method in class docstring.
+        # So there is no error if docstring is missing in __init__
+        if name == "__init__":
+            return True
     return err_code in noqa_checks
 
 
@@ -361,7 +343,7 @@ def get_noqa_checks(doc: Validator) -> list:
     return [check.strip() for check in noqa_checks]
 
 
-def construct_validator(import_path: str) -> Validator:  # GL08
+def construct_validator(import_path: str) -> Validator:  # noqa: GL08
     # helper function
     return Validator(get_doc_object(Validator._load_obj(import_path)))
 
@@ -543,6 +525,18 @@ def monkeypatching():
     sys.modules["sqlalchemy"] = Mock()
 
     modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
+
+    # monkey-patch numpydoc for working correctly with properties
+    # until https://github.com/numpy/numpydoc/issues/551 is fixed
+    def load_obj(name, old_load_obj=Validator._load_obj):
+        obj = old_load_obj(name)
+        if isinstance(obj, property):
+            obj = obj.fget
+        elif isinstance(obj, functools.cached_property):
+            obj = obj.func
+        return obj
+
+    Validator._load_obj = staticmethod(load_obj)
 
     # for testing hdk-engine docs without `pyhdk` installation
     sys.modules["pyhdk"] = Mock()
