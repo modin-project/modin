@@ -21,6 +21,7 @@ for pandas storage format.
 from __future__ import annotations
 
 import datetime
+from functools import cached_property
 import re
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
@@ -109,8 +110,8 @@ class PandasDataframe(
     _dtypes: Optional[ModinDtypes] = None
     _pandas_backend: str = None
 
-    @pandas.util.cache_readonly
-    def __constructor__(self) -> Callable[..., PandasDataframe]:
+    @cached_property
+    def __constructor__(self) -> type[PandasDataframe]:
         """
         Create a new instance of this object.
 
@@ -1745,6 +1746,7 @@ class PandasDataframe(
             new_frame = self._partition_mgr_cls.lazy_map_partitions(
                 self._partitions, astype_builder
             )
+        # TODO: recompute _pandas_backend (it can be changed)
         return self.__constructor__(
             new_frame,
             self.copy_index_cache(copy_lengths=True),
