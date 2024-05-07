@@ -13,26 +13,40 @@
 
 """Module houses builder class for Map operator."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable
+
 from .operator import Operator
+
+if TYPE_CHECKING:
+    import pandas
+
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class Map(Operator):
     """Builder class for Map operator."""
 
     @classmethod
-    def register(cls, function, *call_args, **call_kwds):
+    def register(
+        cls,
+        function: Callable[..., pandas.DataFrame],
+        *call_args: tuple,
+        **call_kwds: dict,
+    ) -> Callable[..., PandasQueryCompiler]:
         """
         Build Map operator that will be performed across each partition.
 
         Parameters
         ----------
-        function : callable(pandas.DataFrame) -> pandas.DataFrame
+        function : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
             Function that will be applied to the each partition.
             Function takes `pandas.DataFrame` and returns `pandas.DataFrame`
             of the same shape.
-        *call_args : args
+        *call_args : tuple
             Args that will be passed to the returned function.
-        **call_kwds : kwargs
+        **call_kwds : dict
             Kwargs that will be passed to the returned function.
 
         Returns
@@ -41,7 +55,9 @@ class Map(Operator):
             Function that takes query compiler and executes map function.
         """
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(
+            query_compiler: PandasQueryCompiler, *args: tuple, **kwargs: dict
+        ) -> PandasQueryCompiler:
             """Execute Map function against passed query compiler."""
             shape_hint = call_kwds.pop("shape_hint", None) or query_compiler._shape_hint
             return query_compiler.__constructor__(

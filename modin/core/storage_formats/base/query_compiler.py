@@ -17,9 +17,11 @@ Module contains class ``BaseQueryCompiler``.
 ``BaseQueryCompiler`` is a parent abstract class for any other query compiler class.
 """
 
+from __future__ import annotations
+
 import abc
 import warnings
-from typing import Hashable, List, Optional
+from typing import TYPE_CHECKING, Hashable, List, Optional
 
 import numpy as np
 import pandas
@@ -49,6 +51,10 @@ from modin.logging.config import LogLevel
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 
 from . import doc_utils
+
+if TYPE_CHECKING:
+    # TODO: should be ModinDataframe
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
 def _get_axis(axis):
@@ -123,6 +129,9 @@ class BaseQueryCompiler(
     See the Abstract Methods and Fields section immediately below this
     for a list of requirements for subclassing this object.
     """
+
+    _modin_frame: PandasDataframe
+    _shape_hint: Optional[str]
 
     def __wrap_in_qc(self, obj):
         """

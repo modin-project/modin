@@ -13,7 +13,17 @@
 
 """Module houses builder class for TreeReduce operator."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Optional
+
 from .operator import Operator
+
+if TYPE_CHECKING:
+    import pandas
+    from pandas._typing import DtypeObj
+
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class TreeReduce(Operator):
@@ -21,20 +31,24 @@ class TreeReduce(Operator):
 
     @classmethod
     def register(
-        cls, map_function, reduce_function=None, axis=None, compute_dtypes=None
-    ):
+        cls,
+        map_function: Optional[Callable[..., pandas.DataFrame]],
+        reduce_function: Optional[Callable[..., pandas.Series]] = None,
+        axis: Optional[int] = None,
+        compute_dtypes: Optional[Callable[..., DtypeObj]] = None,
+    ) -> Callable[..., PandasQueryCompiler]:
         """
         Build TreeReduce operator.
 
         Parameters
         ----------
-        map_function : callable(pandas.DataFrame) -> pandas.DataFrame
+        map_function : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
             Source map function.
-        reduce_function : callable(pandas.DataFrame) -> pandas.Series, optional
+        reduce_function : callable(pandas.DataFrame, *args, **kwargs) -> pandas.Series, optional
             Source reduce function.
         axis : int, optional
             Specifies axis to apply function along.
-        compute_dtypes : callable(pandas.Series, *func_args, **func_kwargs) -> np.dtype, optional
+        compute_dtypes : callable(pandas.Series, *func_args, **func_kwargs) -> DtypeObj, optional
             Callable for computing dtypes.
 
         Returns
@@ -46,7 +60,9 @@ class TreeReduce(Operator):
         if reduce_function is None:
             reduce_function = map_function
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(
+            query_compiler: PandasQueryCompiler, *args: tuple, **kwargs: dict
+        ) -> PandasQueryCompiler:
             """Execute TreeReduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
 
