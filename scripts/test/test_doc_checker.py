@@ -12,12 +12,12 @@
 # governing permissions and limitations under the License.
 
 import pytest
-from numpydoc.validate import Docstring
 
 from scripts.doc_checker import (
     MODIN_ERROR_CODES,
     check_optional_args,
     check_spelling_words,
+    construct_validator,
     get_noqa_checks,
     get_optional_args,
 )
@@ -34,7 +34,7 @@ from scripts.doc_checker import (
     ],
 )
 def test_get_optional_args(import_path, result):
-    optional_args = get_optional_args(Docstring(import_path))
+    optional_args = get_optional_args(construct_validator(import_path))
     assert optional_args == result
 
 
@@ -57,7 +57,7 @@ def test_get_optional_args(import_path, result):
     ],
 )
 def test_check_optional_args(import_path, result):
-    errors = check_optional_args(Docstring(import_path))
+    errors = check_optional_args(construct_validator(import_path))
     assert errors == result
 
 
@@ -88,7 +88,7 @@ def test_check_spelling_words(import_path, result):
                 ),
             )
         )
-    errors = check_spelling_words(Docstring(import_path))
+    errors = check_spelling_words(construct_validator(import_path))
     # the order of incorrect words found on the same line is not guaranteed
     for error in errors:
         assert error in result_errors
@@ -105,5 +105,5 @@ def test_check_spelling_words(import_path, result):
     ],
 )
 def test_get_noqa_checks(import_path, result):
-    noqa_checks = get_noqa_checks(Docstring(import_path))
+    noqa_checks = get_noqa_checks(construct_validator(import_path))
     assert noqa_checks == result

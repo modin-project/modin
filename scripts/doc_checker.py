@@ -32,8 +32,8 @@ import sys
 import types
 from typing import List
 
-from numpydoc.docscrape import NumpyDocString
-from numpydoc.validate import Docstring
+from numpydoc.docscrape import NumpyDocString, get_doc_object
+from numpydoc.validate import Validator
 
 # Let the other modules to know that the doc checker is running.
 os.environ["_MODIN_DOC_CHECKER_"] = "1"
@@ -73,14 +73,14 @@ MODIN_ERROR_CODES = {
 }
 
 
-def get_optional_args(doc: Docstring) -> dict:
+def get_optional_args(doc: Validator) -> dict:
     """
     Get optional parameters for the object for which the docstring is checked.
 
     Parameters
     ----------
-    doc : numpydoc.validate.Docstring
-        Docstring handler.
+    doc : numpydoc.validate.Validator
+        Validator handler.
 
     Returns
     -------
@@ -98,13 +98,13 @@ def get_optional_args(doc: Docstring) -> dict:
     }
 
 
-def check_optional_args(doc: Docstring) -> list:
+def check_optional_args(doc: Validator) -> list:
     """
     Check type description of optional arguments.
 
     Parameters
     ----------
-    doc : numpydoc.validate.Docstring
+    doc : numpydoc.validate.Validator
 
     Returns
     -------
@@ -139,14 +139,14 @@ def check_optional_args(doc: Docstring) -> list:
     return errors
 
 
-def check_spelling_words(doc: Docstring) -> list:
+def check_spelling_words(doc: Validator) -> list:
     """
     Check spelling of chosen words in doc.
 
     Parameters
     ----------
-    doc : numpydoc.validate.Docstring
-        Docstring handler.
+    doc : numpydoc.validate.Validator
+        Validator handler.
 
     Returns
     -------
@@ -188,9 +188,18 @@ def check_spelling_words(doc: Docstring) -> list:
     ]
 
     docstring_start_line = None
-    for idx, line in enumerate(inspect.getsourcelines(doc.code_obj)[0]):
+    code_obj = doc.code_obj
+    if isinstance(code_obj, property):
+        # inspect.getsourcelines doesn't work with property
+        code_obj = code_obj.fget
+    elif isinstance(code_obj, functools.cached_property):
+        # inspect.getsourcelines doesn't work with cached_property
+        code_obj = code_obj.func
+
+    rows, starting_line = inspect.getsourcelines(code_obj)
+    for idx, line in enumerate(rows):
         if '"""' in line or "'''" in line:
-            docstring_start_line = doc.source_file_def_line + idx
+            docstring_start_line = starting_line + idx
             break
 
     errors = []
@@ -210,14 +219,14 @@ def check_spelling_words(doc: Docstring) -> list:
     return errors
 
 
-def check_docstring_indention(doc: Docstring) -> list:
+def check_docstring_indention(doc: Validator) -> list:
     """
     Check indention of docstring since numpydoc reports weird results.
 
     Parameters
     ----------
-    doc : numpydoc.validate.Docstring
-        Docstring handler.
+    doc : numpydoc.validate.Validator
+        Validator handler.
 
     Returns
     -------
@@ -240,14 +249,14 @@ def check_docstring_indention(doc: Docstring) -> list:
     return errors
 
 
-def validate_modin_error(doc: Docstring, results: dict) -> list:
+def validate_modin_error(doc: Validator, results: dict) -> list:
     """
     Validate custom Modin errors.
 
     Parameters
     ----------
-    doc : numpydoc.validate.Docstring
-        Docstring handler.
+    doc : numpydoc.validate.Validator
+        Validator handler.
     results : dict
         Dictionary that numpydoc.validate.validate return.
 
@@ -263,14 +272,14 @@ def validate_modin_error(doc: Docstring, results: dict) -> list:
     return results
 
 
-def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool:
+def skip_check_if_noqa(doc: Validator, err_code: str, noqa_checks: list) -> bool:
     """
     Skip the check that matches `err_code` if `err_code` found in noqa string.
 
     Parameters
     ----------
-    doc : numpydoc.validate.Docstring
-        Docstring handler.
+    doc : numpydoc.validate.Validator
+        Validator handler.
     err_code : str
         Error code found by numpydoc.
     noqa_checks : list
@@ -286,22 +295,31 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
 
     # GL08 - missing docstring in an arbitary object; numpydoc code
     if err_code == "GL08":
-        name = doc.name.split(".")[-1]
-        # Numpydoc recommends to add docstrings of __init__ method in class docstring.
-        # So there is no error if docstring is missing in __init__
-        if name == "__init__":
-            return True
+        try:
+            name = doc.name.split(".")[-1]
+            # Numpydoc recommends to add docstrings of __init__ method in class docstring.
+            # So there is no error if docstring is missing in __init__
+            if name == "__init__":
+                return True
+        except AttributeError as exc:
+            # Cashed properties are not used for constructors, so we can safely ignore this exception
+            if (
+                not len(exc.args) > 0
+                and exc.args[0]
+                == "'cached_property' object has no attribute '__name__'"
+            ):
+                raise exc
     return err_code in noqa_checks
 
 
-def get_noqa_checks(doc: Docstring) -> list:
+def get_noqa_checks(doc: Validator) -> list:
     """
     Get codes after `# noqa`.
 
     Parameters
     ----------
-    doc : numpydoc.validate.Docstring
-        Docstring handler.
+    doc : numpydoc.validate.Validator
+        Validator handler.
 
     Returns
     -------
@@ -343,6 +361,11 @@ def get_noqa_checks(doc: Docstring) -> list:
     return [check.strip() for check in noqa_checks]
 
 
+def construct_validator(import_path: str) -> Validator:  # GL08
+    # helper function
+    return Validator(get_doc_object(Validator._load_obj(import_path)))
+
+
 # code snippet from numpydoc
 def validate_object(import_path: str) -> list:
     """
@@ -361,7 +384,7 @@ def validate_object(import_path: str) -> list:
     from numpydoc.validate import validate
 
     errors = []
-    doc = Docstring(import_path)
+    doc = construct_validator(import_path)
     if getattr(doc.obj, "__doc_inherited__", False) or (
         isinstance(doc.obj, property)
         and getattr(doc.obj.fget, "__doc_inherited__", False)
@@ -520,15 +543,6 @@ def monkeypatching():
     sys.modules["sqlalchemy"] = Mock()
 
     modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
-
-    # monkey-patch numpydoc for working correctly with properties
-    def load_obj(name, old_load_obj=Docstring._load_obj):
-        obj = old_load_obj(name)
-        if isinstance(obj, property):
-            obj = obj.fget
-        return obj
-
-    Docstring._load_obj = staticmethod(load_obj)
 
     # for testing hdk-engine docs without `pyhdk` installation
     sys.modules["pyhdk"] = Mock()

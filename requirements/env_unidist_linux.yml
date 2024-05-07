@@ -58,4 +58,4 @@ dependencies:
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - connectorx>=0.2.6a4
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
-      - numpydoc==1.1.0
+      - numpydoc==1.6.0
