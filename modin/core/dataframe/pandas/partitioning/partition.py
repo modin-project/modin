@@ -13,14 +13,16 @@
 
 """The module defines base interface for a partition of a Modin DataFrame."""
 
+from __future__ import annotations
+
 import logging
 import uuid
 from abc import ABC
 from copy import copy
+from functools import cached_property
 
 import pandas
 from pandas.api.types import is_scalar
-from pandas.util import cache_readonly
 
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.logging import ClassLogger, get_logger
@@ -60,8 +62,8 @@ class PandasDataframePartition(
             else:
                 type(self)._iloc_func = staticmethod(self._iloc)
 
-    @cache_readonly
-    def __constructor__(self):
+    @cached_property
+    def __constructor__(self) -> type[PandasDataframePartition]:
         """
         Create a new instance of this object.
 

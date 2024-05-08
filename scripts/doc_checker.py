@@ -367,9 +367,16 @@ def validate_object(import_path: str) -> list:
 
     errors = []
     doc = construct_validator(import_path)
-    if getattr(doc.obj, "__doc_inherited__", False) or (
-        isinstance(doc.obj, property)
-        and getattr(doc.obj.fget, "__doc_inherited__", False)
+    if (
+        getattr(doc.obj, "__doc_inherited__", False)
+        or (
+            isinstance(doc.obj, property)
+            and getattr(doc.obj.fget, "__doc_inherited__", False)
+        )
+        or (
+            isinstance(doc.obj, functools.cached_property)
+            and getattr(doc.obj.func, "__doc_inherited__", False)
+        )
     ):
         # do not check inherited docstrings
         return errors
@@ -507,7 +514,6 @@ def monkeypatching():
     """Monkeypatch not installed modules and decorators which change __doc__ attribute."""
     from unittest.mock import Mock
 
-    import pandas.util
     import ray
 
     import modin.utils
@@ -519,7 +525,6 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
-    pandas.util.cache_readonly = property
 
     # We are mocking packages we don't need for docs checking in order to avoid import errors
     sys.modules["sqlalchemy"] = Mock()
