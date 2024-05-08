@@ -367,6 +367,8 @@ def _replace_doc(
             attr_name,
             functools.cached_property(target_obj.func),
         )
+        # otherwise: `TypeError: Cannot use cached_property instance without calling __set_name__ on it.`
+        getattr(parent_cls, attr_name).__set_name__(parent_cls, attr_name)
     else:
         if overwrite:
             target_obj.__doc_inherited__ = True  # type: ignore[attr-defined]
