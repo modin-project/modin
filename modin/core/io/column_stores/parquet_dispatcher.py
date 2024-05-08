@@ -13,6 +13,9 @@
 
 """Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
+from __future__ import annotations
+
+import functools
 import json
 import os
 import re
@@ -58,11 +61,6 @@ class ColumnStoreDataset:
     dataset : ParquetDataset or ParquetFile
         Underlying dataset implementation for PyArrow and fastparquet
         respectively.
-    _row_groups_per_file : list
-        List that contains the number of row groups for each file in the
-        given parquet dataset.
-    _files : list
-        List that contains the full paths of the parquet files in the dataset.
     """
 
     def __init__(self, path, storage_options):  # noqa : PR01
@@ -71,8 +69,6 @@ class ColumnStoreDataset:
         self._fs_path = None
         self._fs = None
         self.dataset = self._init_dataset()
-        self._row_groups_per_file = None
-        self._files = None
 
     @property
     def pandas_metadata(self):
@@ -89,14 +85,12 @@ class ColumnStoreDataset:
         """Return string representing what engine is being used."""
         raise NotImplementedError
 
-    # TODO: make this cache_readonly after docstring inheritance is fixed.
-    @property
+    @functools.cached_property
     def files(self):
         """Return the list of formatted file paths of the dataset."""
         raise NotImplementedError
 
-    # TODO: make this cache_readonly after docstring inheritance is fixed.
-    @property
+    @functools.cached_property
     def row_groups_per_file(self):
         """Return a list with the number of row groups per file."""
         raise NotImplementedError
@@ -201,31 +195,27 @@ class PyArrowDataset(ColumnStoreDataset):
     def engine(self):
         return "pyarrow"
 
-    @property
+    @functools.cached_property
     def row_groups_per_file(self):
         from pyarrow.parquet import ParquetFile
 
-        if self._row_groups_per_file is None:
-            row_groups_per_file = []
-            # Count up the total number of row groups across all files and
-            # keep track of row groups per file to use later.
-            for file in self.files:
-                with self.fs.open(file) as f:
-                    row_groups = ParquetFile(f).num_row_groups
-                    row_groups_per_file.append(row_groups)
-            self._row_groups_per_file = row_groups_per_file
-        return self._row_groups_per_file
+        row_groups_per_file = []
+        # Count up the total number of row groups across all files and
+        # keep track of row groups per file to use later.
+        for file in self.files:
+            with self.fs.open(file) as f:
+                row_groups = ParquetFile(f).num_row_groups
+                row_groups_per_file.append(row_groups)
+        return row_groups_per_file
 
-    @property
+    @functools.cached_property
     def files(self):
-        if self._files is None:
-            try:
-                files = self.dataset.files
-            except AttributeError:
-                # compatibility at least with 3.0.0 <= pyarrow < 8.0.0
-                files = self.dataset._dataset.files
-            self._files = self._get_files(files)
-        return self._files
+        try:
+            files = self.dataset.files
+        except AttributeError:
+            # compatibility at least with 3.0.0 <= pyarrow < 8.0.0
+            files = self.dataset._dataset.files
+        return self._get_files(files)
 
     def to_pandas_dataframe(
         self,
@@ -259,26 +249,22 @@ class FastParquetDataset(ColumnStoreDataset):
     def engine(self):
         return "fastparquet"
 
-    @property
+    @functools.cached_property
     def row_groups_per_file(self):
         from fastparquet import ParquetFile
 
-        if self._row_groups_per_file is None:
-            row_groups_per_file = []
-            # Count up the total number of row groups across all files and
-            # keep track of row groups per file to use later.
-            for file in self.files:
-                with self.fs.open(file) as f:
-                    row_groups = ParquetFile(f).info["row_groups"]
-                    row_groups_per_file.append(row_groups)
-            self._row_groups_per_file = row_groups_per_file
-        return self._row_groups_per_file
+        row_groups_per_file = []
+        # Count up the total number of row groups across all files and
+        # keep track of row groups per file to use later.
+        for file in self.files:
+            with self.fs.open(file) as f:
+                row_groups = ParquetFile(f).info["row_groups"]
+                row_groups_per_file.append(row_groups)
+        return row_groups_per_file
 
-    @property
+    @functools.cached_property
     def files(self):
-        if self._files is None:
-            self._files = self._get_files(self._get_fastparquet_files())
-        return self._files
+        return self._get_files(self._get_fastparquet_files())
 
     def to_pandas_dataframe(self, columns):
         return self.dataset.to_pandas(columns=columns)
