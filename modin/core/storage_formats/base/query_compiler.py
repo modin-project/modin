@@ -54,6 +54,7 @@ from . import doc_utils
 
 if TYPE_CHECKING:
     # TODO: should be ModinDataframe
+    # https://github.com/modin-project/modin/issues/7244
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 

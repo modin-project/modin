@@ -211,15 +211,15 @@ class GroupByReduce(TreeReduce):
     def reduce(
         cls,
         df: pandas.DataFrame,
-        reduce_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        partition_idx=0,
-        drop=False,
-        method=None,
-        finalizer_fn=None,
+        reduce_func: Union[dict, Callable[..., pandas.DataFrame]],
+        axis: int,
+        groupby_kwargs: dict,
+        agg_args: list,
+        agg_kwargs: dict,
+        partition_idx: int = 0,
+        drop: bool = False,
+        method: Optional[str] = None,
+        finalizer_fn: Optional[Callable[[pandas.DataFrame], pandas.DataFrame]] = None,
     ) -> pandas.DataFrame:
         """
         Execute Reduce phase of GroupByReduce.
@@ -247,7 +247,7 @@ class GroupByReduce(TreeReduce):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
-        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, optional
             A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
@@ -719,7 +719,7 @@ class GroupByReduce(TreeReduce):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
-        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, optional
             A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
