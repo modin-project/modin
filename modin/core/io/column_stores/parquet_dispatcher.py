@@ -210,11 +210,7 @@ class PyArrowDataset(ColumnStoreDataset):
 
     @functools.cached_property
     def files(self):
-        try:
-            files = self.dataset.files
-        except AttributeError:
-            # compatibility at least with 3.0.0 <= pyarrow < 8.0.0
-            files = self.dataset._dataset.files
+        files = self.dataset.files
         return self._get_files(files)
 
     def to_pandas_dataframe(
