@@ -230,20 +230,20 @@ def test_join_6602():
     "test_data, test_data2",
     [
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
+            np.random.randint(0, 100, size=(64, 64)),
+            np.random.randint(0, 100, size=(128, 64)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.randint(0, 100, size=(128, 64)),
+            np.random.randint(0, 100, size=(64, 64)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
+            np.random.randint(0, 100, size=(64, 64)),
+            np.random.randint(0, 100, size=(64, 128)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.randint(0, 100, size=(64, 128)),
+            np.random.randint(0, 100, size=(64, 64)),
         ),
     ],
 )
