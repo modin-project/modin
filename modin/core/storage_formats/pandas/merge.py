@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
@@ -142,8 +142,8 @@ class MergeImpl:
                 reverted = True
 
             def should_keep_index(
-                left: Union[PandasQueryCompiler, pandas.DataFrame],
-                right: Union[PandasQueryCompiler, pandas.DataFrame],
+                left: PandasQueryCompiler,
+                right: PandasQueryCompiler,
             ) -> bool:
                 keep_index = False
                 if left_on is not None and right_on is not None:
@@ -159,7 +159,9 @@ class MergeImpl:
                     )
                 return keep_index
 
-            def map_func(left, right, kwargs=kwargs) -> pandas.DataFrame:  # pragma: no cover
+            def map_func(
+                left, right, kwargs=kwargs
+            ) -> pandas.DataFrame:  # pragma: no cover
                 if reverted:
                     df = pandas.merge(right, left, **kwargs)
                 else:
@@ -174,7 +176,6 @@ class MergeImpl:
                 on = list(on) if is_list_like(on) else [on]
 
             right_to_broadcast = right._modin_frame.combine()
-            # if not reverted:
             new_columns, new_dtypes = cls._compute_result_metadata(
                 left,
                 right,
@@ -183,17 +184,6 @@ class MergeImpl:
                 right_on,
                 kwargs.get("suffixes", ("_x", "_y") if not reverted else ("_y", "_x")),
             )
-            """
-            else:
-                new_columns, new_dtypes = cls._compute_result_metadata(
-                    right,
-                    left,
-                    on,
-                    right_on,
-                    left_on,
-                    kwargs.get("suffixes", ("_x", "_y")),
-                )
-            """
 
             # We rebalance when the ratio of the number of existing partitions to
             # the ideal number of partitions is smaller than this threshold. The
