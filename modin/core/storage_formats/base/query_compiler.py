@@ -22,14 +22,13 @@ from __future__ import annotations
 import abc
 import warnings
 from functools import cached_property
-from typing import Hashable, List, Optional
+from typing import TYPE_CHECKING, Hashable, List, Optional
 
 import numpy as np
 import pandas
 import pandas.core.resample
 from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
-from typing_extensions import Self
 
 from modin.config import StorageFormat
 from modin.core.dataframe.algebra.default2pandas import (
@@ -53,6 +52,9 @@ from modin.logging.config import LogLevel
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 
 from . import doc_utils
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 def _get_axis(axis):
