@@ -29,6 +29,7 @@ import pandas
 import pandas.core.resample
 from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
+from typing_extensions import Self
 
 from modin.config import StorageFormat
 from modin.core.dataframe.algebra.default2pandas import (
@@ -150,7 +151,7 @@ class BaseQueryCompiler(
         else:
             return obj
 
-    def default_to_pandas(self, pandas_op, *args, **kwargs):
+    def default_to_pandas(self, pandas_op, *args, **kwargs) -> Self:
         """
         Do fallback to pandas for the passed function.
 
@@ -4459,7 +4460,7 @@ class BaseQueryCompiler(
     # END Abstract methods for QueryCompiler
 
     @cached_property
-    def __constructor__(self) -> type[BaseQueryCompiler]:
+    def __constructor__(self) -> type[Self]:
         """
         Get query compiler constructor.
 

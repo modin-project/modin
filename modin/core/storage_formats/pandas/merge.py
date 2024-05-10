@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
@@ -103,7 +103,7 @@ class MergeImpl:
     @classmethod
     def row_axis_merge(
         cls, left: PandasQueryCompiler, right: PandasQueryCompiler, kwargs: dict
-    ):
+    ) -> PandasQueryCompiler:
         """
         Execute merge using row-axis implementation.
 
@@ -126,17 +126,25 @@ class MergeImpl:
         right_index = kwargs.get("right_index", False)
         sort = kwargs.get("sort", False)
 
-        if how in ["left", "inner"] and left_index is False and right_index is False:
+        if (
+            (
+                how in ["left", "inner"]
+                or (how == "right" and right._modin_frame._partitions.size != 0)
+            )
+            and left_index is False
+            and right_index is False
+        ):
             kwargs["sort"] = False
 
             reverted = False
-            if (
-                how == "inner" and right._modin_frame._partitions.size != 0
-            ):  # and left._modin_frame._partitions.shape[0] == 1:
+            if how == "right":
                 left, right = right, left
                 reverted = True
 
-            def should_keep_index(left, right):
+            def should_keep_index(
+                left: Union[PandasQueryCompiler, pandas.DataFrame],
+                right: Union[PandasQueryCompiler, pandas.DataFrame],
+            ) -> bool:
                 keep_index = False
                 if left_on is not None and right_on is not None:
                     keep_index = any(
@@ -159,7 +167,7 @@ class MergeImpl:
                 else:
                     df = pandas.merge(left, right, **kwargs)
 
-                if kwargs["how"] == "left":
+                if kwargs["how"] in ("left", "right"):
                     partition_idx = service_kwargs["partition_idx"]
                     if len(axis_lengths):
                         if not should_keep_index(left, right):
@@ -180,15 +188,16 @@ class MergeImpl:
                 on = list(on) if is_list_like(on) else [on]
 
             right_to_broadcast = right._modin_frame.combine()
-            if not reverted:
-                new_columns, new_dtypes = cls._compute_result_metadata(
-                    left,
-                    right,
-                    on,
-                    left_on,
-                    right_on,
-                    kwargs.get("suffixes", ("_x", "_y")),
-                )
+            # if not reverted:
+            new_columns, new_dtypes = cls._compute_result_metadata(
+                left,
+                right,
+                on,
+                left_on,
+                right_on,
+                kwargs.get("suffixes", ("_x", "_y") if not reverted else ("_y", "_x")),
+            )
+            """
             else:
                 new_columns, new_dtypes = cls._compute_result_metadata(
                     right,
@@ -198,6 +207,7 @@ class MergeImpl:
                     left_on,
                     kwargs.get("suffixes", ("_x", "_y")),
                 )
+            """
 
             # We rebalance when the ratio of the number of existing partitions to
             # the ideal number of partitions is smaller than this threshold. The
@@ -213,7 +223,7 @@ class MergeImpl:
                 left._modin_frame.broadcast_apply_full_axis(
                     axis=1,
                     func=map_func,
-                    enumerate_partitions=how == "left",
+                    enumerate_partitions=how in ("left", "right"),
                     other=right_to_broadcast,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
@@ -224,7 +234,7 @@ class MergeImpl:
                     new_columns=new_columns,
                     sync_labels=False,
                     dtypes=new_dtypes,
-                    pass_axis_lengths_to_partitions=how == "left",
+                    pass_axis_lengths_to_partitions=how in ("left", "right"),
                 )
             )
 
@@ -265,14 +275,22 @@ class MergeImpl:
 
             return (
                 new_left.reset_index(drop=True)
-                if not keep_index and (kwargs["how"] != "left" or sort)
+                if not keep_index and (kwargs["how"] not in ("left", "right") or sort)
                 else new_left
             )
         else:
             return left.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
     @classmethod
-    def _compute_result_metadata(cls, left, right, on, left_on, right_on, suffixes):
+    def _compute_result_metadata(
+        cls,
+        left: PandasQueryCompiler,
+        right: PandasQueryCompiler,
+        on,
+        left_on,
+        right_on,
+        suffixes,
+    ) -> tuple[Optional[pandas.Index], Optional[ModinDtypes]]:
         """
         Compute columns and dtypes metadata for the result of merge if possible.
 

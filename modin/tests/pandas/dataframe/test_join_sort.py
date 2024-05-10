@@ -269,7 +269,7 @@ def test_merge(test_data, test_data2):
         index=pandas.Index([i for i in range(1, test_data2.shape[0] + 1)], name="key"),
     )
 
-    hows = ["left", "inner"]
+    hows = ["left", "inner", "right"]
     ons = ["col33", ["col33", "col34"]]
     sorts = [False, True]
     for i in range(2):
@@ -398,11 +398,10 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
-def test_merge_empty():
+@pytest.mark.parametrize("how", ["inner", "right"])
+def test_merge_empty(how):
     data = np.random.uniform(0, 100, size=(2**6, 2**6))
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: df.merge(df.iloc[:0]))
+    eval_general(*create_test_dfs(data), lambda df: df.merge(df.iloc[:0], how=how))
 
 
 def test_merge_with_mi_columns():

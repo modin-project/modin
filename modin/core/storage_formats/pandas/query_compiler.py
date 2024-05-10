@@ -18,6 +18,8 @@ Module contains ``PandasQueryCompiler`` class.
 queries for the ``PandasDataframe``.
 """
 
+from __future__ import annotations
+
 import ast
 import hashlib
 import re
@@ -313,8 +315,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Dataframe exchange protocol
 
-    index = property(_get_axis(0), _set_axis(0))
-    columns = property(_get_axis(1), _set_axis(1))
+    index: pandas.Index = property(_get_axis(0), _set_axis(0))
+    columns: pandas.Index = property(_get_axis(1), _set_axis(1))
 
     @property
     def dtypes(self):
@@ -586,7 +588,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def reset_index(self, **kwargs):
+    def reset_index(self, **kwargs) -> PandasQueryCompiler:
         if self.lazy_execution:
 
             def _reset(df, *axis_lengths, partition_idx):  # pragma: no cover
