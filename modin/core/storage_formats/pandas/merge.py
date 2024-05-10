@@ -144,23 +144,8 @@ class MergeImpl:
                     )
                 return keep_index
 
-            def map_func(
-                left, right, *axis_lengths, kwargs=kwargs, **service_kwargs
-            ):  # pragma: no cover
-                df = pandas.merge(left, right, **kwargs)
-
-                if kwargs["how"] == "left":
-                    partition_idx = service_kwargs["partition_idx"]
-                    if len(axis_lengths):
-                        if not should_keep_index(left, right):
-                            # Doesn't work for "inner" case, since the partition sizes of the
-                            # left dataframe may change
-                            start = sum(axis_lengths[:partition_idx])
-                            stop = sum(axis_lengths[: partition_idx + 1])
-
-                            df.index = pandas.RangeIndex(start, stop)
-
-                return df
+            def map_func(left, right):  # pragma: no cover
+                return pandas.merge(left, right, **kwargs)
 
             # Want to ensure that these are python lists
             if left_on is not None and right_on is not None:
@@ -188,7 +173,6 @@ class MergeImpl:
                 left._modin_frame.broadcast_apply_full_axis(
                     axis=1,
                     func=map_func,
-                    enumerate_partitions=how == "left",
                     other=right_to_broadcast,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
@@ -199,7 +183,6 @@ class MergeImpl:
                     new_columns=new_columns,
                     sync_labels=False,
                     dtypes=new_dtypes,
-                    pass_axis_lengths_to_partitions=how == "left",
                 )
             )
 
@@ -238,11 +221,7 @@ class MergeImpl:
                         else new_left.sort_rows_by_column_values(on)
                     )
 
-            return (
-                new_left.reset_index(drop=True)
-                if not keep_index and (kwargs["how"] != "left" or sort)
-                else new_left
-            )
+            return new_left if keep_index else new_left.reset_index(drop=True)
         else:
             return left.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
