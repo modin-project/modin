@@ -65,7 +65,11 @@ if TYPE_CHECKING:
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
 from modin.pandas.indexing import is_range_like
-from modin.pandas.utils import check_both_not_none, is_full_grab_slice
+from modin.pandas.utils import (
+    check_both_not_none,
+    get_pandas_backend,
+    is_full_grab_slice,
+)
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
@@ -136,8 +140,15 @@ class PandasDataframe(
         self.set_columns_cache(columns)
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
-        self.set_dtypes_cache(dtypes)
         self._pandas_backend = pandas_backend
+        if not pandas_backend == "pyarrow":
+            # In this case, the type precomputation may be incorrect; we need
+            # to know the type algebra precisely. Considering the number of operations
+            # and different combinations of backends, the best solution would be to
+            # introduce optimizations gradually, with a large number of tests.
+            self.set_dtypes_cache(dtypes)
+        else:
+            self.set_dtypes_cache(None)
 
         self._validate_axes_lengths()
         self._filter_empties(compute_metadata=False)
@@ -406,6 +417,9 @@ class PandasDataframe(
         else:
             dtypes = self._compute_dtypes()
             self.set_dtypes_cache(dtypes)
+            # During materialization, we can find out the backend and, if it
+            # is suitable, use the ability to pre-calculate types.
+            self._pandas_backend = get_pandas_backend(dtypes)
         return dtypes
 
     def get_dtypes_set(self):
@@ -1321,7 +1335,6 @@ class PandasDataframe(
             new_row_lengths,
             new_col_widths,
             new_dtypes,
-            # CHECKED: backend preserved
             pandas_backend=self._pandas_backend,
         )
 
@@ -1499,7 +1512,6 @@ class PandasDataframe(
             row_lengths=self._row_lengths_cache,
             column_widths=new_column_widths,
             dtypes=new_dtypes,
-            # CHECKED: backend preserved
             pandas_backend=self._pandas_backend,
         )
         # Set flag for propagating deferred row labels across dataframe partitions
@@ -1633,7 +1645,6 @@ class PandasDataframe(
             new_lengths,
             new_widths,
             new_dtypes,
-            # CHECKED: backend preserved
             pandas_backend=self._pandas_backend,
         )
 
@@ -1654,7 +1665,6 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             self.copy_dtypes_cache(),
-            # CHECKED: backend preserved
             pandas_backend=self._pandas_backend,
         )
 
@@ -1688,7 +1698,6 @@ class PandasDataframe(
                     if new_dtypes is None:
                         new_dtypes = self_dtypes.copy()
                     # Update the new dtype series to the proper pandas dtype
-                    # We don't need to add an implicit backend for `astype`
                     new_dtype = pandas.api.types.pandas_dtype(dtype)
                     if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
                         # FIXME: https://github.com/dask/distributed/issues/8585
@@ -1718,7 +1727,6 @@ class PandasDataframe(
             # Assume that the dtype is a scalar.
             if not (col_dtypes == self_dtypes).all():
                 new_dtypes = self_dtypes.copy()
-                # We don't need to add an implicit backend for `astype`
                 new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
                 if Engine.get() == "Dask" and hasattr(new_dtype, "_is_materialized"):
                     # FIXME: https://github.com/dask/distributed/issues/8585
@@ -1752,7 +1760,7 @@ class PandasDataframe(
             new_frame = self._partition_mgr_cls.lazy_map_partitions(
                 self._partitions, astype_builder
             )
-        # TODO: recompute _pandas_backend (it can be changed)
+
         return self.__constructor__(
             new_frame,
             self.copy_index_cache(copy_lengths=True),
@@ -1760,8 +1768,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
-            # TODO: backend can be changed
-            pandas_backend=self._pandas_backend,
+            pandas_backend=get_pandas_backend(new_dtypes),
         )
 
     def numeric_columns(self, include_bool=True):
@@ -2113,7 +2120,7 @@ class PandasDataframe(
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
             dtypes = pandas.Series(
-                [self.construct_dtype(dtypes, self._pandas_backend)] * len(new_axes[1]),
+                [pandas.api.types.pandas_dtype(dtypes)] * len(new_axes[1]),
                 index=new_axes[1],
             )
 
@@ -2122,7 +2129,6 @@ class PandasDataframe(
             *new_axes,
             *new_axes_lengths,
             dtypes,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
         return result
@@ -2299,7 +2305,7 @@ class PandasDataframe(
                 # Materializing lazy columns in order to build dtype's index
                 new_columns = new_columns.get(return_lengths=False)
             dtypes = pandas.Series(
-                [self.construct_dtype(dtypes, self._pandas_backend)] * len(new_columns),
+                [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
                 index=new_columns,
             )
         return self.__constructor__(
@@ -2309,7 +2315,6 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             dtypes=dtypes,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
 
@@ -2390,7 +2395,6 @@ class PandasDataframe(
             self.copy_columns_cache(copy_lengths=True),
             self._row_lengths_cache,
             self._column_widths_cache,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
 
@@ -2438,7 +2442,6 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
-            # CHECKED: backend may be changed depending on `new_cols_dtypes`
             pandas_backend=self._pandas_backend,
         )
 
@@ -2545,7 +2548,6 @@ class PandasDataframe(
                 self._row_lengths_cache,
                 [len(self.columns)] if self.has_materialized_columns else None,
                 self.copy_dtypes_cache(),
-                # CHECKED: backend preserved
                 pandas_backend=self._pandas_backend,
             )
         else:
@@ -2850,7 +2852,6 @@ class PandasDataframe(
             *new_axes,
             *new_lengths,
             self.copy_dtypes_cache() if axis == Axis.COL_WISE else None,
-            # CHECKED: backend preserved
             pandas_backend=self._pandas_backend,
         )
 
@@ -2910,7 +2911,6 @@ class PandasDataframe(
             new_columns,
             row_lengths,
             column_widths,
-            # TODO: need check
             pandas_backend=self._pandas_backend,
         )
 
@@ -2939,7 +2939,6 @@ class PandasDataframe(
                 else None
             ),
             dtypes=self.copy_dtypes_cache(),
-            # CHECKED: backend preserved
             pandas_backend=self._pandas_backend,
         )
         result.synchronize_labels()
@@ -3096,7 +3095,6 @@ class PandasDataframe(
             None,
             None,
             dtypes=new_dtypes,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
 
@@ -3192,7 +3190,6 @@ class PandasDataframe(
                 lengths_objs[0],
                 lengths_objs[1],
                 new_dtypes,
-                # CHECKED: backend may be changed depending on function
                 pandas_backend=self._pandas_backend,
             )
         else:
@@ -3221,7 +3218,6 @@ class PandasDataframe(
                 self._row_lengths_cache,
                 self._column_widths_cache,
                 new_dtypes,
-                # CHECKED: backend may be changed depending on function
                 pandas_backend=self._pandas_backend,
             )
 
@@ -3328,7 +3324,6 @@ class PandasDataframe(
             new_row_lengths,
             new_column_widths,
             dtypes=dtypes,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
 
@@ -3471,17 +3466,8 @@ class PandasDataframe(
             new_partitions,
             index=new_index,
             columns=new_columns,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
-
-    def construct_dtype(self, dtype: str, backend: Optional[str]):
-        if backend is None or dtype == "category":
-            return pandas.api.types.pandas_dtype(dtype)
-        elif backend == "pyarrow":
-            return pandas.api.types.pandas_dtype(f"{dtype}[{backend}]")
-        else:
-            raise NotImplementedError
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
@@ -3596,17 +3582,14 @@ class PandasDataframe(
             else:
                 if new_columns is None:
                     assert not is_list_like(dtypes)
-                    # CHECKED: backend may be changed depending on function
-                    dtype = self.construct_dtype(dtypes, self._pandas_backend)
+                    dtype = pandas.api.types.pandas_dtype(dtypes)
                     kw["dtypes"] = ModinDtypes(DtypesDescriptor(remaining_dtype=dtype))
                 else:
                     kw["dtypes"] = (
                         pandas.Series(dtypes, index=new_columns)
                         if is_list_like(dtypes)
                         else pandas.Series(
-                            # CHECKED: backend may be changed depending on function
-                            [self.construct_dtype(dtypes, self._pandas_backend)]
-                            * len(new_columns),
+                            [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
                             index=new_columns,
                         )
                     )
@@ -3674,7 +3657,6 @@ class PandasDataframe(
             index=new_index,
             columns=new_columns,
             **kw,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
         if sync_labels and new_index is not None:
@@ -3897,7 +3879,6 @@ class PandasDataframe(
                 self.copy_columns_cache(copy_lengths=True),
                 row_lengths,
                 self._column_widths_cache,
-                # CHECKED: backend preserved
                 pandas_backend=self._pandas_backend,
             )
             new_right_frames = [
@@ -3907,7 +3888,6 @@ class PandasDataframe(
                     right_frame.copy_columns_cache(copy_lengths=True),
                     row_lengths,
                     right_frame._column_widths_cache,
-                    # CHECKED: backend preserved
                     pandas_backend=self._pandas_backend,
                 )
                 for right_parts, right_frame in zip(list_of_right_parts, right_frames)
@@ -3946,7 +3926,6 @@ class PandasDataframe(
             row_lengths,
             column_widths,
             dtypes,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
 
@@ -4081,7 +4060,6 @@ class PandasDataframe(
             new_lengths,
             new_widths,
             new_dtypes,
-            # CHECKED: backend preserved
             pandas_backend=self._pandas_backend,
         )
 
@@ -4157,7 +4135,6 @@ class PandasDataframe(
             index=new_index,
             columns=new_columns,
             dtypes=new_dtypes,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
 
@@ -4507,7 +4484,6 @@ class PandasDataframe(
                 new_partitions,
                 index=result.copy_index_cache(),
                 row_lengths=result._row_lengths_cache,
-                # CHECKED: backend may be changed depending on function
                 pandas_backend=self._pandas_backend,
             )
 
@@ -4588,7 +4564,6 @@ class PandasDataframe(
             new_partitions,
             index=new_index,
             columns=new_columns,
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )
 
@@ -4774,7 +4749,6 @@ class PandasDataframe(
             self._column_widths_cache,
             self._row_lengths_cache,
             dtypes=new_dtypes,
-            # TODO: backend preserved?
             pandas_backend=self._pandas_backend,
         )
 
@@ -4963,7 +4937,6 @@ class PandasDataframe(
                         columns,
                         row_lengths,
                         column_widths,
-                        # CHECKED: backend may be changed depending on function
                         pandas_backend=self._pandas_backend,
                     )
                     for part in list_of_right_parts
@@ -5036,6 +5009,5 @@ class PandasDataframe(
             index=self.index,
             row_lengths=lengths,
             column_widths=[1],
-            # CHECKED: backend may be changed depending on function
             pandas_backend=self._pandas_backend,
         )

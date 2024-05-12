@@ -35,7 +35,7 @@ class TreeReduce(Operator):
         axis : int, optional
             Specifies axis to apply function along.
         compute_dtypes : callable(pandas.Series, *func_args, **func_kwargs) -> np.dtype, optional
-            Callable for computing dtypes. Only NumPy?
+            Callable for computing dtypes.
 
         Returns
         -------

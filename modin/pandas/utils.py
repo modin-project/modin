@@ -13,6 +13,8 @@
 
 """Implement utils for pandas component."""
 
+from __future__ import annotations
+
 from typing import Iterator, Optional, Tuple
 
 import numpy as np
@@ -114,6 +116,13 @@ def is_scalar(obj):
     from .base import BasePandasDataset
 
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
+
+
+def get_pandas_backend(dtypes: pandas.Series) -> str | None:
+    backend = None
+    if any(isinstance(x, pandas.ArrowDtype) for x in dtypes):
+        backend = "pyarrow"
+    return backend
 
 
 def is_full_grab_slice(slc, sequence_len=None):

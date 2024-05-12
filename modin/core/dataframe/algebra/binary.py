@@ -85,7 +85,6 @@ def maybe_compute_dtypes_common_cast(
         # belong to the intersection, these will be NaN columns in the result
         mismatch_columns = columns_first ^ columns_second
     elif isinstance(second, dict):
-        # TODO: pyarrow backend
         dtypes_second = {
             key: pandas.api.types.pandas_dtype(type(value))
             for key, value in second.items()
@@ -98,7 +97,6 @@ def maybe_compute_dtypes_common_cast(
         mismatch_columns = columns_first.difference(columns_second)
     else:
         if isinstance(second, (list, tuple)):
-            # TODO: pyarrow backend
             second_dtypes_list = (
                 [pandas.api.types.pandas_dtype(type(value)) for value in second]
                 if axis == 1
@@ -107,7 +105,6 @@ def maybe_compute_dtypes_common_cast(
                 else [np.array(second).dtype] * len(dtypes_first)
             )
         elif is_scalar(second) or isinstance(second, np.ndarray):
-            # TODO: pyarrow backend
             try:
                 dtype = getattr(second, "dtype", None) or pandas.api.types.pandas_dtype(
                     type(second)
@@ -133,7 +130,6 @@ def maybe_compute_dtypes_common_cast(
         mismatch_columns = []
 
     # If at least one column doesn't match, the result of the non matching column would be nan.
-    # TODO: pyarrow backend
     nan_dtype = pandas.api.types.pandas_dtype(type(np.nan))
     dtypes = None
     if func is not None:
@@ -249,7 +245,7 @@ def try_compute_new_dtypes(
     infer_dtypes : {"common_cast", "try_sample", "bool", None}, default: None
         How dtypes should be infered (see ``Binary.register`` doc for more info).
     result_dtype : np.dtype, optional
-        NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter. Only NumPy?
+        NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter.
     axis : int, default: 0
         Axis to perform the binary operation along.
     func : callable(pandas.DataFrame, pandas.DataFrame) -> pandas.DataFrame, optional
@@ -264,19 +260,8 @@ def try_compute_new_dtypes(
 
     try:
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
-            # dataframe can contain types of different backends at the same time, for example:
-            # (Pdb) (pandas.DataFrame([[1,2,3], [4,5,6]]).astype({0: "int64[pyarrow]"}) > 4).dtypes
-            # 0    bool[pyarrow]
-            # 1             bool
-            # 2             bool
-            # dtype: object
-            backend = ""
-            if any("pyarrow" in str(x) for x in first.dtypes) or any(
-                "pyarrow" in str(x) for x in second.dtypes
-            ):
-                backend = "[pyarrow]"
             dtypes = maybe_build_dtypes_series(
-                first, second, dtype=pandas.api.types.pandas_dtype(f"bool{backend}")
+                first, second, dtype=pandas.api.types.pandas_dtype(bool)
             )
         elif infer_dtypes == "common_cast":
             dtypes = maybe_compute_dtypes_common_cast(

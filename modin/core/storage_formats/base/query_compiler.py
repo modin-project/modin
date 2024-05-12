@@ -6754,10 +6754,7 @@ class BaseQueryCompiler(
         ]
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
-    def construct_dtype(self, dtype: str, backend: Optional[str]):
-        return self._modin_frame.construct_dtype(dtype, backend)
-
-    def get_backend(self) -> str:
+    def get_backend(self) -> Optional[str]:
         return self._modin_frame._pandas_backend
 
     def repartition(self, axis=None):

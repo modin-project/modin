@@ -40,6 +40,7 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
+from modin.pandas.utils import get_pandas_backend
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.utils import ShuffleFunctions
@@ -985,9 +986,7 @@ class PandasDataframePartitionManager(
         parts = cls.split_pandas_df_into_partitions(
             df, row_chunksize, col_chunksize, update_bar
         )
-        backend = None
-        if any(isinstance(x, pandas.ArrowDtype) for x in df.dtypes):
-            backend = "pyarrow"
+        backend = get_pandas_backend(df.dtypes)
         if ProgressBar.get():
             pbar.close()
         if not return_dims:
