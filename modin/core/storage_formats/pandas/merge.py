@@ -221,9 +221,7 @@ class MergeImpl:
                         else new_left.sort_rows_by_column_values(on)
                     )
 
-            return (
-                new_left if keep_index or not sort else new_left.reset_index(drop=True)
-            )
+            return new_left if keep_index else new_left.reset_index(drop=True)
         else:
             return left.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
