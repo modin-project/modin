@@ -232,7 +232,7 @@ def boolean_mask_to_numeric(indexer):
             # `itertools.compress` masks `data` with the `selectors` mask,
             # works about ~10% faster than a pure list comprehension
             itertools.compress(data=range(len(indexer)), selectors=indexer),
-            dtype="int64",
+            dtype=np.int64,
         )
 
 
@@ -1130,7 +1130,7 @@ class _iLocIndexer(_LocationIndexerBase):
                     # `Index.__getitem__` works much faster with numpy arrays than with python lists,
                     # so although we lose some time here on converting to numpy, `Index.__getitem__`
                     # speedup covers the loss that we gain here.
-                    axis_loc = np.array(axis_loc, dtype="int64")
+                    axis_loc = np.array(axis_loc, dtype=np.int64)
                 # Relatively fast check allows us to not trigger `self.qc.get_axis()` computation
                 # if there're no negative indices and so they don't not depend on the axis length.
                 if isinstance(axis_loc, np.ndarray) and not (axis_loc < 0).any():

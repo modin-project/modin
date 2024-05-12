@@ -3088,7 +3088,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                     # we have to keep other columns so setting their mask
                     # values with `False`
-                    # TODO: pyarrow backend?
                     mask = pandas.Series(
                         np.zeros(df.shape[1], dtype=bool), index=df.columns
                     )

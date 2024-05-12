@@ -4288,7 +4288,6 @@ class BaseQueryCompiler(
                     # `Index.get_indexer_for` works much faster with numpy arrays than with python lists,
                     # so although we lose some time here on converting to numpy, `Index.get_indexer_for`
                     # speedup covers the loss that we gain here.
-                    # TODO: pyarrow backend?
                     axis_loc = np.array(axis_loc, dtype=axis_labels.dtype)
                 axis_lookup = axis_labels.get_indexer_for(axis_loc)
                 # `Index.get_indexer_for` sets -1 value for missing labels, we have to verify whether
