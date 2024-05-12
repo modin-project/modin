@@ -280,7 +280,9 @@ def test_merge(test_data, test_data2):
             pandas_result = pandas_df.merge(
                 pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
             )
-            sort_if_range_partitioning(modin_result, pandas_result)
+            sort_if_range_partitioning(
+                modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+            )
 
             modin_result = modin_df.merge(
                 modin_df2,
@@ -296,7 +298,9 @@ def test_merge(test_data, test_data2):
                 right_on="key",
                 sort=sorts[j],
             )
-            sort_if_range_partitioning(modin_result, pandas_result)
+            sort_if_range_partitioning(
+                modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+            )
 
     # Test for issue #1771
     modin_df = pd.DataFrame({"name": np.arange(40)})
@@ -305,7 +309,9 @@ def test_merge(test_data, test_data2):
     pandas_df2 = pandas.DataFrame({"name": [39], "position": [0]})
     modin_result = modin_df.merge(modin_df2, on="name", how="inner")
     pandas_result = pandas_df.merge(pandas_df2, on="name", how="inner")
-    sort_if_range_partitioning(modin_result, pandas_result)
+    sort_if_range_partitioning(
+        modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+    )
 
     frame_data = {
         "col1": [0, 1, 2, 3],
@@ -326,7 +332,9 @@ def test_merge(test_data, test_data2):
         # Defaults
         modin_result = modin_df.merge(modin_df2, how=how)
         pandas_result = pandas_df.merge(pandas_df2, how=how)
-        sort_if_range_partitioning(modin_result, pandas_result)
+        sort_if_range_partitioning(
+            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+        )
 
         # left_on and right_index
         modin_result = modin_df.merge(
@@ -335,7 +343,9 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_index=True
         )
-        sort_if_range_partitioning(modin_result, pandas_result)
+        sort_if_range_partitioning(
+            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+        )
 
         # left_index and right_on
         modin_result = modin_df.merge(
@@ -344,7 +354,9 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_on="col1"
         )
-        sort_if_range_partitioning(modin_result, pandas_result)
+        sort_if_range_partitioning(
+            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+        )
 
         # left_on and right_on col1
         modin_result = modin_df.merge(
@@ -353,7 +365,9 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_on="col1"
         )
-        sort_if_range_partitioning(modin_result, pandas_result)
+        sort_if_range_partitioning(
+            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+        )
 
         # left_on and right_on col2
         modin_result = modin_df.merge(
@@ -362,7 +376,9 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col2", right_on="col2"
         )
-        sort_if_range_partitioning(modin_result, pandas_result)
+        sort_if_range_partitioning(
+            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+        )
 
         # left_index and right_index
         modin_result = modin_df.merge(
@@ -371,7 +387,9 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_index=True
         )
-        sort_if_range_partitioning(modin_result, pandas_result)
+        sort_if_range_partitioning(
+            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+        )
 
     # Cannot merge a Series without a name
     ps = pandas.Series(frame_data2.get("col1"))
@@ -382,6 +400,7 @@ def test_merge(test_data, test_data2):
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
         comparator=sort_if_range_partitioning,
         expected_exception=ValueError("Cannot merge a Series without a name"),
+        comparator_kwargs={"force": StorageFormat.get() == "Hdk"},
     )
 
     # merge a Series with a name
@@ -392,6 +411,7 @@ def test_merge(test_data, test_data2):
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
         comparator=sort_if_range_partitioning,
+        comparator_kwargs={"force": StorageFormat.get() == "Hdk"},
     )
 
     with pytest.raises(TypeError):
