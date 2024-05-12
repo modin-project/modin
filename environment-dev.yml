@@ -14,7 +14,7 @@ dependencies:
   # optional dependencies
   # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
   - ray-core>=2.1.0,!=2.5.0
-  - pyarrow>=7.0.0
+  - pyarrow>=10.0.1
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*
   - grpcio!=1.46.*
@@ -69,4 +69,4 @@ dependencies:
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
-      - numpydoc==1.1.0
+      - numpydoc==1.6.0

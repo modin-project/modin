@@ -20,6 +20,7 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 from __future__ import annotations
 
 import re
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -46,8 +47,8 @@ class ListAccessor(ClassLogger):
         self._series = data
         self._query_compiler = data._query_compiler
 
-    @pandas.util.cache_readonly
-    def _Series(self):  # noqa: GL08
+    @cached_property
+    def _Series(self) -> Series:  # noqa: GL08
         # to avoid cyclic import
         from .series import Series
 
@@ -74,8 +75,8 @@ class StructAccessor(ClassLogger):
         self._series = data
         self._query_compiler = data._query_compiler
 
-    @pandas.util.cache_readonly
-    def _Series(self):  # noqa: GL08
+    @cached_property
+    def _Series(self) -> Series:  # noqa: GL08
         # to avoid cyclic import
         from modin.pandas.series import Series
 
@@ -107,8 +108,8 @@ class CategoryMethods(ClassLogger):
         self._series = data
         self._query_compiler = data._query_compiler
 
-    @pandas.util.cache_readonly
-    def _Series(self):  # noqa: GL08
+    @cached_property
+    def _Series(self) -> Series:  # noqa: GL08
         # to avoid cyclic import
         from modin.pandas.series import Series
 
@@ -202,8 +203,8 @@ class StringMethods(ClassLogger):
         self._series = data
         self._query_compiler = data._query_compiler
 
-    @pandas.util.cache_readonly
-    def _Series(self):  # noqa: GL08
+    @cached_property
+    def _Series(self) -> Series:  # noqa: GL08
         # to avoid cyclic import
         from .series import Series
 
@@ -584,8 +585,8 @@ class DatetimeProperties(ClassLogger):
         self._series = data
         self._query_compiler = data._query_compiler
 
-    @pandas.util.cache_readonly
-    def _Series(self):  # noqa: GL08
+    @cached_property
+    def _Series(self) -> Series:  # noqa: GL08
         # to avoid cyclic import
         from .series import Series
 

@@ -17,8 +17,9 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterable
+from functools import cached_property
 from types import BuiltinFunctionType
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Hashable, Union
 
 import numpy as np
 import pandas
@@ -70,12 +71,9 @@ _DEFAULT_BEHAVIOUR = {
     "_default_to_pandas",
     "_df",
     "_drop",
-    "_groups_cache",
     "_idx_name",
     "_index",
-    "_indices_cache",
     "_internal_by",
-    "_internal_by_cache",
     "_is_multi_by",
     "_iter",
     "_kwargs",
@@ -343,17 +341,9 @@ class DataFrameGroupBy(ClassLogger):
         """
         return self._default_to_pandas(lambda df: df.__bytes__())
 
-    _groups_cache = lib.no_default
-
-    # TODO: since python 3.9:
-    # @cached_property
-    @property
+    @cached_property
     def groups(self):
-        if self._groups_cache is not lib.no_default:
-            return self._groups_cache
-
-        self._groups_cache = self._compute_index_grouped(numerical=False)
-        return self._groups_cache
+        return self._compute_index_grouped(numerical=False)
 
     def min(self, numeric_only=False, min_count=-1, engine=None, engine_kwargs=None):
         if engine not in ("cython", None) and engine_kwargs is not None:
@@ -540,17 +530,9 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=dict(axis=axis, **kwargs),
         )
 
-    _indices_cache = lib.no_default
-
-    # TODO: since python 3.9:
-    # @cached_property
-    @property
+    @cached_property
     def indices(self):
-        if self._indices_cache is not lib.no_default:
-            return self._indices_cache
-
-        self._indices_cache = self._compute_index_grouped(numerical=True)
-        return self._indices_cache
+        return self._compute_index_grouped(numerical=True)
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
     def pct_change(
@@ -704,12 +686,8 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=numeric_only,
         )
 
-    _internal_by_cache = lib.no_default
-
-    # TODO: since python 3.9:
-    # @cached_property
-    @property
-    def _internal_by(self):
+    @cached_property
+    def _internal_by(self) -> tuple[Hashable]:
         """
         Get only those components of 'by' that are column labels of the source frame.
 
@@ -717,9 +695,6 @@ class DataFrameGroupBy(ClassLogger):
         -------
         tuple of labels
         """
-        if self._internal_by_cache is not lib.no_default:
-            return self._internal_by_cache
-
         internal_by = tuple()
         if self._drop:
             if is_list_like(self._by):
@@ -738,8 +713,6 @@ class DataFrameGroupBy(ClassLogger):
                     extra_log=f"When 'drop' is True, 'by' must be either list-like, Grouper, or a QueryCompiler, met: {type(self._by)}.",
                 )
                 internal_by = tuple(self._by.columns)
-
-        self._internal_by_cache = internal_by
         return internal_by
 
     def __getitem__(self, key):

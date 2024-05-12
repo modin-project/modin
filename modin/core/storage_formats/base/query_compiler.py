@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import abc
 import warnings
+from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Hashable, List, Optional
 
 import numpy as np
@@ -4464,8 +4465,8 @@ class BaseQueryCompiler(
 
     # END Abstract methods for QueryCompiler
 
-    @pandas.util.cache_readonly
-    def __constructor__(self) -> Callable[..., BaseQueryCompiler]:
+    @cached_property
+    def __constructor__(self) -> type[BaseQueryCompiler]:
         """
         Get query compiler constructor.
 
