@@ -2395,7 +2395,7 @@ class Series(BasePandasDataset):
         """
         return self._default_to_pandas(pandas.qcut, q, **kwargs)
 
-    def _reduce_dimension(self, query_compiler) -> Union[Series, Scalar]:
+    def _reduce_dimension(self, query_compiler) -> Series | Scalar:
         """
         Try to reduce the dimension of data from the `query_compiler`.
 

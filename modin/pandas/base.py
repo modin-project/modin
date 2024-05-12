@@ -20,16 +20,7 @@ import pickle as pkl
 import re
 import warnings
 from functools import cached_property
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Literal,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Literal, Optional, Sequence
 
 import numpy as np
 import pandas
@@ -851,9 +842,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     @abc.abstractmethod
-    def _reduce_dimension(
-        self, query_compiler: BaseQueryCompiler
-    ) -> Union[Series, Scalar]:
+    def _reduce_dimension(self, query_compiler: BaseQueryCompiler) -> Series | Scalar:
         """
         Reduce the dimension of data from the `query_compiler`.
 
@@ -864,7 +853,7 @@ class BasePandasDataset(ClassLogger):
 
         Returns
         -------
-        Union[Series, Scalar]
+        Series | Scalar
         """
         pass
 
@@ -2019,12 +2008,10 @@ class BasePandasDataset(ClassLogger):
         return _iLocIndexer(self)
 
     @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
-    def kurt(
-        self, axis=0, skipna=True, numeric_only=False, **kwargs
-    ) -> Series | Scalar:
+    def kurt(self, axis=0, skipna=True, numeric_only=False, **kwargs) -> Series | float:
         return self._stat_operation("kurt", axis, skipna, numeric_only, **kwargs)
 
-    kurtosis: Series | Scalar = kurt
+    kurtosis: Series | float = kurt
 
     def last(self, offset) -> Self:  # noqa: PR01, RT01, D200
         """
@@ -2159,7 +2146,7 @@ class BasePandasDataset(ClassLogger):
     def _stat_operation(
         self,
         op_name: str,
-        axis: Union[int, str],
+        axis: int | str,
         skipna: bool,
         numeric_only: Optional[bool] = False,
         **kwargs,
@@ -2279,7 +2266,7 @@ class BasePandasDataset(ClassLogger):
 
     notnull: Self = notna
 
-    def nunique(self, axis=0, dropna=True) -> Series | Scalar:  # noqa: PR01, RT01, D200
+    def nunique(self, axis=0, dropna=True) -> Series | int:  # noqa: PR01, RT01, D200
         """
         Return number of unique elements in the `BasePandasDataset`.
         """
@@ -2599,7 +2586,7 @@ class BasePandasDataset(ClassLogger):
         kind: Optional[str] = lib.no_default,
         on: Level = None,
         level: Level = None,
-        origin: Union[str, TimestampConvertibleTypes] = "start_day",
+        origin: str | TimestampConvertibleTypes = "start_day",
         offset: Optional[TimedeltaConvertibleTypes] = None,
         group_keys=False,
     ) -> Resampler:  # noqa: PR01, RT01, D200
