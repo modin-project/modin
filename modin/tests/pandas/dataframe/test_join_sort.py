@@ -80,20 +80,20 @@ def test_combine(data):
     "test_data, test_data2",
     [
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
+            np.random.randint(0, 100, size=(64, 64)),
+            np.random.uniform(0, 100, size=(128, 64)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.randint(0, 100, size=(128, 64)),
+            np.random.randint(0, 100, size=(64, 64)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
+            np.random.randint(0, 100, size=(64, 64)),
+            np.random.randint(0, 100, size=(64, 128)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.randint(0, 100, size=(64, 128)),
+            np.random.randint(0, 100, size=(64, 64)),
         ),
     ],
 )
@@ -122,8 +122,9 @@ def test_join(test_data, test_data2):
     hows = ["inner", "left", "right", "outer"]
     ons = ["col33", "col34"]
     sorts = [False, True]
-    for i in range(4):
-        for j in range(2):
+    assert len(ons) == len(sorts), "the loop below is designed for this condition"
+    for i in range(len(hows)):
+        for j in range(len(ons)):
             modin_result = modin_df.join(
                 modin_df2,
                 how=hows[i],
@@ -140,7 +141,11 @@ def test_join(test_data, test_data2):
                 lsuffix="_caller",
                 rsuffix="_other",
             )
-            df_equals(modin_result, pandas_result)
+            if sorts[j]:
+                # sorting in `join` is implemented through range partitioning technique
+                df_equals_and_sort(modin_result, pandas_result)
+            else:
+                df_equals(modin_result, pandas_result)
 
     frame_data = {
         "col1": [0, 1, 2, 3],
@@ -172,6 +177,15 @@ def test_join(test_data, test_data2):
         modin_join = modin_df.join([modin_df2, modin_df3], how=how)
         pandas_join = pandas_df.join([pandas_df2, pandas_df3], how=how)
         df_equals(modin_join, pandas_join)
+
+
+@pytest.mark.parametrize("how", ["inner", "right"])
+def test_join_empty(how):
+    data = np.random.randint(0, 100, size=(64, 64))
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.join(df.iloc[:0], how=how, lsuffix="_caller"),
+    )
 
 
 def test_join_cross_6786():
@@ -272,8 +286,9 @@ def test_merge(test_data, test_data2):
     hows = ["left", "inner", "right"]
     ons = ["col33", ["col33", "col34"]]
     sorts = [False, True]
-    for i in range(2):
-        for j in range(2):
+    assert len(ons) == len(sorts), "the loop below is designed for this condition"
+    for i in range(len(hows)):
+        for j in range(len(ons)):
             modin_result = modin_df.merge(
                 modin_df2, how=hows[i], on=ons[j], sort=sorts[j]
             )
@@ -420,7 +435,7 @@ def test_merge(test_data, test_data2):
 
 @pytest.mark.parametrize("how", ["inner", "right"])
 def test_merge_empty(how):
-    data = np.random.uniform(0, 100, size=(2**6, 2**6))
+    data = np.random.randint(0, 100, size=(64, 64))
     eval_general(*create_test_dfs(data), lambda df: df.merge(df.iloc[:0], how=how))
 
 

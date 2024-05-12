@@ -177,12 +177,11 @@ class MergeImpl:
 
             right_to_broadcast = right._modin_frame.combine()
             new_columns, new_dtypes = cls._compute_result_metadata(
-                left,
-                right,
+                *((left, right) if not reverted else (right, left)),
                 on,
                 left_on,
                 right_on,
-                kwargs.get("suffixes", ("_x", "_y") if not reverted else ("_y", "_x")),
+                kwargs.get("suffixes", ("_x", "_y")),
             )
 
             # We rebalance when the ratio of the number of existing partitions to

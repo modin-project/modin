@@ -526,33 +526,46 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 get_logger().info(message)
         return MergeImpl.row_axis_merge(self, right, kwargs)
 
-    def join(self, right, **kwargs):
+    def join(self, right: PandasQueryCompiler, **kwargs) -> PandasQueryCompiler:
         on = kwargs.get("on", None)
         how = kwargs.get("how", "left")
         sort = kwargs.get("sort", False)
+        left = self
 
-        if how in ["left", "inner"]:
+        if how in ["left", "inner"] or (
+            how == "right" and right._modin_frame._partitions.size != 0
+        ):
+            reverted = False
+            if how == "right":
+                left, right = right, left
+                reverted = True
 
-            def map_func(left, right, kwargs=kwargs):  # pragma: no cover
-                return pandas.DataFrame.join(left, right, **kwargs)
+            def map_func(
+                left, right, kwargs=kwargs
+            ) -> pandas.DataFrame:  # pragma: no cover
+                if reverted:
+                    df = pandas.DataFrame.join(right, left, **kwargs)
+                else:
+                    df = pandas.DataFrame.join(left, right, **kwargs)
+                return df
 
             right_to_broadcast = right._modin_frame.combine()
-            new_self = self.__constructor__(
-                self._modin_frame.broadcast_apply_full_axis(
+            left = left.__constructor__(
+                left._modin_frame.broadcast_apply_full_axis(
                     axis=1,
                     func=map_func,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
                     num_splits=merge_partitioning(
-                        self._modin_frame, right._modin_frame, axis=1
+                        left._modin_frame, right._modin_frame, axis=1
                     ),
                     other=right_to_broadcast,
                 )
             )
-            return new_self.sort_rows_by_column_values(on) if sort else new_self
+            return left.sort_rows_by_column_values(on) if sort else left
         else:
-            return self.default_to_pandas(pandas.DataFrame.join, right, **kwargs)
+            return left.default_to_pandas(pandas.DataFrame.join, right, **kwargs)
 
     # END Inter-Data operations
 
