@@ -81,7 +81,7 @@ def test_combine(data):
     [
         (
             np.random.randint(0, 100, size=(64, 64)),
-            np.random.uniform(0, 100, size=(128, 64)),
+            np.random.randint(0, 100, size=(128, 64)),
         ),
         (
             np.random.randint(0, 100, size=(128, 64)),

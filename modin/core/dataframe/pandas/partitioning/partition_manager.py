@@ -192,7 +192,9 @@ class PandasDataframePartitionManager(
         Parameters
         ----------
         dtypes : pandas.Series, optional
-            Dtypes that will be used when calling `astype`.
+            Column dtypes.
+            Upon creating a pandas DataFrame from `metadata` we call `astype` since
+            pandas doesn't allow to pass a list of dtypes directly in the constructor.
         **metadata : dict
             Metadata that has to be wrapped in a partition.
 
