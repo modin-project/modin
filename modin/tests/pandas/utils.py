@@ -1087,14 +1087,25 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
     )
 
 
-def create_test_dfs(*args, **kwargs) -> tuple[pd.DataFrame, pandas.DataFrame]:
-    post_fn = kwargs.pop("post_fn", lambda df: df)
+def create_test_dfs(
+    *args, post_fn=None, backend=None, **kwargs
+) -> tuple[pd.DataFrame, pandas.DataFrame]:
+    if post_fn is None:
+        post_fn = lambda df: (  # noqa: E731
+            df.convert_dtypes(dtype_backend=backend) if backend is not None else df
+        )
+    elif backend is not None:
+        post_fn = lambda df: post_fn(df).convert_dtypes(  # noqa: E731
+            dtype_backend=backend
+        )
     return tuple(
         map(post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)])
     )
 
 
-def create_test_series(vals, sort=False, **kwargs) -> tuple[pd.Series, pandas.Series]:
+def create_test_series(
+    vals, sort=False, backend=None, **kwargs
+) -> tuple[pd.Series, pandas.Series]:
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
@@ -1104,6 +1115,10 @@ def create_test_series(vals, sort=False, **kwargs) -> tuple[pd.Series, pandas.Se
     if sort:
         modin_series = modin_series.sort_values().reset_index(drop=True)
         pandas_series = pandas_series.sort_values().reset_index(drop=True)
+
+    if backend is not None:
+        modin_series = modin_series.convert_dtypes(dtype_backend=backend)
+        pandas_series = pandas_series.convert_dtypes(dtype_backend=backend)
     return modin_series, pandas_series
 
 

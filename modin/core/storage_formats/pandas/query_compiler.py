@@ -943,9 +943,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 and any(is_bool_dtype(t) for t in dtypes)
                 and any(is_numeric_dtype(t) for t in dtypes)
             ):
-                return np.object_
-            # how to take into account backend here?
-            return np.float64
+                return "object"
+            return "float64"
 
         return TreeReduce.register(
             map_fn,
