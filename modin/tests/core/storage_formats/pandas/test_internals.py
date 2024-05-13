@@ -26,8 +26,10 @@ from modin.config import (
     MinPartitionSize,
     NPartitions,
     RangePartitioning,
+    StorageFormat,
     context,
 )
+from modin.core.dataframe.algebra import Fold
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
@@ -36,6 +38,7 @@ from modin.core.dataframe.pandas.metadata import (
     ModinDtypes,
 )
 from modin.core.execution.utils import remote_function
+from modin.core.storage_formats import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.tests.pandas.utils import (
@@ -2705,3 +2708,41 @@ def test_map_partitions_joined_by_column():
             assert np.all(
                 result_partitions[i][0].to_numpy() == 3
             ), "Invalid map function result."
+
+
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="HDK is deprecated and doesn't allow to register a custom function.",
+)
+def test_fold_operator():
+    new_index = list(range(500, 1000))
+    new_columns = ["b"]
+
+    initial_df = pandas.DataFrame({"a": range(0, 1000)})
+    modin_df = pd.DataFrame(initial_df)
+    expected_df = pandas.DataFrame(
+        list(range(0, 1000, 2)), index=new_index, columns=new_columns
+    )
+
+    def filter_func(df):
+        result = df[df.index % 2 == 0]
+        result.index = new_index
+        result.columns = new_columns
+        return result
+
+    PandasQueryCompiler.filter_func = Fold.register(filter_func)
+
+    def filter_modin_dataframe(df):
+        return df.__constructor__(
+            query_compiler=df._query_compiler.filter_func(
+                fold_axis=0,
+                new_index=new_index,
+                new_columns=new_columns,
+            )
+        )
+
+    pd.DataFrame.filter_dataframe = filter_modin_dataframe
+
+    filtered_df = modin_df.filter_dataframe()
+
+    df_equals(filtered_df, expected_df)

@@ -2361,8 +2361,8 @@ class PandasDataframe(
             new_partitions,
             self.copy_index_cache(copy_lengths=copy_lengths),
             self.copy_columns_cache(copy_lengths=copy_widths),
-            self._row_lengths_cache,
-            self._column_widths_cache,
+            row_lengths=self._row_lengths_cache if copy_lengths else None,
+            column_widths=self._column_widths_cache if copy_widths else None,
             pandas_backend=self._pandas_backend,
         )
 
