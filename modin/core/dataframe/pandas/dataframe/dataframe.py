@@ -2341,16 +2341,16 @@ class PandasDataframe(
         PandasDataframe
             A new dataframe.
         """
+        copy_lengths = True
+        copy_widths = True
         if new_index is not None:
-            if self.has_materialized_index and len(self.index) == len(new_index):
-                copy_lengths = True
-            else:
+            if self.has_materialized_index and not len(self.index) == len(new_index):
                 copy_lengths = False
             self.set_index_cache(new_index)
         if new_columns is not None:
-            if self.has_materialized_columns and len(self.columns) == len(new_columns):
-                copy_widths = True
-            else:
+            if self.has_materialized_columns and not len(self.columns) == len(
+                new_columns
+            ):
                 copy_widths = False
             self.set_columns_cache(new_columns)
 
