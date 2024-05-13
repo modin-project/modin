@@ -331,22 +331,6 @@ class ModinAPI:
             storage_options=storage_options,
         )
 
-    def to_pickle_distributed(
-        self,
-        filepath_or_buffer,
-        compression: CompressionOptions = "infer",
-        protocol: int = pickle.HIGHEST_PROTOCOL,
-        storage_options: StorageOptions = None,
-    ) -> None:  # noqa
-        warnings.warn(
-            "`DataFrame.modin.to_pickle_distributed` is deprecated and will be removed in a future version. "
-            + "Please use `DataFrame.modin.to_pickle_glob` instead.",
-            category=FutureWarning,
-        )
-        return self.to_pickle_glob(
-            filepath_or_buffer, compression, protocol, storage_options
-        )
-
     def to_parquet_glob(
         self,
         path,
