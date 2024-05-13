@@ -297,8 +297,13 @@ def test_merge(test_data, test_data2):
             pandas_result = pandas_df.merge(
                 pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
             )
+            # sorting in `merge` is implemented through range partitioning technique
+            # therefore the order of the rows after it does not match the pandas,
+            # so additional sorting is needed in order to get the same result as for pandas
             sort_if_range_partitioning(
-                modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+                modin_result,
+                pandas_result,
+                force=StorageFormat.get() == "Hdk" or sorts[j],
             )
 
             modin_result = modin_df.merge(
@@ -316,7 +321,9 @@ def test_merge(test_data, test_data2):
                 sort=sorts[j],
             )
             sort_if_range_partitioning(
-                modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
+                modin_result,
+                pandas_result,
+                force=StorageFormat.get() == "Hdk" or sorts[j],
             )
 
     # Test for issue #1771
