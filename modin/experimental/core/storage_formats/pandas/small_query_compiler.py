@@ -18,17 +18,17 @@ Module contains ``SmallQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
-from modin.config.envvars import InitializeWithSmallQueryCompilers
+import warnings
+
 import numpy as np
 import pandas
-from pandas.core.dtypes.common import (
-    is_list_like,
-    is_scalar,
-)
+from pandas.core.dtypes.common import is_list_like, is_scalar
 
+from modin.config.envvars import InitializeWithSmallQueryCompilers
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.error_message import ErrorMessage
 from modin.utils import (
+    MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
     try_cast_to_pandas,
 )
@@ -262,7 +262,7 @@ def _groupby(agg_name):
         agg_func=None,
         how="axis_wise",
         drop=False,
-        **kwargs
+        **kwargs,
     ):
         by_names = []
         if isinstance(by, pandas.DataFrame):
@@ -337,15 +337,61 @@ def _register_binary(op):
     """
 
     def binary_operator(df, other, **kwargs):
-        if isinstance(other, pandas.DataFrame) and (
-            not df.empty
-            or (
-                len(other.columns) == 1
-                and other.columns[0] == MODIN_UNNAMED_SERIES_LABEL
-            )
-        ):
-            other = other.squeeze()
+
+        # if isinstance(other, pandas.DataFrame) and (
+        #     not df.empty
+        #     or (
+        #         len(other.columns) == 1
+        #         and other.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        #     )
+        # ):
+        #     other = other.squeeze()
+        squeeze_other = kwargs.pop("broadcast", False) or kwargs.pop(
+            "squeeze_other", False
+        )
+        squeeze_self = kwargs.pop("squeeze_self", False)
+
+        if squeeze_other:
+            other = other.squeeze(axis=1)
+
+        if squeeze_self:
+            df = df.squeeze(axis=1)
+
         return getattr(df, op)(other, **kwargs)
+
+    return binary_operator
+
+
+def _register_exanding(func):
+    def binary_operator(df, fold_axis, rolling_args, *args, **kwargs):
+        # if
+        # other_for_default = (
+        #     other
+        #     if other is None
+        #     else (
+        #         other.to_pandas().squeeze(axis=1)
+        #         if squeeze_other
+        #         else other.to_pandas()
+        #     )
+        # )
+
+        # if isinstance(other, pandas.DataFrame) and (
+        #     not df.empty
+        #     or (
+        #         len(other.columns) == 1
+        #         and other.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        #     )
+        # ):
+        #     other = other.squeeze()
+        squeeze_self = kwargs.pop("squeeze_self", False)
+
+        if squeeze_self:
+            df = df.squeeze(axis=1)
+        roller = df.expanding(*rolling_args)
+        if type(func) is property:
+            return func.fget(roller)
+
+        return func(roller, *args, **kwargs)
 
     return binary_operator
 
@@ -383,10 +429,16 @@ def _drop(df, **kwargs):  # noqa: GL08
     return df
 
 
-def _fillna(df, squeeze_self=True, squeeze_value=False, **kwargs):  # noqa: GL08
-    if len(df.columns) == 1 and df.columns[0] == "__reduced__":
-        df = df["__reduced__"]
-    return df.fillna(**kwargs)
+def _fillna(df, value, **kwargs):  # noqa: GL08
+    squeeze_self = kwargs.pop("squeeze_self", False)
+    squeeze_value = kwargs.pop("squeeze_value", False)
+    if squeeze_self and isinstance(df, pandas.DataFrame):
+        df = df.squeeze(axis=1)
+    if squeeze_value and isinstance(value, pandas.DataFrame):
+        value = value.squeeze(axis=1)
+    # if len(df.columns) == 1 and df.columns[0] == "__reduced__":
+    #     df = df["__reduced__"]
+    return df.fillna(value, **kwargs)
 
 
 def _is_monotonic(monotonic_type):  # noqa: GL08
@@ -423,12 +475,28 @@ def _getitem_row_array(df, key):  # noqa: GL08
 
 
 def _write_items(
-    df, row_numeric_index, col_numeric_index, broadcasted_items
+    df,
+    row_numeric_index,
+    col_numeric_index,
+    broadcasted_items,
+    need_columns_reindex=True,
 ):  # noqa: GL08
+    from modin.pandas.utils import broadcast_item, is_scalar
+
     if not isinstance(row_numeric_index, slice):
         row_numeric_index = list(row_numeric_index)
     if not isinstance(col_numeric_index, slice):
         col_numeric_index = list(col_numeric_index)
+    if not is_scalar(broadcasted_items):
+        broadcasted_items, _ = broadcast_item(
+            df,
+            row_numeric_index,
+            col_numeric_index,
+            broadcasted_items,
+            need_columns_reindex=need_columns_reindex,
+        )
+    else:
+        broadcasted_items = broadcasted_items
 
     if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
         broadcasted_items = broadcasted_items.squeeze()
@@ -452,6 +520,85 @@ def _delitem(df, key):  # noqa: GL08
 
 def _get_dummies(df, columns, **kwargs):  # noqa: GL08
     return pandas.get_dummies(df, columns=columns, **kwargs)
+
+
+def _register_default_pandas(
+    func,
+    is_series=False,
+    squeeze_series=False,
+    squeeze_args=False,
+    squeeze_kwargs=False,
+    return_modin=True,
+    in_place=False,
+    df_copy=False,
+    filter_kwargs=[],
+):
+    """
+    Build function that apply specified method of the passed frame.
+
+    Parameters
+    ----------
+    func : callable
+        Function to apply.
+    is_series : bool, default: False
+        If True, the passed frame will always be squeezed to a series.
+    squeeze_series : bool, default: False
+        If True, the passed frame will always be squeezed to a series if there is a single column named "__reduced__".
+    squeeze_args : bool, default: False
+        If True, all passed arguments will be squeezed.
+    squeeze_kwargs : bool, default: False
+        If True, all passed key word arguments will be squeezed.
+    return_modin : bool, default: True
+        If True, the result will always try to convert to DataFrame or Series.
+    in_place : bool, default: False
+        If True, the specified function will be applied on the passed frame in place.
+    df_copy : bool, default: False
+        If True, the specified function will be applied to a copy of the passed frame.
+    filter_kwargs : list, default: []
+        List of key word argument names to remove.
+
+    Returns
+    -------
+    callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+        Function to be applied to the frame.
+    """
+
+    def caller(query_compiler, *args, **kwargs):
+        df = query_compiler._pandas_frame
+        if df_copy:
+            df = df.copy()
+        if is_series:
+            df = df.squeeze(axis=1)
+        elif (
+            squeeze_series
+            and len(df.columns) == 1
+            and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
+            df = df.squeeze(axis=1)
+        exclude_names = [
+            # "broadcast",
+            "fold_axis",
+            # "squeeze_self",
+            # "squeeze_value",
+            "ignore_indices",
+        ] + filter_kwargs
+        kwargs = kwargs.copy()
+        for name in exclude_names:
+            kwargs.pop(name, None)
+        args = try_cast_to_pandas(args, squeeze=squeeze_args, squeeze_df=True)
+        kwargs = try_cast_to_pandas(kwargs, squeeze=squeeze_kwargs, squeeze_df=True)
+        result = func(df, *args, **kwargs)
+        if in_place:
+            result = df
+        if not (return_modin or isinstance(result, (pandas.Series, pandas.DataFrame))):
+            return result
+        if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = MODIN_UNNAMED_SERIES_LABEL
+            result = result.to_frame()
+        return query_compiler.__constructor__(result)
+
+    return caller
 
 
 @_inherit_docstrings(BaseQueryCompiler)
@@ -479,106 +626,97 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
         self._pandas_frame = pandas_frame
 
+    # def default_to_pandas(self, pandas_op, *args, **kwargs):
+    #     args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
+    #     kwargs = {
+    #         k: v.to_pandas if isinstance(v, type(self)) else v
+    #         for k, v in kwargs.items()
+    #     }
+    #     op_name = getattr(pandas_op, "__name__", str(pandas_op))
+    #     ErrorMessage.default_to_pandas(op_name)
+
+    #     result = pandas_op(self._pandas_frame, *args, **kwargs)
+    #     if isinstance(result, pandas.Series):
+    #         if result.name is None:
+    #             result.name = MODIN_UNNAMED_SERIES_LABEL
+    #         result = result.to_frame()
+
+    #     return result
+
     def default_to_pandas(self, pandas_op, *args, **kwargs):
-        args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
-        kwargs = {
-            k: v.to_pandas if isinstance(v, type(self)) else v
-            for k, v in kwargs.items()
-        }
+        """
+        Do fallback to pandas for the passed function.
 
-        result = pandas_op(self._pandas_frame, *args, **kwargs)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = MODIN_UNNAMED_SERIES_LABEL
-            result = result.to_frame()
+        Parameters
+        ----------
+        pandas_op : callable(pandas.DataFrame) -> object
+            Function to apply to the casted to pandas frame.
+        *args : iterable
+            Positional arguments to pass to `pandas_op`.
+        **kwargs : dict
+            Key-value arguments to pass to `pandas_op`.
 
-        return result
+        Returns
+        -------
+        BaseQueryCompiler
+            The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
+        """
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
+        if isinstance(result, (tuple, list)):
+            if "Series.tolist" in pandas_op.__name__:
+                # fast path: no need to iterate over the result from `tolist` function
+                return result
+            return [self.__wrap_in_qc(obj) for obj in result]
+        # breakpoint()
+        return type(self)(result)
+
+    def __wrap_in_qc(self, obj):
+        """
+        Wrap `obj` in query compiler.
+
+        Parameters
+        ----------
+        obj : any
+            Object to wrap.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Query compiler wrapping the object.
+        """
+        if isinstance(obj, pandas.Series):
+            if obj.name is None:
+                obj.name = MODIN_UNNAMED_SERIES_LABEL
+            obj = obj.to_frame()
+        if isinstance(obj, pandas.DataFrame):
+            return self.from_pandas(obj, type(self._pandas_frame))
+        else:
+            return obj
 
     def execute(self):
         """Wait for all computations to complete without materializing data."""
         pass
-    
-    
-    
-    def _register_default_pandas(
-        func,
-        is_series=False,
-        squeeze_series=False,
-        squeeze_args=False,
-        squeeze_kwargs=False,
-        return_modin=True,
-        in_place=False,
-        df_copy=False,
-        filter_kwargs=[],
-    ):
-        """
-        Build function that apply specified method of the passed frame.
 
-        Parameters
-        ----------
-        func : callable
-            Function to apply.
-        is_series : bool, default: False
-            If True, the passed frame will always be squeezed to a series.
-        squeeze_series : bool, default: False
-            If True, the passed frame will always be squeezed to a series if there is a single column named "__reduced__".
-        squeeze_args : bool, default: False
-            If True, all passed arguments will be squeezed.
-        squeeze_kwargs : bool, default: False
-            If True, all passed key word arguments will be squeezed.
-        return_modin : bool, default: True
-            If True, the result will always try to convert to DataFrame or Series.
-        in_place : bool, default: False
-            If True, the specified function will be applied on the passed frame in place.
-        df_copy : bool, default: False
-            If True, the specified function will be applied to a copy of the passed frame.
-        filter_kwargs : list, default: []
-            List of key word argument names to remove.
+    def take_2d_positional(self, index=None, columns=None):
+        index = slice(None) if index is None else index
+        columns = slice(None) if columns is None else columns
+        self._pandas_frame.iloc[index, columns]
+        return self.__constructor__(self._pandas_frame.iloc[index, columns])
 
-        Returns
-        -------
-        callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
-            Function to be applied to the frame.
-        """
+    def copy(self):
+        return self.__constructor__(self._pandas_frame.copy())
 
-        def caller(query_compiler, *args, **kwargs):
-            df = query_compiler._pandas_frame
-            if df_copy:
-                df = df.copy()
-            if is_series:
-                df = df.squeeze(axis=1)
-            elif (
-                squeeze_series
-                and len(df.columns) == 1
-                and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL
-            ):
-                df = df.squeeze(axis=1)
-            exclude_names = [
-                "broadcast",
-                "fold_axis",
-                "squeeze_self",
-                "squeeze_value",
-                "ignore_indices"
-            ] + filter_kwargs
-            kwargs = kwargs.copy()
-            for name in exclude_names:
-                kwargs.pop(name, None)
-            args = try_cast_to_pandas(args, squeeze=squeeze_args, squeeze_df=True)
-            kwargs = try_cast_to_pandas(kwargs, squeeze=squeeze_kwargs, squeeze_df=True)
-            result = func(df, *args, **kwargs)
-            if in_place:
-                result = df
-            if not (
-                return_modin or isinstance(result, (pandas.Series, pandas.DataFrame))
-            ):
-                return result
-            if isinstance(result, pandas.Series):
-                if result.name is None:
-                    result.name = MODIN_UNNAMED_SERIES_LABEL
-                result = result.to_frame()
-            return query_compiler.__constructor__(result)
+    def setitem_bool(self, row_loc, col_loc, item):
 
-        return caller
+        self._pandas_frame.loc[row_loc._pandas_frame.squeeze(axis=1), col_loc] = item
+        return self.__constructor__(self._pandas_frame)
 
     __and__ = _register_default_pandas(pandas.DataFrame.__and__, squeeze_series=True)
     __dir__ = _register_default_pandas(pandas.DataFrame.__dir__)
@@ -609,6 +747,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     apply_on_series = _register_default_pandas(pandas.Series.apply, is_series=True)
     applymap = _register_default_pandas(pandas.DataFrame.applymap)
     astype = _register_default_pandas(pandas.DataFrame.astype)
+    case_when = _register_default_pandas(pandas.Series.case_when)
     cat_codes = _register_default_pandas(lambda ser: ser.cat.codes, is_series=True)
     clip = _register_default_pandas(pandas.DataFrame.clip)
     combine = _register_default_pandas(_combine, squeeze_series=True)
@@ -621,7 +760,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
         lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df))
     )
     convert_dtypes = _register_default_pandas(pandas.DataFrame.convert_dtypes)
-    copy = _register_default_pandas(pandas.DataFrame.copy)
     count = _register_default_pandas(pandas.DataFrame.count)
     corr = _register_default_pandas(pandas.DataFrame.corr)
     cov = _register_default_pandas(pandas.DataFrame.cov)
@@ -691,15 +829,60 @@ class SmallQueryCompiler(BaseQueryCompiler):
     dt_weekday = _register_default_pandas(_dt_prop_map("weekday"))
     dt_weekofyear = _register_default_pandas(_dt_prop_map("weekofyear"))
     dt_year = _register_default_pandas(_dt_prop_map("year"))
+    duplicated = _register_default_pandas(pandas.DataFrame.duplicated)
     eq = _register_default_pandas(_register_binary("eq"), filter_kwargs=["dtypes"])
+    equals = _register_default_pandas(_register_binary("equals"))
     eval = _register_default_pandas(pandas.DataFrame.eval)
     explode = _register_default_pandas(pandas.DataFrame.explode)
+    expanding_count = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.count)
+    )
+    expanding_sum = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.sum)
+    )
+    expanding_mean = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.mean)
+    )
+    expanding_median = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.median)
+    )
+    expanding_std = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.std)
+    )
+    expanding_min = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.min)
+    )
+    expanding_max = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.max)
+    )
+    expanding_skew = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.skew)
+    )
+    expanding_kurt = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.kurt)
+    )
+    expanding_sem = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.sem)
+    )
+    expanding_quantile = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.quantile)
+    )
+    expanding_aggregate = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.aggregate)
+    )
+    expanding_var = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.var)
+    )
+    expanding_rank = _register_default_pandas(
+        _register_exanding(pandas.core.window.expanding.Expanding.rank)
+    )
+
     fillna = _register_default_pandas(_fillna)
     first_valid_index = _register_default_pandas(
         pandas.DataFrame.first_valid_index, return_modin=False
     )
     floordiv = _register_default_pandas(_register_binary("floordiv"))
-    ge = _register_default_pandas(pandas.DataFrame.ge, filter_kwargs=["dtypes"])
+    ge = _register_default_pandas(_register_binary("ge"), filter_kwargs=["dtypes"])
     get_dummies = _register_default_pandas(_get_dummies)
     getitem_array = _register_default_pandas(_getitem_array)
     getitem_row_array = _register_default_pandas(_getitem_row_array)
@@ -727,7 +910,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     groupby_std = _register_default_pandas(_groupby("std"))
     groupby_sum = _register_default_pandas(_groupby("sum"))
     groupby_var = _register_default_pandas(_groupby("var"))
-    gt = _register_default_pandas(pandas.DataFrame.gt, filter_kwargs=["dtypes"])
+    gt = _register_default_pandas(_register_binary("gt"), filter_kwargs=["dtypes"])
     idxmax = _register_default_pandas(pandas.DataFrame.idxmax)
     idxmin = _register_default_pandas(pandas.DataFrame.idxmin)
     infer_objects = _register_default_pandas(
@@ -753,10 +936,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
     last_valid_index = _register_default_pandas(
         pandas.DataFrame.last_valid_index, return_modin=False
     )
-    le = _register_default_pandas(pandas.DataFrame.le, filter_kwargs=["dtypes"])
-    lt = _register_default_pandas(pandas.DataFrame.lt, filter_kwargs=["dtypes"])
-    #mad = _register_default_pandas(pandas.DataFrame.mad)
+    le = _register_default_pandas(_register_binary("le"), filter_kwargs=["dtypes"])
+    lt = _register_default_pandas(_register_binary("lt"), filter_kwargs=["dtypes"])
+    # mad = _register_default_pandas(pandas.DataFrame.mad)
+    mask = _register_default_pandas(pandas.DataFrame.mask)
     max = _register_default_pandas(pandas.DataFrame.max)
+    map = _register_default_pandas(pandas.DataFrame.map)
     mean = _register_default_pandas(pandas.DataFrame.mean)
     median = _register_default_pandas(pandas.DataFrame.median)
     melt = _register_default_pandas(pandas.DataFrame.melt)
@@ -766,7 +951,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     mod = _register_default_pandas(_register_binary("mod"))
     mode = _register_default_pandas(pandas.DataFrame.mode)
     mul = _register_default_pandas(_register_binary("mul"))
-    ne = _register_default_pandas(pandas.DataFrame.ne, filter_kwargs=["dtypes"])
+    ne = _register_default_pandas(_register_binary("ne"), filter_kwargs=["dtypes"])
     negative = _register_default_pandas(pandas.DataFrame.__neg__)
     nlargest = _register_default_pandas(pandas.DataFrame.nlargest)
     notna = _register_default_pandas(pandas.DataFrame.notna)
@@ -925,7 +1110,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
         is_series=True,
     )
     transpose = _register_default_pandas(pandas.DataFrame.transpose)
-    truediv = _register_default_pandas(_register_binary("truediv"))
+    truediv = _register_default_pandas(_register_binary("truediv"), squeeze_series=True)
     unique = _register_default_pandas(pandas.Series.unique, is_series=True)
     unstack = _register_default_pandas(pandas.DataFrame.unstack)
     var = _register_default_pandas(pandas.DataFrame.var)
@@ -977,6 +1162,78 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
         return self.__constructor__(result)
 
+    def expanding_cov(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_default = (
+            other
+            if other is None
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
+        )
+        # expanding_rank = _register_default_pandas(_register_exanding(pandas.core.window.expanding.Expanding.rank))
+
+        return _register_default_pandas(
+            _register_exanding(pandas.core.window.expanding.Expanding.cov)
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_default,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            squeeze_self=squeeze_self,
+            **kwargs,
+        )
+
+    def expanding_corr(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_default = (
+            other
+            if other is None
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
+        )
+        return _register_default_pandas(
+            _register_exanding(pandas.core.window.expanding.Expanding.corr)
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_default,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            squeeze_self=squeeze_self,
+            **kwargs,
+        )
+
     def get_axis(self, axis):
         return self._pandas_frame.index if axis == 0 else self._pandas_frame.columns
 
@@ -995,15 +1252,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
         assert axis == 1
         return isinstance(self._pandas_frame.columns, pandas.MultiIndex)
 
-    def insert_item(self, *args, **kwargs):
-        return
-
     def to_pandas(self):
         return self._pandas_frame
 
     @classmethod
     def from_pandas(cls, df, data_cls):
-        return cls(data_cls.from_pandas(df))
+        return cls(df)
 
     @classmethod
     def from_arrow(cls, at, data_cls):

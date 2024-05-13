@@ -44,9 +44,6 @@ from typing import (
 )
 
 import numpy as np
-from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    SmallQueryCompiler,
-)
 import pandas
 from pandas._libs.lib import NoDefault, no_default
 from pandas._typing import (
@@ -69,6 +66,9 @@ from pandas.io.parsers.readers import _c_parser_defaults
 
 from modin.config import ModinNumpy, InitializeWithSmallQueryCompilers
 from modin.error_message import ErrorMessage
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
     SupportsPrivateToNumPy,
@@ -993,8 +993,8 @@ def from_pandas(df) -> DataFrame:
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-    
-    if InitializeWithSmallQueryCompilers.get():        
+
+    if InitializeWithSmallQueryCompilers.get():
         return ModinObjects.DataFrame(query_compiler=SmallQueryCompiler(df))
 
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))

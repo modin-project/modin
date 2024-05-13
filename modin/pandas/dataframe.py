@@ -57,7 +57,7 @@ from pandas.core.indexes.frozen import FrozenList
 from pandas.io.formats.info import DataFrameInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import PersistentPickle,InitializeWithSmallQueryCompilers
+from modin.config import InitializeWithSmallQueryCompilers, PersistentPickle
 from modin.error_message import ErrorMessage
 from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
     SmallQueryCompiler,
@@ -84,7 +84,7 @@ from .utils import (
     _doc_binary_op,
     cast_function_modin2pandas,
 )
-from modin.core.storage_formats import BaseQueryCompiler
+
 if TYPE_CHECKING:
     from modin.core.storage_formats import BaseQueryCompiler
 
@@ -150,13 +150,10 @@ class DataFrame(BasePandasDataset):
         query_compiler: BaseQueryCompiler = None,
     ) -> None:
         from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
-        if query_compiler is not None:
-            if not isinstance(query_compiler, BaseQueryCompiler): 
-                breakpoint()    
-        print(type(query_compiler))   
         if isinstance(data, (DataFrame, Series)):
             query_compiler = data._query_compiler.copy()
             self._query_compiler = query_compiler
@@ -210,9 +207,6 @@ class DataFrame(BasePandasDataset):
             distributed_frame = from_non_pandas(data, index, columns, dtype)
             if distributed_frame is not None:
                 self._query_compiler = distributed_frame._query_compiler
-                if self._query_compiler is not None:
-                    if not isinstance(self._query_compiler, BaseQueryCompiler): 
-                        breakpoint() 
                 return
 
             if isinstance(data, pandas.Index):
@@ -251,9 +245,6 @@ class DataFrame(BasePandasDataset):
                         new_qc = new_qc.reindex(axis=1, labels=columns)
 
                     self._query_compiler = new_qc
-                    if self._query_compiler is not None:
-                        if not isinstance(self._query_compiler, BaseQueryCompiler): 
-                            breakpoint() 
                     return
 
                 data = {
@@ -272,15 +263,12 @@ class DataFrame(BasePandasDataset):
             self._query_compiler = from_pandas(pandas_df)._query_compiler
         else:
             self._query_compiler = query_compiler
-        
+
         if query_compiler is None and InitializeWithSmallQueryCompilers.get():
             small_dataframe = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )
             self._query_compiler = SmallQueryCompiler(small_dataframe)
-        if self._query_compiler is not None:
-            if not isinstance(self._query_compiler, BaseQueryCompiler): 
-                breakpoint()   
 
     def __repr__(self) -> str:
         """
@@ -3147,7 +3135,6 @@ class DataFrame(BasePandasDataset):
         -------
         pandas.DataFrame
         """
-        print(f"self._query_compiler {type(self._query_compiler)}")
         return self._query_compiler.to_pandas()
 
     def _validate_eval_query(self, expr, **kwargs) -> None:

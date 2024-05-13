@@ -63,7 +63,6 @@ def eval_setitem(md_df, pd_df, value, col=None, loc=None, expected_exception=Non
         col = pd_df.columns[loc]
 
     value_getter = value if callable(value) else (lambda *args, **kwargs: value)
-
     eval_general(
         md_df,
         pd_df,
@@ -80,7 +79,6 @@ def eval_loc(md_df, pd_df, value, key):
         md_value, pd_value = value
     else:
         md_value, pd_value = value, value
-
     eval_general(
         md_df,
         pd_df,
@@ -523,7 +521,6 @@ def test_loc_4456(
     if reverse_value_columns:
         pdf_value = pdf_value.reindex(columns=pdf_value.columns[::-1])
         mdf_value = mdf_value.reindex(columns=mdf_value.columns[::-1])
-
     eval_loc(modin_df, pandas_df, pdf_value, key)
     eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
 
@@ -1486,6 +1483,7 @@ def test_reset_index(data, test_async_reset_index):
     pd_df_cp = pandas_df.copy()
     if test_async_reset_index:
         modin_df._query_compiler.set_frame_index_cache(None)
+
     modin_df_cp.reset_index(inplace=True)
     pd_df_cp.reset_index(inplace=True)
     df_equals(modin_df_cp, pd_df_cp)
