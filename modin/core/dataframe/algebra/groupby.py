@@ -13,6 +13,10 @@
 
 """Module houses builder class for GroupByReduce operator."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Optional, Union
+
 import pandas
 
 from modin.core.dataframe.pandas.metadata import ModinIndex
@@ -21,6 +25,9 @@ from modin.utils import MODIN_UNNAMED_SERIES_LABEL, hashable
 
 from .default2pandas.groupby import GroupBy, GroupByDefault
 from .tree_reduce import TreeReduce
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class GroupByReduce(TreeReduce):
@@ -41,11 +48,16 @@ class GroupByReduce(TreeReduce):
         arbitrary aggregation. Note: this attribute should be considered private.
     """
 
-    ID_LEVEL_NAME = "__ID_LEVEL_NAME__"
-    _GROUPBY_REDUCE_IMPL_FLAG = "__groupby_reduce_impl_func__"
+    ID_LEVEL_NAME: str = "__ID_LEVEL_NAME__"
+    _GROUPBY_REDUCE_IMPL_FLAG: str = "__groupby_reduce_impl_func__"
 
     @classmethod
-    def register(cls, map_func, reduce_func=None, **call_kwds):
+    def register(
+        cls,
+        map_func: Union[str, dict, Callable[..., pandas.DataFrame]],
+        reduce_func: Optional[Union[str, dict, Callable[..., pandas.DataFrame]]] = None,
+        **call_kwds: dict,
+    ) -> Callable[..., PandasQueryCompiler]:
         """
         Build template GroupBy aggregation function.
 
@@ -59,7 +71,7 @@ class GroupByReduce(TreeReduce):
         reduce_func : str, dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame, optional
             Function to apply to the ``DataFrameGroupBy`` at the reduce phase. If not specified
             will be set the same as 'map_func'.
-        **call_kwds : kwargs
+        **call_kwds : dict
             Kwargs that will be passed to the returned function.
 
         Returns
@@ -90,7 +102,11 @@ class GroupByReduce(TreeReduce):
         )
 
     @classmethod
-    def register_implementation(cls, map_func, reduce_func):
+    def register_implementation(
+        cls,
+        map_func: Callable[..., pandas.DataFrame],
+        reduce_func: Callable[..., pandas.DataFrame],
+    ) -> None:
         """
         Register callables to be recognized as an implementations of tree-reduce phases.
 
@@ -107,16 +123,16 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def map(
         cls,
-        df,
-        map_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        other=None,
+        df: pandas.DataFrame,
+        map_func: Callable[..., pandas.DataFrame],
+        axis: int,
+        groupby_kwargs: dict,
+        agg_args: list,
+        agg_kwargs: dict,
+        other: Optional[pandas.DataFrame] = None,
         by=None,
-        drop=False,
-    ):
+        drop: bool = False,
+    ) -> pandas.DataFrame:
         """
         Execute Map phase of GroupByReduce.
 
@@ -194,17 +210,17 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def reduce(
         cls,
-        df,
-        reduce_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        partition_idx=0,
-        drop=False,
-        method=None,
-        finalizer_fn=None,
-    ):
+        df: pandas.DataFrame,
+        reduce_func: Union[dict, Callable[..., pandas.DataFrame]],
+        axis: int,
+        groupby_kwargs: dict,
+        agg_args: list,
+        agg_kwargs: dict,
+        partition_idx: int = 0,
+        drop: bool = False,
+        method: Optional[str] = None,
+        finalizer_fn: Optional[Callable[[pandas.DataFrame], pandas.DataFrame]] = None,
+    ) -> pandas.DataFrame:
         """
         Execute Reduce phase of GroupByReduce.
 
@@ -231,7 +247,7 @@ class GroupByReduce(TreeReduce):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
-        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, optional
             A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
@@ -286,27 +302,27 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def caller(
         cls,
-        query_compiler,
+        query_compiler: PandasQueryCompiler,
         by,
-        map_func,
-        reduce_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        method=None,
-        default_to_pandas_func=None,
-        finalizer_fn=None,
-    ):
+        map_func: Union[dict, Callable[..., pandas.DataFrame]],
+        reduce_func: Union[dict, Callable[..., pandas.DataFrame]],
+        axis: int,
+        groupby_kwargs: dict,
+        agg_args: list,
+        agg_kwargs: dict,
+        drop: bool = False,
+        method: Optional[str] = None,
+        default_to_pandas_func: Optional[Callable[..., pandas.DataFrame]] = None,
+        finalizer_fn: Optional[Callable[[pandas.DataFrame], pandas.DataFrame]] = None,
+    ) -> PandasQueryCompiler:
         """
         Execute GroupBy aggregation with TreeReduce approach.
 
         Parameters
         ----------
-        query_compiler : BaseQueryCompiler
+        query_compiler : PandasQueryCompiler
             Frame to group.
-        by : BaseQueryCompiler, column or index label, Grouper or list of such
+        by : PandasQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
         map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             Function to apply to the `GroupByObject` at the Map phase.
@@ -328,12 +344,12 @@ class GroupByReduce(TreeReduce):
         default_to_pandas_func : callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, optional
             The pandas aggregation function equivalent to the `map_func + reduce_func`.
             Used in case of defaulting to pandas. If not specified `map_func` is used.
-        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, optional
             A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
         -------
-        The same type as `query_compiler`
+        PandasQueryCompiler
             QueryCompiler which carries the result of GroupBy aggregation.
         """
         is_unsupported_axis = axis != 0
@@ -434,7 +450,12 @@ class GroupByReduce(TreeReduce):
         return result
 
     @classmethod
-    def get_callable(cls, agg_func, df, preserve_aggregation_order=True):
+    def get_callable(
+        cls,
+        agg_func: Union[dict, Callable[..., pandas.DataFrame]],
+        df: pandas.DataFrame,
+        preserve_aggregation_order: bool = True,
+    ) -> Callable[..., pandas.DataFrame]:
         """
         Build aggregation function to apply to each group at this particular partition.
 
@@ -473,8 +494,11 @@ class GroupByReduce(TreeReduce):
 
     @classmethod
     def _build_callable_for_dict(
-        cls, agg_dict, preserve_aggregation_order=True, grp_has_id_level=False
-    ):
+        cls,
+        agg_dict: dict,
+        preserve_aggregation_order: bool = True,
+        grp_has_id_level: bool = False,
+    ) -> Callable[..., pandas.DataFrame]:
         """
         Build callable for an aggregation dictionary.
 
@@ -643,7 +667,7 @@ class GroupByReduce(TreeReduce):
         return aggregate_on_dict
 
     @classmethod
-    def is_registered_implementation(cls, func):
+    def is_registered_implementation(cls, func: Callable) -> bool:
         """
         Check whether the passed `func` was registered as a TreeReduce implementation.
 
@@ -661,16 +685,16 @@ class GroupByReduce(TreeReduce):
     def build_map_reduce_functions(
         cls,
         by,
-        axis,
-        groupby_kwargs,
-        map_func,
-        reduce_func,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        method=None,
-        finalizer_fn=None,
-    ):
+        axis: int,
+        groupby_kwargs: dict,
+        map_func: Union[dict, Callable[..., pandas.DataFrame]],
+        reduce_func: Union[dict, Callable[..., pandas.DataFrame]],
+        agg_args: list,
+        agg_kwargs: dict,
+        drop: bool = False,
+        method: Optional[str] = None,
+        finalizer_fn: Callable[[pandas.DataFrame], pandas.DataFrame] = None,
+    ) -> tuple[Callable, Callable]:
         """
         Bind appropriate arguments to map and reduce functions.
 
@@ -695,7 +719,7 @@ class GroupByReduce(TreeReduce):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
-        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, optional
             A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
@@ -709,8 +733,14 @@ class GroupByReduce(TreeReduce):
         if hasattr(by, "_modin_frame"):
             by = None
 
-        def _map(df, other=None, **kwargs):
-            def wrapper(df, other=None):
+        def _map(
+            df: pandas.DataFrame,
+            other: Optional[pandas.DataFrame] = None,
+            **kwargs: dict,
+        ) -> pandas.DataFrame:
+            def wrapper(
+                df: pandas.DataFrame, other: Optional[pandas.DataFrame] = None
+            ) -> pandas.DataFrame:
                 return cls.map(
                     df,
                     other=other,
@@ -732,8 +762,8 @@ class GroupByReduce(TreeReduce):
                 result = wrapper(df.copy(), other if other is None else other.copy())
             return result
 
-        def _reduce(df, **call_kwargs):
-            def wrapper(df):
+        def _reduce(df: pandas.DataFrame, **call_kwargs: dict) -> pandas.DataFrame:
+            def wrapper(df: pandas.DataFrame):
                 return cls.reduce(
                     df,
                     axis=axis,

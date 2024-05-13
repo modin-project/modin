@@ -364,6 +364,38 @@ def test_sum_single_column(data):
     df_equals(modin_df.sum(axis=1), pandas_df.sum(axis=1))
 
 
+def test_sum_datetime64():
+    pd_ser = pandas.date_range(start="1/1/2018", end="1/08/2018")
+    modin_df, pandas_df = create_test_dfs({"A": pd_ser, "B": [1, 2, 3, 4, 5, 6, 7, 8]})
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sum(),
+        expected_exception=TypeError(
+            "'DatetimeArray' with dtype datetime64[ns] does not support reduction 'sum'"
+        ),
+    )
+
+
+def test_min_datetime64():
+    pd_ser = pandas.date_range(start="1/1/2018", end="1/08/2018")
+    modin_df, pandas_df = create_test_dfs({"A": pd_ser, "B": [1, 2, 3, 4, 5, 6, 7, 8]})
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.min(),
+    )
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.min(axis=1),
+        # pandas raises: `TypeError: '<=' not supported between instances of 'Timestamp' and 'int'`
+        # while modin raises quite general: `TypeError("Cannot compare Numeric and Non-Numeric Types")`
+        expected_exception=False,
+    )
+
+
 @pytest.mark.parametrize(
     "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
 )

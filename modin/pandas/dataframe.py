@@ -1635,7 +1635,7 @@ class DataFrame(BasePandasDataset):
                 dtype=pandas.api.types.pandas_dtype("float64"),
             )
 
-        data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
+        data = self._validate_dtypes_prod_mean(axis, numeric_only, ignore_axis=True)
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
@@ -2162,9 +2162,19 @@ class DataFrame(BasePandasDataset):
                 dtype=pandas.api.types.pandas_dtype("float64"),
             )
 
-        data = self._validate_dtypes_sum_prod_mean(
-            axis, numeric_only, ignore_axis=False
-        )
+        # We cannot add datetime types, so if we are summing a column with
+        # dtype datetime64 and cannot ignore non-numeric types, we must throw a
+        # TypeError.
+        if numeric_only is False and any(
+            dtype == pandas.api.types.pandas_dtype("datetime64[ns]")
+            for dtype in self.dtypes
+        ):
+            raise TypeError(
+                "'DatetimeArray' with dtype datetime64[ns] does not support reduction 'sum'"
+            )
+
+        data = self._get_numeric_data(axis) if numeric_only else self
+
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
@@ -3055,31 +3065,23 @@ class DataFrame(BasePandasDataset):
         """
         # If our DataFrame has both numeric and non-numeric dtypes then
         # comparisons between these types do not make sense and we must raise a
-        # TypeError. The exception to this rule is when there are datetime and
-        # timedelta objects, in which case we proceed with the comparison
-        # without ignoring any non-numeric types. We must check explicitly if
+        # TypeError. We must check explicitly if
         # numeric_only is False because if it is None, it will default to True
         # if the operation fails with mixed dtypes.
         if (
             axis
             and numeric_only is False
-            and np.unique([is_numeric_dtype(dtype) for dtype in self.dtypes]).size == 2
+            and not all([is_numeric_dtype(dtype) for dtype in self.dtypes])
         ):
-            # check if there are columns with dtypes datetime or timedelta
-            if all(
-                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
-                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
-                for dtype in self.dtypes
-            ):
-                raise TypeError("Cannot compare Numeric and Non-Numeric Types")
+            raise TypeError("Cannot compare Numeric and Non-Numeric Types")
 
         return self._get_numeric_data(axis) if numeric_only else self
 
-    def _validate_dtypes_sum_prod_mean(
+    def _validate_dtypes_prod_mean(
         self, axis, numeric_only, ignore_axis=False
     ) -> DataFrame:
         """
-        Validate data dtype for `sum`, `prod` and `mean` methods.
+        Validate data dtype for `prod` and `mean` methods.
 
         Parameters
         ----------
@@ -3096,38 +3098,17 @@ class DataFrame(BasePandasDataset):
         -------
         DataFrame
         """
-        # We cannot add datetime types, so if we are summing a column with
-        # dtype datetime64 and cannot ignore non-numeric types, we must throw a
-        # TypeError.
-        if (
-            not axis
-            and numeric_only is False
-            and any(
-                dtype == pandas.api.types.pandas_dtype("datetime64[ns]")
-                for dtype in self.dtypes
-            )
-        ):
-            raise TypeError("Cannot add Timestamp Types")
-
         # If our DataFrame has both numeric and non-numeric dtypes then
         # operations between these types do not make sense and we must raise a
-        # TypeError. The exception to this rule is when there are datetime and
-        # timedelta objects, in which case we proceed with the comparison
-        # without ignoring any non-numeric types. We must check explicitly if
+        # TypeError. We must check explicitly if
         # numeric_only is False because if it is None, it will default to True
         # if the operation fails with mixed dtypes.
         if (
             (axis or ignore_axis)
             and numeric_only is False
-            and np.unique([is_numeric_dtype(dtype) for dtype in self.dtypes]).size == 2
+            and not all([is_numeric_dtype(dtype) for dtype in self.dtypes])
         ):
-            # check if there are columns with dtypes datetime or timedelta
-            if all(
-                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
-                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
-                for dtype in self.dtypes
-            ):
-                raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
+            raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
         return self._get_numeric_data(axis) if numeric_only else self
 
@@ -3164,7 +3145,7 @@ class DataFrame(BasePandasDataset):
                     "'Not' nodes are not implemented."
                 )  # pragma: no cover
 
-    def _reduce_dimension(self, query_compiler) -> Series:
+    def _reduce_dimension(self, query_compiler: BaseQueryCompiler) -> Series:
         """
         Reduce the dimension of data from the `query_compiler`.
 

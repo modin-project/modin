@@ -52,16 +52,6 @@ from modin.core.storage_formats.pandas.parsers import (
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
-
-if TYPE_CHECKING:
-    from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
-        ProtocolDataframe,
-    )
-    from modin.core.dataframe.pandas.partitioning.partition_manager import (
-        PandasDataframePartitionManager,
-    )
-    from pandas._typing import npt
-
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
 from modin.pandas.indexing import is_range_like
@@ -71,6 +61,16 @@ from modin.pandas.utils import (
     is_full_grab_slice,
 )
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+
+if TYPE_CHECKING:
+    from pandas._typing import npt
+
+    from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+        ProtocolDataframe,
+    )
+    from modin.core.dataframe.pandas.partitioning.partition_manager import (
+        PandasDataframePartitionManager,
+    )
 
 
 class PandasDataframe(
@@ -103,7 +103,7 @@ class PandasDataframe(
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls: PandasDataframePartitionManager = None
+    _partition_mgr_cls: PandasDataframePartitionManager
     _query_compiler_cls = PandasQueryCompiler
     # These properties flag whether or not we are deferring the metadata synchronization
     _deferred_index: bool = False
@@ -320,7 +320,7 @@ class PandasDataframe(
         return self.row_lengths if axis == 0 else self.column_widths
 
     @property
-    def has_dtypes_cache(self):
+    def has_dtypes_cache(self) -> bool:
         """
         Check if the dtypes cache exists.
 
@@ -331,7 +331,7 @@ class PandasDataframe(
         return self._dtypes is not None
 
     @property
-    def has_materialized_dtypes(self):
+    def has_materialized_dtypes(self) -> bool:
         """
         Check if dataframe has materialized index cache.
 
@@ -1128,7 +1128,7 @@ class PandasDataframe(
 
     def _get_new_index_obj(
         self, positions, sorted_positions, axis: int
-    ) -> "tuple[pandas.Index, slice | npt.NDArray[np.intp]]":
+    ) -> tuple[pandas.Index, slice | npt.NDArray[np.intp]]:
         """
         Find the new Index object for take_2d_positional result.
 
@@ -2958,7 +2958,7 @@ class PandasDataframe(
         num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
-    ):
+    ) -> PandasDataframe:
         """
         Perform a function across an entire axis.
 

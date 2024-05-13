@@ -322,11 +322,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Dataframe exchange protocol
 
-    index = property(_get_axis(0), _set_axis(0))
-    columns = property(_get_axis(1), _set_axis(1))
+    index: pandas.Index = property(_get_axis(0), _set_axis(0))
+    columns: pandas.Index = property(_get_axis(1), _set_axis(1))
 
     @property
-    def dtypes(self):
+    def dtypes(self) -> pandas.Series:
         return self._modin_frame.dtypes
 
     def get_dtypes_set(self):
@@ -820,7 +820,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # data inside. Sometimes we have to reverse this transposition of blocks
     # for simplicity of implementation.
 
-    def transpose(self, *args, **kwargs):
+    def transpose(self, *args, **kwargs) -> PandasQueryCompiler:
         # Switch the index and columns and transpose the data within the blocks.
         return self.__constructor__(self._modin_frame.transpose())
 

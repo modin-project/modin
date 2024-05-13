@@ -37,6 +37,7 @@ dependencies:
   - pytest>=7.3.2
   - pytest-cov>=4.0.0
   - pytest-xdist>=3.2.0
+  - typing_extensions
 
   # code linters
   - black>=24.1.0
