@@ -13,20 +13,31 @@
 
 """Module houses builder class for Fold operator."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Optional
+
 from .operator import Operator
+
+if TYPE_CHECKING:
+    import pandas
+
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class Fold(Operator):
     """Builder class for Fold functions."""
 
     @classmethod
-    def register(cls, fold_function):
+    def register(
+        cls, fold_function: Callable[..., pandas.DataFrame]
+    ) -> Callable[..., PandasQueryCompiler]:
         """
         Build Fold operator that will be performed across rows/columns.
 
         Parameters
         ----------
-        fold_function : callable(pandas.DataFrame) -> pandas.DataFrame
+        fold_function : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
             Function to apply across rows/columns.
 
         Returns
@@ -35,25 +46,30 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
-        def caller(query_compiler, fold_axis=None, *args, **kwargs):
+        def caller(
+            query_compiler: PandasQueryCompiler,
+            fold_axis: Optional[int] = None,
+            *args: tuple,
+            **kwargs: dict,
+        ) -> PandasQueryCompiler:
             """
             Execute Fold function against passed query compiler.
 
             Parameters
             ----------
-            query_compiler : BaseQueryCompiler
+            query_compiler : PandasQueryCompiler
                 The query compiler to execute the function on.
             fold_axis : int, optional
                 0 or None means apply across full column partitions. 1 means
                 apply across full row partitions.
-            *args : iterable
-                Additional arguments passed to fold_function.
+            *args : tuple
+                Additional arguments passed to `fold_function`.
             **kwargs: dict
-                Additional keyword arguments passed to fold_function.
+                Additional keyword arguments passed to `fold_function`.
 
             Returns
             -------
-            BaseQueryCompiler
+            PandasQueryCompiler
                 A new query compiler representing the result of executing the
                 function.
             """

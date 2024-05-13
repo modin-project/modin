@@ -13,8 +13,10 @@
 
 """Module houses builder class for Binary operator."""
 
+from __future__ import annotations
+
 import warnings
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import numpy as np
 import pandas
@@ -24,13 +26,20 @@ from modin.error_message import ErrorMessage
 
 from .operator import Operator
 
+if TYPE_CHECKING:
+    from pandas._typing import DtypeObj
+
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+
 
 def maybe_compute_dtypes_common_cast(
-    first,
-    second,
-    trigger_computations=False,
-    axis=0,
-    func=None,
+    first: PandasQueryCompiler,
+    second: Union[PandasQueryCompiler, dict, list, tuple, np.ndarray, str, DtypeObj],
+    trigger_computations: bool = False,
+    axis: int = 0,
+    func: Optional[
+        Callable[[pandas.DataFrame, pandas.DataFrame], pandas.DataFrame]
+    ] = None,
 ) -> Optional[pandas.Series]:
     """
     Precompute data types for binary operations by finding common type between operands.
@@ -39,7 +48,7 @@ def maybe_compute_dtypes_common_cast(
     ----------
     first : PandasQueryCompiler
         First operand for which the binary operation would be performed later.
-    second : PandasQueryCompiler, list-like or scalar
+    second : PandasQueryCompiler, dict, list, tuple, np.ndarray, str or DtypeObj
         Second operand for which the binary operation would be performed later.
     trigger_computations : bool, default: False
         Whether to trigger computation of the lazy metadata for `first` and `second`.
@@ -155,7 +164,7 @@ def maybe_compute_dtypes_common_cast(
             ],
             index=common_columns,
         )
-    dtypes = pandas.concat(
+    dtypes: pandas.Series = pandas.concat(
         [
             dtypes,
             pandas.Series(
@@ -168,7 +177,10 @@ def maybe_compute_dtypes_common_cast(
 
 
 def maybe_build_dtypes_series(
-    first, second, dtype, trigger_computations=False
+    first: PandasQueryCompiler,
+    second: Union[PandasQueryCompiler, Any],
+    dtype: DtypeObj,
+    trigger_computations: bool = False,
 ) -> Optional[pandas.Series]:
     """
     Build a ``pandas.Series`` describing dtypes of the result of a binary operation.
@@ -179,7 +191,7 @@ def maybe_build_dtypes_series(
         First operand for which the binary operation would be performed later.
     second : PandasQueryCompiler, list-like or scalar
         Second operand for which the binary operation would be performed later.
-    dtype : np.dtype
+    dtype : DtypeObj
         Dtype of the result.
     trigger_computations : bool, default: False
         Whether to trigger computation of the lazy metadata for `first` and `second`.
@@ -217,8 +229,15 @@ def maybe_build_dtypes_series(
 
 
 def try_compute_new_dtypes(
-    first, second, infer_dtypes=None, result_dtype=None, axis=0, func=None
-):
+    first: PandasQueryCompiler,
+    second: Union[PandasQueryCompiler, Any],
+    infer_dtypes: Optional[str] = None,
+    result_dtype: Optional[Union[DtypeObj, str]] = None,
+    axis: int = 0,
+    func: Optional[
+        Callable[[pandas.DataFrame, pandas.DataFrame], pandas.DataFrame]
+    ] = None,
+) -> Optional[pandas.Series]:
     """
     Precompute resulting dtypes of the binary operation if possible.
 
@@ -285,11 +304,11 @@ class Binary(Operator):
     @classmethod
     def register(
         cls,
-        func,
-        join_type="outer",
-        labels="replace",
-        infer_dtypes=None,
-    ):
+        func: Callable[..., pandas.DataFrame],
+        join_type: str = "outer",
+        labels: str = "replace",
+        infer_dtypes: Optional[str] = None,
+    ) -> Callable[..., PandasQueryCompiler]:
         """
         Build template binary operator.
 
@@ -318,34 +337,39 @@ class Binary(Operator):
         """
 
         def caller(
-            query_compiler, other, broadcast=False, *args, dtypes=None, **kwargs
-        ):
+            query_compiler: PandasQueryCompiler,
+            other: Union[PandasQueryCompiler, Any],
+            broadcast: bool = False,
+            *args: tuple,
+            dtypes: Optional[Union[DtypeObj, str]] = None,
+            **kwargs: dict,
+        ) -> PandasQueryCompiler:
             """
             Apply binary `func` to passed operands.
 
             Parameters
             ----------
-            query_compiler : QueryCompiler
+            query_compiler : PandasQueryCompiler
                 Left operand of `func`.
-            other : QueryCompiler, list-like object or scalar
+            other : PandasQueryCompiler, list-like object or scalar
                 Right operand of `func`.
             broadcast : bool, default: False
                 If `other` is a one-column query compiler, indicates whether it is a Series or not.
                 Frames and Series have to be processed differently, however we can't distinguish them
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
-            *args : args,
+            *args : tuple,
                 Arguments that will be passed to `func`.
             dtypes : "copy", scalar dtype or None, default: None
                 Dtypes of the result. "copy" to keep old dtypes and None to compute them on demand.
-            **kwargs : kwargs,
+            **kwargs : dict,
                 Arguments that will be passed to `func`.
 
             Returns
             -------
-            QueryCompiler
+            PandasQueryCompiler
                 Result of binary function.
             """
-            axis = kwargs.get("axis", 0)
+            axis: int = kwargs.get("axis", 0)
             if isinstance(other, type(query_compiler)) and broadcast:
                 assert (
                     len(other.columns) == 1

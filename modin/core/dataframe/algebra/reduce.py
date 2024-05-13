@@ -13,14 +13,28 @@
 
 """Module houses builder class for Reduce operator."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Optional
+
 from .operator import Operator
+
+if TYPE_CHECKING:
+    import pandas
+
+    from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class Reduce(Operator):
     """Builder class for Reduce operator."""
 
     @classmethod
-    def register(cls, reduce_function, axis=None, shape_hint=None):
+    def register(
+        cls,
+        reduce_function: Callable[..., pandas.Series],
+        axis: Optional[int] = None,
+        shape_hint: Optional[str] = None,
+    ) -> Callable[..., PandasQueryCompiler]:
         """
         Build Reduce operator that will be performed across rows/columns.
 
@@ -28,7 +42,7 @@ class Reduce(Operator):
 
         Parameters
         ----------
-        reduce_function : callable(pandas.DataFrame) -> pandas.Series
+        reduce_function : callable(pandas.DataFrame, *args, **kwargs) -> pandas.Series
             Source function.
         axis : int, optional
             Axis to apply function along.
@@ -41,7 +55,9 @@ class Reduce(Operator):
             Function that takes query compiler and executes Reduce function.
         """
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(
+            query_compiler: PandasQueryCompiler, *args: tuple, **kwargs: dict
+        ) -> PandasQueryCompiler:
             """Execute Reduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
