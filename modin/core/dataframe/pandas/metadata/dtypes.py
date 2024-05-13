@@ -1228,22 +1228,9 @@ def extract_dtype(value) -> DtypeObj | pandas.Series:
     -------
     DtypeObj or pandas.Series of DtypeObj
     """
-    from modin.pandas.utils import is_scalar
+    try:
+        dtype = pandas.api.types.pandas_dtype(value)
+    except TypeError:
+        dtype = pandas.Series(value).dtype
 
-    if hasattr(value, "dtype"):
-        # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
-        # we would like to get its internal dtype
-        return value.dtype
-    elif hasattr(value, "dtypes"):
-        return value.dtypes
-    elif hasattr(value, "to_numpy"):
-        # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
-        # we would like to convert it and get its proper internal dtype
-        return value.to_numpy().dtype
-    elif is_scalar(value):
-        if value is None:
-            # previous type was object instead of 'float64'
-            return pandas.api.types.pandas_dtype(value)
-        return pandas.api.types.pandas_dtype(type(value))
-    else:
-        return pandas.Series(value).dtype
+    return dtype
