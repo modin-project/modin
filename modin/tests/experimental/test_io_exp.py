@@ -253,8 +253,8 @@ def test_read_multiple_csv_s3_storage_opts(
 @pytest.mark.parametrize(
     "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
 )
-@pytest.mark.parametrize("read_func", ["read_pickle_glob", "read_pickle_distributed"])
-@pytest.mark.parametrize("to_func", ["to_pickle_glob", "to_pickle_distributed"])
+@pytest.mark.parametrize("read_func", ["read_pickle_glob"])
+@pytest.mark.parametrize("to_func", ["to_pickle_glob"])
 def test_distributed_pickling(
     tmp_path, filename, compression, pathlike, read_func, to_func
 ):
