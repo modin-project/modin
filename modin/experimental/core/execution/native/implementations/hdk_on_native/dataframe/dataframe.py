@@ -1458,7 +1458,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             # `Index` constructor can lead to the following error:
             # `ValueError: string values cannot be losslessly cast to int64`
             new_columns = Index(new_columns)
-            if new_columns.dtype != new_columns_dtype:
+            if new_columns.dtype != new_columns_dtype and new_columns_dtype is not None:
                 # ValueError: string values cannot be losslessly cast to int64
                 new_columns = new_columns.astype(new_columns_dtype)
             lhs = lhs.__constructor__(
