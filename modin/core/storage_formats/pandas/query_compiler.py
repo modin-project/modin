@@ -945,7 +945,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ):
                 return np.object_
             # how to take into account backend here?
-            return "float64"
+            return np.float64
 
         return TreeReduce.register(
             map_fn,
@@ -2141,7 +2141,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_month_name = Map.register(_dt_func_map("month_name"), dtypes=np.object_)
     dt_day_name = Map.register(_dt_func_map("day_name"), dtypes=np.object_)
     dt_to_pytimedelta = Map.register(_dt_func_map("to_pytimedelta"), dtypes=np.object_)
-    dt_total_seconds = Map.register(_dt_func_map("total_seconds"), dtypes="float64")
+    dt_total_seconds = Map.register(_dt_func_map("total_seconds"), dtypes=np.float64)
     dt_seconds = Map.register(_dt_prop_map("seconds"), dtypes=np.int64)
     dt_days = Map.register(_dt_prop_map("days"), dtypes=np.int64)
     dt_microseconds = Map.register(_dt_prop_map("microseconds"), dtypes=np.int64)
@@ -2323,7 +2323,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # Does it work with pyarrow backend?
             df_mask = np.isfinite(df)
 
-            result = np.empty((n_rows, n_cols), dtype="float64")
+            result = np.empty((n_rows, n_cols), dtype=np.float64)
 
             for i in range(n_rows):
                 df_ith_row = df[i]
@@ -2679,7 +2679,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lambda df: quantile_builder(df, **kwargs),
             new_index=q_index,
             new_columns=new_columns,
-            dtypes="float64",
+            dtypes=np.float64,
         )
         result = self.__constructor__(new_modin_frame)
         return result.transpose() if axis == 1 else result
@@ -2696,7 +2696,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if not numeric_only
                 else None
             ),
-            dtypes="float64",
+            dtypes=np.float64,
             sync_labels=False,
         )
         return self.__constructor__(new_modin_frame)

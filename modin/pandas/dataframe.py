@@ -1623,7 +1623,7 @@ class DataFrame(BasePandasDataset):
             and numeric_only is False
             and min_count > len(axis_to_apply)
             # Type inference is not so simple for pyarrow
-            and self._query_compiler.get_backend() == "default"
+            and self._query_compiler.get_backend() is not None
         ):
             new_index = self.columns if not axis else self.index
             # >>> pd.DataFrame([1,2,3,4], dtype="int64[pyarrow]").prod(min_count=10)
@@ -2153,7 +2153,7 @@ class DataFrame(BasePandasDataset):
             and numeric_only is False
             and min_count > len(axis_to_apply)
             # Type inference is not so simple for pyarrow
-            and self._query_compiler.get_backend() == "default"
+            and self._query_compiler.get_backend() is not None
         ):
             new_index = self.columns if not axis else self.index
             return Series(
