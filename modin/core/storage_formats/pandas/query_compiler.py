@@ -1950,7 +1950,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_capitalize = Map.register(_str_map("capitalize"), dtypes="copy")
     str_center = Map.register(_str_map("center"), dtypes="copy")
     str_contains = Map.register(_str_map("contains"), dtypes=np.bool_)
-    str_count = Map.register(_str_map("count"), dtypes=np.int64)
+    str_count = Map.register(_str_map("count"), dtypes=int)
     str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool_)
     str_find = Map.register(_str_map("find"), dtypes=np.int64)
     str_findall = Map.register(_str_map("findall"), dtypes="copy")
@@ -1966,7 +1966,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_istitle = Map.register(_str_map("istitle"), dtypes=np.bool_)
     str_isupper = Map.register(_str_map("isupper"), dtypes=np.bool_)
     str_join = Map.register(_str_map("join"), dtypes="copy")
-    str_len = Map.register(_str_map("len"), dtypes=np.int64)
+    str_len = Map.register(_str_map("len"), dtypes=int)
     str_ljust = Map.register(_str_map("ljust"), dtypes="copy")
     str_lower = Map.register(_str_map("lower"), dtypes="copy")
     str_lstrip = Map.register(_str_map("lstrip"), dtypes="copy")
@@ -2105,9 +2105,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_date = Map.register(_dt_prop_map("date"), dtypes=np.object_)
     dt_time = Map.register(_dt_prop_map("time"), dtypes=np.object_)
     dt_timetz = Map.register(_dt_prop_map("timetz"), dtypes=np.object_)
-    dt_year = Map.register(_dt_prop_map("year"), dtypes="int32")
-    dt_month = Map.register(_dt_prop_map("month"), dtypes="int32")
-    dt_day = Map.register(_dt_prop_map("day"), dtypes="int32")
+    dt_year = Map.register(_dt_prop_map("year"), dtypes=np.int32)
+    dt_month = Map.register(_dt_prop_map("month"), dtypes=np.int32)
+    dt_day = Map.register(_dt_prop_map("day"), dtypes=np.int32)
     dt_hour = Map.register(_dt_prop_map("hour"), dtypes=np.int64)
     dt_minute = Map.register(_dt_prop_map("minute"), dtypes=np.int64)
     dt_second = Map.register(_dt_prop_map("second"), dtypes=np.int64)
@@ -2158,7 +2158,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
-        # Function that can change the backend
         return self.__constructor__(
             self._modin_frame.astype(col_dtypes, errors=errors),
             shape_hint=self._shape_hint,
@@ -2320,7 +2319,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             """Compute covariance or correlation matrix for the passed frame."""
             df = df.to_numpy()
             n_rows = df.shape[0]
-            # Does it work with pyarrow backend?
             df_mask = np.isfinite(df)
 
             result = np.empty((n_rows, n_cols), dtype=np.float64)
@@ -3191,8 +3189,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             hashed_modin_frame = self._modin_frame.reduce(
                 axis=1,
                 function=_compute_hash,
-                # TODO: pyarrow backend
-                dtypes=np.object_,
+                dtypes=pandas.api.types.pandas_dtype("O"),
             )
         else:
             hashed_modin_frame = self._modin_frame
@@ -3628,7 +3625,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
 
         qc_with_converted_datetime_cols = (
-            self.astype({col: np.int64 for col in datetime_cols.keys()})
+            self.astype({col: "int64" for col in datetime_cols.keys()})
             if len(datetime_cols) > 0
             else self
         )
@@ -4480,15 +4477,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
-            # TODO: pyarrow backend
             new_modin_frame = self._modin_frame.apply_full_axis(
-                0, map_fn, new_index=self.index, dtypes=np.bool_
+                0, map_fn, new_index=self.index, dtypes=bool
             )
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
-            ).apply_full_axis(0, map_fn, new_index=self.index, dtypes=np.bool_)
+            ).apply_full_axis(0, map_fn, new_index=self.index, dtypes=bool)
             untouched_frame = self.drop(columns=columns)
         # If we mapped over all the data we are done. If not, we need to
         # prepend the `new_modin_frame` with the raw data from the columns that were

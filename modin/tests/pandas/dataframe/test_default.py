@@ -528,8 +528,6 @@ def test_info(data, verbose, max_cols, memory_usage, show_counts):
         assert modin_info[1:] == pandas_info[1:]
 
 
-# TODO: just for developing purpose; remove `xfail` mark
-@pytest.mark.xfail
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("numeric_only", [False, True])
@@ -718,7 +716,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
         "callable_tree_reduce_func" in request.node.callspec.id
         and "int_data" in request.node.callspec.id
     ):
-        expected_exception = TypeError("'float' object is not callable")
+        expected_exception = TypeError("'numpy.float64' object is not callable")
 
     eval_general(
         md_df,

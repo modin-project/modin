@@ -472,8 +472,6 @@ def test_non_commutative_multiply():
     eval_general(modin_df, pandas_df, lambda s: s * integer)
 
 
-# TODO: just for developing purpose; remove `skip` mark
-@pytest.mark.skip
 @pytest.mark.parametrize(
     "op",
     [
