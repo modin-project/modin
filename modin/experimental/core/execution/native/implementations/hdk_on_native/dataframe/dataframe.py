@@ -1457,6 +1457,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             # in the case of heterogeneous data, using the `dtype` parameter of the
             # `Index` constructor can lead to the following error:
             # `ValueError: string values cannot be losslessly cast to int64`
+            # that's why we explicitly call astype below
             new_columns = Index(new_columns)
             if new_columns.dtype != new_columns_dtype and new_columns_dtype is not None:
                 # ValueError: string values cannot be losslessly cast to int64

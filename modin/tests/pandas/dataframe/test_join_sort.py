@@ -143,6 +143,8 @@ def test_join(test_data, test_data2):
             )
             if sorts[j]:
                 # sorting in `join` is implemented through range partitioning technique
+                # therefore the order of the rows after it does not match the pandas,
+                # so additional sorting is needed in order to get the same result as for pandas
                 df_equals_and_sort(modin_result, pandas_result)
             else:
                 df_equals(modin_result, pandas_result)
@@ -179,7 +181,7 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
-@pytest.mark.parametrize("how", ["inner", "right"])
+@pytest.mark.parametrize("how", ["left", "inner", "right"])
 def test_join_empty(how):
     data = np.random.randint(0, 100, size=(64, 64))
     eval_general(
@@ -433,7 +435,7 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
-@pytest.mark.parametrize("how", ["inner", "right"])
+@pytest.mark.parametrize("how", ["left", "inner", "right"])
 def test_merge_empty(how):
     data = np.random.randint(0, 100, size=(64, 64))
     eval_general(*create_test_dfs(data), lambda df: df.merge(df.iloc[:0], how=how))
