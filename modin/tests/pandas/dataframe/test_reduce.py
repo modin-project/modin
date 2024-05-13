@@ -324,10 +324,9 @@ def test_sum(data, axis, skipna, is_transposed, request):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("dtype", ["int64", "Int64"])
+@pytest.mark.parametrize("dtype", ["int64", "Int64", "int64[pyarrow]"])
 def test_dtype_consistency(dtype):
     # test for issue #6781
-    # TODO: add pyarrow dtype
     res_dtype = pd.DataFrame([1, 2, 3, 4], dtype=dtype).sum().dtype
     assert res_dtype == pandas.api.types.pandas_dtype(dtype)
 

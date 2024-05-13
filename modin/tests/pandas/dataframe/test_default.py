@@ -778,6 +778,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
     [pytest.param("Custom name", id="str_name")],
 )
 @pytest.mark.parametrize("fill_value", [None, 0])
+@pytest.mark.parametrize("backend", [None, "pyarrow"])
 def test_pivot_table_margins(
     data,
     index,
@@ -786,13 +787,14 @@ def test_pivot_table_margins(
     aggfunc,
     margins_name,
     fill_value,
+    backend,
     request,
 ):
     expected_exception = None
     if "dict_func" in request.node.callspec.id:
         expected_exception = KeyError("Column(s) ['col28', 'col38'] do not exist")
     eval_general(
-        *create_test_dfs(data),
+        *create_test_dfs(data, backend=backend),
         operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
         index=index,
         columns=columns,
