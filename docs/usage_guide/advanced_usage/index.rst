@@ -38,19 +38,25 @@ Additional APIs
 
 Modin also supports these additional APIs on top of pandas to improve user experience.
 
-- :py:meth:`~modin.pandas.DataFrame.modin.to_pandas` -- convert Modin DataFrame/Series to Pandas DataFrame/Series.
-- :py:meth:`~modin.pandas.DataFrame.modin.to_ray` -- convert Modin DataFrame/Series to Ray Dataset.
-- :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
-- :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
-- :py:func:`~modin.experimental.pandas.read_custom_text` -- read custom text data from file
-- :py:func:`~modin.experimental.pandas.read_pickle_glob`  -- read multiple pickle files in a directory
-- :py:func:`~modin.experimental.pandas.read_parquet_glob`  -- read multiple parquet files in a directory
-- :py:func:`~modin.experimental.pandas.read_json_glob`  -- read multiple json files in a directory
-- :py:func:`~modin.experimental.pandas.read_xml_glob`  -- read multiple xml files in a directory
-- :py:meth:`~modin.pandas.DataFrame.modin.to_pickle_glob` -- write to multiple pickle files in a directory
-- :py:meth:`~modin.pandas.DataFrame.modin.to_parquet_glob` -- write to multiple parquet files in a directory
-- :py:meth:`~modin.pandas.DataFrame.modin.to_json_glob` -- write to multiple json files in a directory
-- :py:meth:`~modin.pandas.DataFrame.modin.to_xml_glob` -- write to multiple xml files in a directory
+- :py:meth:`~modin.pandas.DataFrame.modin.to_pandas` -- convert a Modin DataFrame/Series to a pandas DataFrame/Series.
+- :py:meth:`~modin.pandas.io.from_pandas` -- convert a pandas DataFrame to a Modin DataFrame.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_ray` -- convert a Modin DataFrame/Series to a Ray Dataset.
+- :py:meth:`~modin.pandas.io.from_ray` -- convert a Ray Dataset to a Modin DataFrame.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_dask` -- convert a Modin DataFrame/Series to a Ray Dataset.
+- :py:meth:`~modin.pandas.io.from_dask` -- convert a Modin DataFrame/Series to a Dask DataFrame/Series.
+- :py:meth:`~modin.pandas.io.from_map` -- create a Modin DataFrame from map function applied to an iterable object.
+- :py:meth:`~modin.pandas.io.from_arrow` -- convert an Arrow Table to a Modin DataFrame.
+- :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory.
+- :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection.
+- :py:func:`~modin.experimental.pandas.read_custom_text` -- read custom text data from file.
+- :py:func:`~modin.experimental.pandas.read_pickle_glob`  -- read multiple pickle files in a directory.
+- :py:func:`~modin.experimental.pandas.read_parquet_glob`  -- read multiple parquet files in a directory.
+- :py:func:`~modin.experimental.pandas.read_json_glob`  -- read multiple json files in a directory.
+- :py:func:`~modin.experimental.pandas.read_xml_glob`  -- read multiple xml files in a directory.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_pickle_glob` -- write to multiple pickle files in a directory.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_parquet_glob` -- write to multiple parquet files in a directory.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_json_glob` -- write to multiple json files in a directory.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_xml_glob` -- write to multiple xml files in a directory.
 
 DataFrame partitioning API
 --------------------------
