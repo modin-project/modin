@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
@@ -103,7 +103,7 @@ class MergeImpl:
     @classmethod
     def row_axis_merge(
         cls, left: PandasQueryCompiler, right: PandasQueryCompiler, kwargs: dict
-    ):
+    ) -> PandasQueryCompiler:
         """
         Execute merge using row-axis implementation.
 
@@ -126,10 +126,25 @@ class MergeImpl:
         right_index = kwargs.get("right_index", False)
         sort = kwargs.get("sort", False)
 
-        if how in ["left", "inner"] and left_index is False and right_index is False:
+        if (
+            (
+                how in ["left", "inner"]
+                or (how == "right" and right._modin_frame._partitions.size != 0)
+            )
+            and left_index is False
+            and right_index is False
+        ):
             kwargs["sort"] = False
 
-            def should_keep_index(left, right):
+            reverted = False
+            if how == "right":
+                left, right = right, left
+                reverted = True
+
+            def should_keep_index(
+                left: PandasQueryCompiler,
+                right: PandasQueryCompiler,
+            ) -> bool:
                 keep_index = False
                 if left_on is not None and right_on is not None:
                     keep_index = any(
@@ -144,8 +159,14 @@ class MergeImpl:
                     )
                 return keep_index
 
-            def map_func(left, right):  # pragma: no cover
-                return pandas.merge(left, right, **kwargs)
+            def map_func(
+                left, right, kwargs=kwargs
+            ) -> pandas.DataFrame:  # pragma: no cover
+                if reverted:
+                    df = pandas.merge(right, left, **kwargs)
+                else:
+                    df = pandas.merge(left, right, **kwargs)
+                return df
 
             # Want to ensure that these are python lists
             if left_on is not None and right_on is not None:
@@ -156,7 +177,11 @@ class MergeImpl:
 
             right_to_broadcast = right._modin_frame.combine()
             new_columns, new_dtypes = cls._compute_result_metadata(
-                left, right, on, left_on, right_on, kwargs.get("suffixes", ("_x", "_y"))
+                *((left, right) if not reverted else (right, left)),
+                on,
+                left_on,
+                right_on,
+                kwargs.get("suffixes", ("_x", "_y")),
             )
 
             # We rebalance when the ratio of the number of existing partitions to
@@ -226,7 +251,15 @@ class MergeImpl:
             return left.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
     @classmethod
-    def _compute_result_metadata(cls, left, right, on, left_on, right_on, suffixes):
+    def _compute_result_metadata(
+        cls,
+        left: PandasQueryCompiler,
+        right: PandasQueryCompiler,
+        on,
+        left_on,
+        right_on,
+        suffixes,
+    ) -> tuple[Optional[pandas.Index], Optional[ModinDtypes]]:
         """
         Compute columns and dtypes metadata for the result of merge if possible.
 

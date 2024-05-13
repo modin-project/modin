@@ -1347,13 +1347,13 @@ def build_row_idx_filter_expr(row_idx, row_col):
         return row_col.eq(row_idx)
 
     if is_range_like(row_idx):
-        start = row_idx[0]
-        stop = row_idx[-1]
+        start = row_idx.start
+        stop = row_idx.stop
         step = row_idx.step
         if step < 0:
             start, stop = stop, start
             step = -step
-        exprs = [row_col.ge(start), row_col.le(stop)]
+        exprs = [row_col.ge(start), row_col.cmp("<", stop)]
         if step > 1:
             mod = OpExpr("MOD", [row_col, LiteralExpr(step)], _get_dtype(int))
             exprs.append(mod.eq(0))
