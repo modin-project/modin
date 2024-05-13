@@ -528,11 +528,7 @@ class DtypesDescriptor:
         def combine_dtypes(row):
             if (row == "unknown").any():
                 return "unknown"
-            if any("pyarrow" in str(x) for x in row):
-                # nans can be stored not only in float types, for example in `bool[pyarrow]`
-                row = row[~row.isna()]
-            else:
-                row = row.fillna(pandas.api.types.pandas_dtype("float"))
+            row = row.fillna(pandas.api.types.pandas_dtype("float"))
             return find_common_type(list(row.values))
 
         dtypes = dtypes_matrix.apply(combine_dtypes, axis=1)
