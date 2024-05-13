@@ -186,7 +186,7 @@ def test_join_empty(how):
     data = np.random.randint(0, 100, size=(64, 64))
     eval_general(
         *create_test_dfs(data),
-        lambda df: df.join(df.iloc[:0], how=how, lsuffix="_caller"),
+        lambda df: df.join(df.iloc[:0], on=1, how=how, lsuffix="_caller"),
     )
 
 

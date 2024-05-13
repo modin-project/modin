@@ -21,7 +21,7 @@ import os
 import warnings
 from abc import ABC
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas
@@ -183,12 +183,16 @@ class PandasDataframePartitionManager(
     # END Abstract Methods
 
     @classmethod
-    def create_partition_from_metadata(cls, **metadata):
+    def create_partition_from_metadata(
+        cls, dtypes: Optional[pandas.Series] = None, **metadata
+    ):
         """
         Create NumPy array of partitions that holds an empty dataframe with given metadata.
 
         Parameters
         ----------
+        dtypes : pandas.Series, optional
+            Dtypes that will be used when calling `astype`.
         **metadata : dict
             Metadata that has to be wrapped in a partition.
 
@@ -197,7 +201,7 @@ class PandasDataframePartitionManager(
         np.ndarray
             A NumPy 2D array of a single partition which contains the data.
         """
-        metadata_dataframe = pandas.DataFrame(**metadata)
+        metadata_dataframe = pandas.DataFrame(**metadata).astype(dtypes)
         return np.array([[cls._partition_class.put(metadata_dataframe)]])
 
     @classmethod
