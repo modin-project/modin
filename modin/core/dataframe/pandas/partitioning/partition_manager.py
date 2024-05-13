@@ -201,7 +201,9 @@ class PandasDataframePartitionManager(
         np.ndarray
             A NumPy 2D array of a single partition which contains the data.
         """
-        metadata_dataframe = pandas.DataFrame(**metadata).astype(dtypes)
+        metadata_dataframe = pandas.DataFrame(**metadata)
+        if dtypes is not None:
+            metadata_dataframe = metadata_dataframe.astype(dtypes)
         return np.array([[cls._partition_class.put(metadata_dataframe)]])
 
     @classmethod
