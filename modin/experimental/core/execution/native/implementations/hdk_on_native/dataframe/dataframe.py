@@ -1994,8 +1994,6 @@ class HdkOnNativeDataframe(PandasDataframe):
                 drop_index_cols_after = [
                     col for col in base._index_cols if col in columns
                 ]
-                if not drop_index_cols_after:
-                    drop_index_cols_after = None
 
                 if drop_index_cols_before:
                     exprs = dict()

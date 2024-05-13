@@ -697,12 +697,12 @@ def sort_data(data):
         return np.sort(data)
 
 
-def sort_if_range_partitioning(df1, df2, comparator=None):
+def sort_if_range_partitioning(df1, df2, comparator=None, force=False):
     """Sort the passed objects if 'RangePartitioning' is enabled and compare the sorted results."""
     if comparator is None:
         comparator = df_equals
 
-    if RangePartitioning.get() or use_range_partitioning_groupby():
+    if force or (RangePartitioning.get() or use_range_partitioning_groupby()):
         df1, df2 = sort_data(df1), sort_data(df2)
 
     comparator(df1, df2)
