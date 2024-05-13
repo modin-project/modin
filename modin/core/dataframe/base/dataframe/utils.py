@@ -24,7 +24,7 @@ from typing import Dict, List, Sequence, Tuple, cast
 import pandas
 from pandas._typing import IndexLabel
 from pandas.api.types import is_scalar
-from pandas.core.dtypes.common import is_float_dtype, is_numeric_dtype
+from pandas.core.dtypes.common import is_integer_dtype
 
 
 class Axis(Enum):  # noqa: PR01
@@ -170,10 +170,7 @@ def is_trivial_index(index: pandas.Index) -> bool:
         return True
     if isinstance(index, pandas.RangeIndex):
         return index.start == 0 and index.step == 1
-    if not (
-        isinstance(index, pandas.Index)
-        and (is_numeric_dtype(index) and not is_float_dtype(index))
-    ):
+    if not (isinstance(index, pandas.Index) and is_integer_dtype(index)):
         return False
     return (
         index.is_monotonic_increasing

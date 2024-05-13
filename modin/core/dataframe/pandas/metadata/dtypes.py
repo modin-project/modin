@@ -496,7 +496,7 @@ class DtypesDescriptor:
                 # in the 'dtypes_matrix'
                 series = pandas.Series(dtypes, name=i)
                 dtypes_matrix = pandas.concat([dtypes_matrix, series], axis=1)
-                if val._know_all_names and val._remaining_dtype is None:
+                if not (val._know_all_names and val._remaining_dtype is None):
                     dtypes_matrix.fillna(
                         value={
                             # If we encountered a 'NaN' while 'val' describes all the columns, then
