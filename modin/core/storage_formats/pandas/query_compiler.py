@@ -2818,18 +2818,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._modin_frame.has_materialized_dtypes and is_scalar(item):
             new_dtypes = self.dtypes.copy()
             old_dtypes = new_dtypes[col_loc]
-
-            if hasattr(item, "dtype"):
-                # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
-                # we would like to get its internal dtype
-                item_type = item.dtype
-            elif hasattr(item, "to_numpy"):
-                # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
-                # we would like to convert it and get its proper internal dtype
-                item_type = item.to_numpy().dtype
-            else:
-                item_type = pandas.api.types.pandas_dtype(type(item))
-
+            item_type = extract_dtype(item)
             if isinstance(old_dtypes, pandas.Series):
                 new_dtypes[col_loc] = [
                     find_common_type([dtype, item_type]) for dtype in old_dtypes.values
@@ -4523,7 +4512,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         else:
             broadcasted_item, broadcasted_dtypes = item, pandas.Series(
-                [np.array(item).dtype] * len(col_numeric_index)
+                [extract_dtype(item)] * len(col_numeric_index)
             )
 
         new_dtypes = None
