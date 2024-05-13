@@ -49,6 +49,8 @@ class Fold(Operator):
         def caller(
             query_compiler: PandasQueryCompiler,
             fold_axis: Optional[int] = None,
+            new_index=None,
+            new_columns=None,
             *args: tuple,
             **kwargs: dict,
         ) -> PandasQueryCompiler:
@@ -62,6 +64,10 @@ class Fold(Operator):
             fold_axis : int, optional
                 0 or None means apply across full column partitions. 1 means
                 apply across full row partitions.
+            new_index : list-like, optional
+                The index of the result.
+            new_columns : list-like, optional
+                The columns of the result.
             *args : tuple
                 Additional arguments passed to `fold_function`.
             **kwargs: dict
@@ -77,6 +83,8 @@ class Fold(Operator):
                 query_compiler._modin_frame.fold(
                     cls.validate_axis(fold_axis),
                     lambda x: fold_function(x, *args, **kwargs),
+                    new_index=new_index,
+                    new_columns=new_columns,
                 )
             )
 

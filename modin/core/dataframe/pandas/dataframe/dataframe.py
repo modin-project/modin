@@ -2321,7 +2321,7 @@ class PandasDataframe(
         pass
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold(self, axis, func, new_columns=None):
+    def fold(self, axis, func, new_index=None, new_columns=None):
         """
         Perform a function across an entire axis.
 
@@ -2331,26 +2331,27 @@ class PandasDataframe(
             The axis to apply over.
         func : callable
             The function to apply.
+        new_index : list-like, optional
+            The index of the result.
         new_columns : list-like, optional
             The columns of the result.
-            Must be the same length as the columns' length of `self`.
-            The column labels of `self` may change during an operation so
-            we may want to pass the new column labels in (e.g., see `cat.codes`).
 
         Returns
         -------
         PandasDataframe
             A new dataframe.
-
-        Notes
-        -----
-        The data shape is not changed (length and width of the table).
         """
+        if new_index is not None:
+            if self.has_materialized_index and len(self.index) == len(new_index):
+                copy_lengths = True
+            else:
+                copy_lengths = False
+            self.set_index_cache(new_index)
         if new_columns is not None:
-            if self.has_materialized_columns:
-                assert len(self.columns) == len(
-                    new_columns
-                ), "The length of `new_columns` doesn't match the columns' length of `self`"
+            if self.has_materialized_columns and len(self.columns) == len(new_columns):
+                copy_widths = True
+            else:
+                copy_widths = False
             self.set_columns_cache(new_columns)
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
@@ -2358,8 +2359,8 @@ class PandasDataframe(
         )
         return self.__constructor__(
             new_partitions,
-            self.copy_index_cache(copy_lengths=True),
-            self.copy_columns_cache(copy_lengths=True),
+            self.copy_index_cache(copy_lengths=copy_lengths),
+            self.copy_columns_cache(copy_lengths=copy_widths),
             self._row_lengths_cache,
             self._column_widths_cache,
             pandas_backend=self._pandas_backend,
