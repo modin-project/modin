@@ -427,22 +427,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
     combine_first = Binary.register(
         pandas.DataFrame.combine_first, infer_dtypes="common_cast"
     )
-    eq = Binary.register(pandas.DataFrame.eq, infer_dtypes=np.bool_)
+    eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
     equals = Binary.register(
         lambda df, other: pandas.DataFrame([[df.equals(other)]]),
         join_type=None,
         labels="drop",
-        infer_dtypes=np.bool_,
+        infer_dtypes="bool",
     )
     floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="try_sample")
-    ge = Binary.register(pandas.DataFrame.ge, infer_dtypes=np.bool_)
-    gt = Binary.register(pandas.DataFrame.gt, infer_dtypes=np.bool_)
-    le = Binary.register(pandas.DataFrame.le, infer_dtypes=np.bool_)
-    lt = Binary.register(pandas.DataFrame.lt, infer_dtypes=np.bool_)
+    ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
+    gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
+    le = Binary.register(pandas.DataFrame.le, infer_dtypes="bool")
+    lt = Binary.register(pandas.DataFrame.lt, infer_dtypes="bool")
     mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="try_sample")
     mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="try_sample")
     rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="try_sample")
-    ne = Binary.register(pandas.DataFrame.ne, infer_dtypes=np.bool_)
+    ne = Binary.register(pandas.DataFrame.ne, infer_dtypes="bool")
     pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="try_sample")
     radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="try_sample")
     rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="try_sample")
@@ -452,12 +452,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="try_sample")
     sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="try_sample")
     truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="try_sample")
-    __and__ = Binary.register(pandas.DataFrame.__and__, infer_dtypes=np.bool_)
-    __or__ = Binary.register(pandas.DataFrame.__or__, infer_dtypes=np.bool_)
-    __rand__ = Binary.register(pandas.DataFrame.__rand__, infer_dtypes=np.bool_)
-    __ror__ = Binary.register(pandas.DataFrame.__ror__, infer_dtypes=np.bool_)
-    __rxor__ = Binary.register(pandas.DataFrame.__rxor__, infer_dtypes=np.bool_)
-    __xor__ = Binary.register(pandas.DataFrame.__xor__, infer_dtypes=np.bool_)
+    __and__ = Binary.register(pandas.DataFrame.__and__, infer_dtypes="bool")
+    __or__ = Binary.register(pandas.DataFrame.__or__, infer_dtypes="bool")
+    __rand__ = Binary.register(pandas.DataFrame.__rand__, infer_dtypes="bool")
+    __ror__ = Binary.register(pandas.DataFrame.__ror__, infer_dtypes="bool")
+    __rxor__ = Binary.register(pandas.DataFrame.__rxor__, infer_dtypes="bool")
+    __xor__ = Binary.register(pandas.DataFrame.__xor__, infer_dtypes="bool")
     df_update = Binary.register(
         copy_df_for_func(pandas.DataFrame.update, display_name="update"),
         join_type="left",
@@ -475,19 +475,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda df, other, *args, **kwargs: pandas.DataFrame(
             np.logical_and(df, other, *args, **kwargs)
         ),
-        infer_dtypes=np.bool_,
+        infer_dtypes="bool",
     )
     _logical_or = Binary.register(
         lambda df, other, *args, **kwargs: pandas.DataFrame(
             np.logical_or(df, other, *args, **kwargs)
         ),
-        infer_dtypes=np.bool_,
+        infer_dtypes="bool",
     )
     _logical_xor = Binary.register(
         lambda df, other, *args, **kwargs: pandas.DataFrame(
             np.logical_xor(df, other, *args, **kwargs)
         ),
-        infer_dtypes=np.bool_,
+        infer_dtypes="bool",
     )
 
     def where(self, cond, other, **kwargs):
