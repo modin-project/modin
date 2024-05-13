@@ -355,6 +355,12 @@ def test_sum_prod_specific(fn, min_count, numeric_only):
     )
 
 
+@pytest.mark.parametrize("backend", [None, "pyarrow"])
+def test_sum_prod_min_count(backend):
+    md_df, pd_df = create_test_dfs(test_data["float_nan_data"], backend=backend)
+    eval_general(md_df, pd_df, lambda df: df.prod(min_count=len(pd_df) + 1))
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sum_single_column(data):
     modin_df = pd.DataFrame(data).iloc[:, [0]]

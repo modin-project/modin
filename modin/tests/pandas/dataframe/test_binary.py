@@ -75,7 +75,8 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
     ],
 )
-def test_math_functions(other, axis, op):
+@pytest.mark.parametrize("backend", [None, "pyarrow"])
+def test_math_functions(other, axis, op, backend):
     data = test_data["float_nan_data"]
     if (op == "floordiv" or op == "rfloordiv") and axis == "rows":
         # lambda == "series_or_list"
@@ -85,16 +86,12 @@ def test_math_functions(other, axis, op):
         # lambda == "series_or_list"
         pytest.xfail(reason="different behavior")
 
-    md_df, pd_df = create_test_dfs(data)
-    if op in ("mod", "rmod") and any("pyarrow" in str(dtype) for dtype in pd_df.dtypes):
-        with pytest.raises(NotImplementedError):
-            eval_general(
-                md_df, pd_df, lambda df: getattr(df, op)(other(df, axis), axis=axis)
-            )
-    else:
-        eval_general(
-            md_df, pd_df, lambda df: getattr(df, op)(other(df, axis), axis=axis)
-        )
+    if op in ("mod", "rmod") and backend == "pyarrow":
+        pytest.skip(reason="Not implemented for pyarrow backend")
+    eval_general(
+        *create_test_dfs(data, backend=backend),
+        lambda df: getattr(df, op)(other(df, axis), axis=axis),
+    )
 
 
 @pytest.mark.parametrize("other", [lambda df: 2, lambda df: df])

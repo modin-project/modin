@@ -662,7 +662,6 @@ def assert_dtypes_equal(df1, df2):
         lambda obj: isinstance(obj, pandas.PeriodDtype),
     )
 
-    # `test_pivot_table_margins` failed due to usage ``pd.NA`` in column name
     for idx in range(len(dtypes1)):
         for comparator in dtype_comparators:
             if assert_all_act_same(comparator, dtypes1.iloc[idx], dtypes2.iloc[idx]):
