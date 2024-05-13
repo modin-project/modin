@@ -364,7 +364,7 @@ class BasePandasDataset(ClassLogger):
             other_dtypes = [other.dtype] * len(other)
         elif is_dict_like(other):
             other_dtypes = [
-                type(other[label])
+                other[label] if pandas.isna(other[label]) else type(other[label])
                 for label in self._get_axis(axis)
                 # The binary operation is applied for intersection of axis labels
                 # and dictionary keys. So filtering out extra keys.

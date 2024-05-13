@@ -1200,7 +1200,7 @@ class PandasDataframe(
                     + f"received: {type(indexer)}",
                 )
                 if isinstance(indexer, list):
-                    indexer = np.array(indexer, dtype="int64")
+                    indexer = np.array(indexer, dtype=np.int64)
             indexers.append(indexer)
         row_positions, col_positions = indexers
 
@@ -1760,7 +1760,6 @@ class PandasDataframe(
             new_frame = self._partition_mgr_cls.lazy_map_partitions(
                 self._partitions, astype_builder
             )
-
         return self.__constructor__(
             new_frame,
             self.copy_index_cache(copy_lengths=True),
@@ -1881,13 +1880,13 @@ class PandasDataframe(
                         return dict_of_slices
         if isinstance(indices, list):
             # Converting python list to numpy for faster processing
-            indices = np.array(indices, dtype="int64")
+            indices = np.array(indices, dtype=np.int64)
         # Fasttrack empty numpy array
         if isinstance(indices, np.ndarray) and indices.size == 0:
             # This will help preserve metadata stored in empty dataframes (indexes and dtypes)
             # Otherwise, we will get an empty `new_partitions` array, from which it will
             #  no longer be possible to obtain metadata
-            return dict([(0, np.array([], dtype="int64"))])
+            return dict([(0, np.array([], dtype=np.int64))])
         negative_mask = np.less(indices, 0)
         has_negative = np.any(negative_mask)
         if has_negative:
@@ -1895,7 +1894,7 @@ class PandasDataframe(
             indices = (
                 indices.copy()
                 if isinstance(indices, np.ndarray)
-                else np.array(indices, dtype="int64")
+                else np.array(indices, dtype=np.int64)
             )
             indices[negative_mask] = indices[negative_mask] % len(self.get_axis(axis))
         # If the `indices` array was modified because of the negative indices conversion
@@ -4585,7 +4584,7 @@ class PandasDataframe(
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_frame, new_lengths, new_widths, pandas_backend = (
+        new_frame, pandas_backend, new_lengths, new_widths = (
             cls._partition_mgr_cls.from_pandas(df, True)
         )
         return cls(
@@ -4613,7 +4612,7 @@ class PandasDataframe(
         PandasDataframe
             New Modin DataFrame.
         """
-        new_frame, new_lengths, new_widths, pandas_backend = (
+        new_frame, pandas_backend, new_lengths, new_widths = (
             cls._partition_mgr_cls.from_arrow(at, return_dims=True)
         )
         new_columns = Index.__new__(Index, data=at.column_names, dtype="O")

@@ -946,7 +946,7 @@ class PandasDataframePartitionManager(
 
         Returns
         -------
-        np.ndarray or (np.ndarray, row_lengths, col_widths)
+        (np.ndarray, backend) or (np.ndarray, backend, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
         num_splits = NPartitions.get()
@@ -1008,7 +1008,7 @@ class PandasDataframePartitionManager(
                 )
                 for i in range(0, len(df.columns), col_chunksize)
             ]
-            return parts, row_lengths, col_widths, backend
+            return parts, backend, row_lengths, col_widths
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
@@ -1025,10 +1025,9 @@ class PandasDataframePartitionManager(
 
         Returns
         -------
-        np.ndarray or (np.ndarray, row_lengths, col_widths)
+        (np.ndarray, backend) or (np.ndarray, backend, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
-        # also return backend
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod

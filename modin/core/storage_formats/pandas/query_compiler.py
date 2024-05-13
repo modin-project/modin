@@ -4602,10 +4602,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def cat_codes(self):
         def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            if not isinstance(ser.dtype, pandas.CategoricalDtype):
-                raise TypeError(
-                    f"Series dtype should be `CategoricalDtype`: actual dtype: {ser.dtype}"
-                )
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
         res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])

@@ -1116,7 +1116,7 @@ class BaseQueryCompiler(
         tolerance=None,
         allow_exact_matches: bool = True,
         direction: str = "backward",
-    ):
+    ):  # noqa: GL08
         # Pandas fallbacks for tricky cases:
         if (
             # No idea how this works or why it does what it does; and in fact
@@ -3620,7 +3620,9 @@ class BaseQueryCompiler(
             drop=drop,
         )
 
-    def groupby_diff(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+    def groupby_diff(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):  # noqa: GL08
         return self.groupby_agg(
             by=by,
             agg_func="diff",
@@ -3633,7 +3635,7 @@ class BaseQueryCompiler(
 
     def groupby_pct_change(
         self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
-    ):
+    ):  # noqa: GL08
         return self.groupby_agg(
             by=by,
             agg_func="pct_change",
@@ -3941,7 +3943,7 @@ class BaseQueryCompiler(
         agg_args,
         agg_kwargs,
         is_df,
-    ):
+    ):  # noqa: GL08
         if not is_df:
             return self.groupby_agg(
                 by=by,
@@ -4605,7 +4607,7 @@ class BaseQueryCompiler(
         freq,
         axis,
         fill_value,
-    ):
+    ):  # noqa: GL08
         return DataFrameDefault.register(pandas.DataFrame.shift)(
             self, periods, freq, axis, fill_value
         )
@@ -6756,6 +6758,14 @@ class BaseQueryCompiler(
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
     def get_backend(self) -> Optional[str]:
+        """
+        Get backend stored in `_modin_frame`.
+
+        Returns
+        -------
+        str | None
+            Backend name.
+        """
         return self._modin_frame._pandas_backend
 
     def repartition(self, axis=None):
