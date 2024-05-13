@@ -54,6 +54,8 @@ from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 from . import doc_utils
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     # TODO: should be ModinDataframe
     # https://github.com/modin-project/modin/issues/7244
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
@@ -158,7 +160,7 @@ class BaseQueryCompiler(
         else:
             return obj
 
-    def default_to_pandas(self, pandas_op, *args, **kwargs):
+    def default_to_pandas(self, pandas_op, *args, **kwargs) -> Self:
         """
         Do fallback to pandas for the passed function.
 
@@ -4469,7 +4471,7 @@ class BaseQueryCompiler(
     # END Abstract methods for QueryCompiler
 
     @cached_property
-    def __constructor__(self) -> type[BaseQueryCompiler]:
+    def __constructor__(self) -> type[Self]:
         """
         Get query compiler constructor.
 

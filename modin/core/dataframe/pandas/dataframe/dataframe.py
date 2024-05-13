@@ -3379,8 +3379,11 @@ class PandasDataframe(
         if self._partitions.size > 0:
             return self._partitions
         else:
+            dtypes = None
+            if self.has_materialized_dtypes:
+                dtypes = self.dtypes
             return self._partition_mgr_cls.create_partition_from_metadata(
-                index=self.index, columns=self.columns
+                index=self.index, columns=self.columns, dtypes=dtypes
             )
 
     @lazy_metadata_decorator(apply_axis="both")
