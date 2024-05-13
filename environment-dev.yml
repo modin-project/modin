@@ -14,7 +14,7 @@ dependencies:
   # optional dependencies
   # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
   - ray-core>=2.1.0,!=2.5.0
-  - pyarrow>=7.0.0
+  - pyarrow>=10.0.1
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*
   - grpcio!=1.46.*
@@ -50,6 +50,7 @@ dependencies:
   - pytest-benchmark>=4.0.0
   - pytest-cov>=4.0.0
   - pytest-xdist>=3.2.0
+  - typing_extensions
 
   # code linters
   - black>=24.1.0

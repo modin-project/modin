@@ -56,6 +56,10 @@ from . import doc_utils
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    # TODO: should be ModinDataframe
+    # https://github.com/modin-project/modin/issues/7244
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
 
 def _get_axis(axis):
     """
@@ -129,6 +133,9 @@ class BaseQueryCompiler(
     See the Abstract Methods and Fields section immediately below this
     for a list of requirements for subclassing this object.
     """
+
+    _modin_frame: PandasDataframe
+    _shape_hint: Optional[str]
 
     def __wrap_in_qc(self, obj):
         """

@@ -13,13 +13,15 @@
 
 """Module contains an interface for operator builder classes."""
 
-from typing import Optional
+from __future__ import annotations
+
+from typing import Callable, Optional
 
 
 class Operator(object):
     """Interface for building operators that can execute in parallel across partitions."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         raise ValueError(
             "Please use {}.register instead of the constructor".format(
                 type(self).__name__
@@ -27,7 +29,7 @@ class Operator(object):
         )
 
     @classmethod
-    def register(cls, func, **kwargs):
+    def register(cls, func: Callable, **kwargs: dict):
         """
         Build operator that applies source function across the entire dataset.
 
@@ -35,7 +37,7 @@ class Operator(object):
         ----------
         func : callable
             Source function.
-        **kwargs : kwargs
+        **kwargs : dict
             Kwargs that will be passed to the builder function.
 
         Returns

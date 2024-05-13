@@ -8,7 +8,7 @@ psutil>=5.8.0
 ## optional dependencies
 # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
 ray>=2.1.0,!=2.5.0
-pyarrow>=7.0.0
+pyarrow>=10.0.1
 dask[complete]>=2.22.0
 distributed>=2.22.0
 xarray>=2022.12.0
@@ -52,6 +52,7 @@ pytest>=7.3.2
 pytest-benchmark>=4.0.0
 pytest-cov>=4.0.0
 pytest-xdist>=3.2.0
+typing_extensions
 
 ## code linters
 black>=24.1.0
