@@ -651,7 +651,9 @@ def hashable(obj: bool) -> bool:
     return True
 
 
-def try_cast_to_pandas(obj: Any, squeeze: bool = False, squeeze_df: bool = False) -> Any:
+def try_cast_to_pandas(
+    obj: Any, squeeze: bool = False, squeeze_df: bool = False
+) -> Any:
     """
     Convert `obj` and all nested objects from Modin to pandas if it is possible.
 
@@ -682,8 +684,7 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False, squeeze_df: bool = False
             and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             result = result.squeeze(axis=1)
-        
-        
+
         # QueryCompiler/low-level ModinFrame case, it doesn't have logic about convertion to Series
         if (
             isinstance(getattr(result, "name", None), str)
@@ -696,7 +697,10 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False, squeeze_df: bool = False
             [try_cast_to_pandas(o, squeeze=squeeze, squeeze_df=squeeze_df) for o in obj]
         )
     if isinstance(obj, dict):
-        return {k: try_cast_to_pandas(v, squeeze=squeeze, squeeze_df=squeeze_df) for k, v in obj.items()}
+        return {
+            k: try_cast_to_pandas(v, squeeze=squeeze, squeeze_df=squeeze_df)
+            for k, v in obj.items()
+        }
     if callable(obj):
         module_hierarchy = getattr(obj, "__module__", "").split(".")
         fn_name = getattr(obj, "__name__", None)

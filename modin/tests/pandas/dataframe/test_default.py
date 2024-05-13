@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
 import io
 import warnings
 
@@ -22,7 +23,12 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat, InitializeWithSmallQueryCompilers
+from modin.config import (
+    Engine,
+    InitializeWithSmallQueryCompilers,
+    NPartitions,
+    StorageFormat,
+)
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     axis_keys,
@@ -87,7 +93,11 @@ pytestmark = [
 )
 def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
-    with warns_that_defaulting_to_pandas():
+    with (
+        warns_that_defaulting_to_pandas()
+        if not InitializeWithSmallQueryCompilers.get()
+        else contextlib.nullcontext()
+    ):
         operation = getattr(modin_df, op)
         if make_args is not None:
             operation(**make_args(modin_df))
@@ -101,7 +111,11 @@ def test_ops_defaulting_to_pandas(op, make_args):
 
 def test_style():
     data = test_data_values[0]
-    with warns_that_defaulting_to_pandas():
+    with (
+        warns_that_defaulting_to_pandas()
+        if not InitializeWithSmallQueryCompilers.get()
+        else contextlib.nullcontext()
+    ):
         pd.DataFrame(data).style
 
 
@@ -109,7 +123,11 @@ def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
-    with warns_that_defaulting_to_pandas():
+    with (
+        warns_that_defaulting_to_pandas()
+        if not InitializeWithSmallQueryCompilers.get()
+        else contextlib.nullcontext()
+    ):
         df.to_period().to_timestamp()
 
 
@@ -121,6 +139,7 @@ def test_to_timestamp():
 def test_to_numpy(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     assert_array_equal(modin_df.values, pandas_df.values)
+
 
 @pytest.mark.skipif(
     InitializeWithSmallQueryCompilers.get(),
@@ -137,7 +156,11 @@ def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     df = pd.DataFrame({"s": series})
-    with warns_that_defaulting_to_pandas():
+    with (
+        warns_that_defaulting_to_pandas()
+        if not InitializeWithSmallQueryCompilers.get()
+        else contextlib.nullcontext()
+    ):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         df.asfreq(freq="30S")
@@ -297,8 +320,8 @@ class TestCorr:
                 {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
             )
             modin_df = pd.concat([modin_df.iloc[:3], modin_df.iloc[3:]])
-
-            assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+            if not InitializeWithSmallQueryCompilers.get():
+                assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
             eval_general(
                 modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods)
             )
@@ -317,8 +340,8 @@ class TestCorr:
         reason="doesn't make sense for non-partitioned executions",
     )
     @pytest.mark.skipif(
-    InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not contain partitions.",
+        InitializeWithSmallQueryCompilers.get(),
+        reason="SmallQueryCompiler does not contain partitions.",
     )
     def test_corr_nans_in_different_partitions(self):
         # NaN in the first partition

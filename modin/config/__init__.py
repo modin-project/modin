@@ -27,6 +27,7 @@ from modin.config.envvars import (
     EnvironmentVariable,
     GithubCI,
     GpuCount,
+    InitializeWithSmallQueryCompilers,
     IsDebug,
     IsExperimental,
     IsRayCluster,
@@ -53,7 +54,7 @@ from modin.config.envvars import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     TrackFileLeaks,
-    InitializeWithSmallQueryCompilers
+
 )
 from modin.config.pubsub import Parameter, ValueSource, context
 
@@ -69,7 +70,7 @@ __all__ = [
     "CpuCount",
     "GpuCount",
     "Memory",
-    "PersistentPickle"
+    "InitializeWithSmallQueryCompilers",
     # Ray specific
     "IsRayCluster",
     "RayRedisAddress",
