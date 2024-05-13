@@ -101,6 +101,8 @@ class PandasDataframe(
         each of the block partitions. Is computed if not provided.
     dtypes : pandas.Series or callable, optional
         The data types for the dataframe columns.
+    pandas_backend : {"pyarrow", None}, optional
+        Backend used by pandas.
     """
 
     _partition_mgr_cls: PandasDataframePartitionManager
