@@ -119,6 +119,19 @@ def is_scalar(obj):
 
 
 def get_pandas_backend(dtypes: pandas.Series) -> str | None:
+    """
+    Determine the backend based on the `dtypes`.
+
+    Parameters
+    ----------
+    dtypes : pandas.Series
+        DataFrame dtypes.
+
+    Returns
+    -------
+    str | None
+        Backend name.
+    """
     backend = None
     if any(isinstance(x, pandas.ArrowDtype) for x in dtypes):
         backend = "pyarrow"
@@ -306,7 +319,6 @@ def broadcast_item(
     try:
         # Cast to numpy drop information about heterogeneous types (cast to common)
         # TODO: we shouldn't do that, maybe there should be the if branch
-        # TODO: what if item comes from pyarrow
         item = np.array(item)
         if dtypes is None:
             dtypes = pandas.Series([item.dtype] * len(col_lookup))

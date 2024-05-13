@@ -250,15 +250,16 @@ def test_combine_first():
 
 class TestCorr:
     @pytest.mark.parametrize("method", ["pearson", "kendall", "spearman"])
-    def test_corr(self, method):
+    @pytest.mark.parametrize("backend", [None, "pyarrow"])
+    def test_corr(self, method, backend):
         eval_general(
-            *create_test_dfs(test_data["int_data"]),
+            *create_test_dfs(test_data["int_data"], backend=backend),
             lambda df: df.corr(method=method),
         )
         # Modin result may slightly differ from pandas result
         # due to floating pointing arithmetic.
         eval_general(
-            *create_test_dfs(test_data["float_nan_data"]),
+            *create_test_dfs(test_data["float_nan_data"], backend=backend),
             lambda df: df.corr(method=method),
             comparator=modin_df_almost_equals_pandas,
         )
@@ -352,7 +353,8 @@ class TestCorr:
 
 @pytest.mark.parametrize("min_periods", [1, 3, 5], ids=lambda x: f"min_periods={x}")
 @pytest.mark.parametrize("ddof", [1, 2, 4], ids=lambda x: f"ddof={x}")
-def test_cov(min_periods, ddof):
+@pytest.mark.parametrize("backend", [None, "pyarrow"])
+def test_cov(min_periods, ddof, backend):
     # Modin result may slightly differ from pandas result
     # due to floating pointing arithmetic.
     if StorageFormat.get() == "Hdk":
@@ -366,13 +368,13 @@ def test_cov(min_periods, ddof):
         comparator2 = modin_df_almost_equals_pandas
 
     eval_general(
-        *create_test_dfs(test_data["int_data"]),
+        *create_test_dfs(test_data["int_data"], backend=backend),
         lambda df: df.cov(min_periods=min_periods, ddof=ddof),
         comparator=comparator1,
     )
 
     eval_general(
-        *create_test_dfs(test_data["float_nan_data"]),
+        *create_test_dfs(test_data["float_nan_data"], backend=backend),
         lambda df: df.cov(min_periods=min_periods),
         comparator=comparator2,
     )
@@ -634,7 +636,6 @@ def test_pivot(data, index, columns, values, request):
         expected_exception = ValueError(
             "Index contains duplicate entries, cannot reshape"
         )
-    # failed because pandas doesn't preserve dtype backend
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: df.pivot(*args, **kwargs),

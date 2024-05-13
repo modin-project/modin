@@ -39,7 +39,6 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_list_like,
     is_numeric_dtype,
-    is_timedelta64_dtype,
 )
 from pandas.core.groupby.base import transformation_kernels
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -1855,7 +1854,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     map = Map.register(pandas.DataFrame.map)
-    # Will it work with pyarrow backend?
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
 
     def convert_dtypes(
@@ -1876,13 +1874,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             convert_floating=convert_floating,
             dtype_backend=dtype_backend,
         )
+        # TODO: `numpy_nullable` should be handled similar
         if dtype_backend == "pyarrow":
             result._modin_frame._pandas_backend = "pyarrow"
         return result
 
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
-    # better way to distinguish methods for NumPy API?
+    # TODO: better way to distinguish methods for NumPy API?
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
         dtypes=np.bool_,
@@ -2272,7 +2271,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     corr = CorrCovBuilder.build_corr_method()
 
     def cov(self, min_periods=None, ddof=1):
-        if self._modin_frame._pandas_backend == "pyarrow":
+        if self.get_backend() == "pyarrow":
             return super().cov(min_periods=min_periods, ddof=ddof)
         # _nancorr use numpy which incompatible with pandas dataframes on pyarrow
         return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
@@ -2642,11 +2641,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = [
                 col
                 for col, dtype in zip(self.columns, self.dtypes)
-                if (
-                    is_numeric_dtype(dtype)
-                    or is_timedelta64_dtype(dtype)
-                    or is_datetime64_any_dtype(dtype)
-                )
+                if (is_numeric_dtype(dtype) or lib.is_np_dtype(dtype, "mM"))
             ]
         if axis == 1:
             query_compiler = self.getitem_column_array(new_columns)
@@ -2841,7 +2836,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __getitem__ methods
     __getitem_bool = Binary.register(
-        # TODO: `is_scalar` don't work with pyarrow scalars
         lambda df, r: df[[r]] if is_scalar(r) else df[r],
         join_type="left",
         labels="drop",
@@ -4532,20 +4526,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             pandas.DataFrame
                 Partition data with updated values.
             """
+            partition = partition.copy()
             try:
                 partition.iloc[row_internal_indices, col_internal_indices] = item
             except ValueError:
-                # maybe make a copy only if there is an exception?
-                partition = partition.copy()
                 # `copy` is needed to avoid "ValueError: buffer source array is read-only" for `item`
                 # because the item may be converted to the type that is in the dataframe.
                 # TODO: in the future we will need to convert to the correct type manually according
                 # to the following warning. Example: "FutureWarning: Setting an item of incompatible
                 # dtype is deprecated and will raise in a future error of pandas. Value '[1.38629436]'
                 # has dtype incompatible with int64, please explicitly cast to a compatible dtype first."
-                partition.iloc[row_internal_indices, col_internal_indices] = (
-                    item.copy() if hasattr(item, "copy") else item
-                )
+                partition.iloc[row_internal_indices, col_internal_indices] = item.copy()
             return partition
 
         if not is_scalar(item):
