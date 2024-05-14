@@ -95,6 +95,7 @@ class BaseDataframeAxisPartition(
         pass
 
     # Child classes must have these in order to correctly subclass.
+    # TODO: Looks like can be deleted
     instance_type = None
     partition_type = None
     _PARTITIONS_METADATA_LEN = 0

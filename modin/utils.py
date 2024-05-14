@@ -437,6 +437,7 @@ def _inherit_docstrings(
         """Check if `obj` docstring could be patched."""
         return bool(
             callable(obj)
+            and not inspect.isclass(obj)
             or (isinstance(obj, property) and obj.fget)
             or (isinstance(obj, functools.cached_property))
             or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
