@@ -2344,21 +2344,33 @@ class PandasDataframe(
         copy_lengths = True
         copy_widths = True
         if new_index is not None:
-            if self.has_materialized_index and len(self.index) != len(new_index):
+            if self.has_materialized_index:
+                if len(self.index) != len(new_index):
+                    copy_lengths = False
+            else:
                 copy_lengths = False
-            self.set_index_cache(new_index)
         if new_columns is not None:
-            if self.has_materialized_columns and len(self.columns) != len(new_columns):
+            if self.has_materialized_columns:
+                if len(self.columns) != len(new_columns):
+                    copy_widths = False
+            else:
                 copy_widths = False
-            self.set_columns_cache(new_columns)
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
         return self.__constructor__(
             new_partitions,
-            self.copy_index_cache(copy_lengths=copy_lengths),
-            self.copy_columns_cache(copy_lengths=copy_widths),
+            (
+                self.copy_index_cache(copy_lengths=copy_lengths)
+                if new_index is None
+                else new_index
+            ),
+            (
+                self.copy_columns_cache(copy_lengths=copy_widths)
+                if new_columns is None
+                else new_columns
+            ),
             row_lengths=self._row_lengths_cache if copy_lengths else None,
             column_widths=self._column_widths_cache if copy_widths else None,
             pandas_backend=self._pandas_backend,
