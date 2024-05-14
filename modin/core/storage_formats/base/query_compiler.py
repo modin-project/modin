@@ -6757,7 +6757,7 @@ class BaseQueryCompiler(
         ]
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
-    def get_backend(self) -> Optional[str]:
+    def get_pandas_backend(self) -> Optional[str]:
         """
         Get backend stored in `_modin_frame`.
 

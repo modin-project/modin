@@ -57,7 +57,7 @@ class CorrCovBuilder:
             numeric_only: bool = True,
         ) -> PandasQueryCompiler:
             # Further implementation is designed for the default pandas backend (numpy)
-            if method != "pearson" or qc.get_backend() == "pyarrow":
+            if method != "pearson" or qc.get_pandas_backend() == "pyarrow":
                 return super(type(qc), qc).corr(
                     method=method, min_periods=min_periods, numeric_only=numeric_only
                 )
