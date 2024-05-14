@@ -2657,6 +2657,7 @@ def test_map_approaches(partitioning_scheme, expected_map_approach):
     df = pandas.DataFrame(data)
 
     modin_df = construct_modin_df_by_scheme(df, partitioning_scheme(df))
+    partitions = modin_df._query_compiler._modin_frame._partitions
     partition_mgr_cls = modin_df._query_compiler._modin_frame._partition_mgr_cls
 
     with mock.patch.object(
@@ -2664,7 +2665,7 @@ def test_map_approaches(partitioning_scheme, expected_map_approach):
         expected_map_approach,
         wraps=getattr(partition_mgr_cls, expected_map_approach),
     ) as expected_method:
-        try_cast_to_pandas(modin_df.map(lambda x: x * 2))
+        partition_mgr_cls.map_partitions(partitions, lambda x: x * 2)
         expected_method.assert_called()
 
 
