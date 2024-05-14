@@ -94,8 +94,6 @@ class DefaultMethod(Operator):
             Function that takes query compiler, does fallback to pandas and applies `func`
             to the casted to pandas frame or its property accesed by ``cls.frame_wrapper``.
         """
-        fn_name = getattr(func, "__name__", str(func)) if fn_name is None else fn_name
-
         if isinstance(func, str):
             if obj_type is None:
                 obj_type = cls.DEFAULT_OBJECT_TYPE
@@ -104,7 +102,16 @@ class DefaultMethod(Operator):
             fn = func
 
         if type(fn) is property:
+            if fn_name is None and hasattr(fn, "fget"):
+                # When `fn` is a property, `str(fn)` will be something like
+                # "<property object at 0x7f8671e09d10>". We instead check its `fget` method to get
+                # the name of the property.
+                # Note that this method is still imperfect because we cannot get the class name
+                # of the property. For example, we can only get "hour" from `Series.dt.hour`.
+                fn_name = f"<property fget:{getattr(fn.fget, '__name__', 'noname')}>"
             fn = cls.build_property_wrapper(fn)
+        else:
+            fn_name = getattr(fn, "__name__", str(fn)) if fn_name is None else fn_name
 
         def applyier(df, *args, **kwargs):
             """
