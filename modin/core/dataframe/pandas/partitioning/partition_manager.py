@@ -596,7 +596,7 @@ class PandasDataframePartitionManager(
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def map_partitions(
+    def base_map_partitions(
         cls,
         partitions,
         map_func,
@@ -622,21 +622,53 @@ class PandasDataframePartitionManager(
         NumPy array
             An array of partitions
         """
+        preprocessed_map_func = cls.preprocess_func(map_func)
+        return np.array(
+            [
+                [
+                    part.apply(
+                        preprocessed_map_func,
+                        *func_args if func_args is not None else (),
+                        **func_kwargs if func_kwargs is not None else {},
+                    )
+                    for part in row_of_parts
+                ]
+                for row_of_parts in partitions
+            ]
+        )
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def map_partitions(
+        cls,
+        partitions,
+        map_func,
+        func_args=None,
+        func_kwargs=None,
+    ):
+        """
+        Apply `map_func` to `partitions` using different approaches to achieve the best performance.
+
+        Parameters
+        ----------
+        partitions : NumPy 2D array
+            Partitions housing the data of Modin Frame.
+        map_func : callable
+            Function to apply.
+        func_args : iterable, optional
+            Positional arguments for the 'map_func'.
+        func_kwargs : dict, optional
+            Keyword arguments for the 'map_func'.
+
+        Returns
+        -------
+        NumPy array
+            An array of partitions
+        """
         if np.prod(partitions.shape) <= 1.5 * CpuCount.get():
             # block-wise map
-            preprocessed_map_func = cls.preprocess_func(map_func)
-            new_partitions = np.array(
-                [
-                    [
-                        part.apply(
-                            preprocessed_map_func,
-                            *func_args if func_args is not None else (),
-                            **func_kwargs if func_kwargs is not None else {},
-                        )
-                        for part in row_of_parts
-                    ]
-                    for row_of_parts in partitions
-                ]
+            new_partitions = cls.base_map_partitions(
+                partitions, map_func, func_args, func_kwargs
             )
         else:
             # axis-wise map
