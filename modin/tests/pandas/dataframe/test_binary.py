@@ -87,7 +87,7 @@ def test_math_functions(other, axis, op, backend):
         pytest.xfail(reason="different behavior")
 
     if op in ("mod", "rmod") and backend == "pyarrow":
-        pytest.skip(reason="Not implemented for pyarrow backend")
+        pytest.skip(reason="These functions are not implemented in pandas itself")
     eval_general(
         *create_test_dfs(data, backend=backend),
         lambda df: getattr(df, op)(other(df, axis), axis=axis),

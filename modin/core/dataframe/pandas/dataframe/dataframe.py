@@ -3985,6 +3985,7 @@ class PandasDataframe(
             new_columns = joined_index
             frames = [self] + others
             # TODO: should we wrap all `concat` call into "try except" block?
+            # `ModinDtypes.concat` can throw exception in case of duplicate values
             new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=1)
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
@@ -4621,6 +4622,9 @@ class PandasDataframe(
 
         try:
             # TODO: should we map arrow types to pyarrow-backed pandas types?
+            # It seems like this might help avoid the expense of transferring
+            # data between backends (numpy and pyarrow), but we need to be sure
+            # how this fits into the type inference system in pandas.
             res = arrow_type.to_pandas_dtype()
         # Conversion to pandas is not implemented for some arrow types,
         # perform manual conversion for them:

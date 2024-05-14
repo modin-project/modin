@@ -360,6 +360,7 @@ class PivotTableImpl:
             # different partitions
             if len(index) == 0 and len(columns) > 0:
                 common_type = find_common_type(result.dtypes.tolist())
+                # TODO: remove find_common_type+astype after pandas fix the following issue
                 # transpose loses dtypes: https://github.com/pandas-dev/pandas/issues/43337
                 result = result.transpose().astype(common_type, copy=False)
 
