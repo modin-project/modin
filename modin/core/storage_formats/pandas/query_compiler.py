@@ -1634,16 +1634,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 args=args,
                 kwargs=kwargs,
             ),
-            shape_preserved=True,
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_quantile = Fold.register(
         lambda df, rolling_kwargs, q, interpolation, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).quantile(
                 q=q, interpolation=interpolation, **kwargs
             ),
-            shape_preserved=True,
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_rank = Fold.register(
         lambda df, rolling_kwargs, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
@@ -1654,8 +1654,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 numeric_only=numeric_only,
                 **kwargs,
             ),
-            shape_preserved=True,
-        )
+        ),
+        shape_preserved=True,
     )
 
     def rolling_corr(self, axis, rolling_kwargs, other, pairwise, *args, **kwargs):
