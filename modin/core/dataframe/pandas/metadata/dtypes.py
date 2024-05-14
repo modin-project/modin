@@ -278,9 +278,7 @@ class DtypesDescriptor:
             _schema_is_known=self._schema_is_known,
         )
 
-    def set_index(
-        self, new_index: Union[pandas.Index, "ModinIndex"]
-    ) -> DtypesDescriptor:
+    def set_index(self, new_index: Union[pandas.Index, ModinIndex]) -> DtypesDescriptor:
         """
         Set new column names for this descriptor.
 
@@ -497,21 +495,18 @@ class DtypesDescriptor:
                 # in the 'dtypes_matrix'
                 series = pandas.Series(dtypes, name=i)
                 dtypes_matrix = pandas.concat([dtypes_matrix, series], axis=1)
-                dtypes_matrix.fillna(
-                    value={
-                        # If we encountered a 'NaN' while 'val' describes all the columns, then
-                        # it means, that the missing columns for this instance will be filled with NaNs (floats),
-                        # otherwise, it may indicate missing columns that this 'val' has no info about,
-                        # meaning that we shouldn't try computing a new dtype for this column,
-                        # so marking it as 'unknown'
-                        i: (
-                            pandas.api.types.pandas_dtype(float)
-                            if val._know_all_names and val._remaining_dtype is None
-                            else "unknown"
-                        )
-                    },
-                    inplace=True,
-                )
+                if not (val._know_all_names and val._remaining_dtype is None):
+                    dtypes_matrix.fillna(
+                        value={
+                            # If we encountered a 'NaN' while 'val' describes all the columns, then
+                            # it means, that the missing columns for this instance will be filled with NaNs (floats),
+                            # otherwise, it may indicate missing columns that this 'val' has no info about,
+                            # meaning that we shouldn't try computing a new dtype for this column,
+                            # so marking it as 'unknown'
+                            i: "unknown",
+                        },
+                        inplace=True,
+                    )
             elif isinstance(val, pandas.Series):
                 dtypes_matrix = pandas.concat([dtypes_matrix, val], axis=1)
             elif val is None:
@@ -889,7 +884,7 @@ class ModinDtypes:
             desc = pandas.concat(values)
         return ModinDtypes(desc)
 
-    def set_index(self, new_index: Union[pandas.Index, "ModinIndex"]) -> ModinDtypes:
+    def set_index(self, new_index: Union[pandas.Index, ModinIndex]) -> ModinDtypes:
         """
         Set new column names for stored dtypes.
 

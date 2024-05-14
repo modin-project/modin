@@ -15,6 +15,7 @@
 
 import numpy as np
 import pandas
+from pandas.core.dtypes.cast import find_common_type
 
 from modin.config import use_range_partitioning_groupby
 from modin.core.dataframe.algebra import GroupByReduce
@@ -358,7 +359,10 @@ class PivotTableImpl:
             # transposing it back to be consistent with column axis values along
             # different partitions
             if len(index) == 0 and len(columns) > 0:
-                result = result.transpose()
+                common_type = find_common_type(result.dtypes.tolist())
+                # TODO: remove find_common_type+astype after pandas fix the following issue
+                # transpose loses dtypes: https://github.com/pandas-dev/pandas/issues/43337
+                result = result.transpose().astype(common_type, copy=False)
 
             return result
 

@@ -41,6 +41,7 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
+from modin.pandas.utils import get_pandas_backend
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.utils import ShuffleFunctions
@@ -1019,7 +1020,7 @@ class PandasDataframePartitionManager(
 
         Returns
         -------
-        np.ndarray or (np.ndarray, row_lengths, col_widths)
+        (np.ndarray, backend) or (np.ndarray, backend, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
         num_splits = NPartitions.get()
@@ -1059,10 +1060,11 @@ class PandasDataframePartitionManager(
         parts = cls.split_pandas_df_into_partitions(
             df, row_chunksize, col_chunksize, update_bar
         )
+        backend = get_pandas_backend(df.dtypes)
         if ProgressBar.get():
             pbar.close()
         if not return_dims:
-            return parts
+            return parts, backend
         else:
             row_lengths = [
                 (
@@ -1080,7 +1082,7 @@ class PandasDataframePartitionManager(
                 )
                 for i in range(0, len(df.columns), col_chunksize)
             ]
-            return parts, row_lengths, col_widths
+            return parts, backend, row_lengths, col_widths
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
@@ -1097,7 +1099,7 @@ class PandasDataframePartitionManager(
 
         Returns
         -------
-        np.ndarray or (np.ndarray, row_lengths, col_widths)
+        (np.ndarray, backend) or (np.ndarray, backend, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)

@@ -75,7 +75,8 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
     ],
 )
-def test_math_functions(other, axis, op):
+@pytest.mark.parametrize("backend", [None, "pyarrow"])
+def test_math_functions(other, axis, op, backend):
     data = test_data["float_nan_data"]
     if (op == "floordiv" or op == "rfloordiv") and axis == "rows":
         # lambda == "series_or_list"
@@ -85,8 +86,11 @@ def test_math_functions(other, axis, op):
         # lambda == "series_or_list"
         pytest.xfail(reason="different behavior")
 
+    if op in ("mod", "rmod") and backend == "pyarrow":
+        pytest.skip(reason="These functions are not implemented in pandas itself")
     eval_general(
-        *create_test_dfs(data), lambda df: getattr(df, op)(other(df, axis), axis=axis)
+        *create_test_dfs(data, backend=backend),
+        lambda df: getattr(df, op)(other(df, axis), axis=axis),
     )
 
 

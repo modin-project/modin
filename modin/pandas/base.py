@@ -364,14 +364,14 @@ class BasePandasDataset(ClassLogger):
             other_dtypes = [other.dtype] * len(other)
         elif is_dict_like(other):
             other_dtypes = [
-                type(other[label])
+                other[label] if pandas.isna(other[label]) else type(other[label])
                 for label in self._get_axis(axis)
                 # The binary operation is applied for intersection of axis labels
                 # and dictionary keys. So filtering out extra keys.
                 if label in other
             ]
         else:
-            other_dtypes = [type(x) for x in other]
+            other_dtypes = [x if pandas.isna(x) else type(x) for x in other]
         if compare_index:
             if not self.index.equals(other.index):
                 raise TypeError("Cannot perform operation with non-equal index")
@@ -391,17 +391,18 @@ class BasePandasDataset(ClassLogger):
             # TODO(https://github.com/modin-project/modin/issues/5239):
             # this spuriously rejects other that is a list including some
             # custom type that can be added to self's elements.
-            if not all(
-                (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-                or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
-                or (
-                    lib.is_np_dtype(self_dtype, "mM")
-                    and lib.is_np_dtype(self_dtype, "mM")
-                )
-                or is_dtype_equal(self_dtype, other_dtype)
-                for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
-            ):
-                raise TypeError("Cannot do operation with improper dtypes")
+            for self_dtype, other_dtype in zip(self_dtypes, other_dtypes):
+                if not (
+                    (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
+                    or (is_numeric_dtype(self_dtype) and pandas.isna(other_dtype))
+                    or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
+                    or (
+                        lib.is_np_dtype(self_dtype, "mM")
+                        and lib.is_np_dtype(self_dtype, "mM")
+                    )
+                    or is_dtype_equal(self_dtype, other_dtype)
+                ):
+                    raise TypeError("Cannot do operation with improper dtypes")
         return result
 
     def _validate_function(self, func, on_invalid=None) -> None:

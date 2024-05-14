@@ -45,6 +45,8 @@ class PandasOnPythonDataframe(PandasDataframe):
         each of the block partitions. Is computed if not provided.
     dtypes : pandas.Series, optional
         The data types for the dataframe columns.
+    pandas_backend : {"pyarrow", None}, optional
+        Backend used by pandas. None - means default NumPy backend.
     """
 
     _partition_mgr_cls = PandasOnPythonDataframePartitionManager

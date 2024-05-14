@@ -6757,6 +6757,17 @@ class BaseQueryCompiler(
         ]
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
+    def get_pandas_backend(self) -> Optional[str]:
+        """
+        Get backend stored in `_modin_frame`.
+
+        Returns
+        -------
+        str | None
+            Backend name.
+        """
+        return self._modin_frame._pandas_backend
+
     def repartition(self, axis=None):
         """
         Repartitioning QueryCompiler objects to get ideal partitions inside.

@@ -25,7 +25,7 @@ import hashlib
 import re
 import warnings
 from collections.abc import Iterable
-from typing import Hashable, List
+from typing import TYPE_CHECKING, Hashable, List, Optional
 
 import numpy as np
 import pandas
@@ -80,6 +80,9 @@ from .aggregations import CorrCovBuilder
 from .groupby import GroupbyReduceImpl, PivotTableImpl
 from .merge import MergeImpl
 from .utils import get_group_names, merge_partitioning
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
 def _get_axis(axis):
@@ -265,7 +268,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Shape hint for frames known to be a column or a row, otherwise None.
     """
 
-    def __init__(self, modin_frame, shape_hint=None):
+    _modin_frame: PandasDataframe
+    _shape_hint: Optional[str]
+
+    def __init__(self, modin_frame: PandasDataframe, shape_hint: Optional[str] = None):
         self._modin_frame = modin_frame
         self._shape_hint = shape_hint
 
@@ -1862,9 +1868,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     map = Map.register(pandas.DataFrame.map)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+        dtype_backend: str = "numpy_nullable",
+    ):
+        result = Fold.register(pandas.DataFrame.convert_dtypes)(
+            self,
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+            convert_floating=convert_floating,
+            dtype_backend=dtype_backend,
+        )
+        # TODO: `numpy_nullable` should be handled similar
+        if dtype_backend == "pyarrow":
+            result._modin_frame._pandas_backend = "pyarrow"
+        return result
+
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
+    # TODO: better way to distinguish methods for NumPy API?
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
         dtypes=np.bool_,
@@ -2254,6 +2284,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     corr = CorrCovBuilder.build_corr_method()
 
     def cov(self, min_periods=None, ddof=1):
+        if self.get_pandas_backend() == "pyarrow":
+            return super().cov(min_periods=min_periods, ddof=ddof)
+        # _nancorr use numpy which incompatible with pandas dataframes on pyarrow
         return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
 
     def _nancorr(self, min_periods=1, cov=False, ddof=1):
@@ -2822,7 +2855,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     # __setitem__ methods
-    def setitem_bool(self, row_loc, col_loc, item):
+    def setitem_bool(self, row_loc: PandasQueryCompiler, col_loc, item):
         def _set_item(df, row_loc):  # pragma: no cover
             df = df.copy()
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
@@ -2899,7 +2932,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return self.getitem_column_array(key)
 
-    def getitem_column_array(self, key, numeric=False, ignore_order=False):
+    def getitem_column_array(
+        self, key, numeric=False, ignore_order=False
+    ) -> PandasQueryCompiler:
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
             if ignore_order and is_list_like(key):
@@ -3111,7 +3146,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             shape_hint=self._shape_hint,
         )
 
-    def drop(self, index=None, columns=None, errors: str = "raise"):
+    def drop(
+        self, index=None, columns=None, errors: str = "raise"
+    ) -> PandasQueryCompiler:
         # `errors` parameter needs to be part of the function signature because
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
@@ -3912,7 +3949,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             add_missing_cats=add_missing_cats,
             **groupby_kwargs,
         )
-        result_qc = self.__constructor__(result)
+        result_qc: PandasQueryCompiler = self.__constructor__(result)
 
         if not is_transform and not groupby_kwargs.get("as_index", True):
             return result_qc.reset_index(drop=True)
@@ -4578,7 +4615,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def cat_codes(self):
         def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            assert isinstance(ser.dtype, pandas.CategoricalDtype)
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
         res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])
