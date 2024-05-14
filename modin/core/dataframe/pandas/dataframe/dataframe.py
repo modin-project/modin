@@ -2321,7 +2321,7 @@ class PandasDataframe(
         pass
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold(self, axis, func, new_index=None, new_columns=None):
+    def fold(self, axis, func, new_index=None, new_columns=None, shape_preserved=False):
         """
         Perform a function across an entire axis.
 
@@ -2335,44 +2335,34 @@ class PandasDataframe(
             The index of the result.
         new_columns : list-like, optional
             The columns of the result.
+        shape_preserved : bool, default: False
+            Whether the shape of the dataframe is preserved or not
+            after applying a function.
 
         Returns
         -------
         PandasDataframe
             A new dataframe.
         """
-        copy_lengths = True
-        copy_widths = True
-        if new_index is not None:
-            if self.has_materialized_index:
-                if len(self.index) != len(new_index):
-                    copy_lengths = False
-            else:
-                copy_lengths = False
-        if new_columns is not None:
-            if self.has_materialized_columns:
-                if len(self.columns) != len(new_columns):
-                    copy_widths = False
-            else:
-                copy_widths = False
+        new_row_lengths = None
+        new_column_widths = None
+        if shape_preserved:
+            if new_index is None:
+                new_index = self.copy_index_cache(copy_lengths=True)
+            if new_columns is None:
+                new_columns = self.copy_columns_cache(copy_lengths=True)
+            new_row_lengths = self._row_lengths_cache
+            new_column_widths = self._column_widths_cache
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
         return self.__constructor__(
             new_partitions,
-            (
-                self.copy_index_cache(copy_lengths=copy_lengths)
-                if new_index is None
-                else new_index
-            ),
-            (
-                self.copy_columns_cache(copy_lengths=copy_widths)
-                if new_columns is None
-                else new_columns
-            ),
-            row_lengths=self._row_lengths_cache if copy_lengths else None,
-            column_widths=self._column_widths_cache if copy_widths else None,
+            new_index,
+            new_columns,
+            row_lengths=new_row_lengths,
+            column_widths=new_column_widths,
             pandas_backend=self._pandas_backend,
         )
 
