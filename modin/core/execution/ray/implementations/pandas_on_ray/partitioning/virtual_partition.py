@@ -267,12 +267,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         RayWrapper.wait(futures)
 
 
-@_inherit_docstrings(PandasOnRayDataframeVirtualPartition.__init__)
+@_inherit_docstrings(PandasOnRayDataframeVirtualPartition)
 class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
     axis = 0
 
 
-@_inherit_docstrings(PandasOnRayDataframeVirtualPartition.__init__)
+@_inherit_docstrings(PandasOnRayDataframeVirtualPartition)
 class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
     axis = 1
 

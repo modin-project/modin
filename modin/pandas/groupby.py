@@ -86,7 +86,7 @@ _DEFAULT_BEHAVIOUR = {
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(ClassLogger):
+class DataFrameGroupBy(ClassLogger):  # noqa: GL08
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
     _return_tuple_when_iterating = False
     _df: Union[DataFrame, Series]
@@ -209,7 +209,7 @@ class DataFrameGroupBy(ClassLogger):
         return attr
 
     @property
-    def ngroups(self):
+    def ngroups(self):  # noqa: GL08
         return len(self)
 
     def skew(self, axis=lib.no_default, skipna=True, numeric_only=False, **kwargs):
@@ -608,7 +608,7 @@ class DataFrameGroupBy(ClassLogger):
             lambda df: df.filter(func, dropna=dropna, *args, **kwargs)
         )
 
-    def _deprecate_axis(self, axis: int, name: str) -> None:
+    def _deprecate_axis(self, axis: int, name: str) -> None:  # noqa: GL08
         if axis == 1:
             warnings.warn(
                 f"{type(self).__name__}.{name} with axis=1 is deprecated and "
@@ -1061,7 +1061,7 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def __len__(self):
+    def __len__(self):  # noqa: GL08
         return len(self.indices)
 
     def all(self, skipna=True):
@@ -1728,7 +1728,7 @@ class DataFrameGroupBy(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(DataFrameGroupBy):
+class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
     _pandas_class = pandas.core.groupby.SeriesGroupBy
 
     @property
@@ -1810,7 +1810,7 @@ class SeriesGroupBy(DataFrameGroupBy):
         ascending: bool = False,
         bins=None,
         dropna: bool = True,
-    ):
+    ):  # noqa: GL08
         return self._default_to_pandas(
             lambda ser: ser.value_counts(
                 normalize=normalize,

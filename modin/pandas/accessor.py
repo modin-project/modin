@@ -197,7 +197,7 @@ class CachedAccessor(ClassLogger):
         self._name = name
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    def __get__(self, obj, cls):  # noqa: GL08
         if obj is None:
             return self._accessor
         accessor_obj = self._accessor(obj)

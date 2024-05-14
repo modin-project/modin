@@ -239,12 +239,12 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         DaskWrapper.wait(self.list_of_blocks)
 
 
-@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition.__init__)
+@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition)
 class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition):
     axis = 0
 
 
-@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition.__init__)
+@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition)
 class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
     axis = 1
 

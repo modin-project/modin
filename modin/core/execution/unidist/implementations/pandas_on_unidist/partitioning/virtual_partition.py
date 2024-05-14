@@ -260,12 +260,12 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         UnidistWrapper.wait(futures)
 
 
-@_inherit_docstrings(PandasOnUnidistDataframeVirtualPartition.__init__)
+@_inherit_docstrings(PandasOnUnidistDataframeVirtualPartition)
 class PandasOnUnidistDataframeColumnPartition(PandasOnUnidistDataframeVirtualPartition):
     axis = 0
 
 
-@_inherit_docstrings(PandasOnUnidistDataframeVirtualPartition.__init__)
+@_inherit_docstrings(PandasOnUnidistDataframeVirtualPartition)
 class PandasOnUnidistDataframeRowPartition(PandasOnUnidistDataframeVirtualPartition):
     axis = 1
 
