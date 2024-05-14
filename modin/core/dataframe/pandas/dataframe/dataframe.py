@@ -143,13 +143,13 @@ class PandasDataframe(
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._pandas_backend = pandas_backend
-        if not pandas_backend == "pyarrow":
+        if pandas_backend != "pyarrow":
+            self.set_dtypes_cache(dtypes)
+        else:
             # In this case, the type precomputation may be incorrect; we need
             # to know the type algebra precisely. Considering the number of operations
             # and different combinations of backends, the best solution would be to
             # introduce optimizations gradually, with a large number of tests.
-            self.set_dtypes_cache(dtypes)
-        else:
             self.set_dtypes_cache(None)
 
         self._validate_axes_lengths()
