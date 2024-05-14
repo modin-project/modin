@@ -2321,7 +2321,7 @@ class PandasDataframe(
         pass
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold(self, axis, func, new_columns=None):
+    def fold(self, axis, func, new_index=None, new_columns=None, shape_preserved=False):
         """
         Perform a function across an entire axis.
 
@@ -2331,37 +2331,38 @@ class PandasDataframe(
             The axis to apply over.
         func : callable
             The function to apply.
+        new_index : list-like, optional
+            The index of the result.
         new_columns : list-like, optional
             The columns of the result.
-            Must be the same length as the columns' length of `self`.
-            The column labels of `self` may change during an operation so
-            we may want to pass the new column labels in (e.g., see `cat.codes`).
+        shape_preserved : bool, default: False
+            Whether the shape of the dataframe is preserved or not
+            after applying a function.
 
         Returns
         -------
         PandasDataframe
             A new dataframe.
-
-        Notes
-        -----
-        The data shape is not changed (length and width of the table).
         """
-        if new_columns is not None:
-            if self.has_materialized_columns:
-                assert len(self.columns) == len(
-                    new_columns
-                ), "The length of `new_columns` doesn't match the columns' length of `self`"
-            self.set_columns_cache(new_columns)
+        new_row_lengths = None
+        new_column_widths = None
+        if shape_preserved:
+            if new_index is None:
+                new_index = self.copy_index_cache(copy_lengths=True)
+            if new_columns is None:
+                new_columns = self.copy_columns_cache(copy_lengths=True)
+            new_row_lengths = self._row_lengths_cache
+            new_column_widths = self._column_widths_cache
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
         return self.__constructor__(
             new_partitions,
-            self.copy_index_cache(copy_lengths=True),
-            self.copy_columns_cache(copy_lengths=True),
-            self._row_lengths_cache,
-            self._column_widths_cache,
+            new_index,
+            new_columns,
+            row_lengths=new_row_lengths,
+            column_widths=new_column_widths,
             pandas_backend=self._pandas_backend,
         )
 
