@@ -1420,7 +1420,8 @@ def test_pyarrow_backed_functions():
         )
 
     if StorageFormat.get() != "Hdk":
-        # FIXME: HDK should also work in this case
+        # FIXME: HDK should also work in this case but
+        # since we deprecated it, we will just remove this branch
         eval_general(
             modin_series,
             pandas_series,
