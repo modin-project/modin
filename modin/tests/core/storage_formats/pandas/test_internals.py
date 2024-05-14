@@ -2732,7 +2732,7 @@ def test_fold_operator():
 
     PandasQueryCompiler.filter_func = Fold.register(filter_func)
 
-    def filter_modin_dataframe(df):
+    def filter_modin_dataframe1(df):
         return df.__constructor__(
             query_compiler=df._query_compiler.filter_func(
                 fold_axis=0,
@@ -2741,8 +2741,19 @@ def test_fold_operator():
             )
         )
 
-    pd.DataFrame.filter_dataframe = filter_modin_dataframe
+    pd.DataFrame.filter_dataframe1 = filter_modin_dataframe1
 
-    filtered_df = modin_df.filter_dataframe()
+    filtered_df = modin_df.filter_dataframe1()
+
+    df_equals(filtered_df, expected_df)
+
+    def filter_modin_dataframe2(df):
+        return df.__constructor__(
+            query_compiler=df._query_compiler.filter_func(fold_axis=0)
+        )
+
+    pd.DataFrame.filter_dataframe2 = filter_modin_dataframe2
+
+    filtered_df = modin_df.filter_dataframe2()
 
     df_equals(filtered_df, expected_df)
