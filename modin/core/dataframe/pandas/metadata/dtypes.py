@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Optional, Union
 
-import numpy as np
 import pandas
 from pandas._typing import DtypeObj, IndexLabel
 from pandas.core.dtypes.cast import find_common_type
@@ -109,7 +108,7 @@ class DtypesDescriptor:
         self._know_all_names: bool = know_all_names
         # a common dtype for columns that are not present in 'known_dtypes' nor in 'cols_with_unknown_dtypes'
         self._remaining_dtype: Optional[DtypeObj] = remaining_dtype
-        self._parent_df: Optional["PandasDataframe"] = parent_df
+        self._parent_df: Optional[PandasDataframe] = parent_df
         if columns_order is None:
             self._columns_order: Optional[dict[int, IndexLabel]] = None
             # try to compute '._columns_order' using 'parent_df'
@@ -1212,7 +1211,7 @@ def get_categories_dtype(
     )
 
 
-def extract_dtype(value) -> Union[DtypeObj, pandas.Series]:
+def extract_dtype(value) -> DtypeObj | pandas.Series:
     """
     Extract dtype(s) from the passed `value`.
 
@@ -1224,25 +1223,9 @@ def extract_dtype(value) -> Union[DtypeObj, pandas.Series]:
     -------
     DtypeObj or pandas.Series of DtypeObj
     """
-    from modin.pandas.utils import is_scalar
+    try:
+        dtype = pandas.api.types.pandas_dtype(value)
+    except TypeError:
+        dtype = pandas.Series(value).dtype
 
-    if hasattr(value, "dtype"):
-        # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
-        # we would like to get its internal dtype
-        return value.dtype
-    elif hasattr(value, "to_numpy"):
-        # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
-        # we would like to convert it and get its proper internal dtype
-        return value.to_numpy().dtype
-    elif hasattr(value, "dtypes"):
-        return value.dtypes
-    elif is_scalar(value):
-        if value is None:
-            # previous type was object instead of 'float64'
-            return pandas.api.types.pandas_dtype(value)
-        # TODO: backend is not taken into account
-        # pd.api.types.pandas_dtype(pd.ArrowDtype(pa.array([1,2,3]).type))
-        return pandas.api.types.pandas_dtype(type(value))
-    else:
-        # TODO: new way without numpy?
-        return np.array(value).dtype
+    return dtype
