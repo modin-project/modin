@@ -1,6 +1,6 @@
 name: Publish Modin wheel to PyPI
 
-on: pull_request
+on: push
 
 jobs:
   build-n-publish:
@@ -28,4 +28,4 @@ jobs:
       if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        password: ${{ secrets.NON_EXISTENT_TOKEN }}
+        password: ${{ secrets.PUBLISH_TO_PYPI_TOKEN }}
