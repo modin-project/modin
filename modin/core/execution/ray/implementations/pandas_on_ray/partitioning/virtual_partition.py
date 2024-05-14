@@ -51,7 +51,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     _PARTITIONS_METADATA_LEN = 3  # (length, width, ip)
     partition_type = PandasOnRayDataframePartition
-    instance_type = ray.ObjectRef
     axis = None
 
     # these variables are intentionally initialized at runtime (see #6023)
