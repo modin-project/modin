@@ -1673,7 +1673,7 @@ class DataFrame(BasePandasDataset):
     _AXIS_ORDERS = ["index", "columns"]
     _get_index_resolvers = pandas.DataFrame._get_index_resolvers
 
-    def _get_axis_resolvers(self, axis: str) -> dict:
+    def _get_axis_resolvers(self, axis: str) -> dict:  # noqa: GL08
         # forked from pandas because we only want to update the index if there's more
         # than one level of the index.
         # index or columns

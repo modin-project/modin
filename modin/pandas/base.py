@@ -1126,7 +1126,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def _deprecate_downcast(self, downcast, method_name: str):
+    def _deprecate_downcast(self, downcast, method_name: str):  # noqa: GL08
         if downcast is not lib.no_default:
             warnings.warn(
                 f"The 'downcast' keyword in {method_name} is deprecated and "
