@@ -546,20 +546,6 @@ def func_from_deprecated_location(
     return deprecated_func
 
 
-to_numpy = func_from_deprecated_location(
-    "to_numpy",
-    "modin.pandas.io",
-    "Importing ``to_numpy`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
-    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
-)
-to_pandas = func_from_deprecated_location(
-    "to_pandas",
-    "modin.pandas.io",
-    "Importing ``to_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
-    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
-)
-
-
 def hashable(obj: bool) -> bool:
     """
     Return whether the `obj` is hashable.

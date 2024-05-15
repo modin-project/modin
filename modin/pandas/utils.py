@@ -22,7 +22,7 @@ import pandas
 from pandas._typing import AggFuncType, AggFuncTypeBase, AggFuncTypeDict, IndexLabel
 from pandas.util._decorators import doc
 
-from modin.utils import func_from_deprecated_location, hashable
+from modin.utils import hashable
 
 _doc_binary_operation = """
 Return {operation} of {left} and `{right}` (binary operator `{bin_op}`).
@@ -40,31 +40,6 @@ Returns
 SET_DATAFRAME_ATTRIBUTE_WARNING = (
     "Modin doesn't allow columns to be created via a new attribute name - see "
     + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access"
-)
-
-from_pandas = func_from_deprecated_location(
-    "from_pandas",
-    "modin.pandas.io",
-    "Importing ``from_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
-    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
-)
-from_arrow = func_from_deprecated_location(
-    "from_arrow",
-    "modin.pandas.io",
-    "Importing ``from_arrow`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
-    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
-)
-from_dataframe = func_from_deprecated_location(
-    "from_dataframe",
-    "modin.pandas.io",
-    "Importing ``from_dataframe`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
-    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
-)
-from_non_pandas = func_from_deprecated_location(
-    "from_non_pandas",
-    "modin.pandas.io",
-    "Importing ``from_non_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
-    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
 )
 
 
