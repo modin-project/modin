@@ -47,7 +47,6 @@ class BinaryDefault(DefaultMethod):
                 "squeeze_other", False
             )
             squeeze_self = kwargs.pop("squeeze_self", False)
-
             if squeeze_other:
                 other = other.squeeze(axis=1)
 

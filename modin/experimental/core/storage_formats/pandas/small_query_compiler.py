@@ -357,7 +357,15 @@ def _register_binary(op):
         if squeeze_self:
             df = df.squeeze(axis=1)
 
-        return getattr(df, op)(other, **kwargs)
+        result = getattr(df, op)(other, **kwargs)
+        if (
+            not isinstance(result, pandas.Series)
+            and not isinstance(result, pandas.DataFrame)
+            and is_list_like(result)
+        ):
+            result = pandas.DataFrame(result)
+
+        return result
 
     return binary_operator
 
@@ -569,12 +577,6 @@ def _register_default_pandas(
             df = df.copy()
         if is_series:
             df = df.squeeze(axis=1)
-        elif (
-            squeeze_series
-            and len(df.columns) == 1
-            and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            df = df.squeeze(axis=1)
         exclude_names = [
             # "broadcast",
             "fold_axis",
@@ -585,8 +587,8 @@ def _register_default_pandas(
         kwargs = kwargs.copy()
         for name in exclude_names:
             kwargs.pop(name, None)
-        args = try_cast_to_pandas(args, squeeze=squeeze_args, squeeze_df=True)
-        kwargs = try_cast_to_pandas(kwargs, squeeze=squeeze_kwargs, squeeze_df=True)
+        args = try_cast_to_pandas(args, squeeze=squeeze_args)
+        kwargs = try_cast_to_pandas(kwargs, squeeze=squeeze_kwargs)
         result = func(df, *args, **kwargs)
         if in_place:
             result = df
@@ -596,6 +598,7 @@ def _register_default_pandas(
             if result.name is None:
                 result.name = MODIN_UNNAMED_SERIES_LABEL
             result = result.to_frame()
+
         return query_compiler.__constructor__(result)
 
     return caller
