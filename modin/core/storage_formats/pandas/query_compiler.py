@@ -25,7 +25,7 @@ import hashlib
 import re
 import warnings
 from collections.abc import Iterable
-from typing import Hashable, List
+from typing import TYPE_CHECKING, Hashable, List, Optional
 
 import numpy as np
 import pandas
@@ -80,6 +80,9 @@ from .aggregations import CorrCovBuilder
 from .groupby import GroupbyReduceImpl, PivotTableImpl
 from .merge import MergeImpl
 from .utils import get_group_names, merge_partitioning
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
 def _get_axis(axis):
@@ -265,7 +268,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Shape hint for frames known to be a column or a row, otherwise None.
     """
 
-    def __init__(self, modin_frame, shape_hint=None):
+    _modin_frame: PandasDataframe
+    _shape_hint: Optional[str]
+
+    def __init__(self, modin_frame: PandasDataframe, shape_hint: Optional[str] = None):
         self._modin_frame = modin_frame
         self._shape_hint = shape_hint
 
@@ -1338,49 +1344,57 @@ class PandasQueryCompiler(BaseQueryCompiler):
     expanding_sum = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).sum(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_min = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).min(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_max = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).max(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_mean = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).mean(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_median = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).median(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_var = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).var(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_std = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).std(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_count = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).count(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     def expanding_cov(
@@ -1421,7 +1435,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 (df.squeeze(axis=1) if squeeze_self else df)
                 .expanding(*expanding_args)
                 .cov(*args, **kwargs)
-            )
+            ),
+            shape_preserved=True,
         )(
             self,
             fold_axis,
@@ -1471,7 +1486,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 (df.squeeze(axis=1) if squeeze_self else df)
                 .expanding(*expanding_args)
                 .corr(*args, **kwargs)
-            )
+            ),
+            shape_preserved=True,
         )(
             self,
             fold_axis,
@@ -1486,107 +1502,127 @@ class PandasQueryCompiler(BaseQueryCompiler):
     expanding_quantile = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).quantile(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_sem = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).sem(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_kurt = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).kurt(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_skew = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).skew(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     expanding_rank = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).rank(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
 
     window_mean = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).mean(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     window_sum = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).sum(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     window_var = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).var(ddof=ddof, *args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     window_std = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).std(ddof=ddof, *args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_count = Fold.register(
         lambda df, rolling_kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).count()
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_sum = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).sum(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_sem = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).sem(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_mean = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).mean(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_median = Fold.register(
         lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).median(**kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_var = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).var(ddof=ddof, *args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_std = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).std(ddof=ddof, *args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_min = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).min(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_max = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).max(*args, **kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_skew = Fold.register(
         lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).skew(**kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_kurt = Fold.register(
         lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).kurt(**kwargs)
-        )
+        ),
+        shape_preserved=True,
     )
     rolling_apply = Fold.register(
         lambda df, rolling_kwargs, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
@@ -1597,15 +1633,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 engine_kwargs=engine_kwargs,
                 args=args,
                 kwargs=kwargs,
-            )
-        )
+            ),
+        ),
+        shape_preserved=True,
     )
     rolling_quantile = Fold.register(
         lambda df, rolling_kwargs, q, interpolation, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).quantile(
                 q=q, interpolation=interpolation, **kwargs
-            )
-        )
+            ),
+        ),
+        shape_preserved=True,
     )
     rolling_rank = Fold.register(
         lambda df, rolling_kwargs, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
@@ -1615,8 +1653,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 pct=pct,
                 numeric_only=numeric_only,
                 **kwargs,
-            )
-        )
+            ),
+        ),
+        shape_preserved=True,
     )
 
     def rolling_corr(self, axis, rolling_kwargs, other, pairwise, *args, **kwargs):
@@ -1632,7 +1671,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.rolling(**rolling_kwargs).corr(
                         other=other, pairwise=pairwise, *args, **kwargs
                     )
-                )
+                ),
+                shape_preserved=True,
             )(self, axis)
 
     def rolling_cov(self, axis, rolling_kwargs, other, pairwise, ddof, **kwargs):
@@ -1648,7 +1688,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.rolling(**rolling_kwargs).cov(
                         other=other, pairwise=pairwise, ddof=ddof, **kwargs
                     )
-                )
+                ),
+                shape_preserved=True,
             )(self, axis)
 
     def rolling_aggregate(self, axis, rolling_kwargs, func, *args, **kwargs):
@@ -1862,9 +1903,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     map = Map.register(pandas.DataFrame.map)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+        dtype_backend: str = "numpy_nullable",
+    ):
+        result = Fold.register(pandas.DataFrame.convert_dtypes, shape_preserved=True)(
+            self,
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+            convert_floating=convert_floating,
+            dtype_backend=dtype_backend,
+        )
+        # TODO: `numpy_nullable` should be handled similar
+        if dtype_backend == "pyarrow":
+            result._modin_frame._pandas_backend = "pyarrow"
+        return result
+
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
+    # TODO: better way to distinguish methods for NumPy API?
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
         dtypes=np.bool_,
@@ -2228,11 +2293,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
 
-    cummax = Fold.register(pandas.DataFrame.cummax)
-    cummin = Fold.register(pandas.DataFrame.cummin)
-    cumsum = Fold.register(pandas.DataFrame.cumsum)
-    cumprod = Fold.register(pandas.DataFrame.cumprod)
-    _diff = Fold.register(pandas.DataFrame.diff)
+    cummax = Fold.register(pandas.DataFrame.cummax, shape_preserved=True)
+    cummin = Fold.register(pandas.DataFrame.cummin, shape_preserved=True)
+    cumsum = Fold.register(pandas.DataFrame.cumsum, shape_preserved=True)
+    cumprod = Fold.register(pandas.DataFrame.cumprod, shape_preserved=True)
+    _diff = Fold.register(pandas.DataFrame.diff, shape_preserved=True)
 
     def diff(self, axis, periods):
         return self._diff(fold_axis=axis, axis=axis, periods=periods)
@@ -2246,7 +2311,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         kwargs["lower"] = lower
         axis = kwargs.get("axis", 0)
         if is_list_like(lower) or is_list_like(upper):
-            new_modin_frame = self._modin_frame.fold(axis, lambda df: df.clip(**kwargs))
+            new_modin_frame = self._modin_frame.fold(
+                axis, lambda df: df.clip(**kwargs), shape_preserved=True
+            )
         else:
             new_modin_frame = self._modin_frame.map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
@@ -2254,6 +2321,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     corr = CorrCovBuilder.build_corr_method()
 
     def cov(self, min_periods=None, ddof=1):
+        if self.get_pandas_backend() == "pyarrow":
+            return super().cov(min_periods=min_periods, ddof=ddof)
+        # _nancorr use numpy which incompatible with pandas dataframes on pyarrow
         return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
 
     def _nancorr(self, min_periods=1, cov=False, ddof=1):
@@ -2604,7 +2674,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return df.fillna(value=value, **kwargs)
 
         if full_axis:
-            new_modin_frame = self._modin_frame.fold(axis, fillna)
+            new_modin_frame = self._modin_frame.fold(axis, fillna, shape_preserved=True)
         else:
             new_modin_frame = self._modin_frame.map(fillna, dtypes=new_dtypes)
         return self.__constructor__(new_modin_frame)
@@ -2822,7 +2892,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     # __setitem__ methods
-    def setitem_bool(self, row_loc, col_loc, item):
+    def setitem_bool(self, row_loc: PandasQueryCompiler, col_loc, item):
         def _set_item(df, row_loc):  # pragma: no cover
             df = df.copy()
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
@@ -2831,18 +2901,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._modin_frame.has_materialized_dtypes and is_scalar(item):
             new_dtypes = self.dtypes.copy()
             old_dtypes = new_dtypes[col_loc]
-
-            if hasattr(item, "dtype"):
-                # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
-                # we would like to get its internal dtype
-                item_type = item.dtype
-            elif hasattr(item, "to_numpy"):
-                # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
-                # we would like to convert it and get its proper internal dtype
-                item_type = item.to_numpy().dtype
-            else:
-                item_type = pandas.api.types.pandas_dtype(type(item))
-
+            item_type = extract_dtype(item)
             if isinstance(old_dtypes, pandas.Series):
                 new_dtypes[col_loc] = [
                     find_common_type([dtype, item_type]) for dtype in old_dtypes.values
@@ -2910,7 +2969,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return self.getitem_column_array(key)
 
-    def getitem_column_array(self, key, numeric=False, ignore_order=False):
+    def getitem_column_array(
+        self, key, numeric=False, ignore_order=False
+    ) -> PandasQueryCompiler:
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
             if ignore_order and is_list_like(key):
@@ -3122,7 +3183,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             shape_hint=self._shape_hint,
         )
 
-    def drop(self, index=None, columns=None, errors: str = "raise"):
+    def drop(
+        self, index=None, columns=None, errors: str = "raise"
+    ) -> PandasQueryCompiler:
         # `errors` parameter needs to be part of the function signature because
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
@@ -3923,7 +3986,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             add_missing_cats=add_missing_cats,
             **groupby_kwargs,
         )
-        result_qc = self.__constructor__(result)
+        result_qc: PandasQueryCompiler = self.__constructor__(result)
 
         if not is_transform and not groupby_kwargs.get("as_index", True):
             return result_qc.reset_index(drop=True)
@@ -4536,7 +4599,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         else:
             broadcasted_item, broadcasted_dtypes = item, pandas.Series(
-                [np.array(item).dtype] * len(col_numeric_index)
+                [extract_dtype(item)] * len(col_numeric_index)
             )
 
         new_dtypes = None
@@ -4589,7 +4652,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def cat_codes(self):
         def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            assert isinstance(ser.dtype, pandas.CategoricalDtype)
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
         res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])

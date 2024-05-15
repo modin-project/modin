@@ -15,6 +15,7 @@
 
 import functools
 import uuid
+from typing import Optional
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
@@ -44,7 +45,7 @@ class ModinIndex:
         Materialized dtypes of index levels.
     """
 
-    def __init__(self, value=None, axis=None, dtypes=None):
+    def __init__(self, value=None, axis=None, dtypes: Optional[pandas.Series] = None):
         from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
         self._is_default_callable = False
@@ -69,7 +70,7 @@ class ModinIndex:
         self._index_id = uuid.uuid4()
         self._lengths_id = uuid.uuid4()
 
-    def maybe_get_dtypes(self):
+    def maybe_get_dtypes(self) -> Optional[pandas.Series]:
         """
         Get index dtypes if available.
 

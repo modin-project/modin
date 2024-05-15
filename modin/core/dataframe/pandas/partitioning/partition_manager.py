@@ -29,6 +29,7 @@ from pandas._libs.lib import no_default
 
 from modin.config import (
     BenchmarkMode,
+    CpuCount,
     Engine,
     MinPartitionSize,
     NPartitions,
@@ -40,6 +41,7 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
+from modin.pandas.utils import get_pandas_backend
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.utils import ShuffleFunctions
@@ -603,7 +605,7 @@ class PandasDataframePartitionManager(
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def map_partitions(
+    def base_map_partitions(
         cls,
         partitions,
         map_func,
@@ -643,6 +645,71 @@ class PandasDataframePartitionManager(
                 for row_of_parts in partitions
             ]
         )
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def map_partitions(
+        cls,
+        partitions,
+        map_func,
+        func_args=None,
+        func_kwargs=None,
+    ):
+        """
+        Apply `map_func` to `partitions` using different approaches to achieve the best performance.
+
+        Parameters
+        ----------
+        partitions : NumPy 2D array
+            Partitions housing the data of Modin Frame.
+        map_func : callable
+            Function to apply.
+        func_args : iterable, optional
+            Positional arguments for the 'map_func'.
+        func_kwargs : dict, optional
+            Keyword arguments for the 'map_func'.
+
+        Returns
+        -------
+        NumPy array
+            An array of partitions
+        """
+        if np.prod(partitions.shape) <= 1.5 * CpuCount.get():
+            # block-wise map
+            new_partitions = cls.base_map_partitions(
+                partitions, map_func, func_args, func_kwargs
+            )
+        else:
+            # axis-wise map
+            # we choose an axis for a combination of partitions
+            # whose size is closer to the number of CPUs
+            if abs(partitions.shape[0] - CpuCount.get()) < abs(
+                partitions.shape[1] - CpuCount.get()
+            ):
+                axis = 1
+            else:
+                axis = 0
+
+            column_splits = CpuCount.get() // partitions.shape[1]
+
+            if axis == 0 and column_splits > 1:
+                # splitting by parts of columnar partitions
+                new_partitions = cls.map_partitions_joined_by_column(
+                    partitions, column_splits, map_func, func_args, func_kwargs
+                )
+            else:
+                # splitting by full axis partitions
+                new_partitions = cls.map_axis_partitions(
+                    axis,
+                    partitions,
+                    lambda df: map_func(
+                        df,
+                        *(func_args if func_args is not None else ()),
+                        **(func_kwargs if func_kwargs is not None else {}),
+                    ),
+                    keep_partitioning=True,
+                )
+        return new_partitions
 
     @classmethod
     @wait_computations_if_benchmark_mode
@@ -953,7 +1020,7 @@ class PandasDataframePartitionManager(
 
         Returns
         -------
-        np.ndarray or (np.ndarray, row_lengths, col_widths)
+        (np.ndarray, backend) or (np.ndarray, backend, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
         num_splits = NPartitions.get()
@@ -993,10 +1060,11 @@ class PandasDataframePartitionManager(
         parts = cls.split_pandas_df_into_partitions(
             df, row_chunksize, col_chunksize, update_bar
         )
+        backend = get_pandas_backend(df.dtypes)
         if ProgressBar.get():
             pbar.close()
         if not return_dims:
-            return parts
+            return parts, backend
         else:
             row_lengths = [
                 (
@@ -1014,7 +1082,7 @@ class PandasDataframePartitionManager(
                 )
                 for i in range(0, len(df.columns), col_chunksize)
             ]
-            return parts, row_lengths, col_widths
+            return parts, backend, row_lengths, col_widths
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
@@ -1031,7 +1099,7 @@ class PandasDataframePartitionManager(
 
         Returns
         -------
-        np.ndarray or (np.ndarray, row_lengths, col_widths)
+        (np.ndarray, backend) or (np.ndarray, backend, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)

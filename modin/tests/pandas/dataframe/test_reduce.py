@@ -324,7 +324,7 @@ def test_sum(data, axis, skipna, is_transposed, request):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("dtype", ["int64", "Int64"])
+@pytest.mark.parametrize("dtype", ["int64", "Int64", "int64[pyarrow]"])
 def test_dtype_consistency(dtype):
     # test for issue #6781
     res_dtype = pd.DataFrame([1, 2, 3, 4], dtype=dtype).sum().dtype
@@ -353,6 +353,12 @@ def test_sum_prod_specific(fn, min_count, numeric_only):
         lambda df: getattr(df, fn)(min_count=min_count, numeric_only=numeric_only),
         expected_exception=expected_exception,
     )
+
+
+@pytest.mark.parametrize("backend", [None, "pyarrow"])
+def test_sum_prod_min_count(backend):
+    md_df, pd_df = create_test_dfs(test_data["float_nan_data"], backend=backend)
+    eval_general(md_df, pd_df, lambda df: df.prod(min_count=len(pd_df) + 1))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

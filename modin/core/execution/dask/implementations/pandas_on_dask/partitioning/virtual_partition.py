@@ -14,7 +14,6 @@
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
 import pandas
-from distributed import Future
 from distributed.utils import get_ip
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
@@ -51,7 +50,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     axis = None
     _PARTITIONS_METADATA_LEN = 3  # (length, width, ip)
     partition_type = PandasOnDaskDataframePartition
-    instance_type = Future
 
     @property
     def list_of_ips(self):

@@ -26,8 +26,11 @@ from modin.config import (
     MinPartitionSize,
     NPartitions,
     RangePartitioning,
+    StorageFormat,
     context,
 )
+from modin.core.dataframe.algebra import Fold
+from modin.core.dataframe.algebra.default2pandas import DataFrameDefault
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
@@ -36,6 +39,7 @@ from modin.core.dataframe.pandas.metadata import (
     ModinDtypes,
 )
 from modin.core.execution.utils import remote_function
+from modin.core.storage_formats import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.tests.pandas.utils import (
@@ -2657,6 +2661,7 @@ def test_map_approaches(partitioning_scheme, expected_map_approach):
     df = pandas.DataFrame(data)
 
     modin_df = construct_modin_df_by_scheme(df, partitioning_scheme(df))
+    partitions = modin_df._query_compiler._modin_frame._partitions
     partition_mgr_cls = modin_df._query_compiler._modin_frame._partition_mgr_cls
 
     with mock.patch.object(
@@ -2664,7 +2669,7 @@ def test_map_approaches(partitioning_scheme, expected_map_approach):
         expected_map_approach,
         wraps=getattr(partition_mgr_cls, expected_map_approach),
     ) as expected_method:
-        try_cast_to_pandas(modin_df.map(lambda x: x * 2))
+        partition_mgr_cls.map_partitions(partitions, lambda x: x * 2)
         expected_method.assert_called()
 
 
@@ -2704,3 +2709,79 @@ def test_map_partitions_joined_by_column():
             assert np.all(
                 result_partitions[i][0].to_numpy() == 3
             ), "Invalid map function result."
+
+
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="HDK is deprecated and doesn't allow to register a custom function.",
+)
+def test_fold_operator():
+    new_index = list(range(500, 1000))
+    new_columns = ["b"]
+
+    initial_df = pandas.DataFrame({"a": range(0, 1000)})
+    modin_df = pd.DataFrame(initial_df)
+    expected_df = pandas.DataFrame(
+        list(range(0, 1000, 2)), index=new_index, columns=new_columns
+    )
+
+    def filter_func(df):
+        result = df[df.index % 2 == 0]
+        result.index = new_index
+        result.columns = new_columns
+        return result
+
+    PandasQueryCompiler.filter_func = Fold.register(filter_func)
+
+    def filter_modin_dataframe1(df):
+        return df.__constructor__(
+            query_compiler=df._query_compiler.filter_func(
+                fold_axis=0,
+                new_index=new_index,
+                new_columns=new_columns,
+            )
+        )
+
+    pd.DataFrame.filter_dataframe1 = filter_modin_dataframe1
+
+    filtered_df = modin_df.filter_dataframe1()
+
+    df_equals(filtered_df, expected_df)
+
+    def filter_modin_dataframe2(df):
+        return df.__constructor__(
+            query_compiler=df._query_compiler.filter_func(fold_axis=0)
+        )
+
+    pd.DataFrame.filter_dataframe2 = filter_modin_dataframe2
+
+    filtered_df = modin_df.filter_dataframe2()
+
+    df_equals(filtered_df, expected_df)
+
+
+def test_default_property_warning_name():
+    # Test that when a property defaults to pandas, the raised warning mentions the full name of
+    # the pandas property rather than a hex address
+
+    @property
+    def _test_default_property(df):
+        return "suspicious sentinel value"
+
+    @property
+    def qc_test_default_property(qc):
+        return DataFrameDefault.register(_test_default_property)(qc)
+
+    PandasQueryCompiler.qc_test_default_property = qc_test_default_property
+
+    @property
+    def dataframe_test_default_property(df):
+        return df._query_compiler.qc_test_default_property
+
+    pd.DataFrame.dataframe_test_default_property = dataframe_test_default_property
+
+    with pytest.warns(
+        UserWarning,
+        match="<function DataFrame.<property fget:_test_default_property>> is not currently supported",
+    ):
+        pd.DataFrame([[1]]).dataframe_test_default_property

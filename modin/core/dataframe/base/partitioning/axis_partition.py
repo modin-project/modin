@@ -14,7 +14,7 @@
 """Base class of an axis partition for a Modin Dataframe."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
 
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
@@ -95,9 +95,7 @@ class BaseDataframeAxisPartition(
         pass
 
     # Child classes must have these in order to correctly subclass.
-    # TODO: Looks like can be deleted
-    instance_type = None
-    partition_type = None
+    partition_type: Type
     _PARTITIONS_METADATA_LEN = 0
 
     def _wrap_partitions(
@@ -120,7 +118,6 @@ class BaseDataframeAxisPartition(
             List of wrapped remote partition objects.
         """
         assert self.partition_type is not None
-        assert self.instance_type is not None  # type: ignore
 
         if extract_metadata is None:
             # If `_PARTITIONS_METADATA_LEN == 0` then the execution doesn't support metadata

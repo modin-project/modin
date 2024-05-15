@@ -30,7 +30,7 @@ class Fold(Operator):
 
     @classmethod
     def register(
-        cls, fold_function: Callable[..., pandas.DataFrame]
+        cls, fold_function: Callable[..., pandas.DataFrame], shape_preserved=False
     ) -> Callable[..., PandasQueryCompiler]:
         """
         Build Fold operator that will be performed across rows/columns.
@@ -39,6 +39,9 @@ class Fold(Operator):
         ----------
         fold_function : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
             Function to apply across rows/columns.
+        shape_preserved : bool, default: False
+            Whether the shape of the dataframe is preserved or not
+            after applying a function.
 
         Returns
         -------
@@ -50,6 +53,8 @@ class Fold(Operator):
             query_compiler: PandasQueryCompiler,
             fold_axis: Optional[int] = None,
             *args: tuple,
+            new_index=None,
+            new_columns=None,
             **kwargs: dict,
         ) -> PandasQueryCompiler:
             """
@@ -64,6 +69,10 @@ class Fold(Operator):
                 apply across full row partitions.
             *args : tuple
                 Additional arguments passed to `fold_function`.
+            new_index : list-like, optional
+                The index of the result.
+            new_columns : list-like, optional
+                The columns of the result.
             **kwargs: dict
                 Additional keyword arguments passed to `fold_function`.
 
@@ -77,6 +86,9 @@ class Fold(Operator):
                 query_compiler._modin_frame.fold(
                     cls.validate_axis(fold_axis),
                     lambda x: fold_function(x, *args, **kwargs),
+                    new_index=new_index,
+                    new_columns=new_columns,
+                    shape_preserved=shape_preserved,
                 )
             )
 

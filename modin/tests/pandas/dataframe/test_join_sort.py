@@ -34,7 +34,6 @@ from modin.tests.pandas.utils import (
     generate_multiindex,
     random_state,
     rotate_decimal_digits_or_symbols,
-    sort_if_range_partitioning,
     test_data,
     test_data_keys,
     test_data_values,
@@ -297,14 +296,8 @@ def test_merge(test_data, test_data2):
             pandas_result = pandas_df.merge(
                 pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
             )
-            # sorting in `merge` is implemented through range partitioning technique
-            # therefore the order of the rows after it does not match the pandas,
-            # so additional sorting is needed in order to get the same result as for pandas
-            sort_if_range_partitioning(
-                modin_result,
-                pandas_result,
-                force=StorageFormat.get() == "Hdk" or sorts[j],
-            )
+            # FIXME: https://github.com/modin-project/modin/issues/2246
+            df_equals_and_sort(modin_result, pandas_result)
 
             modin_result = modin_df.merge(
                 modin_df2,
@@ -320,11 +313,8 @@ def test_merge(test_data, test_data2):
                 right_on="key",
                 sort=sorts[j],
             )
-            sort_if_range_partitioning(
-                modin_result,
-                pandas_result,
-                force=StorageFormat.get() == "Hdk" or sorts[j],
-            )
+            # FIXME: https://github.com/modin-project/modin/issues/2246
+            df_equals_and_sort(modin_result, pandas_result)
 
     # Test for issue #1771
     modin_df = pd.DataFrame({"name": np.arange(40)})
@@ -333,9 +323,8 @@ def test_merge(test_data, test_data2):
     pandas_df2 = pandas.DataFrame({"name": [39], "position": [0]})
     modin_result = modin_df.merge(modin_df2, on="name", how="inner")
     pandas_result = pandas_df.merge(pandas_df2, on="name", how="inner")
-    sort_if_range_partitioning(
-        modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
-    )
+    # FIXME: https://github.com/modin-project/modin/issues/2246
+    df_equals_and_sort(modin_result, pandas_result)
 
     frame_data = {
         "col1": [0, 1, 2, 3],
@@ -356,9 +345,8 @@ def test_merge(test_data, test_data2):
         # Defaults
         modin_result = modin_df.merge(modin_df2, how=how)
         pandas_result = pandas_df.merge(pandas_df2, how=how)
-        sort_if_range_partitioning(
-            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
-        )
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        df_equals_and_sort(modin_result, pandas_result)
 
         # left_on and right_index
         modin_result = modin_df.merge(
@@ -367,9 +355,8 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_index=True
         )
-        sort_if_range_partitioning(
-            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
-        )
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        df_equals_and_sort(modin_result, pandas_result)
 
         # left_index and right_on
         modin_result = modin_df.merge(
@@ -378,9 +365,8 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_on="col1"
         )
-        sort_if_range_partitioning(
-            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
-        )
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        df_equals_and_sort(modin_result, pandas_result)
 
         # left_on and right_on col1
         modin_result = modin_df.merge(
@@ -389,9 +375,8 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_on="col1"
         )
-        sort_if_range_partitioning(
-            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
-        )
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        df_equals_and_sort(modin_result, pandas_result)
 
         # left_on and right_on col2
         modin_result = modin_df.merge(
@@ -400,9 +385,8 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col2", right_on="col2"
         )
-        sort_if_range_partitioning(
-            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
-        )
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        df_equals_and_sort(modin_result, pandas_result)
 
         # left_index and right_index
         modin_result = modin_df.merge(
@@ -411,9 +395,8 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_index=True
         )
-        sort_if_range_partitioning(
-            modin_result, pandas_result, force=StorageFormat.get() == "Hdk"
-        )
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        df_equals_and_sort(modin_result, pandas_result)
 
     # Cannot merge a Series without a name
     ps = pandas.Series(frame_data2.get("col1"))
@@ -422,9 +405,9 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
-        comparator=sort_if_range_partitioning,
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        comparator=df_equals_and_sort,
         expected_exception=ValueError("Cannot merge a Series without a name"),
-        comparator_kwargs={"force": StorageFormat.get() == "Hdk"},
     )
 
     # merge a Series with a name
@@ -434,8 +417,8 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
-        comparator=sort_if_range_partitioning,
-        comparator_kwargs={"force": StorageFormat.get() == "Hdk"},
+        # FIXME: https://github.com/modin-project/modin/issues/2246
+        comparator=df_equals_and_sort,
     )
 
     with pytest.raises(TypeError):

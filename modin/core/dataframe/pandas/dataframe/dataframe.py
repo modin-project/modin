@@ -32,7 +32,7 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import CpuCount, Engine, IsRayCluster, MinPartitionSize, NPartitions
+from modin.config import Engine, IsRayCluster, MinPartitionSize, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, is_trivial_index
 from modin.core.dataframe.pandas.dataframe.utils import (
@@ -52,21 +52,25 @@ from modin.core.storage_formats.pandas.parsers import (
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
-
-if TYPE_CHECKING:
-    from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
-        ProtocolDataframe,
-    )
-    from pandas._typing import npt
-    from modin.core.dataframe.pandas.partitioning.partition_manager import (
-        PandasDataframePartitionManager,
-    )
-
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
 from modin.pandas.indexing import is_range_like
-from modin.pandas.utils import check_both_not_none, is_full_grab_slice
+from modin.pandas.utils import (
+    check_both_not_none,
+    get_pandas_backend,
+    is_full_grab_slice,
+)
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+
+if TYPE_CHECKING:
+    from pandas._typing import npt
+
+    from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+        ProtocolDataframe,
+    )
+    from modin.core.dataframe.pandas.partitioning.partition_manager import (
+        PandasDataframePartitionManager,
+    )
 
 
 class PandasDataframe(
@@ -97,13 +101,20 @@ class PandasDataframe(
         each of the block partitions. Is computed if not provided.
     dtypes : pandas.Series or callable, optional
         The data types for the dataframe columns.
+    pandas_backend : {"pyarrow", None}, optional
+        Backend used by pandas.
     """
 
     _partition_mgr_cls: PandasDataframePartitionManager
     _query_compiler_cls = PandasQueryCompiler
     # These properties flag whether or not we are deferring the metadata synchronization
-    _deferred_index = False
-    _deferred_column = False
+    _deferred_index: bool = False
+    _deferred_column: bool = False
+
+    _index_cache: ModinIndex = None
+    _columns_cache: ModinIndex = None
+    _dtypes: Optional[ModinDtypes] = None
+    _pandas_backend: Optional[str] = None
 
     @cached_property
     def __constructor__(self) -> type[PandasDataframe]:
@@ -112,7 +123,7 @@ class PandasDataframe(
 
         Returns
         -------
-        PandasDataframe
+        callable
         """
         return type(self)
 
@@ -123,14 +134,23 @@ class PandasDataframe(
         columns=None,
         row_lengths=None,
         column_widths=None,
-        dtypes=None,
+        dtypes: Optional[Union[pandas.Series, ModinDtypes, Callable]] = None,
+        pandas_backend: Optional[str] = None,
     ):
         self._partitions = partitions
         self.set_index_cache(index)
         self.set_columns_cache(columns)
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
-        self.set_dtypes_cache(dtypes)
+        self._pandas_backend = pandas_backend
+        if pandas_backend != "pyarrow":
+            self.set_dtypes_cache(dtypes)
+        else:
+            # In this case, the type precomputation may be incorrect; we need
+            # to know the type algebra precisely. Considering the number of operations
+            # and different combinations of backends, the best solution would be to
+            # introduce optimizations gradually, with a large number of tests.
+            self.set_dtypes_cache(None)
 
         self._validate_axes_lengths()
         self._filter_empties(compute_metadata=False)
@@ -399,6 +419,9 @@ class PandasDataframe(
         else:
             dtypes = self._compute_dtypes()
             self.set_dtypes_cache(dtypes)
+            # During materialization, we can find out the backend and, if it
+            # is suitable, use the ability to pre-calculate types.
+            self._pandas_backend = get_pandas_backend(dtypes)
         return dtypes
 
     def get_dtypes_set(self):
@@ -413,13 +436,13 @@ class PandasDataframe(
             return self._dtypes.get_dtypes_set()
         return set(self.dtypes.values)
 
-    def _compute_dtypes(self, columns=None):
+    def _compute_dtypes(self, columns=None) -> pandas.Series:
         """
         Compute the data types via TreeReduce pattern for the specified columns.
 
         Parameters
         ----------
-        columns : list-like, default: None
+        columns : list-like, optional
             Columns to compute dtypes for. If not specified compute dtypes
             for all the columns in the dataframe.
 
@@ -457,9 +480,6 @@ class PandasDataframe(
         # reset name to None because we use MODIN_UNNAMED_SERIES_LABEL internally
         dtypes.name = None
         return dtypes
-
-    _index_cache = None
-    _columns_cache = None
 
     def set_index_cache(self, index):
         """
@@ -866,7 +886,7 @@ class PandasDataframe(
 
         Parameters
         ----------
-        axis : int, default: None
+        axis : int, optional
             The deferred axis.
             0 for the index, 1 for the columns.
         """
@@ -887,7 +907,7 @@ class PandasDataframe(
 
         Parameters
         ----------
-        axis : int, default: None
+        axis : int, optional
             The axis to apply to. If it's None applies to both axes.
         """
         self._filter_empties(compute_metadata=False)
@@ -1276,8 +1296,15 @@ class PandasDataframe(
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
             elif isinstance(self._dtypes, ModinDtypes):
                 try:
+                    supported_monotonic_col_idx = monotonic_col_idx
+                    if isinstance(monotonic_col_idx, slice):
+                        supported_monotonic_col_idx = pandas.RangeIndex(
+                            monotonic_col_idx.start,
+                            monotonic_col_idx.stop,
+                            monotonic_col_idx.step,
+                        ).to_list()
                     new_dtypes = self._dtypes.lazy_get(
-                        monotonic_col_idx, numeric_index=True
+                        supported_monotonic_col_idx, numeric_index=True
                     )
                 # can raise either on missing cache or on duplicated labels
                 except (ValueError, NotImplementedError):
@@ -1310,6 +1337,7 @@ class PandasDataframe(
             new_row_lengths,
             new_col_widths,
             new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
         return self._maybe_reorder_labels(
@@ -1448,7 +1476,9 @@ class PandasDataframe(
             new_column_names = pandas.Index(level_names, tupleize_cols=False)
         new_columns = new_column_names.append(self.columns)
 
-        def from_labels_executor(df, **kwargs):
+        def from_labels_executor(
+            df: pandas.DataFrame, **kwargs
+        ) -> pandas.DataFrame:  # pragma: no cover
             # Setting the names here ensures that external and internal metadata always match.
             df.index.names = new_column_names
 
@@ -1484,6 +1514,7 @@ class PandasDataframe(
             row_lengths=self._row_lengths_cache,
             column_widths=new_column_widths,
             dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
         # Set flag for propagating deferred row labels across dataframe partitions
         result.synchronize_labels(axis=0)
@@ -1610,7 +1641,13 @@ class PandasDataframe(
             col_idx = self.copy_columns_cache(copy_lengths=True)
             new_widths = self._column_widths_cache
         return self.__constructor__(
-            ordered_cols, row_idx, col_idx, new_lengths, new_widths, new_dtypes
+            ordered_cols,
+            row_idx,
+            col_idx,
+            new_lengths,
+            new_widths,
+            new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis=None)
@@ -1630,6 +1667,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             self.copy_dtypes_cache(),
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -1731,6 +1769,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
+            pandas_backend=get_pandas_backend(new_dtypes),
         )
 
     def numeric_columns(self, include_bool=True):
@@ -1932,7 +1971,7 @@ class PandasDataframe(
             considered to be the first index in the `indexes` list.
         sort : boolean
             Whether or not to sort the joined index.
-        fill_value : any, default: None
+        fill_value : any, optional
             Value to use for missing values.
 
         Returns
@@ -2091,6 +2130,7 @@ class PandasDataframe(
             *new_axes,
             *new_axes_lengths,
             dtypes,
+            pandas_backend=self._pandas_backend,
         )
         return result
 
@@ -2212,46 +2252,12 @@ class PandasDataframe(
         PandasDataframe
             A new dataframe.
         """
-        if self.num_parts <= 1.5 * CpuCount.get():
-            # block-wise map
-            map_fn = (
-                self._partition_mgr_cls.lazy_map_partitions
-                if lazy
-                else self._partition_mgr_cls.map_partitions
-            )
-            new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
-        else:
-            # axis-wise map
-            # we choose an axis for a combination of partitions
-            # whose size is closer to the number of CPUs
-            if abs(self._partitions.shape[0] - CpuCount.get()) < abs(
-                self._partitions.shape[1] - CpuCount.get()
-            ):
-                axis = 1
-            else:
-                axis = 0
-
-            column_splits = CpuCount.get() // self._partitions.shape[1]
-
-            if axis == 0 and column_splits > 1:
-                # splitting by parts of columnar partitions
-                new_partitions = (
-                    self._partition_mgr_cls.map_partitions_joined_by_column(
-                        self._partitions, column_splits, func, func_args, func_kwargs
-                    )
-                )
-            else:
-                # splitting by full axis partitions
-                new_partitions = self._partition_mgr_cls.map_axis_partitions(
-                    axis,
-                    self._partitions,
-                    lambda df: func(
-                        df,
-                        *(func_args if func_args is not None else ()),
-                        **(func_kwargs if func_kwargs is not None else {}),
-                    ),
-                    keep_partitioning=True,
-                )
+        map_fn = (
+            self._partition_mgr_cls.lazy_map_partitions
+            if lazy
+            else self._partition_mgr_cls.map_partitions
+        )
+        new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
 
         if new_columns is not None and self.has_materialized_columns:
             assert len(new_columns) == len(
@@ -2276,6 +2282,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             dtypes=dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def window(
@@ -2314,7 +2321,7 @@ class PandasDataframe(
         pass
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold(self, axis, func, new_columns=None):
+    def fold(self, axis, func, new_index=None, new_columns=None, shape_preserved=False):
         """
         Perform a function across an entire axis.
 
@@ -2324,37 +2331,39 @@ class PandasDataframe(
             The axis to apply over.
         func : callable
             The function to apply.
+        new_index : list-like, optional
+            The index of the result.
         new_columns : list-like, optional
             The columns of the result.
-            Must be the same length as the columns' length of `self`.
-            The column labels of `self` may change during an operation so
-            we may want to pass the new column labels in (e.g., see `cat.codes`).
+        shape_preserved : bool, default: False
+            Whether the shape of the dataframe is preserved or not
+            after applying a function.
 
         Returns
         -------
         PandasDataframe
             A new dataframe.
-
-        Notes
-        -----
-        The data shape is not changed (length and width of the table).
         """
-        if new_columns is not None:
-            if self.has_materialized_columns:
-                assert len(self.columns) == len(
-                    new_columns
-                ), "The length of `new_columns` doesn't match the columns' length of `self`"
-            self.set_columns_cache(new_columns)
+        new_row_lengths = None
+        new_column_widths = None
+        if shape_preserved:
+            if new_index is None:
+                new_index = self.copy_index_cache(copy_lengths=True)
+            if new_columns is None:
+                new_columns = self.copy_columns_cache(copy_lengths=True)
+            new_row_lengths = self._row_lengths_cache
+            new_column_widths = self._column_widths_cache
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
         return self.__constructor__(
             new_partitions,
-            self.copy_index_cache(copy_lengths=True),
-            self.copy_columns_cache(copy_lengths=True),
-            self._row_lengths_cache,
-            self._column_widths_cache,
+            new_index,
+            new_columns,
+            row_lengths=new_row_lengths,
+            column_widths=new_column_widths,
+            pandas_backend=self._pandas_backend,
         )
 
     def infer_objects(self) -> PandasDataframe:
@@ -2401,6 +2410,7 @@ class PandasDataframe(
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def join(
@@ -2506,6 +2516,7 @@ class PandasDataframe(
                 self._row_lengths_cache,
                 [len(self.columns)] if self.has_materialized_columns else None,
                 self.copy_dtypes_cache(),
+                pandas_backend=self._pandas_backend,
             )
         else:
             modin_frame = self
@@ -2809,6 +2820,7 @@ class PandasDataframe(
             *new_axes,
             *new_lengths,
             self.copy_dtypes_cache() if axis == Axis.COL_WISE else None,
+            pandas_backend=self._pandas_backend,
         )
 
     def filter_by_types(self, types: List[Hashable]) -> PandasDataframe:
@@ -2862,7 +2874,12 @@ class PandasDataframe(
                 1, partitions
             )
         return self.__constructor__(
-            partitions, new_index, new_columns, row_lengths, column_widths
+            partitions,
+            new_index,
+            new_columns,
+            row_lengths,
+            column_widths,
+            pandas_backend=self._pandas_backend,
         )
 
     def combine(self) -> PandasDataframe:
@@ -2890,6 +2907,7 @@ class PandasDataframe(
                 else None
             ),
             dtypes=self.copy_dtypes_cache(),
+            pandas_backend=self._pandas_backend,
         )
         result.synchronize_labels()
         return result
@@ -2924,12 +2942,12 @@ class PandasDataframe(
         new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
             Whether pass partition index into applied `func` or not.
             Note that `func` must be able to obtain `partition_idx` kwarg.
-        dtypes : list-like, optional
+        dtypes : list-like or scalar, optional
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
@@ -2983,7 +3001,7 @@ class PandasDataframe(
         new_index=None,
         new_columns=None,
         keep_remaining=False,
-        new_dtypes=None,
+        new_dtypes: Optional[Union[pandas.Series, ModinDtypes]] = None,
     ):
         """
         Apply a function across an entire axis for a subset of the data.
@@ -2994,9 +3012,9 @@ class PandasDataframe(
             The axis to apply over.
         func : callable
             The function to apply.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             The labels to apply over.
-        numeric_indices : list-like, default: None
+        numeric_indices : list-like, optional
             The indices to apply over.
         new_index : list-like, optional
             The index of the result. We may know this in advance,
@@ -3039,7 +3057,13 @@ class PandasDataframe(
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
         return self.__constructor__(
-            new_partitions, new_index, new_columns, None, None, dtypes=new_dtypes
+            new_partitions,
+            new_index,
+            new_columns,
+            None,
+            None,
+            dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3052,10 +3076,10 @@ class PandasDataframe(
         col_labels=None,
         new_index=None,
         new_columns=None,
-        new_dtypes=None,
+        new_dtypes: Optional[pandas.Series] = None,
         keep_remaining=False,
         item_to_distribute=no_default,
-    ):
+    ) -> PandasDataframe:
         """
         Apply a function for a subset of the data.
 
@@ -3065,12 +3089,12 @@ class PandasDataframe(
             The axis to apply over.
         func : callable
             The function to apply.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             The labels to apply over. Must be given if axis is provided.
-        row_labels : list-like, default: None
+        row_labels : list-like, optional
             The row labels to apply over. Must be provided with
             `col_labels` to apply over both axes.
-        col_labels : list-like, default: None
+        col_labels : list-like, optional
             The column labels to apply over. Must be provided
             with `row_labels` to apply over both axes.
         new_index : list-like, optional
@@ -3134,6 +3158,7 @@ class PandasDataframe(
                 lengths_objs[0],
                 lengths_objs[1],
                 new_dtypes,
+                pandas_backend=self._pandas_backend,
             )
         else:
             # We are applying over both axes here, so make sure we have all the right
@@ -3161,6 +3186,7 @@ class PandasDataframe(
                 self._row_lengths_cache,
                 self._column_widths_cache,
                 new_dtypes,
+                pandas_backend=self._pandas_backend,
             )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3197,7 +3223,7 @@ class PandasDataframe(
         labels : {"keep", "replace", "drop"}, default: "keep"
             Whether keep labels from `self` Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        dtypes : "copy", pandas.Series or None, default: None
+        dtypes : "copy", pandas.Series or None, optional
             Dtypes of the result. "copy" to keep old dtypes and None to compute them on demand.
 
         Returns
@@ -3266,6 +3292,7 @@ class PandasDataframe(
             new_row_lengths,
             new_column_widths,
             dtypes=dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def _prepare_frame_to_broadcast(self, axis, indices, broadcast_all):
@@ -3333,14 +3360,14 @@ class PandasDataframe(
         self,
         axis,
         func,
-        other,
+        other: PandasDataframe,
         apply_indices=None,
         numeric_indices=None,
         keep_remaining=False,
         broadcast_all=True,
         new_index=None,
         new_columns=None,
-    ):
+    ) -> PandasDataframe:
         """
         Apply a function to select indices at specified axis and broadcast partitions of `other` Modin DataFrame.
 
@@ -3352,9 +3379,9 @@ class PandasDataframe(
             Function to apply.
         other : PandasDataframe
             Partitions of which should be broadcasted.
-        apply_indices : list, default: None
+        apply_indices : list, optional
             List of labels to apply (if `numeric_indices` are not specified).
-        numeric_indices : list, default: None
+        numeric_indices : list, optional
             Numeric indices to apply (if `apply_indices` are not specified).
         keep_remaining : bool, default: False
             Whether drop the data that is not computed over or not.
@@ -3407,7 +3434,10 @@ class PandasDataframe(
             keep_remaining,
         )
         return self.__constructor__(
-            new_partitions, index=new_index, columns=new_columns
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3443,12 +3473,12 @@ class PandasDataframe(
         new_columns : list-like, optional
             Columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
             Whether pass partition index into applied `func` or not.
             Note that `func` must be able to obtain `partition_idx` kwarg.
-        dtypes : list-like, default: None
+        dtypes : list-like or scalar, optional
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
@@ -3522,11 +3552,9 @@ class PandasDataframe(
                 kw["dtypes"] = dtypes.copy()
             else:
                 if new_columns is None:
-                    kw["dtypes"] = ModinDtypes(
-                        DtypesDescriptor(
-                            remaining_dtype=pandas.api.types.pandas_dtype(dtypes)
-                        )
-                    )
+                    assert not is_list_like(dtypes)
+                    dtype = pandas.api.types.pandas_dtype(dtypes)
+                    kw["dtypes"] = ModinDtypes(DtypesDescriptor(remaining_dtype=dtype))
                 else:
                     kw["dtypes"] = (
                         pandas.Series(dtypes, index=new_columns)
@@ -3596,7 +3624,11 @@ class PandasDataframe(
                     kw["column_widths"] = self._column_widths_cache
 
         result = self.__constructor__(
-            new_partitions, index=new_index, columns=new_columns, **kw
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            **kw,
+            pandas_backend=self._pandas_backend,
         )
         if sync_labels and new_index is not None:
             result.synchronize_labels(axis=0)
@@ -3658,7 +3690,7 @@ class PandasDataframe(
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
-        fill_value : any, default: None
+        fill_value : any, optional
             Value to use for missing values.
 
         Returns
@@ -3776,12 +3808,12 @@ class PandasDataframe(
     def n_ary_op(
         self,
         op,
-        right_frames: list,
+        right_frames: list[PandasDataframe],
         join_type="outer",
         copartition_along_columns=True,
         labels="replace",
-        dtypes=None,
-    ):
+        dtypes: Optional[pandas.Series] = None,
+    ) -> PandasDataframe:
         """
         Perform an n-opary operation by joining with other Modin DataFrame(s).
 
@@ -3799,7 +3831,7 @@ class PandasDataframe(
         labels : {"replace", "drop"}, default: "replace"
             Whether use labels from joined DataFrame or drop altogether to make
             them be computed lazily later.
-        dtypes : series, default: None
+        dtypes : pandas.Series, optional
             Dtypes of the resultant dataframe, this argument will be
             received if the resultant dtypes of n-opary operation is precomputed.
 
@@ -3818,6 +3850,7 @@ class PandasDataframe(
                 self.copy_columns_cache(copy_lengths=True),
                 row_lengths,
                 self._column_widths_cache,
+                pandas_backend=self._pandas_backend,
             )
             new_right_frames = [
                 self.__constructor__(
@@ -3826,6 +3859,7 @@ class PandasDataframe(
                     right_frame.copy_columns_cache(copy_lengths=True),
                     row_lengths,
                     right_frame._column_widths_cache,
+                    pandas_backend=self._pandas_backend,
                 )
                 for right_parts, right_frame in zip(list_of_right_parts, right_frames)
             ]
@@ -3863,6 +3897,7 @@ class PandasDataframe(
             row_lengths,
             column_widths,
             dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3950,6 +3985,8 @@ class PandasDataframe(
                 new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             frames = [self] + others
+            # TODO: should we wrap all `concat` call into "try except" block?
+            # `ModinDtypes.concat` can throw exception in case of duplicate values
             new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=1)
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
@@ -3989,11 +4026,23 @@ class PandasDataframe(
                         new_widths = None
 
         return self.__constructor__(
-            new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
+            new_partitions,
+            new_index,
+            new_columns,
+            new_lengths,
+            new_widths,
+            new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     def _apply_func_to_range_partitioning_broadcast(
-        self, right, func, key, new_index=None, new_columns=None, new_dtypes=None
+        self,
+        right,
+        func,
+        key,
+        new_index=None,
+        new_columns=None,
+        new_dtypes: Optional[Union[ModinDtypes, pandas.Series]] = None,
     ):
         """
         Apply `func` against two dataframes using range-partitioning implementation.
@@ -4058,6 +4107,7 @@ class PandasDataframe(
             index=new_index,
             columns=new_columns,
             dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -4406,6 +4456,7 @@ class PandasDataframe(
                 new_partitions,
                 index=result.copy_index_cache(),
                 row_lengths=result._row_lengths_cache,
+                pandas_backend=self._pandas_backend,
             )
 
         if (
@@ -4456,7 +4507,7 @@ class PandasDataframe(
         new_columns : pandas.Index, optional
             Columns of the result. We may know this in advance,
             and if not provided it must be computed.
-        apply_indices : list-like, default: None
+        apply_indices : list-like, optional
             Indices of `axis ^ 1` to apply groupby over.
 
         Returns
@@ -4482,7 +4533,10 @@ class PandasDataframe(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
         return self.__constructor__(
-            new_partitions, index=new_index, columns=new_columns
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            pandas_backend=self._pandas_backend,
         )
 
     @classmethod
@@ -4503,8 +4557,8 @@ class PandasDataframe(
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_frame, new_lengths, new_widths = cls._partition_mgr_cls.from_pandas(
-            df, True
+        new_frame, pandas_backend, new_lengths, new_widths = (
+            cls._partition_mgr_cls.from_pandas(df, True)
         )
         return cls(
             new_frame,
@@ -4513,6 +4567,7 @@ class PandasDataframe(
             new_lengths,
             new_widths,
             dtypes=new_dtypes,
+            pandas_backend=pandas_backend,
         )
 
     @classmethod
@@ -4530,8 +4585,8 @@ class PandasDataframe(
         PandasDataframe
             New Modin DataFrame.
         """
-        new_frame, new_lengths, new_widths = cls._partition_mgr_cls.from_arrow(
-            at, return_dims=True
+        new_frame, pandas_backend, new_lengths, new_widths = (
+            cls._partition_mgr_cls.from_arrow(at, return_dims=True)
         )
         new_columns = Index.__new__(Index, data=at.column_names, dtype="O")
         new_index = Index.__new__(RangeIndex, data=range(at.num_rows))
@@ -4546,6 +4601,7 @@ class PandasDataframe(
             row_lengths=new_lengths,
             column_widths=new_widths,
             dtypes=new_dtypes,
+            pandas_backend=pandas_backend,
         )
 
     @classmethod
@@ -4566,6 +4622,10 @@ class PandasDataframe(
         import pyarrow
 
         try:
+            # TODO: should we map arrow types to pyarrow-backed pandas types?
+            # It seems like this might help avoid the expense of transferring
+            # data between backends (numpy and pyarrow), but we need to be sure
+            # how this fits into the type inference system in pandas.
             res = arrow_type.to_pandas_dtype()
         # Conversion to pandas is not implemented for some arrow types,
         # perform manual conversion for them:
@@ -4664,6 +4724,7 @@ class PandasDataframe(
             self._column_widths_cache,
             self._row_lengths_cache,
             dtypes=new_dtypes,
+            pandas_backend=self._pandas_backend,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -4851,6 +4912,7 @@ class PandasDataframe(
                         columns,
                         row_lengths,
                         column_widths,
+                        pandas_backend=self._pandas_backend,
                     )
                     for part in list_of_right_parts
                 )
@@ -4922,4 +4984,5 @@ class PandasDataframe(
             index=self.index,
             row_lengths=lengths,
             column_widths=[1],
+            pandas_backend=self._pandas_backend,
         )

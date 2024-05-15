@@ -13,6 +13,8 @@
 
 """Contains implementations for aggregation functions."""
 
+from __future__ import annotations
+
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Tuple
 
@@ -38,7 +40,7 @@ class CorrCovBuilder:
     @classmethod
     def build_corr_method(
         cls,
-    ) -> Callable[["PandasQueryCompiler", str, int, bool], "PandasQueryCompiler"]:
+    ) -> Callable[[PandasQueryCompiler, str, int, bool], PandasQueryCompiler]:
         """
         Build a query compiler method computing the correlation matrix.
 
@@ -49,12 +51,13 @@ class CorrCovBuilder:
         """
 
         def corr_method(
-            qc: "PandasQueryCompiler",
+            qc: PandasQueryCompiler,
             method: str,
             min_periods: int = 1,
             numeric_only: bool = True,
-        ) -> "PandasQueryCompiler":
-            if method != "pearson":
+        ) -> PandasQueryCompiler:
+            # Further implementation is designed for the default pandas backend (numpy)
+            if method != "pearson" or qc.get_pandas_backend() == "pyarrow":
                 return super(type(qc), qc).corr(
                     method=method, min_periods=min_periods, numeric_only=numeric_only
                 )
@@ -101,7 +104,7 @@ class CorrCovBuilder:
     @classmethod
     def build_cov_method(
         cls,
-    ) -> Callable[["PandasQueryCompiler", int, int], "PandasQueryCompiler"]:
+    ) -> Callable[[PandasQueryCompiler, int, int], PandasQueryCompiler]:
         """
         Build a query compiler method computing the covariance matrix.
 

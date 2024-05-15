@@ -13,8 +13,6 @@
 
 """The module defines interface for a virtual partition with pandas storage format and python engine."""
 
-import pandas
-
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -48,7 +46,6 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
     """
 
     partition_type = PandasOnPythonDataframePartition
-    instance_type = pandas.DataFrame
 
 
 @_inherit_docstrings(PandasOnPythonDataframeAxisPartition)

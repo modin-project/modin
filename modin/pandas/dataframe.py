@@ -1622,12 +1622,17 @@ class DataFrame(BasePandasDataset):
             skipna is not False
             and numeric_only is False
             and min_count > len(axis_to_apply)
+            # This fast path is only suitable for the default backend
+            and self._query_compiler.get_pandas_backend() is None
         ):
             new_index = self.columns if not axis else self.index
+            # >>> pd.DataFrame([1,2,3,4], dtype="int64[pyarrow]").prod(min_count=10)
+            # 0    <NA>
+            # dtype: int64[pyarrow]
             return Series(
                 [np.nan] * len(new_index),
                 index=new_index,
-                dtype=pandas.api.types.pandas_dtype("object"),
+                dtype=pandas.api.types.pandas_dtype("float64"),
             )
 
         data = self._validate_dtypes_prod_mean(axis, numeric_only, ignore_axis=True)
@@ -2147,12 +2152,14 @@ class DataFrame(BasePandasDataset):
             skipna is not False
             and numeric_only is False
             and min_count > len(axis_to_apply)
+            # This fast path is only suitable for the default backend
+            and self._query_compiler.get_pandas_backend() is None
         ):
             new_index = self.columns if not axis else self.index
             return Series(
                 [np.nan] * len(new_index),
                 index=new_index,
-                dtype=pandas.api.types.pandas_dtype("object"),
+                dtype=pandas.api.types.pandas_dtype("float64"),
             )
 
         # We cannot add datetime types, so if we are summing a column with
