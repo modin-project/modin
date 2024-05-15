@@ -30,6 +30,7 @@ from modin.config import (
     context,
 )
 from modin.core.dataframe.algebra import Fold
+from modin.core.dataframe.algebra.default2pandas import DataFrameDefault
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
@@ -2757,3 +2758,30 @@ def test_fold_operator():
     filtered_df = modin_df.filter_dataframe2()
 
     df_equals(filtered_df, expected_df)
+
+
+def test_default_property_warning_name():
+    # Test that when a property defaults to pandas, the raised warning mentions the full name of
+    # the pandas property rather than a hex address
+
+    @property
+    def _test_default_property(df):
+        return "suspicious sentinel value"
+
+    @property
+    def qc_test_default_property(qc):
+        return DataFrameDefault.register(_test_default_property)(qc)
+
+    PandasQueryCompiler.qc_test_default_property = qc_test_default_property
+
+    @property
+    def dataframe_test_default_property(df):
+        return df._query_compiler.qc_test_default_property
+
+    pd.DataFrame.dataframe_test_default_property = dataframe_test_default_property
+
+    with pytest.warns(
+        UserWarning,
+        match="<function DataFrame.<property fget:_test_default_property>> is not currently supported",
+    ):
+        pd.DataFrame([[1]]).dataframe_test_default_property
