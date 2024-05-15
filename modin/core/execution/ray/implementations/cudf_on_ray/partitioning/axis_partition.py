@@ -13,8 +13,6 @@
 
 """Module houses classes of axis partitions implemented using Ray and cuDF."""
 
-import cudf
-
 from modin.core.execution.ray.common import RayWrapper
 
 from .partition import cuDFOnRayDataframePartition
@@ -34,7 +32,6 @@ class cuDFOnRayDataframeAxisPartition(object):
         self.partitions = [obj for obj in partitions]
 
     partition_type = cuDFOnRayDataframePartition
-    instance_type = cudf.DataFrame
 
 
 class cuDFOnRayDataframeColumnPartition(cuDFOnRayDataframeAxisPartition):
