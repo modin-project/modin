@@ -26,7 +26,6 @@ from modin.config import (
     MinPartitionSize,
     NPartitions,
     RangePartitioning,
-    StorageFormat,
     context,
 )
 from modin.core.dataframe.algebra import Fold
@@ -2711,10 +2710,6 @@ def test_map_partitions_joined_by_column():
             ), "Invalid map function result."
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="HDK is deprecated and doesn't allow to register a custom function.",
-)
 def test_fold_operator():
     new_index = list(range(500, 1000))
     new_columns = ["b"]

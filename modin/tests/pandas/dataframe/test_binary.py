@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -189,12 +189,7 @@ def test_math_alias(math_op, alias):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_comparison(data, op, other, request):
     def operation(df):
-        df = getattr(df, op)(df if other == "as_left" else other)
-        if other == "as_left" and StorageFormat.get() == "Hdk":
-            # In case of comparison with a DataFrame, HDK returns
-            # a DataFrame with sorted columns.
-            df = df.sort_index(axis=1)
-        return df
+        return getattr(df, op)(df if other == "as_left" else other)
 
     expected_exception = None
     if "int_data" in request.node.callspec.id and other == "a":
@@ -203,8 +198,6 @@ def test_comparison(data, op, other, request):
         expected_exception = TypeError(
             "Invalid comparison between dtype=float64 and str"
         )
-        if StorageFormat.get() == "Hdk":
-            pytest.xfail(reason="https://github.com/modin-project/modin/issues/7019")
 
     eval_general(
         *create_test_dfs(data),
@@ -481,13 +474,7 @@ def test_non_commutative_multiply():
     [
         pytest.param([10, 20], id="int"),
         pytest.param([10, True], id="obj"),
-        pytest.param(
-            [True, True],
-            id="bool",
-            marks=pytest.mark.skipif(
-                condition=Engine.get() == "Native", reason="Fails on HDK"
-            ),
-        ),
+        pytest.param([True, True], id="bool"),
         pytest.param([3.5, 4.5], id="float"),
     ],
 )
@@ -496,22 +483,10 @@ def test_non_commutative_multiply():
     [
         pytest.param([10, 20], id="int"),
         pytest.param([10, True], id="obj"),
-        pytest.param(
-            [True, True],
-            id="bool",
-            marks=pytest.mark.skipif(
-                condition=Engine.get() == "Native", reason="Fails on HDK"
-            ),
-        ),
+        pytest.param([True, True], id="bool"),
         pytest.param([3.5, 4.5], id="float"),
         pytest.param(2, id="int scalar"),
-        pytest.param(
-            True,
-            id="bool scalar",
-            marks=pytest.mark.skipif(
-                condition=Engine.get() == "Native", reason="Fails on HDK"
-            ),
-        ),
+        pytest.param(True, id="bool scalar"),
         pytest.param(3.5, id="float scalar"),
     ],
 )

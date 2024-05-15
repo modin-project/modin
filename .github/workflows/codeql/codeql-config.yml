@@ -2,5 +2,3 @@ name: "Modin CodeQL config"
 
 paths:
   - modin/** 
-paths-ignore:
-  - modin/tests/experimental/hdk_on_native/** # TODO: fix unhashable list error, see #5227

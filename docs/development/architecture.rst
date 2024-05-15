@@ -56,7 +56,7 @@ For the simplicity the other execution systems - Dask and MPI are omitted and on
   on a selected storage format and mapping or compiling the Dataframe Algebra DAG to and actual
   execution sequence.
 * Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. pandas,
-  HDK, custom format.
+  custom format.
 * Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
   selected execution. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
   of executors and provides telemetry
@@ -65,8 +65,7 @@ Component View
 --------------
 
 User queries which perform data transformation, data ingress or data egress pass through the Modin components
-detailed below. The path the query takes is mostly similar across execution systems, with some minor exceptions like
-:doc:`HdkOnNative </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>`.
+detailed below. The path the query takes is mostly similar across execution systems.
 
 Data Transformation
 '''''''''''''''''''
@@ -224,10 +223,6 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
-- :doc:`HDK on Native </development/using_hdk>` (experimental)
-    - Uses HDK as an engine.
-    - The storage format is `hdk` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
-    - For more information on the execution path, see the :doc:`HDK on Native </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>` page.
 - cuDF on Ray (experimental)
     - Uses the Ray_ execution framework.
     - The storage format is `cudf` and the in-memory partition type is a cuDF DataFrame.
@@ -247,10 +242,8 @@ following figure illustrates this concept.
 .. image:: /img/block_partitions_diagram.png
    :align: center
 
-Currently, the main in-memory format of each partition is a `pandas DataFrame`_ (:doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`).
-:doc:`HDK </flow/modin/experimental/core/storage_formats/hdk/index>`
-and cuDF are also supported as experimental in-memory formats in Modin.
-
+Currently, the main in-memory format of each partition is a
+`pandas DataFrame`_ (:doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`).
 
 Index
 -----
@@ -324,12 +317,6 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
    │   ├─── :doc:`experimental </flow/modin/experimental/index>`
    │   │   ├───core
-   │   │   │   ├───execution
-   │   │   │   │   └───native
-   │   │   │   │       └───implementations
-   │   │   │   │           └─── :doc:`hdk_on_native </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>`
-   │   │   │   ├─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
-   |   │   │   |   └───:doc:`hdk </flow/modin/experimental/core/storage_formats/hdk/index>`
    |   |   |   └─── :doc:`io </flow/modin/experimental/core/io/index>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`

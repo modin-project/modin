@@ -99,7 +99,7 @@ def create_pandas_df_from_partitions(
         objs = iter(partition_data)
         partition_data = [[next(objs) for _ in range(width)] for __ in range(height)]
     else:
-        # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
+        # Partitions do not always contain pandas objects.
         # This implementation comes from the fact that calling `partition.get`
         # function is not always equivalent to `partition.to_pandas`.
         partition_data = [[obj.to_pandas() for obj in part] for part in partition_data]

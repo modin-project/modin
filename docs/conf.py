@@ -29,8 +29,6 @@ ray.remote = noop_decorator
 for mod_name in (
     "cudf",
     "cupy",
-    "pyhdk",
-    "pyhdk.hdk",
     "xgboost",
     "unidist",
     "unidist.config",
@@ -45,19 +43,6 @@ if not hasattr(sys.modules["cudf"], "DataFrame"):
     sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
 if not hasattr(sys.modules["cupy"], "ndarray"):
     sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
-if not hasattr(sys.modules["pyhdk"], "PyDbEngine"):
-    sys.modules["pyhdk"].PyDbEngine = type("PyDbEngine", (object,), {})
-if not hasattr(sys.modules["pyhdk.hdk"], "HDK"):
-    sys.modules["pyhdk.hdk"].HDK = type("HDK", (object,), {})
-if not hasattr(sys.modules["pyhdk.hdk"], "QueryNode"):
-    sys.modules["pyhdk.hdk"].QueryNode = type("QueryNode", (object,), {})
-if not hasattr(sys.modules["pyhdk.hdk"], "ExecutionResult"):
-    sys.modules["pyhdk.hdk"].ExecutionResult = type("ExecutionResult", (object,), {})
-if not hasattr(sys.modules["pyhdk.hdk"], "RelAlgExecutor"):
-    sys.modules["pyhdk.hdk"].RelAlgExecutor = type("RelAlgExecutor", (object,), {})
-if not hasattr(sys.modules["pyhdk"], "__version__"):
-    # Show all known pyhdk config options in documentation
-    sys.modules["pyhdk"].__version__ = "999"
 if not hasattr(sys.modules["xgboost"], "Booster"):
     sys.modules["xgboost"].Booster = type("Booster", (object,), {})
 if not hasattr(sys.modules["unidist"], "remote"):

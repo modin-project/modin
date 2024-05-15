@@ -12,16 +12,10 @@ the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` 
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas.
 
-.. note::
-    Currently, the second column reflects implementation status for Ray and Dask engines. By default, support for a method
-    in the HDK engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
-    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Hdk`` is explicitly mentioned.
-
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.concat`_              | Y                               | **Hdk**: ``Y`` but ``sort`` and                    |
-|                           |                                 | `ignore_index`` parameters ignored                 |
+| `pd.concat`_              | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.eval`_                | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+

@@ -25,7 +25,7 @@ To install the most recent stable release run the following:
   pip install -U modin # -U for upgrade in case you have an older version
 
 Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`,
-:doc:`Unidist</development/using_pandas_on_mpi>`, or :doc:`HDK</development/using_hdk>` engines.
+:doc:`Unidist</development/using_pandas_on_mpi>` engines.
 If you don't have Ray_, Dask_ or Unidist_ installed, you will need to install Modin with one of the targets:
 
 .. code-block:: bash
@@ -45,7 +45,7 @@ This means that the dashboard and cluster launcher are no longer installed by de
 If you need those, consider installing ``ray[default]`` along with ``modin[ray]``.
 
 Modin will automatically detect which engine you have installed and use that for
-scheduling computation! See below for HDK engine installation.
+scheduling computation!
 
 Release candidates
 """"""""""""""""""
@@ -128,9 +128,7 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 +---------------------------------+---------------------------+-----------------------------+
 | modin-mpi                       | MPI_ through unidist_     |   Linux, Windows, MacOS     |
 +---------------------------------+---------------------------+-----------------------------+
-| modin-hdk                       | HDK_                      |          Linux              |
-+---------------------------------+---------------------------+-----------------------------+
-| modin-all                       | Dask, Ray, Unidist, HDK   |          Linux              |
+| modin-all                       | Dask, Ray, Unidist        |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
 
 **Note:** Since Modin 0.30.0 we use a reduced set of Ray dependencies: ``ray-core`` instead of ``ray-default``.
@@ -153,7 +151,7 @@ or explicitly:
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-dask modin-mpi modin-hdk
+  conda install -c conda-forge modin-ray modin-dask modin-mpi
 
 Refer to `Installing with conda`_ section of the unidist documentation
 for more details on how to install a specific MPI implementation to run on.
@@ -169,21 +167,14 @@ Then it can be used during installation either like
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-hdk --experimental-solver=libmamba
+  conda install -c conda-forge modin-ray modin- --experimental-solver=libmamba
 
 or starting from conda 22.11 and libmamba solver 22.12 versions
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-hdk --solver=libmamba
+  conda install -c conda-forge modin-ray --solver=libmamba
 
-
-Using Intel\ |reg| Distribution of Modin
-""""""""""""""""""""""""""""""""""""""""
-
-With ``conda`` it is also possible to install `Intel Distribution of Modin`_, a special version of Modin
-that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`HDK</development/using_hdk>`
-engine that contains a bunch of optimizations for Intel hardware. More details to get started can be found in the `Intel Distribution of Modin Getting Started`_ guide.
 
 Installing from the GitHub main branch
 --------------------------------------
@@ -203,7 +194,7 @@ If you would like to install Modin with a specific engine, you can use ``modin[r
 Windows
 -------
 
-All Modin engines except :doc:`HDK</development/using_hdk>` are available both on Windows and Linux as mentioned above.
+All Modin engines except are available both on Windows and Linux as mentioned above.
 Default engine on Windows is :doc:`Ray</development/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally 
 not recommended due to the limitations and poor performance of Ray on WSL, a roughly 
@@ -245,7 +236,6 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _Unidist: https://github.com/modin-project/unidist
 .. _`Installing with pip`: https://unidist.readthedocs.io/en/latest/installation.html#installing-with-pip
 .. _`Installing with conda`: https://unidist.readthedocs.io/en/latest/installation.html#installing-with-conda
-.. _HDK: https://github.com/intel-ai/hdk
 .. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
 .. _`Intel Distribution of Modin Getting Started`: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-distribution-of-modin-getting-started-guide.html
 .. |reg|    unicode:: U+000AE .. REGISTERED SIGN

@@ -21,7 +21,7 @@ import pytest
 from pandas._testing import ensure_clean
 
 import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions, StorageFormat
+from modin.config import MinPartitionSize, NPartitions
 from modin.pandas.indexing import is_range_like
 from modin.pandas.testing import assert_index_equal
 from modin.tests.pandas.utils import (
@@ -1491,13 +1491,7 @@ def test_reset_index(data, test_async_reset_index):
     "data",
     [
         test_data["int_data"],
-        pytest.param(
-            test_data["float_nan_data"],
-            marks=pytest.mark.xfail(
-                StorageFormat.get() == "Hdk",
-                reason="https://github.com/modin-project/modin/issues/2896",
-            ),
-        ),
+        test_data["float_nan_data"],
     ],
 )
 def test_reset_index_multiindex_groupby(data):
@@ -2215,10 +2209,6 @@ def test___setitem__(data):
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/165",
-)
 def test___setitem__partitions_aligning():
     # from issue #2390
     modin_df = pd.DataFrame({"a": [1, 2, 3]})
@@ -2286,9 +2276,6 @@ def test___setitem__mask():
         modin_df[array] = 20
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk", reason="https://github.com/intel-ai/hdk/issues/165"
-)
 @pytest.mark.parametrize(
     "data",
     [

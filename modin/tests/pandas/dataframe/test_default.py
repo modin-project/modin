@@ -355,28 +355,17 @@ class TestCorr:
 @pytest.mark.parametrize("ddof", [1, 2, 4], ids=lambda x: f"ddof={x}")
 @pytest.mark.parametrize("backend", [None, "pyarrow"])
 def test_cov(min_periods, ddof, backend):
-    # Modin result may slightly differ from pandas result
-    # due to floating pointing arithmetic.
-    if StorageFormat.get() == "Hdk":
-
-        def comparator1(df1, df2):
-            modin_df_almost_equals_pandas(df1, df2, max_diff=0.0002)
-
-        comparator2 = comparator1
-    else:
-        comparator1 = df_equals
-        comparator2 = modin_df_almost_equals_pandas
-
     eval_general(
         *create_test_dfs(test_data["int_data"], backend=backend),
         lambda df: df.cov(min_periods=min_periods, ddof=ddof),
-        comparator=comparator1,
+        comparator=df_equals,
     )
-
+    # Modin result may slightly differ from pandas result
+    # due to floating pointing arithmetic. That's why we use `modin_df_almost_equals_pandas`.
     eval_general(
         *create_test_dfs(test_data["float_nan_data"], backend=backend),
         lambda df: df.cov(min_periods=min_periods),
-        comparator=comparator2,
+        comparator=modin_df_almost_equals_pandas,
     )
 
 
@@ -568,17 +557,8 @@ def test_last():
     "value_vars", [lambda df: df.columns[-1], lambda df: df.columns[-4:], None]
 )
 def test_melt(data, id_vars, value_vars):
-    if StorageFormat.get() == "Hdk":
-        # Drop NA and sort by all columns to make sure the order
-        # is identical to Pandas.
-        def melt(df, *args, **kwargs):
-            df = df.melt(*args, **kwargs).dropna()
-            return df.sort_values(df.columns.tolist())
-
-    else:
-
-        def melt(df, *args, **kwargs):
-            return df.melt(*args, **kwargs).sort_values(["variable", "value"])
+    def melt(df, *args, **kwargs):
+        return df.melt(*args, **kwargs).sort_values(["variable", "value"])
 
     eval_general(
         *create_test_dfs(data),
@@ -590,8 +570,6 @@ def test_melt(data, id_vars, value_vars):
 
 # Functional test for BUG:7206
 def test_melt_duplicate_col_names():
-    if StorageFormat.get() == "Hdk":
-        pass
     data = {"data": [[1, 2], [3, 4]], "columns": ["dupe", "dupe"]}
 
     def melt(df, *args, **kwargs):
@@ -624,10 +602,7 @@ def test_pivot(data, index, columns, values, request):
         in request.node.callspec.id
         or "default-one_column-several_columns_index" in request.node.callspec.id
         or "default-one_column-one_column_index" in request.node.callspec.id
-        or (
-            current_execution in ("BaseOnPython", "HdkOnNative")
-            and index is lib.no_default
-        )
+        or (current_execution in ("BaseOnPython") and index is lib.no_default)
     ):
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
 
@@ -1476,10 +1451,9 @@ def test_setattr_axes():
             # In BaseOnPython, setting columns raises a warning because get_axis
             #  defaults to pandas.
             warnings.simplefilter("error")
-        if StorageFormat.get() != "Hdk":  # Not yet supported - #1766
-            df.index = ["foo", "bar"]
-            # Check that ensure_index was called
-            pd.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
+        df.index = ["foo", "bar"]
+        # Check that ensure_index was called
+        pd.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
 
         df.columns = [9, 10]
         pd.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))

@@ -19,7 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, RangePartitioning, StorageFormat
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     arg_keys,
@@ -72,9 +72,6 @@ def test_combine(data):
     )
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Hdk", reason="https://github.com/intel-ai/hdk/issues/264"
-)
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [
@@ -237,10 +234,6 @@ def test_join_6602():
         teams.set_index("league_abbreviation").join(abbreviations.rename("league_name"))
 
 
-@pytest.mark.skipif(
-    RangePartitioning.get() and StorageFormat.get() == "Hdk",
-    reason="Doesn't make sense for HDK",
-)
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [
@@ -682,29 +675,10 @@ def test_sort_values(
     if ascending is None and key is not None:
         pytest.skip("Pandas bug #41318")
 
-    # If index is preserved and `key` function is ``None``,
-    # it could be sorted along rows differently from pandas.
-    # The order of NA rows, sorted by HDK, is different (but still valid)
-    # from pandas. To make the index identical to pandas, we add the
-    # index names to 'by'.
-    by_index_names = None
-    if (
-        StorageFormat.get() == "Hdk"
-        and not ignore_index
-        and key is None
-        and (axis == 0 or axis == "rows")
-    ):
-        by_index_names = []
     if "multiindex" in by:
         index = generate_multiindex(len(data[list(data.keys())[0]]), nlevels=2)
         columns = generate_multiindex(len(data.keys()), nlevels=2)
         data = {columns[ind]: data[key] for ind, key in enumerate(data)}
-        if by_index_names is not None:
-            by_index_names.extend(index.names)
-    elif by_index_names is not None:
-        index = pd.RangeIndex(0, len(next(iter(data.values()))), name="test_idx")
-        columns = None
-        by_index_names.append(index.name)
     else:
         index = None
         columns = None
@@ -727,9 +701,6 @@ def test_sort_values(
             by_list.append(index.names[int(b[len("multiindex_level") :])])
         else:
             raise Exception('Unknown "by" specifier:' + b)
-
-    if by_index_names is not None:
-        by_list.extend(by_index_names)
 
     # Create "ascending" list
     if ascending in ["list_first_True", "list_first_False"]:
@@ -769,10 +740,6 @@ def test_sort_values_descending_with_only_two_bins():
     )
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/modin-project/modin/issues/3941",
-)
 @pytest.mark.parametrize("ignore_index", [True, False])
 def test_sort_values_preserve_index_names(ignore_index):
     modin_df, pandas_df = create_test_dfs(

@@ -468,19 +468,7 @@ def test_astype_errors(errors):
     )
 
 
-@pytest.mark.parametrize(
-    "has_dtypes",
-    [
-        pytest.param(
-            False,
-            marks=pytest.mark.xfail(
-                StorageFormat.get() == "Hdk",
-                reason="HDK does not support cases when `.dtypes` is None",
-            ),
-        ),
-        True,
-    ],
-)
+@pytest.mark.parametrize("has_dtypes", [False, True])
 def test_astype_copy(has_dtypes):
     data = [1]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
@@ -563,11 +551,6 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/modin-project/modin/issues/6268",
-    strict=True,
-)
 def test_astype_int64_to_astype_category_github_issue_6259():
     eval_general(
         *create_test_dfs(
@@ -612,21 +595,6 @@ class TestCategoricalProxyDtype:
             assert df._query_compiler._modin_frame._partitions.shape == (nchunks, 1)
 
             df = df.astype({"a": "category"})
-            return df.dtypes["a"], original_dtype, df
-        elif StorageFormat.get() == "Hdk":
-            import pyarrow as pa
-
-            from modin.pandas.io import from_arrow
-
-            at = pa.concat_tables(
-                [
-                    pa.Table.from_pandas(chunk.astype({"a": "category"}))
-                    for chunk in chunks
-                ]
-            )
-            assert len(at.column(0).chunks) == nchunks
-
-            df = from_arrow(at)
             return df.dtypes["a"], original_dtype, df
         else:
             raise NotImplementedError()
@@ -675,9 +643,6 @@ class TestCategoricalProxyDtype:
 
         if StorageFormat.get() == "Pandas":
             assert lazy_proxy._parent is parent_frame
-        elif StorageFormat.get() == "Hdk":
-            arrow_table = parent_frame._partitions[0, 0].get()
-            assert lazy_proxy._parent is arrow_table
         else:
             raise NotImplementedError(
                 f"The test is not implemented for {StorageFormat.get()} storage format"
@@ -692,11 +657,6 @@ class TestCategoricalProxyDtype:
             # Make sure that the old proxy still pointing to the old parent
             assert lazy_proxy._parent is parent_frame
             assert new_lazy_proxy._parent is new_parent_frame
-        elif StorageFormat.get() == "Hdk":
-            new_arrow_table = new_parent_frame._partitions[0, 0].get()
-            # Make sure that the old proxy still pointing to the old parent
-            assert lazy_proxy._parent is arrow_table
-            assert new_lazy_proxy._parent is new_arrow_table
         else:
             raise NotImplementedError(
                 f"The test is not implemented for {StorageFormat.get()} storage format"
@@ -827,10 +787,6 @@ def test_convert_dtypes_dtype_backend(dtype_backend):
     )
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Hdk",
-    reason="HDK does not support columns with different types",
-)
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
@@ -1345,14 +1301,12 @@ def test_insert(data):
         modin_df, pandas_df, col="Duplicate", value=lambda df: df[df.columns[0]]
     )
     eval_insert(modin_df, pandas_df, col="Scalar", value=100)
-    if StorageFormat.get() != "Hdk":
-        # FIXME: https://github.com/modin-project/modin/issues/7027
-        eval_insert(
-            pd.DataFrame(columns=list("ab")),
-            pandas.DataFrame(columns=list("ab")),
-            col="Series insert",
-            value=lambda df: df[df.columns[0]],
-        )
+    eval_insert(
+        pd.DataFrame(columns=list("ab")),
+        pandas.DataFrame(columns=list("ab")),
+        col="Series insert",
+        value=lambda df: df[df.columns[0]],
+    )
     eval_insert(
         modin_df,
         pandas_df,

@@ -357,10 +357,8 @@ def test_execute():
         modin.utils.execute(pandas_df)
         mgr_cls.wait_partitions.assert_not_called()
 
-    # muke sure `trigger_hdk_import=True` doesn't broke anything
-    # when using other storage formats
     with patch.object(mgr_cls, "wait_partitions", new=Mock()):
-        modin.utils.execute(modin_df, trigger_hdk_import=True)
+        modin.utils.execute(modin_df)
         mgr_cls.wait_partitions.assert_called_once()
 
     # check several modin dataframes

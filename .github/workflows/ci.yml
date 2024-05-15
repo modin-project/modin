@@ -150,62 +150,6 @@ jobs:
           runner: python -m pytest --execution=${{ matrix.execution }}
       - uses: ./.github/actions/upload-coverage
 
-  test-hdk:
-    needs: [lint-flake8]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: "native"
-      MODIN_STORAGE_FORMAT: "hdk"
-    name: Test HDK storage format, Python 3.9
-    services:
-      moto:
-        image: motoserver/moto
-        ports:
-          - 5000:5000
-        env:
-          AWS_ACCESS_KEY_ID: foobar_key
-          AWS_SECRET_ACCESS_KEY: foobar_secret
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: requirements/env_hdk.yml
-          activate-environment: modin_on_hdk
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/tests/core/storage_formats/hdk/test_internals.py
-      - run: python -m pytest modin/tests/experimental/hdk_on_native/test_init.py
-      - run: python -m pytest modin/tests/experimental/hdk_on_native/test_dataframe.py
-      - run: python -m pytest modin/tests/experimental/hdk_on_native/test_utils.py
-      - run: python -m pytest modin/tests/pandas/test_io.py --verbose
-      - run: python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
-      - run: python -m pytest modin/tests/interchange/dataframe_protocol/hdk
-      - run: python -m pytest modin/tests/experimental/test_sql.py
-      - run: python -m pytest modin/tests/pandas/test_concat.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_binary.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
-      - run: python -m pytest modin/tests/pandas/test_general.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_indexing.py
-      - run: python -m pytest modin/tests/pandas/test_series.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_default.py
-      - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
-      - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
-      - run: |
-          python examples/docker/modin-hdk/plasticc-hdk.py \
-          examples/data/plasticc_training_set_1k.csv \
-          examples/data/plasticc_test_set_1k.csv \
-          examples/data/plasticc_training_set_metadata_1k.csv \
-          examples/data/plasticc_test_set_metadata_1k.csv \
-          -no-ml
-      - uses: ./.github/actions/upload-coverage
-
   test-asv-benchmarks:
     if: github.event_name == 'pull_request'
     needs: [lint-flake8]
@@ -249,18 +193,6 @@ jobs:
               # check pure pandas
               MODIN_ASV_USE_IMPL=pandas asv run --quick --dry-run --python=same --strict --show-stderr --launch-method=spawn \
                 -b ^benchmarks -b ^io | tee benchmarks.log
-
-              # TODO: Remove manual environment creation after fix https://github.com/airspeed-velocity/asv/issues/1310
-              conda deactivate
-              mamba env create -f ../requirements/env_hdk.yml
-              conda activate modin_on_hdk
-              pip install asv==0.5.1
-              pip install ..
-
-              # check Modin on HDK
-              MODIN_ENGINE=native MODIN_STORAGE_FORMAT=hdk MODIN_EXPERIMENTAL=true asv run --quick --dry-run --python=same --strict --show-stderr \
-                --launch-method=forkserver --python=same --config asv.conf.hdk.json \
-                -b ^hdk | tee benchmarks.log
           else
               echo "Benchmarks did not run, no changes detected"
           fi
@@ -374,7 +306,6 @@ jobs:
       - run: |
           mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret \
             python -m pytest modin/tests/experimental/test_io_exp.py
-      - run: mpiexec -n 1 python -m pytest modin/tests/experimental/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
       - run: |
@@ -495,8 +426,6 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/experimental/test_io_exp.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/tests/experimental/test_sql.py
-        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
       - run: python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
@@ -703,7 +632,7 @@ jobs:
       - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
 
   merge-coverage-artifacts:
-    needs: [test-internals, test-api-and-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-sanity]
+    needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity]
     if: always()  # we need to run it regardless of some job being skipped, like in PR
     runs-on: ubuntu-latest
     defaults:

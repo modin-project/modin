@@ -58,6 +58,7 @@ from .utils import (
     df_equals,
     dummy_decorator,
     eval_general,
+    eval_io,
     eval_io_from_str,
     generate_dataframe,
     get_unique_filename,
@@ -69,14 +70,6 @@ from .utils import (
 )
 from .utils import test_data as utils_test_data
 from .utils import time_parsing_csv_path
-
-if StorageFormat.get() == "Hdk":
-    from modin.tests.experimental.hdk_on_native.utils import (
-        align_datetime_dtypes,
-        eval_io,
-    )
-else:
-    from .utils import eval_io
 
 if StorageFormat.get() == "Pandas":
     import modin.pandas as pd
@@ -471,11 +464,8 @@ class TestCsv:
         skipfooter,
         nrows,
     ):
-        xfail_case = (
-            (false_values or true_values)
-            and Engine.get() != "Python"
-            and StorageFormat.get() != "Hdk"
-        )
+        # TODO: Check #2446 as it was closed
+        xfail_case = (false_values or true_values) and Engine.get() != "Python"
         if xfail_case:
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
 
@@ -749,17 +739,6 @@ class TestCsv:
                 lineterminator=lineterminator,
             )
 
-        if (
-            (StorageFormat.get() == "Hdk")
-            and (escapechar is not None)
-            and (lineterminator is None)
-            and (thousands is None)
-            and (decimal == ".")
-        ):
-            with open(unique_filename, "r") as f:
-                if any(line.find(f',"{escapechar}') != -1 for _, line in enumerate(f)):
-                    pytest.xfail("Tests with this character sequence fail due to #5649")
-
         expected_exception = None
         if dialect is None:
             # FIXME: https://github.com/modin-project/modin/issues/7035
@@ -824,11 +803,8 @@ class TestCsv:
         # in that case exceptions are raised both by Modin and pandas
         # and tests pass
         raise_exception_case = on_bad_lines is not None
-        if (
-            not raise_exception_case
-            and Engine.get() not in ["Python"]
-            and StorageFormat.get() != "Hdk"
-        ):
+        # TODO: Check #2500 as it was closed
+        if not raise_exception_case and Engine.get() not in ["Python"]:
             pytest.xfail("read_csv doesn't raise `bad lines` exceptions - issue #2500")
         eval_io(
             fn_name="read_csv",
@@ -871,8 +847,6 @@ class TestCsv:
 
     @pytest.mark.parametrize("delim_whitespace", [True, False])
     def test_delim_whitespace(self, delim_whitespace, tmp_path):
-        if StorageFormat.get() == "Hdk" and delim_whitespace:
-            pytest.xfail(reason="https://github.com/modin-project/modin/issues/6999")
         str_delim_whitespaces = "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
         unique_filename = get_unique_filename(data_dir=tmp_path)
         eval_io_from_str(
@@ -976,13 +950,6 @@ class TestCsv:
             expected_exception = ValueError(
                 "Missing column provided to 'parse_dates': 'z'"
             )
-        if (
-            StorageFormat.get() == "Hdk"
-            and "names1-0-None-nonexistent_string_column-strict-None"
-            in request.node.callspec.id
-        ):
-            # FIXME: https://github.com/modin-project/modin/issues/7035
-            expected_exception = False
         eval_io(
             fn_name="read_csv",
             expected_exception=expected_exception,
@@ -1034,7 +1001,7 @@ class TestCsv:
     def _has_pandas_fallback_reason(self):
         # The Python engine does not use custom IO dispatchers, so specialized error messages
         # won't appear
-        return Engine.get() != "Python" and StorageFormat.get() != "Hdk"
+        return Engine.get() != "Python"
 
     def test_read_csv_default_to_pandas(self):
         if self._has_pandas_fallback_reason():
@@ -1051,10 +1018,6 @@ class TestCsv:
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/main/modin/tests/pandas/data/blah.csv",
-            # It takes about ~17Gb of RAM for HDK to import the whole table from this test
-            # because of too many (~1000) string columns in it. Taking a subset of columns
-            # to be able to run this test on low-RAM machines.
-            usecols=[0, 1, 2, 3] if StorageFormat.get() == "Hdk" else None,
         )
 
     @pytest.mark.parametrize("nrows", [21, 5, None])
@@ -1072,7 +1035,7 @@ class TestCsv:
             filepath_or_buffer="modin/tests/pandas/data/newlines.csv",
             nrows=nrows,
             skiprows=skiprows,
-            cast_to_str=StorageFormat.get() != "Hdk",
+            cast_to_str=True,
         )
 
     @pytest.mark.parametrize("skiprows", [None, 0, [], [1, 2], np.arange(0, 2)])
@@ -1128,9 +1091,6 @@ class TestCsv:
 
     def test_read_csv_wrong_path(self):
         expected_exception = FileNotFoundError(2, "No such file or directory")
-        if StorageFormat.get() == "Hdk":
-            # FIXME: https://github.com/modin-project/modin/issues/7035
-            expected_exception = False
         eval_io(
             fn_name="read_csv",
             expected_exception=expected_exception,
@@ -1230,11 +1190,6 @@ class TestCsv:
         modin_df = wrapped_read_csv(
             pytest.csvs_names["test_read_csv_regular"], method="modin"
         )
-
-        if StorageFormat.get() == "Hdk":
-            # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
-            # https://github.com/modin-project/modin/issues/3485
-            modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
 
         df_equals(modin_df, pandas_df)
 
@@ -1412,9 +1367,6 @@ class TestTable:
 
         pandas_df = wrapped_read_table(unique_filename, method="pandas")
         modin_df = wrapped_read_table(unique_filename, method="modin")
-
-        if StorageFormat.get() == "Hdk":
-            modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
 
         df_equals(modin_df, pandas_df)
 
@@ -2172,9 +2124,7 @@ class TestParquet:
 def test_read_parquet_relative_to_user_home(make_parquet_file):
     with ensure_clean(".parquet") as unique_filename:
         make_parquet_file(filename=unique_filename)
-        _check_relative_io(
-            "read_parquet", unique_filename, "path", storage_default=("Hdk",)
-        )
+        _check_relative_io("read_parquet", unique_filename, "path")
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -2368,8 +2318,9 @@ class TestExcel:
         for key in pandas_df.keys():
             df_equals(modin_df.get(key), pandas_df.get(key))
 
+    # TODO: Check pandas gh-#39250 as it was fixed
     @pytest.mark.xfail(
-        Engine.get() != "Python" and StorageFormat.get() != "Hdk",
+        Engine.get() != "Python",
         reason="pandas throws the exception. See pandas issue #39250 for more info",
     )
     @check_file_leaks
@@ -2763,9 +2714,6 @@ class TestSql:
         assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk", reason="Missing optional dependency 'lxml'."
-)
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHtml:
     def test_read_html(self, make_html_file):
@@ -3200,9 +3148,6 @@ class TestPickle:
         df_equals(modin_df, recreated_modin_df)
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk", reason="Missing optional dependency 'lxml'."
-)
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestXml:
     def test_read_xml(self):
@@ -3342,7 +3287,7 @@ def test_to_latex():
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_xml():
     # `lxml` is a required dependency for `to_xml`, but optional for Modin.
-    # For some engines we do not install it (like for HDK).
+    # For some engines we do not install it.
     pytest.importorskip("lxml")
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_xml() == to_pandas(modin_df).to_xml()

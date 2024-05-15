@@ -30,7 +30,9 @@ from pandas.errors import SpecificationError
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
-from modin.pandas.testing import assert_series_equal
+from modin.tests.core.storage_formats.pandas.test_internals import (
+    construct_modin_df_by_scheme,
+)
 from modin.tests.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution, try_cast_to_pandas
 
@@ -44,7 +46,6 @@ from .utils import (
     agg_func_keys,
     agg_func_values,
     arg_keys,
-    assert_dtypes_equal,
     bool_arg_keys,
     bool_arg_values,
     categories_equals,
@@ -86,11 +87,6 @@ from .utils import (
     test_string_list_data_keys,
     test_string_list_data_values,
 )
-
-if StorageFormat.get() != "Hdk":
-    from modin.tests.core.storage_formats.pandas.test_internals import (
-        construct_modin_df_by_scheme,
-    )
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
@@ -671,10 +667,6 @@ def test___str__(data):
     assert str(modin_series) == str(pandas_series)
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/272",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___sub__(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1061,13 +1053,7 @@ def test_asof_large(where):
     "data",
     [
         test_data["int_data"],
-        pytest.param(
-            test_data["float_nan_data"],
-            marks=pytest.mark.xfail(
-                StorageFormat.get() == "Hdk",
-                reason="HDK does not raise IntCastingNaNError",
-            ),
-        ),
+        test_data["float_nan_data"],
     ],
     ids=test_data_keys,
 )
@@ -1312,10 +1298,6 @@ def test_clip_sequence(request, data, bound_type):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/271",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
@@ -1323,10 +1305,6 @@ def test_combine(data):
     modin_series.combine(modin_series2, lambda s1, s2: s1 if s1 < s2 else s2)
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/271",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine_first(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1409,25 +1387,20 @@ def test_pyarrow_backed_functions():
         df_equals(df1, df2)
         df_equals(df1.dtypes, df2.dtypes)
 
-    if StorageFormat.get() != "Hdk":
-        # FIXME: HDK should also work in this case
-        eval_general(
-            modin_series,
-            pandas_series,
-            lambda ser: ser
-            + (modin_series if isinstance(ser, pd.Series) else pandas_series),
-            comparator=comparator,
-        )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser
+        + (modin_series if isinstance(ser, pd.Series) else pandas_series),
+        comparator=comparator,
+    )
 
-    if StorageFormat.get() != "Hdk":
-        # FIXME: HDK should also work in this case but
-        # since we deprecated it, we will just remove this branch
-        eval_general(
-            modin_series,
-            pandas_series,
-            lambda ser: ser > (ser + 1),
-            comparator=comparator,
-        )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser > (ser + 1),
+        comparator=comparator,
+    )
 
     eval_general(
         modin_series,
@@ -1443,14 +1416,12 @@ def test_pyarrow_backed_functions():
         comparator=comparator,
     )
 
-    if StorageFormat.get() != "Hdk":
-        # FIXME: HDK should also work in this case
-        eval_general(
-            modin_series,
-            pandas_series,
-            lambda ser: ser.fillna(0),
-            comparator=comparator,
-        )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser.fillna(0),
+        comparator=comparator,
+    )
 
 
 def test_pyarrow_array_retrieve():
@@ -1846,13 +1817,7 @@ def test_dtype(data):
     "timezone",
     [
         pytest.param(None),
-        pytest.param(
-            "Europe/Berlin",
-            marks=pytest.mark.skipif(
-                StorageFormat.get() == "Hdk",
-                reason="HDK is unable to store TZ in the table schema",
-            ),
-        ),
+        pytest.param("Europe/Berlin"),
     ],
 )
 def test_dt(timezone):
@@ -1947,14 +1912,10 @@ def test_dt(timezone):
             .dropna(axis=1)
             .squeeze(1)
         )
-        # BaseOnPython ahd HDK had a single partition after the concat, and it
+        # BaseOnPython had a single partition after the concat, and it
         # maintains that partition after dropna and squeeze. In other execution modes,
         # the series should have two column partitions, one of which is empty.
-        if (
-            isinstance(df, pd.DataFrame)
-            and get_current_execution() != "BaseOnPython"
-            and StorageFormat.get() != "Hdk"
-        ):
+        if isinstance(df, pd.DataFrame) and get_current_execution() != "BaseOnPython":
             assert df._query_compiler._modin_frame._partitions.shape == (1, 2)
         return df.dt.days
 
@@ -2549,10 +2510,6 @@ def test_map(data, na_values):
     )
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/542",
-)
 def test_mask():
     modin_series = pd.Series(np.arange(10))
     m = modin_series % 3 == 0
@@ -3463,10 +3420,6 @@ def test_std(request, data, skipna, ddof):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/272",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sub(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3484,10 +3437,6 @@ def test_6782():
             )
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/272",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_subtract(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3899,13 +3848,7 @@ def test_update(data, other_data):
     [
         pytest.param(None),
         pytest.param(False),
-        pytest.param(
-            True,
-            marks=pytest.mark.skipif(
-                StorageFormat.get() == "Hdk",
-                reason="https://github.com/modin-project/modin/issues/2896",
-            ),
-        ),
+        pytest.param(True),
     ],
 )
 @pytest.mark.parametrize("ascending", [True, False])
@@ -3952,24 +3895,10 @@ def test_value_counts_categorical():
     data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
     random_state = np.random.RandomState(seed=42)
     random_state.shuffle(data)
-
-    if StorageFormat.get() == "Hdk":
-        # The order of HDK categories is different from Pandas
-        # and, thus, index comparison fails.
-        def comparator(df1, df2):
-            # Perform our own non-strict version of dtypes equality check
-            assert_dtypes_equal(df1, df2)
-            assert_series_equal(
-                df1.modin.to_pandas(), df2, check_index=False, check_dtype=False
-            )
-
-    else:
-        comparator = df_equals
-
     eval_general(
         *create_test_series(data, dtype="category"),
         lambda df: df.value_counts(),
-        comparator=comparator,
+        comparator=df_equals,
     )
 
 
@@ -4865,11 +4794,8 @@ def test_case_when(base, caselist):
 
     # 'base' and serieses from 'caselist' must have equal lengths, however in this test we want
     # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal.
-    # HDK and BaseOnPython always use a single partition, thus skipping this test for them.
-    if (
-        StorageFormat.get() != "Hdk"
-        and f"{StorageFormat.get()}On{Engine.get()}" != "BaseOnPython"
-    ):
+    # BaseOnPython always uses a single partition, thus skipping this test for them.
+    if f"{StorageFormat.get()}On{Engine.get()}" != "BaseOnPython":
         modin_base_repart = construct_modin_df_by_scheme(
             base.to_frame(),
             partitioning_scheme={"row_lengths": [14, 14, 12], "column_widths": [1]},
@@ -4969,10 +4895,6 @@ def test_cat_ordered(data):
     assert modin_series.cat.ordered == pandas_series.cat.ordered
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="HDK uses internal codes, that are different from Pandas",
-)
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
@@ -4999,8 +4921,7 @@ def test_cat_codes_issue5650(set_min_partition_size):
         modin_df,
         pandas_df,
         lambda df: df["name"].cat.codes,
-        # https://github.com/modin-project/modin/issues/5973
-        comparator_kwargs={"check_dtypes": StorageFormat.get() != "Hdk"},
+        comparator_kwargs={"check_dtypes": True},
     )
 
 

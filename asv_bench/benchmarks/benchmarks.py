@@ -36,7 +36,6 @@ from .utils import (
     random_columns,
     random_string,
     translator_groupby_ngroups,
-    trigger_import,
 )
 
 
@@ -675,7 +674,6 @@ class TimeIndexing:
 
     def setup(self, shape, indexer_type):
         self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
 
         self.indexer = self.indexer_getters[indexer_type](self.df)
         if isinstance(self.indexer, (IMPL.Series, IMPL.DataFrame)):
@@ -701,7 +699,6 @@ class TimeIndexingColumns:
 
     def setup(self, shape):
         self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
         self.numeric_indexer = [0, 1]
         self.labels_indexer = self.df.columns[self.numeric_indexer].tolist()
 

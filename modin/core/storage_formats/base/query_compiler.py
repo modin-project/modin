@@ -30,7 +30,6 @@ import pandas.core.resample
 from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
 
-from modin.config import StorageFormat
 from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     CatDefault,
@@ -6786,11 +6785,6 @@ class BaseQueryCompiler(
         BaseQueryCompiler
             The repartitioned BaseQueryCompiler.
         """
-        if StorageFormat.get() == "Hdk":
-            # Hdk uses only one partition, it makes
-            # no sense for it to repartition the dataframe.
-            return self
-
         axes = [0, 1] if axis is None else [axis]
 
         new_query_compiler = self

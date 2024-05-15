@@ -23,15 +23,12 @@ from modin.config.envvars import (
     CpuCount,
     DaskThreadsPerWorker,
     DocModule,
-    DoUseCalcite,
     Engine,
     EnvironmentVariable,
     ExperimentalGroupbyImpl,
     ExperimentalNumPyAPI,
     GithubCI,
     GpuCount,
-    HdkFragmentSize,
-    HdkLaunchParameters,
     IsDebug,
     IsExperimental,
     IsRayCluster,
@@ -85,10 +82,6 @@ __all__ = [
     # Partitioning
     "NPartitions",
     "MinPartitionSize",
-    # HDK specific
-    "HdkFragmentSize",
-    "DoUseCalcite",
-    "HdkLaunchParameters",
     # ASV specific
     "TestDatasetSize",
     "AsvImplementation",

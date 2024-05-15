@@ -631,7 +631,7 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
-def execute(*objs: Iterable[Any], trigger_hdk_import: bool = False) -> None:
+def execute(*objs: Iterable[Any]) -> None:
     """
     Trigger the lazy computations for each obj in `objs`, if any, and wait for them to complete.
 
@@ -639,17 +639,12 @@ def execute(*objs: Iterable[Any], trigger_hdk_import: bool = False) -> None:
     ----------
     *objs : Iterable[Any]
         A collection of objects to trigger lazy computations.
-    trigger_hdk_import : bool, default: False
-        Trigger import execution. Makes sense only for HDK storage format.
-        Safe to use with other storage formats.
     """
     for obj in objs:
         if not hasattr(obj, "_query_compiler"):
             continue
         query_compiler = obj._query_compiler
         query_compiler.execute()
-        if trigger_hdk_import and hasattr(query_compiler, "force_import"):
-            query_compiler.force_import()
 
 
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
@@ -794,18 +789,6 @@ def _get_modin_deps_info() -> Mapping[str, Optional[JSONSerializable]]:
                 if version.parse(pkg.__version__) < pkg_version
                 else ""
             )
-
-    try:
-        # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
-        # from HDK is located in it with all the necessary options for dlopen.
-        from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (  # noqa
-            DbWorker,
-        )
-
-        result["hdk"] = "present"
-    except ImportError:
-        result["hdk"] = None
-
     return result
 
 

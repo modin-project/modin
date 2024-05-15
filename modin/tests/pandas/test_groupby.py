@@ -2633,7 +2633,7 @@ def test_validate_by():
 
 
 @pytest.mark.skipif(
-    get_current_execution() == "BaseOnPython" or StorageFormat.get() == "Hdk",
+    get_current_execution() == "BaseOnPython",
     reason="The test only make sense for partitioned executions",
 )
 def test_groupby_with_virtual_partitions():

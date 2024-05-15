@@ -60,17 +60,6 @@ You can initialize MPI through unidist engine with a specific number of CPUs (wo
 
 To get more details on all possible parameters for initialization refer to `unidist documentation`_.
 
-HDK
----
-
-For now it is not possible to initialize HDK beforehand. Modin itself initializes it with the required configuration.
-
-.. code-block:: python
-
-  import modin.config as modin_cfg
-
-  modin_cfg.StorageFormat.put("hdk") # # Modin will use HDK engine
-
 .. _`Ray documentation`: https://docs.ray.io/en/latest
 .. _Dask Distributed documentation: https://distributed.dask.org/en/latest
 .. _`unidist documentation`: https://unidist.readthedocs.io/en/latest

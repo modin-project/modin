@@ -17,11 +17,9 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
-from modin.pandas.testing import assert_series_equal
+from modin.config import NPartitions
 from modin.tests.pandas.utils import (
     arg_keys,
-    assert_dtypes_equal,
     axis_keys,
     axis_values,
     bool_arg_keys,
@@ -105,10 +103,6 @@ def test_count_specific(numeric_only):
     )
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/513",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_count_dtypes(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
@@ -293,16 +287,6 @@ def test_prod(
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_sum(data, axis, skipna, is_transposed, request):
-    if (
-        StorageFormat.get() == "Hdk"
-        and is_transposed
-        and skipna
-        and (
-            "over_rows_int" in request.node.callspec.id
-            or "over_rows_str" in request.node.callspec.id
-        )
-    ):
-        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7028")
     eval_general(
         *create_test_dfs(data),
         lambda df: (df.T if is_transposed else df).sum(
@@ -415,9 +399,6 @@ def test_reduce_specific(fn, numeric_only, axis):
                 expected_exception = TypeError(
                     f"'{operator}' not supported between instances of 'str' and 'float'"
                 )
-                if StorageFormat.get() == "Hdk":
-                    # FIXME: https://github.com/modin-project/modin/issues/7030
-                    expected_exception = False
             else:
                 # FIXME: https://github.com/modin-project/modin/issues/7030
                 expected_exception = False
@@ -482,23 +463,9 @@ def test_value_counts_categorical():
     modin_df, pandas_df = create_test_dfs(
         {"col1": data, "col2": data}, dtype="category"
     )
-
-    if StorageFormat.get() == "Hdk":
-        # The order of HDK categories is different from Pandas
-        # and, thus, index comparison fails.
-        def comparator(df1, df2):
-            # Perform our own non-strict version of dtypes equality check
-            assert_dtypes_equal(df1, df2)
-            assert_series_equal(
-                df1._to_pandas(), df2, check_index=False, check_dtype=False
-            )
-
-    else:
-        comparator = df_equals
-
     eval_general(
         modin_df,
         pandas_df,
         lambda df: df.value_counts(),
-        comparator=comparator,
+        comparator=df_equals,
     )
