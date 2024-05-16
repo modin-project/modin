@@ -28,11 +28,7 @@ import pandas
 
 import modin.pandas
 
-from .compatibility import (
-    ASV_DATASET_SIZE,
-    ASV_USE_ENGINE,
-    ASV_USE_IMPL,
-)
+from .compatibility import ASV_DATASET_SIZE, ASV_USE_ENGINE, ASV_USE_IMPL
 from .data_shapes import RAND_HIGH, RAND_LOW
 
 POSSIBLE_IMPL = {

@@ -70,5 +70,3 @@ This module houses submodules of all of the stable storage formats:
 - :doc:`Base module <base/query_compiler>` contains an abstract query compiler class which defines common API.
 - :doc:`Pandas module <pandas/index>` contains query compiler and text parsers for pandas storage format.
 - cuDF module contains query compiler and text parsers for cuDF storage format.
-
-You can find more in the :doc:`experimental section </flow/modin/experimental/core/storage_formats/index>`.

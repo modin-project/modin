@@ -194,7 +194,7 @@ If you would like to install Modin with a specific engine, you can use ``modin[r
 Windows
 -------
 
-All Modin engines except are available both on Windows and Linux as mentioned above.
+All Modin engines are available both on Windows and Linux as mentioned above.
 Default engine on Windows is :doc:`Ray</development/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally 
 not recommended due to the limitations and poor performance of Ray on WSL, a roughly 

@@ -161,8 +161,7 @@ def check_spelling_words(doc: Validator) -> list:
     if not doc.raw_doc:
         return []
     components = set(
-        ["Modin", "pandas", "NumPy", "Ray", "Dask"]
-        + ["PyArrow", "XGBoost", "Plasma"]
+        ["Modin", "pandas", "NumPy", "Ray", "Dask"] + ["PyArrow", "XGBoost", "Plasma"]
     )
     check_words = "|".join(x.lower() for x in components)
 

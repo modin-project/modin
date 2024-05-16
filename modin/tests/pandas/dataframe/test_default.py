@@ -602,7 +602,7 @@ def test_pivot(data, index, columns, values, request):
         in request.node.callspec.id
         or "default-one_column-several_columns_index" in request.node.callspec.id
         or "default-one_column-one_column_index" in request.node.callspec.id
-        or (current_execution in ("BaseOnPython") and index is lib.no_default)
+        or (current_execution in ("BaseOnPython",) and index is lib.no_default)
     ):
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
 

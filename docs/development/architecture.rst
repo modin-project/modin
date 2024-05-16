@@ -321,7 +321,6 @@ details. The documentation covers most modules, with more docs being added every
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───spreadsheet
-   │   │   ├───sql
    │   │   ├─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   │   └─── :doc:`batch </flow/modin/experimental/batch>`
    │   └───pandas
