@@ -48,11 +48,11 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
     partition_type = PandasOnPythonDataframePartition
 
 
-@_inherit_docstrings(PandasOnPythonDataframeAxisPartition.__init__)
+@_inherit_docstrings(PandasOnPythonDataframeAxisPartition)
 class PandasOnPythonDataframeColumnPartition(PandasOnPythonDataframeAxisPartition):
     axis = 0
 
 
-@_inherit_docstrings(PandasOnPythonDataframeAxisPartition.__init__)
+@_inherit_docstrings(PandasOnPythonDataframeAxisPartition)
 class PandasOnPythonDataframeRowPartition(PandasOnPythonDataframeAxisPartition):
     axis = 1

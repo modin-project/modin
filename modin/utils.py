@@ -310,6 +310,9 @@ def _replace_doc(
     target_doc = target_obj.__doc__ or ""
     overwrite = overwrite or not target_doc
     doc = source_doc if overwrite else target_doc
+    if doc == "":
+        # Empty docstrings do not need to be inherited
+        return
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
@@ -434,6 +437,7 @@ def _inherit_docstrings(
         """Check if `obj` docstring could be patched."""
         return bool(
             callable(obj)
+            and not inspect.isclass(obj)
             or (isinstance(obj, property) and obj.fget)
             or (isinstance(obj, functools.cached_property))
             or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)

@@ -550,7 +550,7 @@ class StringMethods(ClassLogger):
     def isdecimal(self):
         return self._Series(query_compiler=self._query_compiler.str_isdecimal())
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # noqa: GL08
         return self._Series(query_compiler=self._query_compiler.str___getitem__(key))
 
     def _default_to_pandas(self, op, *args, **kwargs):
@@ -577,7 +577,7 @@ class StringMethods(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
-class DatetimeProperties(ClassLogger):
+class DatetimeProperties(ClassLogger):  # noqa: GL08
     _series: Series
     _query_compiler: BaseQueryCompiler
 
@@ -700,15 +700,15 @@ class DatetimeProperties(ClassLogger):
         return dtype.tz
 
     @property
-    def freq(self):
+    def freq(self):  # noqa: GL08
         return self._query_compiler.dt_freq().to_pandas().squeeze()
 
     @property
-    def unit(self):
+    def unit(self):  # noqa: GL08
         # use `iloc[0]` to return scalar
         return self._Series(query_compiler=self._query_compiler.dt_unit()).iloc[0]
 
-    def as_unit(self, *args, **kwargs):
+    def as_unit(self, *args, **kwargs):  # noqa: GL08
         return self._Series(
             query_compiler=self._query_compiler.dt_as_unit(*args, **kwargs)
         )
@@ -810,7 +810,7 @@ class DatetimeProperties(ClassLogger):
         return DataFrame(query_compiler=self._query_compiler.dt_isocalendar())
 
     @property
-    def qyear(self):
+    def qyear(self):  # noqa: GL08
         return self._Series(query_compiler=self._query_compiler.dt_qyear())
 
     @property
