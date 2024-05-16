@@ -783,23 +783,6 @@ class PandasOnUnidistFactory(BaseFactory):
 # EXPERIMENTAL FACTORIES
 # Factories that operate only in experimental mode. They provide access to executions
 # that have little coverage of implemented functionality or are not stable enough.
-
-
-@doc(_doc_factory_class, execution_name="experimental HdkOnNative")
-class ExperimentalHdkOnNativeFactory(BaseFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="experimental ``HdkOnNativeIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.native.implementations.hdk_on_native.io import (
-            HdkOnNativeIO,
-        )
-
-        if not IsExperimental.get():
-            raise ValueError("'HdkOnNative' only works in experimental mode.")
-
-        cls.io_cls = HdkOnNativeIO
-
-
 @doc(_doc_factory_class, execution_name="cuDFOnRay")
 class ExperimentalCudfOnRayFactory(BaseFactory):
     @classmethod

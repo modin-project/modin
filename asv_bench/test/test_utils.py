@@ -31,12 +31,12 @@ from modin.config import AsvDataSizeConfig
                 [
                     # binary shapes
                     [[10, 10], [15, 15]],
-                    [[11, 11], [13, 13]]
+                    [[11, 11], [13, 13]],
                 ],
                 [
                     # unary shapes
                     [11, 11],
-                    [13, 13]
+                    [13, 13],
                 ],
             ],
         ),

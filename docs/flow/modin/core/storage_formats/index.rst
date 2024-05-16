@@ -7,10 +7,7 @@ of objects that are stored in the partitions of the selected Core Modin Datafram
 
 The base storage format in Modin is pandas. In that format, Modin Dataframe operates with
 partitions that hold ``pandas.DataFrame`` objects. Pandas is the most natural storage format
-since high-level DataFrame objects mirror its API, however, Modin's storage formats are not
-limited to the objects that conform to pandas API. There is format that are able to store
-even instances of SQL-like databases (:doc:`HDK storage format </flow/modin/experimental/core/storage_formats/hdk/index>`)
-inside Modin Dataframe's partitions.
+since high-level DataFrame objects mirror its API.
 
 The storage format + execution engine (Ray, Dask, etc.) form the execution backend. 
 The Query Compiler (QC) converts high-level pandas API calls to queries that are understood 
@@ -73,5 +70,3 @@ This module houses submodules of all of the stable storage formats:
 - :doc:`Base module <base/query_compiler>` contains an abstract query compiler class which defines common API.
 - :doc:`Pandas module <pandas/index>` contains query compiler and text parsers for pandas storage format.
 - cuDF module contains query compiler and text parsers for cuDF storage format.
-
-You can find more in the :doc:`experimental section </flow/modin/experimental/core/storage_formats/index>`.

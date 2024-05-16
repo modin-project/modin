@@ -161,8 +161,7 @@ def check_spelling_words(doc: Validator) -> list:
     if not doc.raw_doc:
         return []
     components = set(
-        ["Modin", "pandas", "NumPy", "Ray", "Dask"]
-        + ["PyArrow", "HDK", "XGBoost", "Plasma"]
+        ["Modin", "pandas", "NumPy", "Ray", "Dask"] + ["PyArrow", "XGBoost", "Plasma"]
     )
     check_words = "|".join(x.lower() for x in components)
 
@@ -543,11 +542,6 @@ def monkeypatching():
 
     Validator._load_obj = staticmethod(load_obj)
 
-    # for testing hdk-engine docs without `pyhdk` installation
-    sys.modules["pyhdk"] = Mock()
-    sys.modules["pyhdk"].__version__ = "999"
-    sys.modules["pyhdk.hdk"] = Mock()
-    sys.modules["pyhdk._sql"] = Mock()
     # enable docs testing on windows
     sys.getdlopenflags = Mock()
     sys.setdlopenflags = Mock()

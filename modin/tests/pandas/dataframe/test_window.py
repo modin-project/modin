@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions
 from modin.tests.pandas.utils import (
     arg_keys,
     axis_keys,
@@ -25,7 +25,6 @@ from modin.tests.pandas.utils import (
     bool_arg_keys,
     bool_arg_values,
     create_test_dfs,
-    default_to_pandas_ignore_string,
     df_equals,
     eval_general,
     int_arg_keys,
@@ -46,9 +45,6 @@ NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
-
-if StorageFormat.get() == "Hdk":
-    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -182,10 +178,6 @@ def test_fillna(data, method, axis, limit):
             df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="'datetime64[ns, pytz.FixedOffset(60)]' vs 'datetime64[ns, UTC+01:00]'",
-)
 def test_fillna_sanity():
     # with different dtype
     frame_data = [

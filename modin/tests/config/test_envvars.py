@@ -16,7 +16,6 @@ import unittest.mock
 import warnings
 
 import pytest
-from packaging import version
 
 import modin.config as cfg
 import modin.pandas as pd
@@ -120,48 +119,6 @@ def test_ray_cluster_resources():
     # create a dummy df to initialize Ray engine
     _ = pd.DataFrame([1, 2, 3])
     assert ray.cluster_resources()["special_hardware"] == 1.0
-
-
-def test_hdk_envvar():
-    try:
-        import pyhdk
-
-        defaults = cfg.HdkLaunchParameters.get()
-        assert defaults["enable_union"] == 1
-        if version.parse(pyhdk.__version__) >= version.parse("0.6.1"):
-            assert defaults["log_dir"] == "pyhdk_log"
-        del cfg.HdkLaunchParameters._value
-    except ImportError:
-        # This test is intended to check pyhdk internals. If pyhdk is not available, skip the version check test.
-        pass
-
-    os.environ[cfg.HdkLaunchParameters.varname] = "enable_union=2,enable_thrift_logs=3"
-    params = cfg.HdkLaunchParameters.get()
-    assert params["enable_union"] == 2
-    assert params["enable_thrift_logs"] == 3
-
-    os.environ[cfg.HdkLaunchParameters.varname] = "unsupported=X"
-    del cfg.HdkLaunchParameters._value
-    params = cfg.HdkLaunchParameters.get()
-    assert params["unsupported"] == "X"
-    try:
-        import pyhdk
-
-        pyhdk.buildConfig(**cfg.HdkLaunchParameters.get())
-    except RuntimeError as e:
-        assert str(e) == "unrecognised option '--unsupported'"
-    except ImportError:
-        # This test is intended to check pyhdk internals. If pyhdk is not available, skip the version check test.
-        pass
-
-    os.environ[cfg.HdkLaunchParameters.varname] = (
-        "enable_union=4,enable_thrift_logs=5,enable_lazy_dict_materialization=6"
-    )
-    del cfg.HdkLaunchParameters._value
-    params = cfg.HdkLaunchParameters.get()
-    assert params["enable_union"] == 4
-    assert params["enable_thrift_logs"] == 5
-    assert params["enable_lazy_dict_materialization"] == 6
 
 
 @pytest.mark.parametrize(

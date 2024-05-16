@@ -336,7 +336,7 @@ def test_concat_empty_df_series():
 
 
 @pytest.mark.skipif(
-    StorageFormat.get() not in ("Hdk", "Base"),
+    StorageFormat.get() != "Base",
     reason="https://github.com/modin-project/modin/issues/5696",
 )
 @pytest.mark.parametrize("col_type", [None, "str"])

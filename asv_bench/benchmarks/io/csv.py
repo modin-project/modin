@@ -15,7 +15,6 @@ import numpy as np
 
 from ..utils import (
     ASV_USE_IMPL,
-    ASV_USE_STORAGE_FORMAT,
     IMPL,
     RAND_HIGH,
     RAND_LOW,
@@ -78,7 +77,6 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
                 true_values=["Yes", "true"],
                 false_values=["No", "false"],
             ),
-            trigger_hdk_import=ASV_USE_STORAGE_FORMAT == "hdk",
         )
 
 

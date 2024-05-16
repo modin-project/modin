@@ -38,17 +38,17 @@ API.
 
     import os
 
-    # Setting `MODIN_STORAGE_FORMAT` environment variable.
+    # Setting `MODIN_ENGINE` environment variable.
     # Also can be set outside the script.
-    os.environ["MODIN_STORAGE_FORMAT"] = "Hdk"
+    os.environ["MODIN_ENGINE"] = "Dask"
 
     import modin.config
     import modin.pandas as pd
 
-    # Checking initially set `StorageFormat` config,
-    # which corresponds to `MODIN_STORAGE_FORMAT` environment
+    # Checking initially set `Engine` config,
+    # which corresponds to `MODIN_ENGINE` environment
     # variable
-    print(modin.config.StorageFormat.get()) # prints 'Hdk'
+    print(modin.config.Engine.get()) # prints 'Dask'
 
     # Checking default value of `NPartitions`
     print(modin.config.NPartitions.get()) # prints '8'

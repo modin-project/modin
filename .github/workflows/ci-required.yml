@@ -90,19 +90,6 @@ jobs:
             modin/experimental/pandas/__init__.py
       - run: python scripts/doc_checker.py modin/core/storage_formats/base
       - run: python scripts/doc_checker.py modin/core/storage_formats/pandas
-      - run: |
-          python scripts/doc_checker.py \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/dataframe \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/io \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/partitioning \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/calcite_algebra.py \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/calcite_builder.py \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/calcite_serializer.py \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/df_algebra.py \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/expr.py \
-            modin/experimental/core/execution/native/implementations/hdk_on_native/hdk_worker.py \
-      - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/hdk
-      - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/hdk_on_native/interchange/dataframe_protocol
       - run: python scripts/doc_checker.py modin/experimental/batch/pipeline.py
       - run: python scripts/doc_checker.py modin/logging
 

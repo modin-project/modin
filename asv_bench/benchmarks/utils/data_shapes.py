@@ -16,15 +16,10 @@
 import json
 import os
 
-from .compatibility import ASV_DATASET_SIZE, ASV_USE_STORAGE_FORMAT
+from .compatibility import ASV_DATASET_SIZE
 
 RAND_LOW = 0
-# use a small number of unique values in Github actions to avoid OOM (mostly related to HDK)
-RAND_HIGH = (
-    1_000_000_000
-    if ASV_USE_STORAGE_FORMAT == "hdk" and ASV_DATASET_SIZE == "Big"
-    else 100
-)
+RAND_HIGH = 100
 
 BINARY_OP_DATA_SIZE = {
     "big": [
@@ -56,19 +51,6 @@ BINARY_OP_SERIES_DATA_SIZE = {
     "small": [[[5_000, 1], [10_000, 1]]],
 }
 
-
-HDK_BINARY_OP_DATA_SIZE = {
-    "big": [[[500_000, 20], [1_000_000, 10]]],
-    "small": [[[10_000, 20], [25_000, 10]]],
-}
-HDK_UNARY_OP_DATA_SIZE = {
-    "big": [[1_000_000, 10]],
-    "small": [[10_000, 10]],
-}
-HDK_SERIES_DATA_SIZE = {
-    "big": [[10_000_000, 1]],
-    "small": [[100_000, 1]],
-}
 
 DEFAULT_GROUPBY_NGROUPS = {
     "big": [100, "huge_amount_groups"],
@@ -160,37 +142,6 @@ _DEFAULT_CONFIG_T = [
     ),
 ]
 
-_DEFAULT_HDK_CONFIG_T = [
-    (
-        HDK_UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        [
-            "hdk.TimeJoin",
-            "hdk.TimeBinaryOpDataFrame",
-            "hdk.TimeArithmetic",
-            "hdk.TimeSortValues",
-            "hdk.TimeDrop",
-            "hdk.TimeHead",
-            "hdk.TimeFillna",
-            "hdk.TimeIndexing",
-            "hdk.TimeResetIndex",
-            "hdk.TimeAstype",
-            "hdk.TimeDescribe",
-            "hdk.TimeProperties",
-            "hdk.TimeGroupByDefaultAggregations",
-            "hdk.TimeGroupByMultiColumn",
-            "hdk.TimeValueCountsDataFrame",
-            "hdk.TimeReadCsvNames",
-        ],
-    ),
-    (
-        HDK_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        ["hdk.TimeMerge", "hdk.TimeAppend"],
-    ),
-    (
-        HDK_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
-        ["hdk.TimeBinaryOpSeries", "hdk.TimeValueCountsSeries"],
-    ),
-]
 DEFAULT_CONFIG = {}
 DEFAULT_CONFIG["MergeCategoricals"] = (
     [[10_000, 2]] if ASV_DATASET_SIZE == "big" else [[1_000, 2]]
@@ -201,7 +152,7 @@ DEFAULT_CONFIG["TimeJoinStringIndex"] = (
 DEFAULT_CONFIG["TimeReplace"] = (
     [[10_000, 2]] if ASV_DATASET_SIZE == "big" else [[1_000, 2]]
 )
-for config in (_DEFAULT_CONFIG_T, _DEFAULT_HDK_CONFIG_T):
+for config in (_DEFAULT_CONFIG_T,):
     for _shape, _names in config:
         DEFAULT_CONFIG.update({_name: _shape for _name in _names})
 
@@ -255,6 +206,5 @@ def get_benchmark_shapes(bench_id: str):
                 CONFIG_FROM_FILE = json.load(_f)
 
     if CONFIG_FROM_FILE and bench_id in CONFIG_FROM_FILE:
-        # example: "hdk.TimeReadCsvNames": [[5555, 55], [3333, 33]]
         return CONFIG_FROM_FILE[bench_id]
     return DEFAULT_CONFIG[bench_id]

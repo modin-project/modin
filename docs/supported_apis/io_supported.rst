@@ -14,10 +14,6 @@ for partial (meaning some parameters may not be supported yet), and ``D`` stands
 default to pandas.
 
 .. note::
-    Currently, the second column reflects implementation status for ``Ray`` and ``Dask`` engines. By default, support for a method
-    in the ``Hdk`` engine could be treated as ``D`` unless ``Notes`` column contains additional information.
-
-.. note::
     Support for fully asynchronous reading has been added for the following functions:
     ``read_csv``, ``read_fwf``, ``read_table``, ``read_custom_text``.
     This mode is disabled by default, one can enable it using ``MODIN_ASYNC_READ_MODE=True``
@@ -27,16 +23,7 @@ default to pandas.
 +-------------------+---------------------------------+--------------------------------------------------------+
 | IO method         | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                       |
 +-------------------+---------------------------------+--------------------------------------------------------+
-| `read_csv`_       | Y                               | **Hdk**: ``P``, only basic cases and parameters        |
-|                   |                                 | supported: ``filepath_or_buffer`` can be local file    |
-|                   |                                 | only, ``sep``, ``delimiter``,  ``header`` (partly)     |
-|                   |                                 | ``names``, ``usecols``, ``dtype``,                     |
-|                   |                                 | ``true/false_values``, ``skiprows`` (partly)           |
-|                   |                                 | ``skip_blank_lines`` (partly), ``parse_dates``         |
-|                   |                                 | (partly), ``compression`` (inferred automatically,     |
-|                   |                                 | should not be specified), ``quotechar``,               |
-|                   |                                 | ``escapechar``, ``doublequote``,                       |
-|                   |                                 | ``delim_whitespace``                                   |
+| `read_csv`_       | Y                               |                                                        |
 +-------------------+---------------------------------+--------------------------------------------------------+
 | `read_fwf`_       | Y                               |                                                        |
 +-------------------+---------------------------------+--------------------------------------------------------+

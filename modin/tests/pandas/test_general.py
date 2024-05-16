@@ -19,7 +19,6 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
-from modin.config import StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_frame_equal
 from modin.tests.test_utils import warns_that_defaulting_to_pandas
@@ -29,7 +28,6 @@ from .utils import (
     bool_arg_keys,
     bool_arg_values,
     create_test_dfs,
-    default_to_pandas_ignore_string,
     df_equals,
     eval_general,
     sort_if_range_partitioning,
@@ -38,12 +36,9 @@ from .utils import (
     test_data_values,
 )
 
-if StorageFormat.get() == "Hdk":
-    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-else:
-    pytestmark = pytest.mark.filterwarnings(
-        "default:`DataFrame.insert` for empty DataFrame is not currently supported.*:UserWarning"
-    )
+pytestmark = pytest.mark.filterwarnings(
+    "default:`DataFrame.insert` for empty DataFrame is not currently supported.*:UserWarning"
+)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -507,8 +502,8 @@ def test_pivot():
     with pytest.raises(ValueError):
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
 
-    if get_current_execution() != "BaseOnPython" and StorageFormat.get() != "Hdk":
-        # FIXME: Failed for some reason on 'BaseOnPython' and 'HDK'
+    if get_current_execution() != "BaseOnPython":
+        # FIXME: Failed for some reason on 'BaseOnPython'
         # https://github.com/modin-project/modin/issues/6240
         df_equals(
             pd.pivot(test_df, columns="bar"),
@@ -634,10 +629,6 @@ def test_unique():
     assert modin_result.shape == pandas_result.shape
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/modin-project/modin/issues/2896",
-)
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
@@ -933,11 +924,7 @@ def test_default_to_pandas_warning_message(func, regex):
 
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
-    with (
-        warns_that_defaulting_to_pandas()
-        if StorageFormat.get() != "Hdk"
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         df[(df.a == 1) & (df.b == 2)]
 
 

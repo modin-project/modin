@@ -27,7 +27,6 @@ from .common import (
     random_string,
     setup,
     translator_groupby_ngroups,
-    trigger_import,
 )
 from .compatibility import ASV_USE_IMPL, ASV_USE_STORAGE_FORMAT
 from .data_shapes import GROUPBY_NGROUPS, RAND_HIGH, RAND_LOW, get_benchmark_shapes
@@ -51,6 +50,5 @@ __all__ = [
     "random_columns",
     "random_booleans",
     "translator_groupby_ngroups",
-    "trigger_import",
     "setup",
 ]

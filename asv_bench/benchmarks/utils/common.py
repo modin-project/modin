@@ -28,12 +28,7 @@ import pandas
 
 import modin.pandas
 
-from .compatibility import (
-    ASV_DATASET_SIZE,
-    ASV_USE_ENGINE,
-    ASV_USE_IMPL,
-    ASV_USE_STORAGE_FORMAT,
-)
+from .compatibility import ASV_DATASET_SIZE, ASV_USE_ENGINE, ASV_USE_IMPL
 from .data_shapes import RAND_HIGH, RAND_LOW
 
 POSSIBLE_IMPL = {
@@ -417,26 +412,7 @@ def random_booleans(number: int) -> list:
     return list(np.random.choice([True, False], size=number))
 
 
-def trigger_import(*dfs):
-    """
-    Trigger import execution for DataFrames obtained by HDK engine.
-
-    Parameters
-    ----------
-    *dfs : iterable
-        DataFrames to trigger import.
-    """
-    if ASV_USE_STORAGE_FORMAT != "hdk" or ASV_USE_IMPL == "pandas":
-        return
-
-    for df in dfs:
-        df._query_compiler._modin_frame.force_import()
-
-
-def execute(
-    df: Union[modin.pandas.DataFrame, pandas.DataFrame],
-    trigger_hdk_import: bool = False,
-):
+def execute(df: Union[modin.pandas.DataFrame, pandas.DataFrame]):
     """
     Make sure the calculations are finished.
 
@@ -444,16 +420,8 @@ def execute(
     ----------
     df : modin.pandas.DataFrame or pandas.Datarame
         DataFrame to be executed.
-    trigger_hdk_import : bool, default: False
-        Whether `df` are obtained by import with HDK engine.
     """
-    if trigger_hdk_import:
-        trigger_import(df)
-        return
     if ASV_USE_IMPL == "modin":
-        if ASV_USE_STORAGE_FORMAT == "hdk":
-            df._query_compiler._modin_frame._execute()
-            return
         partitions = df._query_compiler._modin_frame._partitions.flatten()
         mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
         if len(partitions) and hasattr(mgr_cls, "wait_partitions"):

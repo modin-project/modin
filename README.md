@@ -85,8 +85,8 @@ Modin automatically detects which engine(s) you have installed and uses that for
 #### From conda-forge
 
 Installing from [conda forge](https://github.com/conda-forge/modin-feedstock) using `modin-all`
-will install Modin and four engines: [Ray](https://github.com/ray-project/ray), [Dask](https://github.com/dask/dask),
-[MPI through unidist](https://github.com/modin-project/unidist) and [HDK](https://github.com/intel-ai/hdk).
+will install Modin and three engines: [Ray](https://github.com/ray-project/ray), [Dask](https://github.com/dask/dask) and
+[MPI through unidist](https://github.com/modin-project/unidist).
 
 ```bash
 conda install -c conda-forge modin-all
@@ -98,7 +98,6 @@ Each engine can also be installed individually (and also as a combination of sev
 conda install -c conda-forge modin-ray  # Install Modin dependencies and Ray.
 conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
 conda install -c conda-forge modin-mpi # Install Modin dependencies and MPI through unidist.
-conda install -c conda-forge modin-hdk # Install Modin dependencies and HDK.
 ```
 
 **Note:** Since Modin 0.30.0 we use a reduced set of Ray dependencies: `ray-core` instead of `ray-default`.
@@ -118,13 +117,13 @@ conda install -n base conda-libmamba-solver
 and then use it during istallation either like:
 
 ```bash
-conda install -c conda-forge modin-ray modin-hdk --experimental-solver=libmamba
+conda install -c conda-forge modin-ray --experimental-solver=libmamba
 ```
 
 or starting from conda 22.11 and libmamba solver 22.12 versions:
 
 ```bash
-conda install -c conda-forge modin-ray modin-hdk --solver=libmamba
+conda install -c conda-forge modin-ray --solver=libmamba
 ```
 
 #### Choosing a Compute Engine
@@ -158,8 +157,6 @@ modin_cfg.Engine.put('unidist') # Modin will use Unidist
 unidist_cfg.Backend.put('mpi') # Unidist will use MPI backend
 ```
 
-Check [this Modin docs section](https://modin.readthedocs.io/en/latest/development/using_hdk.html) for HDK engine setup.
-
 _Note: You should not change the engine after your first operation with Modin as it will result in undefined behavior._
 
 #### Which engine should I use?
@@ -167,11 +164,6 @@ _Note: You should not change the engine after your first operation with Modin as
 On Linux, MacOS, and Windows you can install and use either Ray, Dask or MPI through unidist. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
-
-On Linux you also can choose [HDK](https://modin.readthedocs.io/en/latest/development/using_hdk.html), which is an experimental
-engine based on [HDK](https://github.com/intel-ai/hdk) and included in the
-[Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html),
-which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html).
 
 ### Pandas API Coverage
 

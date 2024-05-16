@@ -175,7 +175,7 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Native", "Unidist")
+    choices = ("Ray", "Dask", "Python", "Unidist")
 
     NOINIT_ENGINES = {
         "Python",
@@ -227,16 +227,6 @@ class Engine(EnvironmentVariable, type=str):
                 )
             return "Dask"
         try:
-            # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
-            # from HDK is located in it with all the necessary options for dlopen.
-            from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (  # noqa
-                DbWorker,
-            )
-        except ImportError:
-            pass
-        else:
-            return "Native"
-        try:
             import unidist
 
         except ImportError:
@@ -254,26 +244,6 @@ class Engine(EnvironmentVariable, type=str):
         )
 
     @classmethod
-    def get(cls) -> str:
-        """
-        Get value of the Engine.
-
-        Returns
-        -------
-        str
-        """
-        value = super().get()
-        if value == "Native":
-            from modin.error_message import ErrorMessage
-
-            ErrorMessage.single_warning(
-                "HDK engine is deprecated and will be removed in a future version. "
-                + "Consider switching to Ray, Dask or MPI engine.",
-                FutureWarning,
-            )
-        return value
-
-    @classmethod
     @doc(Parameter.add_option.__doc__)
     def add_option(cls, choice: Any) -> Any:
         choice = super().add_option(choice)
@@ -287,7 +257,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "Hdk", "Cudf")
+    choices = ("Pandas", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -460,19 +430,6 @@ class NPartitions(EnvironmentVariable, type=int):
         if nparts <= 0:
             raise ValueError(f"`NPartitions` should be > 0; current value: {nparts}")
         return nparts
-
-
-class HdkFragmentSize(EnvironmentVariable, type=int):
-    """How big a fragment in HDK should be when creating a table (in rows)."""
-
-    varname = "MODIN_HDK_FRAGMENT_SIZE"
-
-
-class DoUseCalcite(EnvironmentVariable, type=bool):
-    """Whether to use Calcite for HDK queries execution."""
-
-    varname = "MODIN_USE_CALCITE"
-    default = True
 
 
 class TestDatasetSize(EnvironmentVariable, type=str):
@@ -661,69 +618,6 @@ class PersistentPickle(EnvironmentVariable, type=bool):
     # When set to on, Modin objects could be saved to disk and loaded
     # but serialization/deserialization could take more time.
     default = False
-
-
-class HdkLaunchParameters(EnvironmentVariable, type=dict):
-    """
-    Additional command line options for the HDK engine.
-
-    Please visit OmniSci documentation for the description of available parameters:
-    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
-    """
-
-    varname = "MODIN_HDK_LAUNCH_PARAMETERS"
-
-    @classmethod
-    def get(cls) -> dict:
-        """
-        Get the resulted command-line options.
-
-        Decode and merge specified command-line options with the default one.
-
-        Returns
-        -------
-        dict
-            Decoded and verified config value.
-        """
-        custom_parameters = super().get()
-        result = cls._get_default().copy()
-        result.update(
-            {key.replace("-", "_"): value for key, value in custom_parameters.items()}
-        )
-        return result
-
-    @classmethod
-    def _get_default(cls) -> Any:
-        """
-        Get default value of the config. Checks the pyhdk version and omits variables unsupported in prior versions.
-
-        Returns
-        -------
-        dict
-            Config keys and corresponding values.
-        """
-        if (default := getattr(cls, "default", None)) is None:
-            cls.default = default = {
-                "enable_union": 1,
-                "enable_columnar_output": 1,
-                "enable_lazy_fetch": 0,
-                "null_div_by_zero": 1,
-                "enable_watchdog": 0,
-                "enable_thrift_logs": 0,
-                "enable_multifrag_execution_result": 1,
-                "cpu_only": 1,
-            }
-
-            try:
-                import pyhdk
-
-                if version.parse(pyhdk.__version__) >= version.parse("0.6.1"):
-                    default["enable_lazy_dict_materialization"] = 0
-                    default["log_dir"] = "pyhdk_log"
-            except ImportError:
-                # if pyhdk is not available, do not show any additional options
-                pass
-        return default
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):
