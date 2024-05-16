@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
 import warnings
 
 import matplotlib
@@ -610,7 +611,11 @@ def test_sort_multiindex(sort_remaining):
             setattr(df, index, new_index)
 
     for kwargs in [{"level": 0}, {"axis": 0}, {"axis": 1}]:
-        with warns_that_defaulting_to_pandas():
+        with (
+            warns_that_defaulting_to_pandas()
+            if not UsePlainPandasQueryCompiler.get()
+            else contextlib.nullcontext()
+        ):
             df_equals(
                 modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
                 pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),

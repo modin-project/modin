@@ -90,7 +90,7 @@ def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
     with (
         warns_that_defaulting_to_pandas()
-        if not InitializeWithSmallQueryCompilers.get()
+        if not UsePlainPandasQueryCompiler.get()
         else contextlib.nullcontext()
     ):
         operation = getattr(modin_df, op)
@@ -108,7 +108,7 @@ def test_style():
     data = test_data_values[0]
     with (
         warns_that_defaulting_to_pandas()
-        if not InitializeWithSmallQueryCompilers.get()
+        if not UsePlainPandasQueryCompiler.get()
         else contextlib.nullcontext()
     ):
         pd.DataFrame(data).style
@@ -120,7 +120,7 @@ def test_to_timestamp():
 
     with (
         warns_that_defaulting_to_pandas()
-        if not InitializeWithSmallQueryCompilers.get()
+        if not UsePlainPandasQueryCompiler.get()
         else contextlib.nullcontext()
     ):
         df.to_period().to_timestamp()
@@ -153,7 +153,7 @@ def test_asfreq():
     df = pd.DataFrame({"s": series})
     with (
         warns_that_defaulting_to_pandas()
-        if not InitializeWithSmallQueryCompilers.get()
+        if not UsePlainPandasQueryCompiler.get()
         else contextlib.nullcontext()
     ):
         # We are only testing that this defaults to pandas, so we will just check for

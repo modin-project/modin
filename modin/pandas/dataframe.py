@@ -57,10 +57,10 @@ from pandas.core.indexes.frozen import FrozenList
 from pandas.io.formats.info import DataFrameInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import InitializeWithSmallQueryCompilers, PersistentPickle
+from modin.config import PersistentPickle, UsePlainPandasQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    SmallQueryCompiler,
+    PlainPandasQueryCompiler,
 )
 from modin.logging import disable_logging
 from modin.pandas import Categorical
@@ -264,11 +264,11 @@ class DataFrame(BasePandasDataset):
         else:
             self._query_compiler = query_compiler
 
-        if query_compiler is None and InitializeWithSmallQueryCompilers.get():
+        if query_compiler is None and UsePlainPandasQueryCompiler.get():
             small_dataframe = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )
-            self._query_compiler = SmallQueryCompiler(small_dataframe)
+            self._query_compiler = PlainPandasQueryCompiler(small_dataframe)
 
     def __repr__(self) -> str:
         """
