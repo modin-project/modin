@@ -24,7 +24,6 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 from __future__ import annotations
 
 import pickle
-import warnings
 from typing import TYPE_CHECKING, Union
 
 import pandas
@@ -229,28 +228,6 @@ class ModinAPI:
         pandas.Series or pandas.DataFrame
         """
         return self._data._to_pandas()
-
-    def to_ray_dataset(self):
-        """
-        Convert a Modin DataFrame/Series to a Ray Dataset.
-
-        Deprecated.
-
-        Returns
-        -------
-        ray.data.Dataset
-            Converted object with type depending on input.
-
-        Notes
-        -----
-        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
-        """
-        warnings.warn(
-            "`DataFrame.modin.to_ray_dataset` is deprecated and will be removed in a future version. "
-            + "Please use `DataFrame.modin.to_ray` instead.",
-            category=FutureWarning,
-        )
-        return to_ray(self._data)
 
     def to_ray(self):
         """

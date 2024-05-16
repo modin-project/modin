@@ -166,7 +166,7 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="pandas DataFrame",
         params="df : pandas.DataFrame",
-        method="utils.from_pandas",
+        method="io.from_pandas",
     )
     def _from_pandas(cls, df):
         return cls.io_cls.from_pandas(df)
@@ -176,7 +176,7 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="Arrow Table",
         params="at : pyarrow.Table",
-        method="utils.from_arrow",
+        method="io.from_arrow",
     )
     def _from_arrow(cls, at):
         return cls.io_cls.from_arrow(at)
@@ -186,7 +186,7 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="a non-pandas object (dict, list, np.array etc...)",
         params=_doc_io_method_all_params,
-        method="utils.from_non_pandas",
+        method="io.from_non_pandas",
     )
     def _from_non_pandas(cls, *args, **kwargs):
         return cls.io_cls.from_non_pandas(*args, **kwargs)
@@ -196,7 +196,7 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="a DataFrame object supporting exchange protocol `__dataframe__()`",
         params=_doc_io_method_all_params,
-        method="utils.from_dataframe",
+        method="io.from_dataframe",
     )
     def _from_dataframe(cls, *args, **kwargs):
         return cls.io_cls.from_dataframe(*args, **kwargs)

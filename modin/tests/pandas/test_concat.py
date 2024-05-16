@@ -17,7 +17,7 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
-from modin.pandas.utils import from_pandas
+from modin.pandas.io import from_pandas
 from modin.utils import get_current_execution
 
 from .utils import (
