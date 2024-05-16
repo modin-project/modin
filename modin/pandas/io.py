@@ -64,10 +64,11 @@ from pandas._typing import (
 from pandas.io.parsers import TextFileReader
 from pandas.io.parsers.readers import _c_parser_defaults
 
-from modin.config import ModinNumpy, InitializeWithSmallQueryCompilers
+
+from modin.config import ModinNumpy, UsePlainPandasQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    SmallQueryCompiler,
+    PlainPandasQueryCompiler,
 )
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
@@ -994,8 +995,8 @@ def from_pandas(df) -> DataFrame:
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    if InitializeWithSmallQueryCompilers.get():
-        return ModinObjects.DataFrame(query_compiler=SmallQueryCompiler(df))
+    if UsePlainPandasQueryCompiler.get():
+        return ModinObjects.DataFrame(query_compiler=PlainPandasQueryCompiler(df))
 
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 

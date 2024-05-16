@@ -646,7 +646,7 @@ jobs:
       matrix:
         python-version: ["3.9"]
     env:
-      MODIN_SMALL_QUERY_COMPILER: "True"
+      MODIN_USE_PLAIN_PANDAS_QUERY_COMPILER: "True"
     name: test-small-query-compiler python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v4

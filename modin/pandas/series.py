@@ -31,9 +31,9 @@ from pandas.core.series import _coerce_method
 from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import InitializeWithSmallQueryCompilers, PersistentPickle
+from modin.config import PersistentPickle, UsePlainPandasQueryCompiler
 from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    SmallQueryCompiler,
+    PlainPandasQueryCompiler,
 )
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
@@ -147,8 +147,8 @@ class Series(BasePandasDataset):
                 name = MODIN_UNNAMED_SERIES_LABEL
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
-            if InitializeWithSmallQueryCompilers.get():
-                query_compiler = SmallQueryCompiler(
+            if UsePlainPandasQueryCompiler.get():
+                query_compiler = PlainPandasQueryCompiler(
                     pandas.DataFrame(
                         pandas.Series(
                             data=data,

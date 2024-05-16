@@ -913,10 +913,10 @@ def _check_vars() -> None:
         )
 
 
-class InitializeWithSmallQueryCompilers(EnvironmentVariable, type=str):
-    """Set to true to use implementation of SmallQueryCompiler."""
+class UsePlainPandasQueryCompiler(EnvironmentVariable, type=bool):
+    """Set to true to use implementation of PlainPandasQueryCompiler."""
 
-    varname = "MODIN_SMALL_QUERY_COMPILER"
+    varname = "MODIN_USE_PLAIN_PANDAS_QUERY_COMPILER"
     default = False
 
 

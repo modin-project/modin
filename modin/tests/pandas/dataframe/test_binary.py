@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat, InitializeWithSmallQueryCompilers
+from modin.config import NPartitions, StorageFormat, UsePlainPandasQueryCompiler
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -211,8 +211,8 @@ def test_comparison(data, op, other, request):
     reason="Modin on this engine doesn't create virtual partitions.",
 )
 @pytest.mark.skipif(
-    InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not contain partitions.",
+    UsePlainPandasQueryCompiler.get(),
+    reason="PlainPandasQueryCompiler does not contain partitions.",
 )
 @pytest.mark.parametrize(
     "left_virtual,right_virtual", [(True, False), (False, True), (True, True)]
