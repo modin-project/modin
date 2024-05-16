@@ -752,7 +752,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
     astype = _register_default_pandas(pandas.DataFrame.astype)
     case_when = _register_default_pandas(pandas.Series.case_when)
     cat_codes = _register_default_pandas(lambda ser: ser.cat.codes, is_series=True)
-    clip = _register_default_pandas(pandas.DataFrame.clip)
     combine = _register_default_pandas(_combine, squeeze_series=True)
     combine_first = _register_default_pandas(
         lambda df, other: df.combine_first(other), squeeze_series=True
@@ -932,7 +931,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
     is_monotonic_increasing = _register_default_pandas(
         _is_monotonic("is_monotonic_increasing"), is_series=True
     )
-    isin = _register_default_pandas(pandas.DataFrame.isin)
     isna = _register_default_pandas(pandas.DataFrame.isna)
     join = _register_default_pandas(pandas.DataFrame.join)
     kurt = _register_default_pandas(pandas.DataFrame.kurt)
@@ -1114,7 +1112,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
     )
     transpose = _register_default_pandas(pandas.DataFrame.transpose)
     truediv = _register_default_pandas(_register_binary("truediv"), squeeze_series=True)
-    unique = _register_default_pandas(pandas.Series.unique, is_series=True)
     unstack = _register_default_pandas(pandas.DataFrame.unstack)
     var = _register_default_pandas(pandas.DataFrame.var)
     where = _register_default_pandas(pandas.DataFrame.where)
@@ -1126,25 +1123,17 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
     T = property(transpose)
 
-    _add_prefix_df = _register_default_pandas(pandas.DataFrame.add_prefix)
-    _add_prefix_series = _register_default_pandas(
-        pandas.Series.add_prefix, is_series=True
-    )
+    add_prefix = _register_default_pandas(pandas.DataFrame.add_prefix)
+    add_suffix = _register_default_pandas(pandas.DataFrame.add_suffix)
 
-    def add_prefix(self, prefix, axis=1):
-        if axis:
-            return self._add_prefix_df(prefix=prefix)
-        return self._add_prefix_series(prefix=prefix)
-
-    _add_suffix_df = _register_default_pandas(pandas.DataFrame.add_suffix)
-    _add_suffix_series = _register_default_pandas(
-        pandas.Series.add_suffix, is_series=True
-    )
-
-    def add_suffix(self, suffix, axis=1):
-        if axis:
-            return self._add_suffix_df(suffix=suffix)
-        return self._add_suffix_series(suffix=suffix)
+    def clip(self, lower, upper, **kwargs):
+        if isinstance(lower, BaseQueryCompiler):
+            lower = lower.to_pandas().squeeze(1)
+        if isinstance(upper, BaseQueryCompiler):
+            upper = upper.to_pandas().squeeze(1)
+        return _register_default_pandas(pandas.DataFrame.clip)(
+            self, lower, upper, **kwargs
+        )
 
     def dot(self, other, squeeze_self=None, squeeze_other=None):
         other = try_cast_to_pandas(other)
@@ -1260,12 +1249,14 @@ class SmallQueryCompiler(BaseQueryCompiler):
             # Pandas logic is that it ignores indexing if 'values' is a 1D object
             values = values.to_pandas().squeeze(axis=1)
         if self._shape_hint == "column":
-            return _register_default_pandas(pandas.Series.isin, is_series=True)(self, values, **kwargs)
+            return _register_default_pandas(pandas.Series.isin, is_series=True)(
+                self, values, **kwargs
+            )
         else:
             return _register_default_pandas(pandas.DataFrame.isin)(
                 self, values, **kwargs
             )
-    
+
     def to_pandas(self):
         return self._pandas_frame
 
@@ -1303,7 +1294,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     def dtypes(self):
         return self._pandas_frame.dtypes
 
-    def getitem_column_array(self, key, numeric=False):
+    def getitem_column_array(self, key, numeric=False, ignore_order=False):
         if numeric:
             return self.__constructor__(self._pandas_frame.iloc[:, key])
         return self.__constructor__(self._pandas_frame.loc[:, key])
