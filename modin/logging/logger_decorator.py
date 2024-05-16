@@ -17,9 +17,11 @@ Module contains the functions designed for the enable/disable of logging.
 ``enable_logging`` is used for decorating individual Modin functions or classes.
 """
 
+from __future__ import annotations
+
 from functools import wraps
 from types import FunctionType, MethodType
-from typing import Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, overload
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, overload
 
 from modin.config import LogMode
 
@@ -27,10 +29,10 @@ from .config import LogLevel, get_logger
 
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
 
-Fn = TypeVar("Fn", bound=Callable)
+Fn = TypeVar("Fn", bound=Any)
 
 
-def disable_logging(func: Callable) -> Callable:
+def disable_logging(func: Callable) -> Any:
     """
     Disable logging of one particular function. Useful for decorated classes.
 
@@ -51,14 +53,23 @@ def disable_logging(func: Callable) -> Callable:
 @overload
 def enable_logging(modin_layer: Fn) -> Fn:
     # This helps preserve typings when the decorator is used without parentheses
-    ...
+    pass
 
 
+@overload
 def enable_logging(
-    modin_layer: Union[str, Fn, Type] = "PANDAS-API",
+    modin_layer: str = "PANDAS-API",
     name: Optional[str] = None,
     log_level: LogLevel = LogLevel.INFO,
 ) -> Callable[[Fn], Fn]:
+    pass
+
+
+def enable_logging(
+    modin_layer: str | Fn = "PANDAS-API",
+    name: Optional[str] = None,
+    log_level: LogLevel = LogLevel.INFO,
+) -> Callable[[Fn], Fn] | Fn:
     """
     Log Decorator used on specific Modin functions or classes.
 
@@ -102,11 +113,11 @@ def enable_logging(
                         )(attr_value)
 
                     setattr(obj, attr_name, wrapped)
-            return obj
+            return obj  # type: ignore [return-value]
         elif isinstance(obj, classmethod):
-            return classmethod(decorator(obj.__func__))
+            return classmethod(decorator(obj.__func__))  # type: ignore [return-value, arg-type]
         elif isinstance(obj, staticmethod):
-            return staticmethod(decorator(obj.__func__))
+            return staticmethod(decorator(obj.__func__))  # type: ignore [return-value, arg-type]
 
         assert isinstance(modin_layer, str), "modin_layer is somehow not a string!"
 
