@@ -1255,6 +1255,17 @@ class SmallQueryCompiler(BaseQueryCompiler):
         assert axis == 1
         return isinstance(self._pandas_frame.columns, pandas.MultiIndex)
 
+    def isin(self, values, ignore_indices=False, **kwargs):
+        if isinstance(values, type(self)) and ignore_indices:
+            # Pandas logic is that it ignores indexing if 'values' is a 1D object
+            values = values.to_pandas().squeeze(axis=1)
+        if self._shape_hint == "column":
+            return _register_default_pandas(pandas.Series.isin, is_series=True)(self, values, **kwargs)
+        else:
+            return _register_default_pandas(pandas.DataFrame.isin)(
+                self, values, **kwargs
+            )
+    
     def to_pandas(self):
         return self._pandas_frame
 
@@ -1296,14 +1307,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
         if numeric:
             return self.__constructor__(self._pandas_frame.iloc[:, key])
         return self.__constructor__(self._pandas_frame.loc[:, key])
-
-    def columnarize(self):
-        if len(self._pandas_frame.columns) != 1 or (
-            len(self._pandas_frame.index) == 1
-            and self._pandas_frame.index[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            return SmallQueryCompiler(self._pandas_frame.transpose())
-        return self
 
     def is_series_like(self):
         return (
