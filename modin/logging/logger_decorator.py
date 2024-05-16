@@ -19,13 +19,15 @@ Module contains the functions designed for the enable/disable of logging.
 
 from functools import wraps
 from types import FunctionType, MethodType
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, overload
 
 from modin.config import LogMode
 
 from .config import LogLevel, get_logger
 
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
+
+Fn = TypeVar("Fn", bound=Callable)
 
 
 def disable_logging(func: Callable) -> Callable:
@@ -46,11 +48,17 @@ def disable_logging(func: Callable) -> Callable:
     return func
 
 
+@overload
+def enable_logging(modin_layer: Fn) -> Fn:
+    # This helps preserve typings when the decorator is used without parentheses
+    ...
+
+
 def enable_logging(
-    modin_layer: Union[str, Callable, Type] = "PANDAS-API",
+    modin_layer: Union[str, Fn, Type] = "PANDAS-API",
     name: Optional[str] = None,
     log_level: LogLevel = LogLevel.INFO,
-) -> Callable:
+) -> Callable[[Fn], Fn]:
     """
     Log Decorator used on specific Modin functions or classes.
 
@@ -76,7 +84,7 @@ def enable_logging(
         # def func()
         return enable_logging()(modin_layer)
 
-    def decorator(obj: Any) -> Any:
+    def decorator(obj: Fn) -> Fn:
         """Decorate function or class to add logs to Modin API function(s)."""
         if isinstance(obj, type):
             seen: Dict[Any, Any] = {}
