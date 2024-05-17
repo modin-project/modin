@@ -889,6 +889,6 @@ def reload_modin() -> None:
     is going to be started up once again.
     """
     modules = sys.modules.copy()
-    for key, module in modules.items():
-        if key.startswith("modin"):
+    for name, module in modules.items():
+        if name.startswith("modin"):
             importlib.reload(module)
