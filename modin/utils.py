@@ -878,3 +878,17 @@ class classproperty:
 
     def __get__(self, instance: Any, owner: Any) -> Any:  # noqa: GL08
         return self.fget(owner)
+
+
+def reload_modin():
+    """
+    Reload all previously imported Modin modules.
+
+    The call to this function is required
+    if an execution engine has been shut down and
+    is going to be started up once again.
+    """
+    modules = sys.modules.copy()
+    for key, module in modules.items():
+        if key.startswith("modin"):
+            importlib.reload(module)
