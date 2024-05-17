@@ -880,7 +880,7 @@ class classproperty:
         return self.fget(owner)
 
 
-def reload_modin():
+def reload_modin() -> None:
     """
     Reload all previously imported Modin modules.
 
