@@ -64,7 +64,7 @@ from pandas._typing import (
 from pandas.io.parsers import TextFileReader
 from pandas.io.parsers.readers import _c_parser_defaults
 
-from modin.config import ExperimentalNumPyAPI
+from modin.config import ModinNumpy
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
@@ -1146,7 +1146,7 @@ def to_numpy(
     if isinstance(modin_obj, SupportsPrivateToNumPy):
         return modin_obj._to_numpy()
     array = modin_obj.to_numpy()
-    if ExperimentalNumPyAPI.get():
+    if ModinNumpy.get():
         array = array._to_numpy()
     return array
 

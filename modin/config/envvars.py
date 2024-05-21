@@ -683,39 +683,11 @@ class GithubCI(EnvironmentVariable, type=bool):
     default = False
 
 
-class ModinNumpy(EnvWithSibilings, type=bool):
+class ModinNumpy(EnvironmentVariable, type=bool):
     """Set to true to use Modin's implementation of NumPy API."""
 
     varname = "MODIN_NUMPY"
     default = False
-
-    @classmethod
-    def _sibling(cls) -> type[EnvWithSibilings]:
-        """Get a parameter sibling."""
-        return ExperimentalNumPyAPI
-
-
-class ExperimentalNumPyAPI(EnvWithSibilings, type=bool):
-    """
-    Set to true to use Modin's implementation of NumPy API.
-
-    This parameter is deprecated. Use ``ModinNumpy`` instead.
-    """
-
-    varname = "MODIN_EXPERIMENTAL_NUMPY_API"
-    default = False
-
-    @classmethod
-    def _sibling(cls) -> type[EnvWithSibilings]:
-        """Get a parameter sibling."""
-        return ModinNumpy
-
-
-# Let the parameter's handling logic know that this variable is deprecated and that
-# we should raise respective warnings
-ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
-    ExperimentalNumPyAPI, ModinNumpy
-)
 
 
 class RangePartitioning(EnvironmentVariable, type=bool):
@@ -728,72 +700,6 @@ class RangePartitioning(EnvironmentVariable, type=bool):
 
     varname = "MODIN_RANGE_PARTITIONING"
     default = False
-
-
-class RangePartitioningGroupby(EnvWithSibilings, type=bool):
-    """
-    Set to true to use Modin's range-partitioning group by implementation.
-
-    This parameter is deprecated. Use ``RangePartitioning`` instead.
-    """
-
-    varname = "MODIN_RANGE_PARTITIONING_GROUPBY"
-    default = False
-
-    @classmethod
-    def _sibling(cls) -> type[EnvWithSibilings]:
-        """Get a parameter sibling."""
-        return ExperimentalGroupbyImpl
-
-
-# Let the parameter's handling logic know that this variable is deprecated and that
-# we should raise respective warnings
-RangePartitioningGroupby._deprecation_descriptor = DeprecationDescriptor(
-    RangePartitioningGroupby, RangePartitioning
-)
-
-
-class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
-    """
-    Set to true to use Modin's range-partitioning group by implementation.
-
-    This parameter is deprecated. Use ``RangePartitioning`` instead.
-    """
-
-    varname = "MODIN_EXPERIMENTAL_GROUPBY"
-    default = False
-
-    @classmethod
-    def _sibling(cls) -> type[EnvWithSibilings]:
-        """Get a parameter sibling."""
-        return RangePartitioningGroupby
-
-
-# Let the parameter's handling logic know that this variable is deprecated and that
-# we should raise respective warnings
-ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
-    ExperimentalGroupbyImpl, RangePartitioningGroupby
-)
-
-
-def use_range_partitioning_groupby() -> bool:
-    """
-    Determine whether range-partitioning implementation for groupby was enabled by a user.
-
-    This is a temporary helper function that queries ``RangePartitioning`` and deprecated
-    ``RangePartitioningGroupby`` config variables in order to determine whether to range-part
-    impl for groupby is enabled. Eventially this function should be removed together with
-    ``RangePartitioningGroupby`` variable.
-
-    Returns
-    -------
-    bool
-    """
-    with warnings.catch_warnings():
-        # filter deprecation warning, it was already showed when a user set the variable
-        warnings.filterwarnings("ignore", category=FutureWarning)
-        old_range_part_var = RangePartitioningGroupby.get()
-    return RangePartitioning.get() or old_range_part_var
 
 
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):

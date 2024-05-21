@@ -17,7 +17,7 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 
-from modin.config import use_range_partitioning_groupby
+from modin.config import RangePartitioning
 from modin.core.dataframe.algebra import GroupByReduce
 from modin.error_message import ErrorMessage
 from modin.utils import hashable
@@ -94,7 +94,7 @@ class GroupbyReduceImpl:
         )
 
         def method(query_compiler, *args, **kwargs):
-            if use_range_partitioning_groupby():
+            if RangePartitioning.get():
                 try:
                     if finalizer_fn is not None:
                         raise NotImplementedError(

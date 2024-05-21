@@ -25,8 +25,6 @@ from modin.config.envvars import (
     DocModule,
     Engine,
     EnvironmentVariable,
-    ExperimentalGroupbyImpl,
-    ExperimentalNumPyAPI,
     GithubCI,
     GpuCount,
     IsDebug,
@@ -43,7 +41,6 @@ from modin.config.envvars import (
     PersistentPickle,
     ProgressBar,
     RangePartitioning,
-    RangePartitioningGroupby,
     RayInitCustomResources,
     RayRedisAddress,
     RayRedisPassword,
@@ -54,7 +51,6 @@ from modin.config.envvars import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     TrackFileLeaks,
-    use_range_partitioning_groupby,
 )
 from modin.config.pubsub import Parameter, ValueSource, context
 
@@ -91,11 +87,7 @@ __all__ = [
     "BenchmarkMode",
     "PersistentPickle",
     "ModinNumpy",
-    "ExperimentalNumPyAPI",
-    "RangePartitioningGroupby",
     "RangePartitioning",
-    "use_range_partitioning_groupby",
-    "ExperimentalGroupbyImpl",
     "AsyncReadMode",
     "ReadSqlEngine",
     "IsExperimental",
