@@ -54,7 +54,7 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
 
-from modin.config import MinPartitionSize
+from modin.config import MinColumnPartitionSize, MinRowPartitionSize
 from modin.core.io.file_dispatcher import OpenFile
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.db_conn import ModinDatabaseConnection
@@ -116,7 +116,12 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
         A list of pandas DataFrames.
     """
     splits = split_result_of_axis_func_pandas(
-        axis, num_splits, df, min_block_size=MinPartitionSize.get()
+        axis,
+        num_splits,
+        df,
+        min_block_size=(
+            MinRowPartitionSize.get() if axis == 0 else MinColumnPartitionSize.get()
+        ),
     )
     if not isinstance(splits, list):
         splits = [splits]

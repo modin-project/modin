@@ -60,7 +60,7 @@ from modin.config import (  # noqa: E402
     BenchmarkMode,
     GithubCI,
     IsExperimental,
-    MinPartitionSize,
+    MinRowPartitionSize,
     NPartitions,
 )
 from modin.core.execution.dispatching.factories import factories  # noqa: E402
@@ -487,11 +487,11 @@ def set_async_read_mode(request):
 
 
 @pytest.fixture
-def set_min_partition_size(request):
-    old_min_partition_size = MinPartitionSize.get()
-    MinPartitionSize.put(request.param)
+def set_min_row_partition_size(request):
+    old_min_row_partition_size = MinRowPartitionSize.get()
+    MinRowPartitionSize.put(request.param)
     yield
-    MinPartitionSize.put(old_min_partition_size)
+    MinRowPartitionSize.put(old_min_row_partition_size)
 
 
 ray_client_server = None

@@ -18,7 +18,7 @@ import pytest
 from pandas.core.dtypes.common import is_list_like
 
 import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions
+from modin.config import MinRowPartitionSize, NPartitions
 from modin.tests.pandas.utils import (
     agg_func_except_keys,
     agg_func_except_values,
@@ -201,7 +201,7 @@ def test_explode_all_partitions(column, ignore_index):
     # expand every row in the input data into two rows. It's especially
     # important that the input data has list-like elements that must be
     # expanded at the boundaries of the partitions, e.g. at row 31.
-    num_rows = NPartitions.get() * MinPartitionSize.get()
+    num_rows = NPartitions.get() * MinRowPartitionSize.get()
     data = {"A": [[3, 4]] * num_rows, "C": [["a", "b"]] * num_rows}
     eval_general(
         *create_test_dfs(data),

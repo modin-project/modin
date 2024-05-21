@@ -32,7 +32,13 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import Engine, IsRayCluster, MinPartitionSize, NPartitions
+from modin.config import (
+    Engine,
+    IsRayCluster,
+    MinColumnPartitionSize,
+    MinRowPartitionSize,
+    NPartitions,
+)
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, is_trivial_index
 from modin.core.dataframe.pandas.dataframe.utils import (
@@ -1592,7 +1598,7 @@ class PandasDataframe(
                 new_lengths = get_length_list(
                     axis_len=len(row_idx),
                     num_splits=ordered_rows.shape[0],
-                    min_block_size=MinPartitionSize.get(),
+                    min_block_size=MinRowPartitionSize.get(),
                 )
             else:
                 # If the frame's partitioning was preserved then
@@ -1630,7 +1636,7 @@ class PandasDataframe(
                 new_widths = get_length_list(
                     axis_len=len(col_idx),
                     num_splits=ordered_cols.shape[1],
-                    min_block_size=MinPartitionSize.get(),
+                    min_block_size=MinColumnPartitionSize.get(),
                 )
             else:
                 # If the frame's partitioning was preserved then
@@ -2635,10 +2641,10 @@ class PandasDataframe(
         # algorithm how many partitions we want to end up with, so it samples and finds pivots
         # according to that.
         if sampling_probability >= 1:
-            from modin.config import MinPartitionSize
+            from modin.config import MinRowPartitionSize
 
-            ideal_num_new_partitions = round(len(grouper) / MinPartitionSize.get())
-            if len(grouper) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+            ideal_num_new_partitions = round(len(grouper) / MinRowPartitionSize.get())
+            if len(grouper) < MinRowPartitionSize.get() or ideal_num_new_partitions < 2:
                 # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return grouper.combine_and_apply(func=func)
@@ -3589,7 +3595,7 @@ class PandasDataframe(
                     kw["row_lengths"] = get_length_list(
                         axis_len=len(new_index),
                         num_splits=new_partitions.shape[0],
-                        min_block_size=MinPartitionSize.get(),
+                        min_block_size=MinRowPartitionSize.get(),
                     )
                 elif axis == 1:
                     if self._row_lengths_cache is not None and len(new_index) == sum(
@@ -3601,7 +3607,7 @@ class PandasDataframe(
                     kw["column_widths"] = get_length_list(
                         axis_len=len(new_columns),
                         num_splits=new_partitions.shape[1],
-                        min_block_size=MinPartitionSize.get(),
+                        min_block_size=MinColumnPartitionSize.get(),
                     )
                 elif axis == 0:
                     if self._column_widths_cache is not None and len(

@@ -22,7 +22,7 @@ used as base class for dipatchers of specific columnar store formats.
 import numpy as np
 import pandas
 
-from modin.config import MinPartitionSize, NPartitions
+from modin.config import MinColumnPartitionSize, MinRowPartitionSize, NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 
@@ -130,7 +130,7 @@ class ColumnStoreDispatcher(FileDispatcher):
             index = index_len
             index_len = len(index)
         num_partitions = NPartitions.get()
-        min_block_size = MinPartitionSize.get()
+        min_block_size = MinRowPartitionSize.get()
         index_chunksize = compute_chunksize(index_len, num_partitions, min_block_size)
         if index_chunksize > index_len:
             row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
@@ -177,7 +177,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             num_remaining_parts = round(NPartitions.get() / num_row_parts)
             min_block_size = min(
-                columns_length // num_remaining_parts, MinPartitionSize.get()
+                columns_length // num_remaining_parts, MinColumnPartitionSize.get()
             )
         column_splits = compute_chunksize(
             columns_length, NPartitions.get(), max(1, min_block_size)

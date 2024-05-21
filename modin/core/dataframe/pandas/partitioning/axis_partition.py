@@ -18,7 +18,7 @@ import warnings
 import numpy as np
 import pandas
 
-from modin.config import MinPartitionSize
+from modin.config import MinColumnPartitionSize, MinRowPartitionSize
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
@@ -277,7 +277,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                             for part in axis_partition.list_of_blocks
                         ]
                     ),
-                    min_block_size=MinPartitionSize.get(),
+                    min_block_size=(
+                        MinRowPartitionSize.get()
+                        if self.axis == 0
+                        else MinColumnPartitionSize.get()
+                    ),
                 )
             )
         result = self._wrap_partitions(
@@ -289,7 +293,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                 num_splits,
                 maintain_partitioning,
                 *self.list_of_blocks,
-                min_block_size=MinPartitionSize.get(),
+                min_block_size=(
+                    MinRowPartitionSize.get()
+                    if self.axis == 0
+                    else MinColumnPartitionSize.get()
+                ),
                 lengths=lengths,
                 manual_partition=manual_partition,
             )

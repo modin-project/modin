@@ -35,7 +35,9 @@ from modin.config.envvars import (
     LogMemoryInterval,
     LogMode,
     Memory,
+    MinColumnPartitionSize,
     MinPartitionSize,
+    MinRowPartitionSize,
     ModinNumpy,
     NPartitions,
     PersistentPickle,
@@ -78,6 +80,8 @@ __all__ = [
     # Partitioning
     "NPartitions",
     "MinPartitionSize",
+    "MinRowPartitionSize",
+    "MinColumnPartitionSize",
     # ASV specific
     "TestDatasetSize",
     "AsvImplementation",

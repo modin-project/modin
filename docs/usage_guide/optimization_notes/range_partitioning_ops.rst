@@ -105,7 +105,7 @@ by reading its source code:
         else:
             raise NotImplementedError(dtype)
 
-    pd.DataFrame(np.arange(cfg.NPartitions.get() * cfg.MinPartitionSize.get())).to_numpy()
+    pd.DataFrame(np.arange(cfg.NPartitions.get() * cfg.MinRowPartitionSize.get())).to_numpy()
 
     nrows = [1_000_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000, 100_000_000]
     duplicate_rate = [0, 0.1, 0.5, 0.95]
@@ -192,7 +192,7 @@ micro-benchmark by reading its source code:
 
     cfg.CpuCount.put(16)
 
-    pd.DataFrame(np.arange(cfg.NPartitions.get() * cfg.MinPartitionSize.get())).to_numpy()
+    pd.DataFrame(np.arange(cfg.NPartitions.get() * cfg.MinRowPartitionSize.get())).to_numpy()
 
     nrows = [1_000_000, 5_000_000, 10_000_000, 25_000_000]
     duplicate_rate = [0, 0.1, 0.5, 0.95]
@@ -312,7 +312,7 @@ by reading its source code:
         else:
             raise NotImplementedError(dtype)
 
-    pd.DataFrame(np.arange(cfg.NPartitions.get() * cfg.MinPartitionSize.get())).to_numpy()
+    pd.DataFrame(np.arange(cfg.NPartitions.get() * cfg.MinRowPartitionSize.get())).to_numpy()
 
     nrows = [1_000_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000, 100_000_000]
     duplicate_rate = [0, 0.1, 0.5, 0.95]

@@ -30,7 +30,7 @@ from fsspec.spec import AbstractBufferedFile
 from packaging import version
 from pandas.io.common import stringify_path
 
-from modin.config import MinPartitionSize, NPartitions
+from modin.config import MinColumnPartitionSize, MinRowPartitionSize, NPartitions
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
@@ -659,7 +659,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         if row_lengths is not None:
             desired_row_nparts = max(
-                1, min(sum(row_lengths) // MinPartitionSize.get(), NPartitions.get())
+                1, min(sum(row_lengths) // MinRowPartitionSize.get(), NPartitions.get())
             )
         else:
             desired_row_nparts = actual_row_nparts
@@ -703,14 +703,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                         new_parts[offset + i].append(split[i])
 
                 new_row_lengths.extend(
-                    get_length_list(part_len, num_splits, MinPartitionSize.get())
+                    get_length_list(part_len, num_splits, MinRowPartitionSize.get())
                 )
 
             remote_parts = np.array(new_parts)
             row_lengths = new_row_lengths
 
         desired_col_nparts = max(
-            1, min(sum(column_widths) // MinPartitionSize.get(), NPartitions.get())
+            1,
+            min(sum(column_widths) // MinColumnPartitionSize.get(), NPartitions.get()),
         )
         # only repartition along cols if the actual number of col splits 1.5 times BIGGER than desired
         if 1.5 * desired_col_nparts < remote_parts.shape[1]:
@@ -729,7 +730,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 ]
             )
             column_widths = get_length_list(
-                sum(column_widths), desired_col_nparts, MinPartitionSize.get()
+                sum(column_widths), desired_col_nparts, MinColumnPartitionSize.get()
             )
 
         return remote_parts, row_lengths, column_widths
