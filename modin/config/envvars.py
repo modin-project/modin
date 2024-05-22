@@ -640,8 +640,6 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         if value <= 0:
             raise ValueError(f"Min partition size should be > 0, passed value {value}")
         super().put(value)
-        MinRowPartitionSize.put(value)
-        MinColumnPartitionSize.put(value)
 
     @classmethod
     def get(cls) -> int:
@@ -656,7 +654,8 @@ class MinPartitionSize(EnvironmentVariable, type=int):
 
         ErrorMessage.single_warning(
             "`MinPartitionSize` is deprecated and will be removed in a future version. "
-            + "Use `MinRowPartitionSize` and `MinColumnPartitionSize` instead.",
+            + "This config has no longer effect, "
+            + "use `MinRowPartitionSize` and `MinColumnPartitionSize` instead.",
             FutureWarning,
         )
         min_partition_size = super().get()
