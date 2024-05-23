@@ -374,7 +374,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         bool
             True if if the undelying modin frame and False otherwise.
         """
-        return self.has_materialized_dtypes()
+        return self._modin_frame.has_materialized_dtypes
 
     def set_frame_dtypes_cache(self, dtypes):
         """
@@ -384,7 +384,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ----------
         dtypes : pandas.Series, ModinDtypes, callable or None
         """
-        self.set_frame_dtypes_cache(dtypes)
+        self._modin_frame.set_dtypes_cache(dtypes)
 
     def has_dtypes_cache(self) -> bool:
         """
