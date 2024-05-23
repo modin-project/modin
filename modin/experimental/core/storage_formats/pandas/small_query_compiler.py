@@ -18,6 +18,8 @@ Module contains ``PlainPandasQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
+from typing import Optional
+
 import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_list_like, is_scalar
@@ -587,7 +589,11 @@ def _register_default_pandas(
         args = try_cast_to_pandas(args, squeeze=squeeze_args)
         kwargs = try_cast_to_pandas(kwargs, squeeze=squeeze_kwargs)
         result = func(df, *args, **kwargs)
+        inplace_method = kwargs.get("inplace", False)
+
         if in_place:
+            inplace_method = in_place
+        if inplace_method:
             result = df
         if not (return_modin or isinstance(result, (pandas.Series, pandas.DataFrame))):
             return result
@@ -692,7 +698,6 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
     cumprod = _register_default_pandas(pandas.DataFrame.cumprod)
     cumsum = _register_default_pandas(pandas.DataFrame.cumsum)
     delitem = _register_default_pandas(_delitem)
-    describe = _register_default_pandas(pandas.DataFrame.describe)
     df_update = _register_default_pandas(
         pandas.DataFrame.update, in_place=True, df_copy=True
     )
@@ -855,7 +860,7 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
     )
     isna = _register_default_pandas(pandas.DataFrame.isna)
     join = _register_default_pandas(pandas.DataFrame.join)
-    kurt = _register_default_pandas(pandas.DataFrame.kurt)
+    kurt = _register_default_pandas(pandas.DataFrame.kurt, return_modin=False)
     last_valid_index = _register_default_pandas(
         pandas.DataFrame.last_valid_index, return_modin=False
     )
@@ -866,7 +871,7 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
     max = _register_default_pandas(pandas.DataFrame.max)
     map = _register_default_pandas(pandas.DataFrame.map)
     mean = _register_default_pandas(pandas.DataFrame.mean, return_modin=False)
-    median = _register_default_pandas(pandas.DataFrame.median)
+    median = _register_default_pandas(pandas.DataFrame.median, return_modin=False)
     melt = _register_default_pandas(pandas.DataFrame.melt)
     memory_usage = _register_default_pandas(pandas.DataFrame.memory_usage)
     merge = _register_default_pandas(pandas.DataFrame.merge)
@@ -964,7 +969,7 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
     series_view = _register_default_pandas(pandas.Series.view, is_series=True)
     set_index_from_columns = _register_default_pandas(pandas.DataFrame.set_index)
     setitem = _register_default_pandas(_setitem)
-    skew = _register_default_pandas(pandas.DataFrame.skew)
+    skew = _register_default_pandas(pandas.DataFrame.skew, return_modin=False)
     sort_index = _register_default_pandas(_sort_index)
     sort_columns_by_row_values = _register_default_pandas(
         lambda df, columns, **kwargs: df.sort_values(by=columns, axis=1, **kwargs)
@@ -1055,6 +1060,13 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
             upper = upper.to_pandas().squeeze(1)
         return _register_default_pandas(pandas.DataFrame.clip)(
             self, lower, upper, **kwargs
+        )
+
+    def describe(self, percentiles: np.ndarray):
+        return _register_default_pandas(pandas.DataFrame.describe)(
+            self,
+            percentiles=percentiles,
+            include="all",
         )
 
     def dot(self, other, squeeze_self=None, squeeze_other=None):
@@ -1223,3 +1235,24 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
 
     def is_series_like(self):
         return len(self._modin_frame.columns) == 1 or len(self._modin_frame.index) == 1
+
+    def support_materialization_in_worker_process(self) -> bool:
+        """
+        Whether it's possible to call function `to_pandas` during the pickling process, at the moment of recreating the object.
+
+        Returns
+        -------
+        bool
+        """
+        return True
+
+    def get_pandas_backend(self) -> Optional[str]:
+        """
+        Get backend stored in `_modin_frame`.
+
+        Returns
+        -------
+        str | None
+            Backend name.
+        """
+        return None

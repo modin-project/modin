@@ -31,10 +31,7 @@ from pandas.core.series import _coerce_method
 from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import PersistentPickle, UsePlainPandasQueryCompiler
-from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    PlainPandasQueryCompiler,
-)
+from modin.config import PersistentPickle
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import (
