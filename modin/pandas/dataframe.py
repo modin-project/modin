@@ -57,11 +57,8 @@ from pandas.core.indexes.frozen import FrozenList
 from pandas.io.formats.info import DataFrameInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import PersistentPickle, UsePlainPandasQueryCompiler
+from modin.config import PersistentPickle
 from modin.error_message import ErrorMessage
-from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    PlainPandasQueryCompiler,
-)
 from modin.logging import disable_logging
 from modin.pandas import Categorical
 from modin.pandas.io import from_non_pandas, from_pandas, to_pandas

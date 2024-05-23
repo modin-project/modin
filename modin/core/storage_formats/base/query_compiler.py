@@ -4617,6 +4617,17 @@ class BaseQueryCompiler(
         """
         return self._modin_frame.has_dtypes_cache
 
+    def has_dtypes_cache(self) -> bool:
+        """
+        Check if the dtypes cache exists for the underlying modin frame.
+
+        Returns
+        -------
+        bool
+            True for base class as dtypes are always present
+        """
+        return True
+
     def get_index_name(self, axis=0):
         """
         Get index name of specified axis.

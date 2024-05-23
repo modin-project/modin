@@ -386,6 +386,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         self.set_frame_dtypes_cache(dtypes)
 
+    def has_dtypes_cache(self) -> bool:
+        """
+        Check if the dtypes cache exists for the underlying modin frame.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.has_dtypes_cache
+
     # Append/Concat/Join (Not Merge)
     # The append/concat/join operations should ideally never trigger remote
     # compute. These operations should only ever be manipulations of the
