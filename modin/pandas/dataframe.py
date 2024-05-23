@@ -263,12 +263,6 @@ class DataFrame(BasePandasDataset):
         else:
             self._query_compiler = query_compiler
 
-        if query_compiler is None and UsePlainPandasQueryCompiler.get():
-            small_dataframe = pandas.DataFrame(
-                data=data, index=index, columns=columns, dtype=dtype, copy=copy
-            )
-            self._query_compiler = PlainPandasQueryCompiler(small_dataframe)
-
     def __repr__(self) -> str:
         """
         Return a string representation for a particular ``DataFrame``.
