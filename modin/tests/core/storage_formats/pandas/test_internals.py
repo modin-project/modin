@@ -718,7 +718,8 @@ def test_reorder_labels_dtypes():
 
 @pytest.mark.parametrize(
     "left_partitioning, right_partitioning, ref_with_cache_available, ref_with_no_cache",
-    # Note: this test takes into consideration that `MinRowPartitionSize == 32`, MinColumnPartitionSize == 32` and `NPartitions == 4`
+    # Note: this test takes into consideration that `MinRowPartitionSize == 32`,
+    # `MinColumnPartitionSize == 32` and `NPartitions == 4`
     [
         (
             [2],
