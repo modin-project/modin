@@ -365,6 +365,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Copy
 
+    def has_materialized_dtypes(self):
+        """
+        Check if the undelying modin frame has materialized dtypes
+
+        Returns
+        -------
+        bool
+            True if if the undelying modin frame and False otherwise.
+        """
+        return self.has_materialized_dtypes()
+
+    def set_frame_dtypes_cache(self, dtypes):
+        """
+        Set dtypes cache for the underlying modin frame.
+
+        Parameters
+        ----------
+        dtypes : pandas.Series, ModinDtypes, callable or None
+        """
+        self.set_frame_dtypes_cache(dtypes)
+
     # Append/Concat/Join (Not Merge)
     # The append/concat/join operations should ideally never trigger remote
     # compute. These operations should only ever be manipulations of the

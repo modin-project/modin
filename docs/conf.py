@@ -48,9 +48,7 @@ if not hasattr(sys.modules["unidist"].core, "base"):
 if not hasattr(sys.modules["unidist"].core.base, "object_ref"):
     sys.modules["unidist"].core.base.object_ref = type("object_ref", (object,), {})
 if not hasattr(sys.modules["unidist"].core.base.object_ref, "ObjectRef"):
-    sys.modules["unidist"].core.base.object_ref.ObjectRef = type(
-        "ObjectRef", (object,), {}
-    )
+    sys.modules["unidist"].core.base.object_ref.ObjectRef = type("ObjectRef", (object,), {})
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin

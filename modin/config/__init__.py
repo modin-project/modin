@@ -54,7 +54,6 @@ from modin.config.envvars import (
     TestReadFromSqlServer,
     TrackFileLeaks,
     UsePlainPandasQueryCompiler,
-    
 )
 from modin.config.pubsub import Parameter, ValueSource, context
 

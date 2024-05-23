@@ -155,8 +155,7 @@ class DataFrame(BasePandasDataset):
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
         if isinstance(data, (DataFrame, Series)):
-            query_compiler = data._query_compiler.copy()
-            self._query_compiler = query_compiler
+            self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
