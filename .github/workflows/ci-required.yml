@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.9.x"
+          python-version: "3.9"
           architecture: "x64"
           cache: "pip"
           cache-dependency-path: '**/requirements-doc.txt'

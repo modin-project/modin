@@ -16,6 +16,7 @@ from __future__ import annotations
 import datetime
 import itertools
 import json
+import sys
 import unittest.mock as mock
 
 import matplotlib
@@ -4879,11 +4880,15 @@ def test_cat_categories(data):
 
     # pandas 2.0.0: Removed setting Categorical.categories directly (GH47834)
     # Just check the exception
+    expected_exception = AttributeError("can't set attribute")
+    if sys.version_info >= (3, 10):
+        # The exception message varies across different versions of Python
+        expected_exception = False
     eval_general(
         modin_series,
         pandas_series,
         set_categories,
-        expected_exception=AttributeError("can't set attribute"),
+        expected_exception=expected_exception,
     )
 
 
