@@ -81,4 +81,3 @@ This allows you to take advantage of both Modin and Dask libraries for maximum p
   modin_df = from_dask(dask_df)
 
 .. _Deploy Dask Clusters: https://docs.dask.org/en/stable/deploying.html
-.. _documentation: https://modin.readthedocs.io/en/latest/development/architecture.html
