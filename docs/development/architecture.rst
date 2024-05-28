@@ -223,10 +223,6 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
-- cuDF on Ray (experimental)
-    - Uses the Ray_ execution framework.
-    - The storage format is `cudf` and the in-memory partition type is a cuDF DataFrame.
-    - For more information on the execution path, see the :doc:`cuDF on Ray </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>` page.
 
 .. _directory-tree:
 
@@ -300,7 +296,6 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   │   ├───common
    │   │   │   │   ├─── :doc:`generic </flow/modin/core/execution/ray/generic>`
    │   │   │   │   └───implementations
-   │   │   │   │       ├─── :doc:`cudf_on_ray </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>`
    │   │   │   │       └─── :doc:`pandas_on_ray </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`
    │   │   │   └───unidist
    │   │   │       ├───common
@@ -310,7 +305,6 @@ details. The documentation covers most modules, with more docs being added every
    │   │   ├─── :doc:`io </flow/modin/core/io/index>`
    │   │   └─── :doc:`storage_formats </flow/modin/core/storage_formats/index>`
    │   │       ├─── :doc:`base </flow/modin/core/storage_formats/base/query_compiler>`
-   │   │       ├───cudf
    │   │       └─── :doc:`pandas </flow/modin/core/storage_formats/pandas/index>`
    │   ├───distributed
    │   │   ├───dataframe

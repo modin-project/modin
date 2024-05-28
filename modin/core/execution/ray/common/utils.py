@@ -34,7 +34,6 @@ from modin.config import (
     RayInitCustomResources,
     RayRedisAddress,
     RayRedisPassword,
-    StorageFormat,
     ValueSource,
 )
 from modin.core.execution.utils import set_env
@@ -139,17 +138,6 @@ def initialize_ray(
             with set_env(**env_vars):
                 ray.init(**ray_init_kwargs)
 
-        if StorageFormat.get() == "Cudf":
-            from modin.core.execution.ray.implementations.cudf_on_ray.partitioning import (
-                GPU_MANAGERS,
-                GPUManager,
-            )
-
-            # Check that GPU_MANAGERS is empty because _update_engine can be called multiple times
-            if not GPU_MANAGERS:
-                for i in range(GpuCount.get()):
-                    GPU_MANAGERS.append(GPUManager.remote(i))
-
     # Now ray is initialized, check runtime env config - especially useful if we join
     # an externally pre-configured cluster
     runtime_env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
@@ -162,11 +150,7 @@ def initialize_ray(
                 )
 
     num_cpus = int(ray.cluster_resources()["CPU"])
-    num_gpus = int(ray.cluster_resources().get("GPU", 0))
-    if StorageFormat.get() == "Cudf":
-        NPartitions._put(num_gpus)
-    else:
-        NPartitions._put(num_cpus)
+    NPartitions._put(num_cpus)
 
     # TODO(https://github.com/ray-project/ray/issues/28216): remove this
     # workaround once Ray gives a better way to suppress task errors.

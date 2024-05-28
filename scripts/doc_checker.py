@@ -29,7 +29,6 @@ import re
 import shutil
 import subprocess
 import sys
-import types
 from typing import List
 
 from numpydoc.docscrape import NumpyDocString, get_doc_object
@@ -37,19 +36,6 @@ from numpydoc.validate import Validator
 
 # Let the other modules to know that the doc checker is running.
 os.environ["_MODIN_DOC_CHECKER_"] = "1"
-
-# fake cuDF-related modules if they're missing
-for mod_name in ("cudf", "cupy"):
-    try:
-        __import__(mod_name)
-    except ImportError:
-        sys.modules[mod_name] = types.ModuleType(
-            mod_name, f"fake {mod_name} for checking docstrings"
-        )
-if not hasattr(sys.modules["cudf"], "DataFrame"):
-    sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
-if not hasattr(sys.modules["cupy"], "ndarray"):
-    sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
 
 logging.basicConfig(
     stream=sys.stdout, format="%(levelname)s:%(message)s", level=logging.INFO
