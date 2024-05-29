@@ -3,7 +3,7 @@ name: Publish Modin wheel to PyPI
 on:
   push:
     tags:
-      - '*'
+    - '*'
 
 jobs:
   build-n-publish:
