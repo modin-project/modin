@@ -4008,11 +4008,11 @@ def test_str___getitem__(data, key):
 # Test str operations
 @pytest.mark.parametrize(
     "others",
-    [["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN], None],
+    [["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.nan], None],
     ids=["list", "None"],
 )
 def test_str_cat(others):
-    data = ["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN]
+    data = ["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.nan]
     eval_general(*create_test_series(data), lambda s: s.str.cat(others=others))
 
 
@@ -4644,7 +4644,7 @@ def str_encode_decode_test_data() -> list[str]:
         "234,3245.67",
         "gSaf,qWer|Gre",
         "asd3,4sad|",
-        np.NaN,
+        np.nan,
         None,
         # add a string that we can't encode in ascii, and whose utf-8 encoding
         # we cannot decode in ascii

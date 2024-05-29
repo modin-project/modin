@@ -1105,7 +1105,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     resample_kwargs = resample_kwargs.copy()
                     resample_kwargs["level"] = None
                 filler = pandas.DataFrame(
-                    np.NaN, index=pandas.Index(timestamps), columns=df.columns
+                    np.nan, index=pandas.Index(timestamps), columns=df.columns
                 )
                 df = pandas.concat([df, filler], copy=False)
             if df_op is not None:

@@ -275,7 +275,7 @@ def test_array_where():
 
 @pytest.mark.parametrize("method", ["argmax", "argmin"])
 def test_argmax_argmin(method):
-    numpy_arr = numpy.array([[1, 2, 3], [4, 5, np.NaN]])
+    numpy_arr = numpy.array([[1, 2, 3], [4, 5, np.nan]])
     modin_arr = np.array(numpy_arr)
     assert_scalar_or_array_equal(
         getattr(np, method)(modin_arr, axis=1),
