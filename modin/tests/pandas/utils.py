@@ -88,7 +88,7 @@ test_data = {
             (
                 x
                 if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
-                else np.NaN
+                else np.nan
             )
             for j, x in enumerate(
                 random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
@@ -161,7 +161,7 @@ test_data["int_data"]["index"] = test_data["int_data"].pop(
 for col in test_data["float_nan_data"]:
     for row in range(NROWS // 2):
         if row % 16 == 0:
-            test_data["float_nan_data"][col][row] = np.NaN
+            test_data["float_nan_data"][col][row] = np.nan
 
 test_data_values = list(test_data.values())
 test_data_keys = list(test_data.keys())
@@ -226,8 +226,8 @@ test_data_small = {
 
 test_data_diff_dtype = {
     "int_col": [-5, 2, 7, 16],
-    "float_col": [np.NaN, -9.4, 10.1, np.NaN],
-    "str_col": ["a", np.NaN, "c", "d"],
+    "float_col": [np.nan, -9.4, 10.1, np.nan],
+    "str_col": ["a", np.nan, "c", "d"],
     "bool_col": [False, True, True, False],
 }
 
@@ -272,7 +272,7 @@ test_string_data = {
         "234,3245.67",
         "gSaf,qWer|Gre",
         "asd3,4sad|",
-        np.NaN,
+        np.nan,
     ]
 }
 
@@ -290,7 +290,7 @@ string_seperators = {"comma sep": ","}
 string_sep_values = list(string_seperators.values())
 string_sep_keys = list(string_seperators.keys())
 
-string_na_rep = {"None na_rep": None, "- na_rep": "-", "nan na_rep": np.NaN}
+string_na_rep = {"None na_rep": None, "- na_rep": "-", "nan na_rep": np.nan}
 
 string_na_rep_values = list(string_na_rep.values())
 string_na_rep_keys = list(string_na_rep.keys())

@@ -879,7 +879,7 @@ def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_positio
         np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
     )
     # Need to ensure that one of the partitions has all NA values except for one row
-    pandas_df.iloc[340:] = np.NaN
+    pandas_df.iloc[340:] = np.nan
     pandas_df.iloc[-1] = -4.0
     modin_df = pd.DataFrame(pandas_df)
     eval_general(

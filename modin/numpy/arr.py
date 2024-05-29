@@ -1622,7 +1622,7 @@ class array(object):
                 # the output.
                 result = (
                     result.replace(numpy.inf, 0)
-                    .replace(numpy.NINF, 0)
+                    .replace(-numpy.inf, 0)
                     .where(self._query_compiler.ne(0), 0)
                 )
             return fix_dtypes_and_determine_return(
@@ -1644,7 +1644,7 @@ class array(object):
             # the output.
             result = (
                 result.replace(numpy.inf, 0)
-                .replace(numpy.NINF, 0)
+                .replace(-numpy.inf, 0)
                 .where(callee.ne(0), 0)
             )
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
@@ -1902,7 +1902,7 @@ class array(object):
             if x2 == 0 and numpy.issubdtype(out_dtype, numpy.integer):
                 # NumPy's remainder by 0 works differently from pandas', so we need to fix
                 # the output.
-                result = result.replace(numpy.NaN, 0)
+                result = result.replace(numpy.nan, 0)
             return fix_dtypes_and_determine_return(
                 result, self._ndim, dtype, out, where
             )
@@ -1920,7 +1920,7 @@ class array(object):
         if callee.eq(0).any() and numpy.issubdtype(out_dtype, numpy.integer):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
-            result = result.replace(numpy.NaN, 0)
+            result = result.replace(numpy.nan, 0)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
     __mod__ = remainder

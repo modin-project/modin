@@ -479,8 +479,8 @@ def test_simple_row_groupby(by, as_index, col1_category):
     pandas_df = pandas.DataFrame(
         {
             "col1": [0, 1, 2, 3],
-            "col2": [4, 5, np.NaN, 7],
-            "col3": [np.NaN, np.NaN, 12, 10],
+            "col2": [4, 5, np.nan, 7],
+            "col3": [np.nan, np.nan, 12, 10],
             "col4": [17, 13, 16, 15],
             "col5": [-4, -5, -6, -7],
         }
@@ -1850,8 +1850,8 @@ def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
     pandas_df = pandas.DataFrame(
         {
             "col1": [1, 0, 2, 3],
-            "col2": [4, 5, np.NaN, 7],
-            "col3": [np.NaN, np.NaN, 12, 10],
+            "col2": [4, 5, np.nan, 7],
+            "col3": [np.nan, np.nan, 12, 10],
             "col4": [17, 13, 16, 15],
         }
     )

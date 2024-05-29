@@ -868,8 +868,8 @@ def add_missing_categories_to_groupby(
     ### At this stage we want to get a fill_value for missing categorical values
     if is_udf_agg and isinstance(total_index, pandas.MultiIndex):
         # if grouping on multiple columns and aggregating with an UDF, then the
-        # fill value is always `np.NaN`
-        missing_values = pandas.DataFrame({0: [np.NaN]})
+        # fill value is always `np.nan`
+        missing_values = pandas.DataFrame({0: [np.nan]})
     else:
         # In case of a udf aggregation we're forced to run the operator against each
         # missing category, as in theory it can return different results for each
@@ -903,8 +903,8 @@ def add_missing_categories_to_groupby(
         ).columns
     else:
         # HACK: If the aggregation has failed, the result would be empty. Assuming the
-        # fill value to be `np.NaN` here (this may not always be correct!!!)
-        fill_value = np.NaN if len(missing_values) == 0 else missing_values.iloc[0, 0]
+        # fill value to be `np.nan` here (this may not always be correct!!!)
+        fill_value = np.nan if len(missing_values) == 0 else missing_values.iloc[0, 0]
         missing_values = pandas.DataFrame(
             fill_value, index=missing_index, columns=combined_cols
         )

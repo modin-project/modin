@@ -844,7 +844,7 @@ class _LocIndexer(_LocationIndexerBase):
             for i in range(len(common_label_loc)):
                 if not common_label_loc[i]:
                     columns = columns.insert(len(columns), col_loc[i])
-            self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=np.NaN)
+            self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=np.nan)
             self.df._update_inplace(new_query_compiler=self.qc)
         self._set_item_existing_loc(row_loc, np.array(col_loc), item)
 
