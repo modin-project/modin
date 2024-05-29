@@ -26,7 +26,12 @@ import warnings
 import pandas
 from pandas.util._decorators import doc
 
+from modin.config import  UsePlainPandasQueryCompiler
+
 from modin.core.io import BaseIO
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    PlainPandasQueryCompiler,
+)
 from modin.utils import get_current_execution
 
 _doc_abstract_factory_class = """
@@ -168,6 +173,9 @@ class BaseFactory(object):
         method="io.from_pandas",
     )
     def _from_pandas(cls, df):
+        if UsePlainPandasQueryCompiler.get():
+            df_copy = df.copy()
+            return PlainPandasQueryCompiler(df_copy)
         return cls.io_cls.from_pandas(df)
 
     @classmethod

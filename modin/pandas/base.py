@@ -66,9 +66,6 @@ from pandas.util._validators import (
 
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
-from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    PlainPandasQueryCompiler,
-)
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
 from modin.pandas.utils import is_scalar
@@ -286,8 +283,6 @@ class BasePandasDataset(ClassLogger):
             indexer = row_indexer, _get_repr_axis_label_indexer(self.columns, num_cols)
         else:
             indexer = row_indexer
-        if isinstance(self._query_compiler, PlainPandasQueryCompiler):
-            return self._query_compiler.to_pandas().iloc[indexer]
         return self.iloc[indexer]._query_compiler.to_pandas()
 
     def _update_inplace(self, new_query_compiler: BaseQueryCompiler) -> None:
