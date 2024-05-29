@@ -5,6 +5,7 @@ on: push
 jobs:
   build-n-publish:
     name: Build and publish Modin wheel to PyPI
+    environment: release
     runs-on: ubuntu-latest
 
     steps:
