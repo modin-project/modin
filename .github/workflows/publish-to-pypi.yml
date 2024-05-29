@@ -1,9 +1,10 @@
 name: Publish Modin wheel to PyPI
 
 on:
+  schedule:
+    - cron: "42 0 * * WED"
   push:
-    tags:
-    - '*'
+  workflow_dispatch:
 
 jobs:
   build-n-publish:
