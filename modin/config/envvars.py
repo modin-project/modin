@@ -257,7 +257,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "Cudf")
+    choices = ("Pandas",)
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -412,10 +412,7 @@ class NPartitions(EnvironmentVariable, type=int):
         -------
         int
         """
-        if StorageFormat.get() == "Cudf":
-            return GpuCount.get()
-        else:
-            return CpuCount.get()
+        return CpuCount.get()
 
     @classmethod
     def get(cls) -> int:

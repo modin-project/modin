@@ -64,9 +64,5 @@ High-level module overview
 
 This module houses submodules of all of the stable storage formats:
 
-..
-    TODO: Insert a link to <cuDF module> when it is added (issue #3323)
-
 - :doc:`Base module <base/query_compiler>` contains an abstract query compiler class which defines common API.
 - :doc:`Pandas module <pandas/index>` contains query compiler and text parsers for pandas storage format.
-- cuDF module contains query compiler and text parsers for cuDF storage format.

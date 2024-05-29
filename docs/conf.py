@@ -27,8 +27,6 @@ ray.remote = noop_decorator
 
 # fake modules if they're missing
 for mod_name in (
-    "cudf",
-    "cupy",
     "xgboost",
     "unidist",
     "unidist.config",
@@ -39,10 +37,6 @@ for mod_name in (
         sys.modules[mod_name] = types.ModuleType(
             mod_name, f"fake {mod_name} for building docs"
         )
-if not hasattr(sys.modules["cudf"], "DataFrame"):
-    sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
-if not hasattr(sys.modules["cupy"], "ndarray"):
-    sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
 if not hasattr(sys.modules["xgboost"], "Booster"):
     sys.modules["xgboost"].Booster = type("Booster", (object,), {})
 if not hasattr(sys.modules["unidist"], "remote"):

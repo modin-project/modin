@@ -29,7 +29,6 @@ Engine specific:
 Execution system specific:
 
 * :doc:`Modin PandasOnRayDataframe </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>` is a specialization of the Core Modin Dataframe for ``PandasOnRay`` execution.
-* :doc:`Modin cuDFOnRayDataframe </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>` is a specialization of the Core Modin Dataframe for ``cuDFOnRay`` execution.
 * :doc:`Modin PandasOnDaskDataframe </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>` is specialization of the Core Modin Dataframe for ``PandasOnDask`` execution.
 * :doc:`Modin PandasOnPythonDataframe </flow/modin/core/execution/python/implementations/pandas_on_python/index>` is a specialization of the Core Modin Dataframe for ``PandasOnPython`` execution.
 * :doc:`Modin PandasOnUnidistDataframe </flow/modin/core/execution/unidist/implementations/pandas_on_unidist/index>` is a specialization of the Core Modin Dataframe for ``PandasOnUnidist`` execution.
