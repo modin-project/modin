@@ -1244,7 +1244,7 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
         -------
         bool
         """
-        return True
+        return False
 
     def get_pandas_backend(self) -> Optional[str]:
         """

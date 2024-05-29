@@ -995,7 +995,8 @@ def from_pandas(df) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if UsePlainPandasQueryCompiler.get():
-        return ModinObjects.DataFrame(query_compiler=PlainPandasQueryCompiler(df))
+        df_copy = df.copy()
+        return ModinObjects.DataFrame(query_compiler=PlainPandasQueryCompiler(df_copy))
 
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 
