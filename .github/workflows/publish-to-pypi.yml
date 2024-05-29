@@ -1,12 +1,16 @@
 name: Publish Modin wheel to PyPI
 
 on: push
+  tags:
+    - '*'
 
 jobs:
   build-n-publish:
     name: Build and publish Modin wheel to PyPI
     environment: release
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
 
     steps:
     - uses: actions/checkout@v4
@@ -28,5 +32,3 @@ jobs:
     - name: Publish Modin wheel to PyPI
       if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PUBLISH_TO_PYPI_TOKEN }}
