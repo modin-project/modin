@@ -2740,7 +2740,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
             df = pd.DataFrame(**self._df_kwargs)
             try:
                 # The frame would stop being lazy once index computation is triggered
-                df._query_compiler._modin_frame.set_index_cache(None)
+                df._query_compiler.set_frame_index_cache(None)
             except AttributeError:
                 pytest.skip(
                     reason="Selected execution doesn't support deferred indices."

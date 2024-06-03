@@ -4521,6 +4521,59 @@ class BaseQueryCompiler(
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
 
+    @property
+    def frame_has_materialized_dtypes(self) -> bool:
+        """
+        Check if the undelying dataframe has materialized dtypes.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.has_materialized_dtypes
+
+    def set_frame_dtypes_cache(self, dtypes):
+        """
+        Set dtypes cache for the underlying dataframe frame.
+
+        Parameters
+        ----------
+        dtypes : pandas.Series, ModinDtypes, callable or None
+        """
+        self._modin_frame.set_dtypes_cache(dtypes)
+
+    def set_frame_index_cache(self, index):
+        """
+        Set index cache for underlying dataframe.
+
+        Parameters
+        ----------
+        index : sequence, callable or None
+        """
+        self._modin_frame.set_index_cache(index)
+
+    @property
+    def frame_has_index_cache(self):
+        """
+        Check if the index cache exists for underlying dataframe.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.has_index_cache
+
+    @property
+    def frame_has_dtypes_cache(self) -> bool:
+        """
+        Check if the dtypes cache exists for the underlying dataframe.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.has_dtypes_cache
+
     def get_index_name(self, axis=0):
         """
         Get index name of specified axis.

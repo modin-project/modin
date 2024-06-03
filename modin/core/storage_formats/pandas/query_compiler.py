@@ -580,10 +580,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_index, indexer = (self.index, None) if axis else self.index.reindex(labels)
         new_columns, _ = self.columns.reindex(labels) if axis else (self.columns, None)
         new_dtypes = None
-        if (
-            self._modin_frame.has_materialized_dtypes
-            and kwargs.get("method", None) is None
-        ):
+        if self.frame_has_materialized_dtypes and kwargs.get("method", None) is None:
             # For columns, defining types is easier because we don't have to calculate the common
             # type, since the entire column is filled. A simple `reindex` covers our needs.
             # For rows, we can avoid calculating common types if we know that no new strings of
@@ -2650,8 +2647,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     }
                     return df.fillna(value=func_dict, **kwargs)
 
-                if self._modin_frame.has_materialized_dtypes:
-                    dtypes = self._modin_frame.dtypes
+                if self.frame_has_materialized_dtypes:
+                    dtypes = self.dtypes
                     value_dtypes = pandas.DataFrame(
                         {k: [v] for (k, v) in value.items()}
                     ).dtypes
@@ -2663,12 +2660,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         new_dtypes = dtypes
 
         else:
-            if self._modin_frame.has_materialized_dtypes:
+            if self.frame_has_materialized_dtypes:
                 dtype = pandas.Series(value).dtype
-                if all(
-                    find_common_type([t, dtype]) == t for t in self._modin_frame.dtypes
-                ):
-                    new_dtypes = self._modin_frame.dtypes
+                if all(find_common_type([t, dtype]) == t for t in self.dtypes):
+                    new_dtypes = self.dtypes
 
             def fillna(df):
                 return df.fillna(value=value, **kwargs)
@@ -2898,7 +2893,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
             return df
 
-        if self._modin_frame.has_materialized_dtypes and is_scalar(item):
+        if self.frame_has_materialized_dtypes and is_scalar(item):
             new_dtypes = self.dtypes.copy()
             old_dtypes = new_dtypes[col_loc]
             item_type = extract_dtype(item)
@@ -4607,7 +4602,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # compute dtypes only if assigning entire columns
             isinstance(row_numeric_index, slice)
             and row_numeric_index == slice(None)
-            and self._modin_frame.has_materialized_dtypes
+            and self.frame_has_materialized_dtypes
         ):
             new_dtypes = self.dtypes.copy()
             new_dtypes.iloc[col_numeric_index] = broadcasted_dtypes.values

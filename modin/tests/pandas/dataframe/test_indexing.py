@@ -1473,7 +1473,7 @@ def test_reindex_multiindex():
 def test_reset_index(data, test_async_reset_index):
     modin_df, pandas_df = create_test_dfs(data)
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame.set_index_cache(None)
+        modin_df._query_compiler.set_frame_index_cache(None)
     modin_result = modin_df.reset_index(inplace=False)
     pandas_result = pandas_df.reset_index(inplace=False)
     df_equals(modin_result, pandas_result)
@@ -1481,7 +1481,7 @@ def test_reset_index(data, test_async_reset_index):
     modin_df_cp = modin_df.copy()
     pd_df_cp = pandas_df.copy()
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame.set_index_cache(None)
+        modin_df._query_compiler.set_frame_index_cache(None)
     modin_df_cp.reset_index(inplace=True)
     pd_df_cp.reset_index(inplace=True)
     df_equals(modin_df_cp, pd_df_cp)
@@ -1662,7 +1662,7 @@ def test_reset_index_with_multi_index_no_drop(
     if col_fill != "no_col_fill":
         kwargs["col_fill"] = col_fill
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame.set_index_cache(None)
+        modin_df._query_compiler.set_frame_index_cache(None)
     eval_general(
         modin_df,
         pandas_df,
@@ -1785,7 +1785,7 @@ def test_reset_index_with_named_index(
         modin_df.index = modin_df.index
         modin_df.modin.to_pandas()
 
-        modin_df._query_compiler._modin_frame.set_index_cache(None)
+        modin_df._query_compiler.set_frame_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
     if test_async_reset_index:
@@ -1793,7 +1793,7 @@ def test_reset_index_with_named_index(
         modin_df.index = modin_df.index
         modin_df.modin.to_pandas()
 
-        modin_df._query_compiler._modin_frame.set_index_cache(None)
+        modin_df._query_compiler.set_frame_index_cache(None)
     modin_df.reset_index(drop=True, inplace=True)
     pandas_df.reset_index(drop=True, inplace=True)
     df_equals(modin_df, pandas_df)
@@ -1806,7 +1806,7 @@ def test_reset_index_with_named_index(
         modin_df.index = modin_df.index
         modin_df._to_pandas()
 
-        modin_df._query_compiler._modin_frame.set_index_cache(None)
+        modin_df._query_compiler.set_frame_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
 
@@ -1829,7 +1829,7 @@ def test_reset_index_metadata_update(index, test_async_reset_index):
         modin_df.index = modin_df.index
         modin_df._to_pandas()
 
-        modin_df._query_compiler._modin_frame.set_index_cache(None)
+        modin_df._query_compiler.set_frame_index_cache(None)
     eval_general(modin_df, pandas_df, lambda df: df.reset_index())
 
 
