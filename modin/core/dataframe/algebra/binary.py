@@ -70,18 +70,15 @@ def maybe_compute_dtypes_common_cast(
     The dtypes of the operands are supposed to be known.
     """
     if not trigger_computations:
-        if not first._modin_frame.has_materialized_dtypes:
+        if not first.frame_has_materialized_dtypes:
             return None
 
-        if (
-            isinstance(second, type(first))
-            and not second._modin_frame.has_materialized_dtypes
-        ):
+        if isinstance(second, type(first)) and not second.frame_has_materialized_dtypes:
             return None
 
-    dtypes_first = first._modin_frame.dtypes.to_dict()
+    dtypes_first = first.dtypes.to_dict()
     if isinstance(second, type(first)):
-        dtypes_second = second._modin_frame.dtypes.to_dict()
+        dtypes_second = second.dtypes.to_dict()
         columns_first = set(first.columns)
         columns_second = set(second.columns)
         common_columns = columns_first.intersection(columns_second)

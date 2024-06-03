@@ -1138,14 +1138,14 @@ def test_binary_op_preserve_dtypes():
     def setup_cache(df, has_cache=True):
         if has_cache:
             _ = df.dtypes
-            assert df._query_compiler._modin_frame.has_materialized_dtypes
+            assert df._query_compiler.frame_has_materialized_dtypes
         else:
-            df._query_compiler._modin_frame.set_dtypes_cache(None)
-            assert not df._query_compiler._modin_frame.has_materialized_dtypes
+            df._query_compiler.set_frame_dtypes_cache(None)
+            assert not df._query_compiler.frame_has_materialized_dtypes
         return df
 
     def assert_cache(df, has_cache=True):
-        assert not (has_cache ^ df._query_compiler._modin_frame.has_materialized_dtypes)
+        assert not (has_cache ^ df._query_compiler.frame_has_materialized_dtypes)
 
     # Check when `other` is a non-distributed object
     assert_cache(setup_cache(df) + 2.0)
@@ -1179,7 +1179,7 @@ def test_concat_dont_materialize_opposite_axis(axis):
         if axis:
             df._query_compiler._modin_frame.set_columns_cache(None)
         else:
-            df._query_compiler._modin_frame.set_index_cache(None)
+            df._query_compiler.set_frame_index_cache(None)
         assert_no_cache(df, axis)
         return df
 
@@ -1195,30 +1195,30 @@ def test_setitem_bool_preserve_dtypes():
     df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
     indexer = pd.Series([True, False, True, False])
 
-    assert df._query_compiler._modin_frame.has_materialized_dtypes
+    assert df._query_compiler.frame_has_materialized_dtypes
 
     # slice(None) as a col_loc
     df.loc[indexer] = 2.0
-    assert df._query_compiler._modin_frame.has_materialized_dtypes
+    assert df._query_compiler.frame_has_materialized_dtypes
 
     # list as a col_loc
     df.loc[indexer, ["a", "b"]] = 2.0
-    assert df._query_compiler._modin_frame.has_materialized_dtypes
+    assert df._query_compiler.frame_has_materialized_dtypes
 
     # scalar as a col_loc
     df.loc[indexer, "a"] = 2.0
-    assert df._query_compiler._modin_frame.has_materialized_dtypes
+    assert df._query_compiler.frame_has_materialized_dtypes
 
 
 def test_setitem_unhashable_preserve_dtypes():
     df = pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8]])
-    assert df._query_compiler._modin_frame.has_materialized_dtypes
+    assert df._query_compiler.frame_has_materialized_dtypes
 
     df2 = pd.DataFrame([[9, 9], [5, 5]])
-    assert df2._query_compiler._modin_frame.has_materialized_dtypes
+    assert df2._query_compiler.frame_has_materialized_dtypes
 
     df[[1, 2]] = df2
-    assert df._query_compiler._modin_frame.has_materialized_dtypes
+    assert df._query_compiler.frame_has_materialized_dtypes
 
 
 @pytest.mark.parametrize("modify_config", [{RangePartitioning: True}], indirect=True)
@@ -1246,7 +1246,7 @@ def test_reindex_preserve_dtypes(kwargs):
     df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
 
     reindexed_df = df.reindex(**kwargs)
-    assert reindexed_df._query_compiler._modin_frame.has_materialized_dtypes
+    assert reindexed_df._query_compiler.frame_has_materialized_dtypes
 
 
 class TestModinIndexIds:
@@ -2039,7 +2039,7 @@ class TestModinDtypes:
             )
             # setting columns cache to 'None', in order to prevent completing 'dtypes' with the materialized columns
             md_df._query_compiler._modin_frame.set_columns_cache(None)
-            md_df._query_compiler._modin_frame.set_dtypes_cache(
+            md_df._query_compiler.set_frame_dtypes_cache(
                 ModinDtypes(
                     DtypesDescriptor(
                         known_dtypes,
@@ -2100,7 +2100,7 @@ class TestModinDtypes:
 
         # 'df2' will have a 'DtypesDescriptor' with unknown dtypes for a column 'c'
         df2 = pd.DataFrame({"c": [2, 3, 4]})
-        df2._query_compiler._modin_frame.set_dtypes_cache(None)
+        df2._query_compiler.set_frame_dtypes_cache(None)
         dtypes_cache = df2._query_compiler._modin_frame._dtypes
         assert isinstance(
             dtypes_cache._value, DtypesDescriptor
@@ -2226,7 +2226,7 @@ class TestModinDtypes:
         """Verify that setting duplicated columns doesn't propagate any errors to a user."""
         df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [3.5, 4.4, 5.5, 6.6]})
         # making sure that dtypes are represented by an unmaterialized dtypes-descriptor
-        df._query_compiler._modin_frame.set_dtypes_cache(None)
+        df._query_compiler.set_frame_dtypes_cache(None)
 
         df.columns = ["a", "a"]
         assert df.dtypes.equals(
@@ -2252,8 +2252,8 @@ class TestModinDtypes:
         )
 
         # Drop actual dtypes in order to use partially-known dtypes
-        md_df1._query_compiler._modin_frame.set_dtypes_cache(None)
-        md_df2._query_compiler._modin_frame.set_dtypes_cache(None)
+        md_df1._query_compiler.set_frame_dtypes_cache(None)
+        md_df2._query_compiler.set_frame_dtypes_cache(None)
 
         md_res = pd.concat([md_df1, md_df2], axis=1)
         pd_res = pandas.concat([pd_df1, pd_df2], axis=1)
@@ -2282,9 +2282,9 @@ class TestZeroComputationDtypes:
         with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
             df = pd.DataFrame({"a": [1, 2], "b": [3, 4], "c": [3, 4]})
             if self_dtype == "materialized":
-                assert df._query_compiler._modin_frame.has_materialized_dtypes
+                assert df._query_compiler.frame_has_materialized_dtypes
             elif self_dtype == "partial":
-                df._query_compiler._modin_frame.set_dtypes_cache(
+                df._query_compiler.set_frame_dtypes_cache(
                     ModinDtypes(
                         DtypesDescriptor(
                             {"a": np.dtype("int64")},
@@ -2293,7 +2293,7 @@ class TestZeroComputationDtypes:
                     )
                 )
             elif self_dtype == "unknown":
-                df._query_compiler._modin_frame.set_dtypes_cache(None)
+                df._query_compiler.set_frame_dtypes_cache(None)
             else:
                 raise NotImplementedError(self_dtype)
 
@@ -2304,7 +2304,7 @@ class TestZeroComputationDtypes:
                     [np.dtype("int64"), value_dtype, np.dtype("int64")],
                     index=["a", "b", "c"],
                 )
-                assert df._query_compiler._modin_frame.has_materialized_dtypes
+                assert df._query_compiler.frame_has_materialized_dtypes
                 assert df.dtypes.equals(result_dtype)
             elif self_dtype == "partial":
                 result_dtype = DtypesDescriptor(
@@ -2339,9 +2339,9 @@ class TestZeroComputationDtypes:
         with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
             df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
             if self_dtype == "materialized":
-                assert df._query_compiler._modin_frame.has_materialized_dtypes
+                assert df._query_compiler.frame_has_materialized_dtypes
             elif self_dtype == "partial":
-                df._query_compiler._modin_frame.set_dtypes_cache(
+                df._query_compiler.set_frame_dtypes_cache(
                     ModinDtypes(
                         DtypesDescriptor(
                             {"a": np.dtype("int64")}, cols_with_unknown_dtypes=["b"]
@@ -2349,7 +2349,7 @@ class TestZeroComputationDtypes:
                     )
                 )
             elif self_dtype == "unknown":
-                df._query_compiler._modin_frame.set_dtypes_cache(None)
+                df._query_compiler.set_frame_dtypes_cache(None)
             else:
                 raise NotImplementedError(self_dtype)
 
@@ -2360,7 +2360,7 @@ class TestZeroComputationDtypes:
                     [value_dtype, np.dtype("int64"), np.dtype("int64")],
                     index=["c", "a", "b"],
                 )
-                assert df._query_compiler._modin_frame.has_materialized_dtypes
+                assert df._query_compiler.frame_has_materialized_dtypes
                 assert df.dtypes.equals(result_dtype)
             elif self_dtype == "partial":
                 result_dtype = DtypesDescriptor(
@@ -2390,7 +2390,7 @@ class TestZeroComputationDtypes:
             cols = [col for col in res.columns if col != "items"]
             res[cols] = res[cols] / res[cols].mean()
 
-            assert res._query_compiler._modin_frame.has_materialized_dtypes
+            assert res._query_compiler.frame_has_materialized_dtypes
 
         patch.assert_not_called()
 
@@ -2403,21 +2403,21 @@ class TestZeroComputationDtypes:
             if has_materialized_index:
                 assert df._query_compiler._modin_frame.has_materialized_index
             else:
-                df._query_compiler._modin_frame.set_index_cache(None)
+                df._query_compiler.set_frame_index_cache(None)
                 assert not df._query_compiler._modin_frame.has_materialized_index
-            assert df._query_compiler._modin_frame.has_materialized_dtypes
+            assert df._query_compiler.frame_has_materialized_dtypes
 
             res = df.reset_index(drop=drop)
             if drop:
                 # we droped the index, so columns and dtypes shouldn't change
-                assert res._query_compiler._modin_frame.has_materialized_dtypes
+                assert res._query_compiler.frame_has_materialized_dtypes
                 assert res.dtypes.equals(df.dtypes)
             else:
                 if has_materialized_index:
                     # we should have inserted index dtype into the descriptor,
                     # and since both of them are materialized, the result should be
                     # materialized too
-                    assert res._query_compiler._modin_frame.has_materialized_dtypes
+                    assert res._query_compiler.frame_has_materialized_dtypes
                     assert res.dtypes.equals(
                         pandas.Series(
                             [np.dtype("int64"), np.dtype("int64")], index=["index", "a"]
@@ -2436,7 +2436,7 @@ class TestZeroComputationDtypes:
 
             # case 2: 'df' has partial dtype by default
             df = pd.DataFrame({"a": [1, 2, 3], "b": [3, 4, 5]})
-            df._query_compiler._modin_frame.set_dtypes_cache(
+            df._query_compiler.set_frame_dtypes_cache(
                 ModinDtypes(
                     DtypesDescriptor(
                         {"a": np.dtype("int64")}, cols_with_unknown_dtypes=["b"]
@@ -2446,7 +2446,7 @@ class TestZeroComputationDtypes:
             if has_materialized_index:
                 assert df._query_compiler._modin_frame.has_materialized_index
             else:
-                df._query_compiler._modin_frame.set_index_cache(None)
+                df._query_compiler.set_frame_index_cache(None)
                 assert not df._query_compiler._modin_frame.has_materialized_index
 
             res = df.reset_index(drop=drop)

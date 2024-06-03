@@ -67,7 +67,7 @@ class TreeReduce(Operator):
             _axis = kwargs.get("axis") if axis is None else axis
 
             new_dtypes = None
-            if compute_dtypes and query_compiler._modin_frame.has_materialized_dtypes:
+            if compute_dtypes and query_compiler.frame_has_materialized_dtypes:
                 new_dtypes = str(compute_dtypes(query_compiler.dtypes, *args, **kwargs))
 
             return query_compiler.__constructor__(

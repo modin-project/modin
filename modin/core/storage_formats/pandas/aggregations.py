@@ -71,8 +71,8 @@ class CorrCovBuilder:
                     np.repeat(pandas.api.types.pandas_dtype("float"), len(new_columns)),
                     index=new_columns,
                 )
-            elif numeric_only and qc._modin_frame.has_materialized_dtypes:
-                old_dtypes = qc._modin_frame.dtypes
+            elif numeric_only and qc.frame_has_materialized_dtypes:
+                old_dtypes = qc.dtypes
 
                 new_columns = old_dtypes[old_dtypes.map(is_numeric_dtype)].index
                 new_index = new_columns.copy()
