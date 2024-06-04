@@ -2882,7 +2882,6 @@ class PandasDataframe(
             pandas_backend=self._pandas_backend,
         )
 
-    @lazy_metadata_decorator(apply_axis="both")
     def combine(self) -> PandasDataframe:
         """
         Create a single partition PandasDataframe from the partitions of the current dataframe.
@@ -2892,7 +2891,15 @@ class PandasDataframe(
         PandasDataframe
             A single partition PandasDataframe.
         """
-        partitions = self._partition_mgr_cls.combine(self._partitions)
+        new_index = None
+        new_columns = None
+        if self.has_index_cache:
+            new_index = self.index
+        if self.has_columns_cache:
+            new_columns = self.columns
+        partitions = self._partition_mgr_cls.combine(
+            self._partitions, new_index, new_columns
+        )
         result = self.__constructor__(
             partitions,
             index=self.copy_index_cache(),

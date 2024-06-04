@@ -1261,7 +1261,7 @@ class PandasDataframePartitionManager(
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
-    def combine(cls, partitions):
+    def combine(cls, partitions, new_index=None, new_columns=None):
         """
         Convert a NumPy 2D array of partitions to a NumPy 2D array of a single partition.
 
@@ -1281,7 +1281,11 @@ class PandasDataframePartitionManager(
         def to_pandas_remote(df, partition_shape, *dfs):
             """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
             return create_pandas_df_from_partitions(
-                (df,) + dfs, partition_shape, called_from_remote=True
+                (df,) + dfs,
+                partition_shape,
+                called_from_remote=True,
+                new_index=new_index,
+                new_columns=new_columns,
             )
 
         preprocessed_func = cls.preprocess_func(to_pandas_remote)

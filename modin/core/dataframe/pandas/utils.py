@@ -72,7 +72,11 @@ def concatenate(dfs, copy=True):
 
 
 def create_pandas_df_from_partitions(
-    partition_data, partition_shape, called_from_remote=False
+    partition_data,
+    partition_shape,
+    called_from_remote=False,
+    new_index=None,
+    new_columns=None,
 ):
     """
     Convert partition data of multiple dataframes to a single dataframe.
@@ -129,4 +133,9 @@ def create_pandas_df_from_partitions(
     if len(df_rows) == 0:
         return pandas.DataFrame()
     else:
-        return concatenate(df_rows, copy=not called_from_remote)
+        res = concatenate(df_rows, copy=not called_from_remote)
+        if new_index is not None:
+            res.index = new_index
+        if new_columns is not None:
+            res.columns = new_columns
+        return res
