@@ -2882,6 +2882,7 @@ class PandasDataframe(
             pandas_backend=self._pandas_backend,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def combine(self) -> PandasDataframe:
         """
         Create a single partition PandasDataframe from the partitions of the current dataframe.
@@ -2909,7 +2910,6 @@ class PandasDataframe(
             dtypes=self.copy_dtypes_cache(),
             pandas_backend=self._pandas_backend,
         )
-        result.synchronize_labels()
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
