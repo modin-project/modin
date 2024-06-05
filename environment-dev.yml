@@ -1,6 +1,7 @@
 name: modin
 channels:
   - conda-forge
+  - numpy_rc
 dependencies:
   - pip
 
