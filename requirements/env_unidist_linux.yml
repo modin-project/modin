@@ -1,7 +1,7 @@
 name: modin_on_unidist
 channels:
   - conda-forge
-  - numpy_rc
+  - conda-forge/label/numpy_rc
 dependencies:
   - pip
 
