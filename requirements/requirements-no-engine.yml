@@ -1,6 +1,6 @@
 channels:
   - conda-forge
-  - conda-forge/label/numpy_rc
+  - numpy_rc
 dependencies:
   - pip
 
