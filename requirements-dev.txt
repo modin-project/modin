@@ -21,7 +21,6 @@ xlrd>=2.0.1
 matplotlib>=3.6.3
 sqlalchemy>=2.0.0
 pandas-gbq>=0.19.0
-tables>=3.7.0
 # pymssql==2.2.8 broken: https://github.com/modin-project/modin/issues/6429
 pymssql>=2.1.5,!=2.2.8
 # psycopg devs recommend the other way of installation for production
