@@ -38,7 +38,6 @@ runs:
         activate-environment: ${{ inputs.activate-environment }}
         environment-file: ${{ inputs.environment-file }}
         python-version: ${{ inputs.python-version }}
-        channel-priority: strict
         # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
         # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
         use-only-tar-bz2: false
