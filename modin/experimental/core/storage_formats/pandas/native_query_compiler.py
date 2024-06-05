@@ -336,15 +336,6 @@ def _register_binary(op):
     """
 
     def binary_operator(df, other, **kwargs):
-
-        # if isinstance(other, pandas.DataFrame) and (
-        #     not df.empty
-        #     or (
-        #         len(other.columns) == 1
-        #         and other.columns[0] == MODIN_UNNAMED_SERIES_LABEL
-        #     )
-        # ):
-        #     other = other.squeeze()
         squeeze_other = kwargs.pop("broadcast", False) or kwargs.pop(
             "squeeze_other", False
         )
@@ -369,27 +360,8 @@ def _register_binary(op):
     return binary_operator
 
 
-def _register_exanding(func):
-    def binary_operator(df, fold_axis, rolling_args, *args, **kwargs):
-        # if
-        # other_for_default = (
-        #     other
-        #     if other is None
-        #     else (
-        #         other.to_pandas().squeeze(axis=1)
-        #         if squeeze_other
-        #         else other.to_pandas()
-        #     )
-        # )
-
-        # if isinstance(other, pandas.DataFrame) and (
-        #     not df.empty
-        #     or (
-        #         len(other.columns) == 1
-        #         and other.columns[0] == MODIN_UNNAMED_SERIES_LABEL
-        #     )
-        # ):
-        #     other = other.squeeze()
+def _register_expanding(func):
+    def expanding_operator(df, fold_axis, rolling_args, *args, **kwargs):
         squeeze_self = kwargs.pop("squeeze_self", False)
 
         if squeeze_self:
@@ -400,7 +372,7 @@ def _register_exanding(func):
 
         return func(roller, *args, **kwargs)
 
-    return binary_operator
+    return expanding_operator
 
 
 def _register_resample(op):
@@ -485,7 +457,7 @@ def _write_items(
     df,
     row_numeric_index,
     col_numeric_index,
-    broadcasted_items,
+    item,
     need_columns_reindex=True,
 ):  # noqa: GL08
     from modin.pandas.utils import broadcast_item, is_scalar
@@ -494,16 +466,16 @@ def _write_items(
         row_numeric_index = list(row_numeric_index)
     if not isinstance(col_numeric_index, slice):
         col_numeric_index = list(col_numeric_index)
-    if not is_scalar(broadcasted_items):
+    if not is_scalar(item):
         broadcasted_items, _ = broadcast_item(
             df,
             row_numeric_index,
             col_numeric_index,
-            broadcasted_items,
+            item,
             need_columns_reindex=need_columns_reindex,
         )
     else:
-        broadcasted_items = broadcasted_items
+        broadcasted_items = item
 
     if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
         broadcasted_items = broadcasted_items.squeeze()
@@ -817,46 +789,46 @@ class NativeQueryCompiler(BaseQueryCompiler):
     eval = _register_default_pandas(pandas.DataFrame.eval)
     explode = _register_default_pandas(pandas.DataFrame.explode)
     expanding_count = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.count)
+        _register_expanding(pandas.core.window.expanding.Expanding.count)
     )
     expanding_sum = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.sum)
+        _register_expanding(pandas.core.window.expanding.Expanding.sum)
     )
     expanding_mean = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.mean)
+        _register_expanding(pandas.core.window.expanding.Expanding.mean)
     )
     expanding_median = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.median)
+        _register_expanding(pandas.core.window.expanding.Expanding.median)
     )
     expanding_std = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.std)
+        _register_expanding(pandas.core.window.expanding.Expanding.std)
     )
     expanding_min = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.min)
+        _register_expanding(pandas.core.window.expanding.Expanding.min)
     )
     expanding_max = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.max)
+        _register_expanding(pandas.core.window.expanding.Expanding.max)
     )
     expanding_skew = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.skew)
+        _register_expanding(pandas.core.window.expanding.Expanding.skew)
     )
     expanding_kurt = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.kurt)
+        _register_expanding(pandas.core.window.expanding.Expanding.kurt)
     )
     expanding_sem = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.sem)
+        _register_expanding(pandas.core.window.expanding.Expanding.sem)
     )
     expanding_quantile = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.quantile)
+        _register_expanding(pandas.core.window.expanding.Expanding.quantile)
     )
     expanding_aggregate = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.aggregate)
+        _register_expanding(pandas.core.window.expanding.Expanding.aggregate)
     )
     expanding_var = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.var)
+        _register_expanding(pandas.core.window.expanding.Expanding.var)
     )
     expanding_rank = _register_default_pandas(
-        _register_exanding(pandas.core.window.expanding.Expanding.rank)
+        _register_expanding(pandas.core.window.expanding.Expanding.rank)
     )
 
     fillna = _register_default_pandas(_fillna)
@@ -1162,10 +1134,10 @@ class NativeQueryCompiler(BaseQueryCompiler):
                 else other.to_pandas()
             )
         )
-        # expanding_rank = _register_default_pandas(_register_exanding(pandas.core.window.expanding.Expanding.rank))
+        # expanding_rank = _register_default_pandas(_register_expanding(pandas.core.window.expanding.Expanding.rank))
 
         return _register_default_pandas(
-            _register_exanding(pandas.core.window.expanding.Expanding.cov)
+            _register_expanding(pandas.core.window.expanding.Expanding.cov)
         )(
             self,
             fold_axis,
@@ -1200,7 +1172,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
             )
         )
         return _register_default_pandas(
-            _register_exanding(pandas.core.window.expanding.Expanding.corr)
+            _register_expanding(pandas.core.window.expanding.Expanding.corr)
         )(
             self,
             fold_axis,
