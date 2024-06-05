@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains ``PlainPandasQueryCompiler`` class.
+Module contains ``NativeQueryCompiler`` class.
 
-``PlainPandasQueryCompiler`` is responsible for compiling efficient DataFrame algebra
+``NativeQueryCompiler`` is responsible for compiling efficient DataFrame algebra
 queries for small data and empty ``PandasDataFrame``.
 """
 
@@ -24,7 +24,7 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_list_like, is_scalar
 
-from modin.config.envvars import UsePlainPandasQueryCompiler
+from modin.config.envvars import NativeDataframeMode
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
@@ -608,7 +608,7 @@ def _register_default_pandas(
 
 
 @_inherit_docstrings(BaseQueryCompiler)
-class PlainPandasQueryCompiler(BaseQueryCompiler):
+class NativeQueryCompiler(BaseQueryCompiler):
     """
     Query compiler for the pandas storage format.
 
@@ -623,7 +623,7 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
     """
 
     def __init__(self, pandas_frame):
-        assert UsePlainPandasQueryCompiler.get()
+        assert NativeDataframeMode.get() == "Native_Pandas"
         if hasattr(pandas_frame, "_to_pandas"):
             pandas_frame = pandas_frame._to_pandas()
         if is_scalar(pandas_frame):
@@ -635,6 +635,59 @@ class PlainPandasQueryCompiler(BaseQueryCompiler):
 
     def execute(self):
         pass
+
+    @property
+    def frame_has_materialized_dtypes(self) -> bool:
+        """
+        Check if the undelying dataframe has materialized dtypes.
+
+        Returns
+        -------
+        bool
+        """
+        return True
+
+    def set_frame_dtypes_cache(self, dtypes):
+        """
+        Set dtypes cache for the underlying dataframe frame.
+
+        Parameters
+        ----------
+        dtypes : pandas.Series, ModinDtypes, callable or None
+        """
+        pass
+
+    def set_frame_index_cache(self, index):
+        """
+        Set index cache for underlying dataframe.
+
+        Parameters
+        ----------
+        index : sequence, callable or None
+        """
+        pass
+
+    @property
+    def frame_has_index_cache(self):
+        """
+        Check if the index cache exists for underlying dataframe.
+
+        Returns
+        -------
+        bool
+        """
+        return True
+
+    @property
+    def frame_has_dtypes_cache(self) -> bool:
+        """
+        Check if the dtypes cache exists for the underlying dataframe.
+
+        Returns
+        -------
+        bool
+        """
+        return True
 
     def take_2d_positional(self, index=None, columns=None):
         index = slice(None) if index is None else index

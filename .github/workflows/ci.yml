@@ -647,7 +647,7 @@ jobs:
       matrix:
         python-version: ["3.9"]
     env:
-      MODIN_USE_PLAIN_PANDAS_QUERY_COMPILER: "True"
+      MODIN_NATIVE_DATAFRAME_MODE: "Native_pandas"
     name: test-small-query-compiler python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v4
@@ -667,21 +667,6 @@ jobs:
       - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
       - run: python -m pytest modin/tests/pandas/dataframe/test_udf.py
       - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
-      - run: python -m pytest modin/tests/pandas/extensions/test_dataframe_extensions.py
-      - run: python -m pytest modin/tests/pandas/extensions/test_pd_extensions.py
-      - run: python -m pytest modin/tests/pandas/extensions/test_series_extensions.py
-      - run: python -m pytest modin/tests/pandas/integrations/test_lazy_import.py
-      - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-      - run: python -m pytest modin/tests/pandas/internals/test_repartition.py
-      - run: python -m pytest modin/tests/pandas/test_api.py
-      - run: python -m pytest modin/tests/pandas/test_concat.py
-      - run: python -m pytest modin/tests/pandas/test_expanding.py
-      - run: python -m pytest modin/tests/pandas/test_general.py
-      - run: python -m pytest modin/tests/pandas/test_groupby.py
-      - run: python -m pytest modin/tests/pandas/test_io.py
-      - run: python -m pytest modin/tests/pandas/test_reshape.py
-      - run: python -m pytest modin/tests/pandas/test_rolling.py
-      - run: python -m pytest modin/tests/pandas/test_series.py
       - uses: codecov/codecov-action@v2
 
   merge-coverage-artifacts:

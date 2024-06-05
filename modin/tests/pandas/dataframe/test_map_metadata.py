@@ -21,9 +21,9 @@ import pytest
 import modin.pandas as pd
 from modin.config import (
     MinRowPartitionSize,
+    NativeDataframeMode,
     NPartitions,
     StorageFormat,
-    UsePlainPandasQueryCompiler,
 )
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
@@ -304,10 +304,7 @@ def test_copy(data):
     assert new_modin_df.columns is not modin_df.columns
     assert new_modin_df.dtypes is not modin_df.dtypes
 
-    if (
-        get_current_execution() != "BaseOnPython"
-        and not UsePlainPandasQueryCompiler.get()
-    ):
+    if get_current_execution() != "BaseOnPython" and not NativeDataframeMode.get():
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
             modin_df._query_compiler._modin_frame._partitions,
@@ -574,8 +571,8 @@ def test_astype_int64_to_astype_category_github_issue_6259():
     reason="BaseOnPython doesn't have proxy categories",
 )
 @pytest.mark.skipif(
-    UsePlainPandasQueryCompiler.get(),
-    reason="PlainPandasQueryCompiler doesn't have proxy categories",
+    NativeDataframeMode.get() is not None,
+    reason="NativeQueryCompiler doesn't have proxy categories",
 )
 class TestCategoricalProxyDtype:
     """This class contains test and test usilities for the ``LazyProxyCategoricalDtype`` class."""
@@ -800,8 +797,8 @@ def test_convert_dtypes_dtype_backend(dtype_backend):
 
 
 @pytest.mark.skipif(
-    UsePlainPandasQueryCompiler.get(),
-    reason="PlainPandasQueryCompiler does not contain partitions.",
+    NativeDataframeMode.get() is not None,
+    reason="NativeQueryCompiler does not contain partitions.",
 )
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
@@ -827,7 +824,7 @@ def test_convert_dtypes_5653():
     modin_part1 = pd.DataFrame({"col1": ["a", "b", "c", "d"]})
     modin_part2 = pd.DataFrame({"col1": [None, None, None, None]})
     modin_df = pd.concat([modin_part1, modin_part2])
-    if StorageFormat.get() == "Pandas" and not UsePlainPandasQueryCompiler.get():
+    if StorageFormat.get() == "Pandas" and not NativeDataframeMode.get():
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     modin_df = modin_df.convert_dtypes()
     assert len(modin_df.dtypes) == 1

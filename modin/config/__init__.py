@@ -39,6 +39,7 @@ from modin.config.envvars import (
     MinPartitionSize,
     MinRowPartitionSize,
     ModinNumpy,
+    NativeDataframeMode,
     NPartitions,
     PersistentPickle,
     ProgressBar,
@@ -53,7 +54,6 @@ from modin.config.envvars import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     TrackFileLeaks,
-    UsePlainPandasQueryCompiler,
 )
 from modin.config.pubsub import Parameter, ValueSource, context
 
@@ -69,7 +69,7 @@ __all__ = [
     "CpuCount",
     "GpuCount",
     "Memory",
-    "UsePlainPandasQueryCompiler",
+    "NativeDataframeMode",
     # Ray specific
     "IsRayCluster",
     "RayRedisAddress",

@@ -26,11 +26,10 @@ import warnings
 import pandas
 from pandas.util._decorators import doc
 
-from modin.config import  UsePlainPandasQueryCompiler
-
+from modin.config import NativeDataframeMode
 from modin.core.io import BaseIO
-from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
-    PlainPandasQueryCompiler,
+from modin.experimental.core.storage_formats.pandas.native_query_compiler import (
+    NativeQueryCompiler,
 )
 from modin.utils import get_current_execution
 
@@ -173,9 +172,9 @@ class BaseFactory(object):
         method="io.from_pandas",
     )
     def _from_pandas(cls, df):
-        if UsePlainPandasQueryCompiler.get():
+        if NativeDataframeMode.get():
             df_copy = df.copy()
-            return PlainPandasQueryCompiler(df_copy)
+            return NativeQueryCompiler(df_copy)
         return cls.io_cls.from_pandas(df)
 
     @classmethod
