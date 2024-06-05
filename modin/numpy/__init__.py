@@ -15,23 +15,7 @@ from . import linalg
 from .arr import array
 from .array_creation import ones_like, tri, zeros_like
 from .array_shaping import append, hstack, ravel, shape, split, transpose
-from .constants import (
-    NAN,
-    NINF,
-    NZERO,
-    PINF,
-    PZERO,
-    Inf,
-    Infinity,
-    NaN,
-    e,
-    euler_gamma,
-    inf,
-    infty,
-    nan,
-    newaxis,
-    pi,
-)
+from .constants import e, euler_gamma, inf, nan, newaxis, pi
 from .logic import (
     all,
     any,

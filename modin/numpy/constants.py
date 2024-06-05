@@ -12,37 +12,12 @@
 # governing permissions and limitations under the License.
 
 # flake8: noqa
-from numpy import (
-    NAN,
-    NINF,
-    NZERO,
-    PINF,
-    PZERO,
-    Inf,
-    Infinity,
-    NaN,
-    e,
-    euler_gamma,
-    inf,
-    infty,
-    nan,
-    newaxis,
-    pi,
-)
+from numpy import e, euler_gamma, inf, nan, newaxis, pi
 
 __all__ = [
-    "Inf",
-    "Infinity",
-    "NAN",
-    "NINF",
-    "NZERO",
-    "NaN",
-    "PINF",
-    "PZERO",
     "e",
     "euler_gamma",
     "inf",
-    "infty",
     "nan",
     "newaxis",
     "pi",
