@@ -54,7 +54,7 @@ setup(
     install_requires=[
         "pandas>=2.2,<2.3",
         "packaging>=21.0",
-        "numpy>=2.0.0rc1",
+        "numpy>=1.22.4",
         "fsspec>=2022.11.0",
         "psutil>=5.8.0",
     ],
