@@ -85,6 +85,7 @@ jobs:
         run: |
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+          MODIN_ENGINE=ray python -m pytest modin/tests/numpy
       - name: Ensure MPI engine start up
         # Install a working MPI implementation beforehand so mpi4py can link to it
         run: |
