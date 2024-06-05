@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "42 0 * * WED"
   push:
+    tags:        
+      - '*'
   workflow_dispatch:
 
 jobs:
@@ -19,6 +21,9 @@ jobs:
       with:
         fetch-depth: 0
         fetch-tags: true
+    - name: Checkout latest git tag
+      run: git checkout $(git describe --tags "$(git rev-list --tags --max-count=1)")
+      if: github.event_name == 'push'
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -35,5 +40,5 @@ jobs:
         path: ./dist/
 
     - name: Publish Modin wheel to PyPI
-      if: startsWith(github.ref, 'refs/tags')
+      if: github.event_name == 'push'
       uses: pypa/gh-action-pypi-publish@release/v1
