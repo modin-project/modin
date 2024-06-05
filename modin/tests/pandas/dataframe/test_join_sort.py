@@ -613,7 +613,7 @@ def test_sort_multiindex(sort_remaining):
     for kwargs in [{"level": 0}, {"axis": 0}, {"axis": 1}]:
         with (
             warns_that_defaulting_to_pandas()
-            if not UsePlainPandasQueryCompiler.get()
+            if not NativeDataframeMode.get()
             else contextlib.nullcontext()
         ):
             df_equals(

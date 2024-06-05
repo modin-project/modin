@@ -18,7 +18,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, UsePlainPandasQueryCompiler
+from modin.config import NativeDataframeMode, NPartitions
 from modin.tests.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
@@ -71,7 +71,7 @@ def test_dataframe(data, min_periods, axis, method, kwargs):
 def test_dataframe_corr_cov(data, min_periods, axis, method):
     with (
         warns_that_defaulting_to_pandas()
-        if not UsePlainPandasQueryCompiler.get()
+        if not NativeDataframeMode.get()
         else contextlib.nullcontext()
     ):
         eval_general(
@@ -87,7 +87,7 @@ def test_dataframe_corr_cov_with_self(method):
     mdf, pdf = create_test_dfs(test_data["float_nan_data"])
     with (
         warns_that_defaulting_to_pandas()
-        if not UsePlainPandasQueryCompiler.get()
+        if not NativeDataframeMode.get()
         else contextlib.nullcontext()
     ):
         eval_general(
