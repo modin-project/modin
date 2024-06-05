@@ -2484,7 +2484,6 @@ class TestExcel:
         )
 
 
-@pytest.mark.skip
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
