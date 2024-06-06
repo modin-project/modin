@@ -1,0 +1,44 @@
+name: Publish Modin wheel to PyPI
+
+on:
+  schedule:
+    - cron: "42 0 * * WED"
+  push:
+    tags:        
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build-n-publish:
+    name: Build and publish Modin wheel to PyPI
+    environment: release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+    - name: Checkout latest git tag
+      run: git checkout $(git describe --tags "$(git rev-list --tags --max-count=1)")
+      if: github.event_name == 'push'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.9.x"
+
+    - name: Install/update tools
+      run: python3 -m pip install --upgrade build wheel
+    - name: Build a pure Python wheel
+      run: python3 setup.py sdist bdist_wheel
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: modin-wheel-and-source-tarball 
+        path: ./dist/
+
+    - name: Publish Modin wheel to PyPI
+      if: github.event_name == 'push'
+      uses: pypa/gh-action-pypi-publish@release/v1
