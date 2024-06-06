@@ -131,11 +131,13 @@ def create_pandas_df_from_partitions(
     del partition_data
 
     if len(df_rows) == 0:
-        return pandas.DataFrame()
+        res = pandas.DataFrame()
     else:
         res = concatenate(df_rows, copy=not called_from_remote)
-        if new_index is not None:
-            res.index = new_index
-        if new_columns is not None:
-            res.columns = new_columns
-        return res
+
+    if new_index is not None:
+        res.index = new_index
+    if new_columns is not None:
+        res.columns = new_columns
+
+    return res

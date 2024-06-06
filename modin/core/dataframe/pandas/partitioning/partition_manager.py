@@ -1275,7 +1275,7 @@ class PandasDataframePartitionManager(
         np.ndarray
             A NumPy 2D array of a single partition.
         """
-        if partitions.size <= 1:
+        if partitions.size <= 1 and new_index is None and new_columns is None:
             return partitions
 
         def to_pandas_remote(df, partition_shape, *dfs):

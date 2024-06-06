@@ -2893,9 +2893,9 @@ class PandasDataframe(
         """
         new_index = None
         new_columns = None
-        if self.has_index_cache:
+        if self._deferred_index:
             new_index = self.index
-        if self.has_columns_cache:
+        if self._deferred_column:
             new_columns = self.columns
         partitions = self._partition_mgr_cls.combine(
             self._partitions, new_index, new_columns
