@@ -89,6 +89,12 @@ def create_pandas_df_from_partitions(
         Shape of the partitions NumPy array.
     called_from_remote : bool, default: False
         Flag used to check if explicit copy should be done in concat.
+    new_index : pandas.Index, optional
+        Index for propagation into internal partitions.
+        Optimization allowing to do this in one remote kernel.
+    new_columns : pandas.Index, optional
+        Columns for propagation into internal partitions.
+        Optimization allowing to do this in one remote kernel.
 
     Returns
     -------

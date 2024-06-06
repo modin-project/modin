@@ -1269,6 +1269,12 @@ class PandasDataframePartitionManager(
         ----------
         partitions : np.ndarray
             The partitions which have to be converted to a single partition.
+        new_index : pandas.Index, optional
+            Index for propagation into internal partitions.
+            Optimization allowing to do this in one remote kernel.
+        new_columns : pandas.Index, optional
+            Columns for propagation into internal partitions.
+            Optimization allowing to do this in one remote kernel.
 
         Returns
         -------
