@@ -2891,7 +2891,15 @@ class PandasDataframe(
         PandasDataframe
             A single partition PandasDataframe.
         """
-        partitions = self._partition_mgr_cls.combine(self._partitions)
+        new_index = None
+        new_columns = None
+        if self._deferred_index:
+            new_index = self.index
+        if self._deferred_column:
+            new_columns = self.columns
+        partitions = self._partition_mgr_cls.combine(
+            self._partitions, new_index, new_columns
+        )
         result = self.__constructor__(
             partitions,
             index=self.copy_index_cache(),
@@ -2909,7 +2917,6 @@ class PandasDataframe(
             dtypes=self.copy_dtypes_cache(),
             pandas_backend=self._pandas_backend,
         )
-        result.synchronize_labels()
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
