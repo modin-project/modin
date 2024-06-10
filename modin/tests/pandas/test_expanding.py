@@ -11,14 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import contextlib
-
 import numpy as np
 import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NativeDataframeMode, NPartitions
+from modin.config import NPartitions
 from modin.tests.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
@@ -69,11 +67,7 @@ def test_dataframe(data, min_periods, axis, method, kwargs):
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("method", ["corr", "cov"])
 def test_dataframe_corr_cov(data, min_periods, axis, method):
-    with (
-        warns_that_defaulting_to_pandas()
-        if not NativeDataframeMode.get()
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         eval_general(
             *create_test_dfs(data),
             lambda df: getattr(
@@ -85,11 +79,7 @@ def test_dataframe_corr_cov(data, min_periods, axis, method):
 @pytest.mark.parametrize("method", ["corr", "cov"])
 def test_dataframe_corr_cov_with_self(method):
     mdf, pdf = create_test_dfs(test_data["float_nan_data"])
-    with (
-        warns_that_defaulting_to_pandas()
-        if not NativeDataframeMode.get()
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         eval_general(
             mdf,
             pdf,

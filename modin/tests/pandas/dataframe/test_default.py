@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import contextlib
 import io
 import warnings
 
@@ -88,11 +87,7 @@ pytestmark = [
 )
 def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
-    with (
-        warns_that_defaulting_to_pandas()
-        if not NativeDataframeMode.get()
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         operation = getattr(modin_df, op)
         if make_args is not None:
             operation(**make_args(modin_df))
@@ -106,11 +101,7 @@ def test_ops_defaulting_to_pandas(op, make_args):
 
 def test_style():
     data = test_data_values[0]
-    with (
-        warns_that_defaulting_to_pandas()
-        if not NativeDataframeMode.get()
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).style
 
 
@@ -118,11 +109,7 @@ def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
-    with (
-        warns_that_defaulting_to_pandas()
-        if not NativeDataframeMode.get()
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         df.to_period().to_timestamp()
 
 
@@ -151,11 +138,7 @@ def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     df = pd.DataFrame({"s": series})
-    with (
-        warns_that_defaulting_to_pandas()
-        if not NativeDataframeMode.get()
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         df.asfreq(freq="30S")
