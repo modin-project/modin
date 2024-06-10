@@ -294,8 +294,6 @@ def _groupby(agg_name):
         groupby_obj = df.groupby(by=by, axis=axis, **groupby_kwargs)
         if agg_name == "agg":
             if isinstance(agg_func, dict):
-                # Related to pandas issue when dict with list of funcs as value is passed in agg_func
-                # https://github.com/pandas-dev/pandas/issues/39103
                 agg_func = {
                     k: v[0] if isinstance(v, list) and len(v) == 1 else v
                     for k, v in agg_func.items()
@@ -312,12 +310,6 @@ def _groupby(agg_name):
         return result
 
     return groupby_callable
-
-
-def _take_2d(df, index=None, columns=None):  # noqa: GL08
-    columns = columns if columns is not None else slice(None)
-    index = index if index is not None else slice(None)
-    return df.iloc[index, columns]
 
 
 def _register_binary(op):
@@ -346,7 +338,6 @@ def _register_binary(op):
 
         if squeeze_self:
             df = df.squeeze(axis=1)
-
         result = getattr(df, op)(other, **kwargs)
         if (
             not isinstance(result, pandas.Series)
@@ -727,6 +718,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
         pandas.DataFrame.update, in_place=True, df_copy=True
     )
     diff = _register_default_pandas(pandas.DataFrame.diff)
+    dot = _register_default_pandas(_register_binary("dot"))
     drop = _register_default_pandas(_drop)
     dropna = _register_default_pandas(pandas.DataFrame.dropna)  # axis values switched?
     dt_ceil = _register_default_pandas(_dt_func_map("ceil"))
@@ -859,7 +851,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
     groupby_quantile = _register_default_pandas(_groupby("quantile"))
     groupby_rank = _register_default_pandas(_groupby("rank"))
     groupby_shift = _register_default_pandas(_groupby("shift"))
-    groupby_size = _register_default_pandas(_groupby("size"))
     groupby_skew = _register_default_pandas(_groupby("skew"))
     groupby_std = _register_default_pandas(_groupby("std"))
     groupby_sum = _register_default_pandas(_groupby("sum"))
@@ -988,9 +979,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
     rtruediv = _register_default_pandas(_register_binary("rtruediv"))
     searchsorted = _register_default_pandas(pandas.Series.searchsorted, is_series=True)
     sem = _register_default_pandas(pandas.DataFrame.sem)
-    series_update = _register_default_pandas(
-        pandas.Series.update, is_series=True, in_place=True, df_copy=True
-    )
     series_view = _register_default_pandas(pandas.Series.view, is_series=True)
     set_index_from_columns = _register_default_pandas(pandas.DataFrame.set_index)
     setitem = _register_default_pandas(_setitem)
@@ -1054,7 +1042,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
     sub = _register_default_pandas(_register_binary("sub"))
     sum = _register_default_pandas(pandas.DataFrame.sum)
     sum_min_count = _register_default_pandas(pandas.DataFrame.sum)
-    take_2d = _register_default_pandas(_take_2d)
     to_datetime = _register_default_pandas(_to_datetime)
     to_numeric = _register_default_pandas(_to_numeric)
     to_numpy = _register_default_pandas(pandas.DataFrame.to_numpy, return_modin=False)
@@ -1094,24 +1081,14 @@ class NativeQueryCompiler(BaseQueryCompiler):
             include="all",
         )
 
-    def dot(self, other, squeeze_self=None, squeeze_other=None):
-        other = try_cast_to_pandas(other)
-        if squeeze_other:
-            other = other.squeeze()
-        if squeeze_self:
-            result = self._modin_frame.squeeze(axis=1).dot(other)
-        else:
-            result = self._modin_frame.dot(other)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = "__reduced__"
-            result = result.to_frame()
-        if is_list_like(result):
-            result = pandas.DataFrame(result)
-        else:
-            result = pandas.DataFrame([result])
-
-        return self.__constructor__(result)
+    def series_update(self, other, **kwargs):
+        return _register_default_pandas(_register_binary("update"), in_place=True)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
+        )
 
     def expanding_cov(
         self,
@@ -1134,8 +1111,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
                 else other.to_pandas()
             )
         )
-        # expanding_rank = _register_default_pandas(_register_expanding(pandas.core.window.expanding.Expanding.rank))
-
         return _register_default_pandas(
             _register_expanding(pandas.core.window.expanding.Expanding.cov)
         )(
@@ -1184,6 +1159,31 @@ class NativeQueryCompiler(BaseQueryCompiler):
             squeeze_self=squeeze_self,
             **kwargs,
         )
+
+    def groupby_size(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        result = _register_default_pandas(_groupby("size"))(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+            method="size",
+        )
+        if not groupby_kwargs.get("as_index", False):
+            # Renaming 'MODIN_UNNAMED_SERIES_LABEL' to a proper name
+
+            result.columns = result.columns[:-1].append(pandas.Index(["size"]))
+        return result
 
     def get_axis(self, axis):
         return self._modin_frame.index if axis == 0 else self._modin_frame.columns

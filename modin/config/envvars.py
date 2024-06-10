@@ -915,16 +915,15 @@ def _check_vars() -> None:
 
 class NativeDataframeMode(EnvironmentVariable, type=str):
     """
-    The mode of execution used for handling dataframes in Modin
+    The mode of execution used for handling dataframes in Modin.
 
     When the env variable is set to None the PandasQueryCompiler would be used
-    which would lead to modin executing dataframes in distributed fashion.
+    which would lead to Modin executing dataframes in distributed fashion.
     When set to Native_pandas NativeQueryCompiler is used which handles the
     dataframes without distributing, falling back to native pandas functions.
 
     In future more execution modes can be added for single node execution so
     keeping the parameter as string.
-
     """
 
     varname = "MODIN_NATIVE_DATAFRAME_MODE"
