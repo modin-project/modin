@@ -13,6 +13,7 @@
 
 import os
 
+import pandas
 import pytest
 
 import modin.config as cfg
@@ -79,34 +80,47 @@ def test_custom_help(make_custom_envvar):
     assert "custom var" in make_custom_envvar.get_help()
 
 
-def test_doc_module():
-    import pandas
+class TestDocModule:
+    """
+    Test using a module to replace default docstrings.
+    """
 
-    import modin.pandas as pd
-    from modin.config import DocModule
+    def test_overrides(self):
+        cfg.DocModule.put("modin.tests.config.docs_module")
 
-    DocModule.put("modin.tests.config.docs_module")
+        # Test for override
+        assert (
+            pd.DataFrame.apply.__doc__
+            == "This is a test of the documentation module for DataFrame."
+        )
+        # Test for pandas doc when method is not defined on the plugin module
+        assert pandas.DataFrame.isna.__doc__ in pd.DataFrame.isna.__doc__
+        assert pandas.DataFrame.isnull.__doc__ in pd.DataFrame.isnull.__doc__
+        # Test for override
+        assert (
+            pd.Series.isna.__doc__
+            == "This is a test of the documentation module for Series."
+        )
+        # Test for pandas doc when method is not defined on the plugin module
+        assert pandas.Series.isnull.__doc__ in pd.Series.isnull.__doc__
+        assert pandas.Series.apply.__doc__ in pd.Series.apply.__doc__
+        # Test for override
+        assert pd.read_csv.__doc__ == "Test override for functions on the module."
+        # Test for pandas doc when function is not defined on module.
+        assert pandas.read_table.__doc__ in pd.read_table.__doc__
 
-    # Test for override
-    assert (
-        pd.DataFrame.apply.__doc__
-        == "This is a test of the documentation module for DataFrame."
-    )
-    # Test for pandas doc when method is not defined on the plugin module
-    assert pandas.DataFrame.isna.__doc__ in pd.DataFrame.isna.__doc__
-    assert pandas.DataFrame.isnull.__doc__ in pd.DataFrame.isnull.__doc__
-    # Test for override
-    assert (
-        pd.Series.isna.__doc__
-        == "This is a test of the documentation module for Series."
-    )
-    # Test for pandas doc when method is not defined on the plugin module
-    assert pandas.Series.isnull.__doc__ in pd.Series.isnull.__doc__
-    assert pandas.Series.apply.__doc__ in pd.Series.apply.__doc__
-    # Test for override
-    assert pd.read_csv.__doc__ == "Test override for functions on the module."
-    # Test for pandas doc when function is not defined on module.
-    assert pandas.read_table.__doc__ in pd.read_table.__doc__
+    def test_not_redefining_classes_modin_issue_7138(self):
+        original_dataframe_class = pd.DataFrame
+
+        cfg.DocModule.put("modin.tests.config.docs_module")
+
+        # Test for override
+        assert (
+            pd.DataFrame.apply.__doc__
+            == "This is a test of the documentation module for DataFrame."
+        )
+
+        assert pd.DataFrame is original_dataframe_class
 
 
 @pytest.mark.skipif(cfg.Engine.get() != "Ray", reason="Ray specific test")
