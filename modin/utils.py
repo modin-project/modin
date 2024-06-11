@@ -389,7 +389,9 @@ def _documentable_obj(obj: object) -> bool:
     """Check if `obj` docstring could be patched."""
     return bool(
         callable(obj)
+        and not inspect.isclass(obj)
         or (isinstance(obj, property) and obj.fget)
+        or (isinstance(obj, functools.cached_property))
         or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
     )
 
@@ -432,12 +434,7 @@ def _inherit_docstrings_in_place(
         overwrite_existing = True
 
     if parent not in excluded:
-        _replace_doc(
-            parent,
-            cls_or_func,
-            overwrite_existing,
-            apilink,
-        )
+        _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
 
     if not isinstance(cls_or_func, types.FunctionType):
         seen = set()
