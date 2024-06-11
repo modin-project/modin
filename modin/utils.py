@@ -403,7 +403,7 @@ def _update_inherited_docstrings(doc_module: DocModule) -> None:
         The current DocModule
     """
     for doc_inheritance_call in _docstring_inheritance_calls:
-        doc_inheritance_call(doc_module.get())
+        doc_inheritance_call(doc_module=doc_module.get())  # type: ignore[call-arg]
 
 
 def _inherit_docstrings_in_place(
