@@ -386,7 +386,19 @@ _docstring_inheritance_calls: list[Callable[[str], None]] = []
 
 
 def _documentable_obj(obj: object) -> bool:
-    """Check if `obj` docstring could be patched."""
+    """
+    Check whether we can replace the docstring of `obj`.
+
+    Parameters
+    ----------
+    obj : object
+        Object whose docstring we want to replace.
+
+    Returns
+    -------
+    bool
+        Whether we can replace the docstring.
+    """
     return bool(
         callable(obj)
         and not inspect.isclass(obj)
@@ -399,10 +411,11 @@ def _documentable_obj(obj: object) -> bool:
 def _update_inherited_docstrings(doc_module: DocModule) -> None:
     """
     Update all inherited docstrings.
+
     Parameters
     ----------
-    doc_module: DocModule
-        The current DocModule
+    doc_module : DocModule
+        The current DocModule.
     """
     for doc_inheritance_call in _docstring_inheritance_calls:
         doc_inheritance_call(doc_module=doc_module.get())  # type: ignore[call-arg]
@@ -416,6 +429,27 @@ def _inherit_docstrings_in_place(
     overwrite_existing: bool = False,
     apilink: Optional[Union[str, List[str]]] = None,
 ) -> None:
+    """
+    Replace `cls_or_func` docstrings with `parent` docstrings in place.
+
+    Parameters
+    ----------
+    cls_or_func : Fn
+        The class or function whose docstrings we need to update.
+    doc_module : str
+        The docs module.
+    parent : object
+        Parent object from which the decorated object inherits __doc__.
+    excluded : list, default: []
+        List of parent objects from which the class does not
+        inherit docstrings.
+    overwrite_existing : bool, default: False
+        Allow overwriting docstrings that already exist in
+        the decorated class.
+    apilink : str | List[str], optional
+        If non-empty, insert the link(s) to pandas API documentation.
+        Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
+    """
     # Import the docs module and get the class (e.g. `DataFrame`).
     imported_doc_module = importlib.import_module(doc_module)
     # Set the default parent so we can use it in case some docs are missing from
