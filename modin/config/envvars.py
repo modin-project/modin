@@ -13,7 +13,6 @@
 
 """Module houses Modin configs originated from environment variables."""
 
-import importlib
 import os
 import secrets
 import sys
@@ -770,36 +769,6 @@ class DocModule(EnvironmentVariable, type=ExactStr):
 
     varname = "MODIN_DOC_MODULE"
     default = "pandas"
-
-    @classmethod
-    def put(cls, value: str) -> None:
-        """
-        Assign a value to the DocModule config.
-
-        Parameters
-        ----------
-        value : str
-            Config value to set.
-        """
-        super().put(value)
-        # Reload everything to apply the documentation. This is required since the
-        # docs might already have been created and the implementation will assume
-        # that the new docs are applied when the config is set. This set of operations
-        # does this.
-        import modin.pandas as pd
-
-        importlib.reload(pd.accessor)
-        importlib.reload(pd.base)
-        importlib.reload(pd.dataframe)
-        importlib.reload(pd.general)
-        importlib.reload(pd.groupby)
-        importlib.reload(pd.io)
-        importlib.reload(pd.iterator)
-        importlib.reload(pd.series)
-        importlib.reload(pd.series_utils)
-        importlib.reload(pd.utils)
-        importlib.reload(pd.window)
-        importlib.reload(pd)
 
 
 class DaskThreadsPerWorker(EnvironmentVariable, type=int):

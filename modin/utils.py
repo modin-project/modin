@@ -378,6 +378,129 @@ def _replace_doc(
         target_obj.__doc__ = doc
 
 
+# This is a map from objects whose docstrings we are overriding to functions that
+# take a DocModule string and override the docstring according to the
+# DocModule. When we update DocModule, we can use this map to update all
+# inherited docstrings.
+_docstring_inheritance_calls: list[Callable[[str], None]] = []
+
+
+def _documentable_obj(obj: object) -> bool:
+    """
+    Check whether we can replace the docstring of `obj`.
+
+    Parameters
+    ----------
+    obj : object
+        Object whose docstring we want to replace.
+
+    Returns
+    -------
+    bool
+        Whether we can replace the docstring.
+    """
+    return bool(
+        callable(obj)
+        and not inspect.isclass(obj)
+        or (isinstance(obj, property) and obj.fget)
+        or (isinstance(obj, functools.cached_property))
+        or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
+    )
+
+
+def _update_inherited_docstrings(doc_module: DocModule) -> None:
+    """
+    Update all inherited docstrings.
+
+    Parameters
+    ----------
+    doc_module : DocModule
+        The current DocModule.
+    """
+    _doc_module = doc_module.get()
+    for doc_inheritance_call in _docstring_inheritance_calls:
+        doc_inheritance_call(doc_module=_doc_module)  # type: ignore[call-arg]
+
+
+def _inherit_docstrings_in_place(
+    cls_or_func: Fn,
+    doc_module: str,
+    parent: object,
+    excluded: List[object],
+    overwrite_existing: bool = False,
+    apilink: Optional[Union[str, List[str]]] = None,
+) -> None:
+    """
+    Replace `cls_or_func` docstrings with `parent` docstrings in place.
+
+    Parameters
+    ----------
+    cls_or_func : Fn
+        The class or function whose docstrings we need to update.
+    doc_module : str
+        The docs module.
+    parent : object
+        Parent object from which the decorated object inherits __doc__.
+    excluded : list, default: []
+        List of parent objects from which the class does not
+        inherit docstrings.
+    overwrite_existing : bool, default: False
+        Allow overwriting docstrings that already exist in
+        the decorated class.
+    apilink : str | List[str], optional
+        If non-empty, insert the link(s) to pandas API documentation.
+        Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
+    """
+    # Import the docs module and get the class (e.g. `DataFrame`).
+    imported_doc_module = importlib.import_module(doc_module)
+    # Set the default parent so we can use it in case some docs are missing from
+    # parent module.
+    default_parent = parent
+    # Try to get the parent object from the doc module, and if it isn't there,
+    # get it from parent instead. We only do this if we are overriding pandas
+    # documentation. We don't touch other docs.
+    if doc_module != DocModule.default and "pandas" in str(
+        getattr(parent, "__module__", "")
+    ):
+        parent = getattr(imported_doc_module, getattr(parent, "__name__", ""), parent)
+    if parent != default_parent:
+        # Reset API link in case the docs are overridden.
+        apilink = None
+        overwrite_existing = True
+
+    if parent not in excluded:
+        _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
+
+    if not isinstance(cls_or_func, types.FunctionType):
+        seen = set()
+        for base in cls_or_func.__mro__:  # type: ignore[attr-defined]
+            if base is object:
+                continue
+            for attr, obj in base.__dict__.items():
+                if attr in seen:
+                    continue
+                seen.add(attr)
+                # Try to get the attribute from the docs class first, then
+                # from the default parent (pandas), and if it's not in either,
+                # set `parent_obj` to `None`.
+                parent_obj = getattr(parent, attr, getattr(default_parent, attr, None))
+                if (
+                    parent_obj in excluded
+                    or not _documentable_obj(parent_obj)
+                    or not _documentable_obj(obj)
+                ):
+                    continue
+
+                _replace_doc(
+                    parent_obj,
+                    obj,
+                    overwrite_existing,
+                    apilink,
+                    parent_cls=cls_or_func,
+                    attr_name=attr,
+                )
+
+
 def _inherit_docstrings(
     parent: object,
     excluded: List[object] = [],
@@ -416,71 +539,24 @@ def _inherit_docstrings(
     are not defined in target class (but are defined in the ancestor class),
     which means that ancestor class attribute docstrings could also change.
     """
-    # Import the docs module and get the class (e.g. `DataFrame`).
-    imported_doc_module = importlib.import_module(DocModule.get())
-    # Set the default parent so we can use it in case some docs are missing from
-    # parent module.
-    default_parent = parent
-    # Try to get the parent object from the doc module, and if it isn't there,
-    # get it from parent instead. We only do this if we are overriding pandas
-    # documentation. We don't touch other docs.
-    if DocModule.get() != DocModule.default and "pandas" in str(
-        getattr(parent, "__module__", "")
-    ):
-        parent = getattr(imported_doc_module, getattr(parent, "__name__", ""), parent)
-    if parent != default_parent:
-        # Reset API link in case the docs are overridden.
-        apilink = None
-        overwrite_existing = True
-
-    def _documentable_obj(obj: object) -> bool:
-        """Check if `obj` docstring could be patched."""
-        return bool(
-            callable(obj)
-            and not inspect.isclass(obj)
-            or (isinstance(obj, property) and obj.fget)
-            or (isinstance(obj, functools.cached_property))
-            or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
-        )
 
     def decorator(cls_or_func: Fn) -> Fn:
-        if parent not in excluded:
-            _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
-
-        if not isinstance(cls_or_func, types.FunctionType):
-            seen = set()
-            for base in cls_or_func.__mro__:  # type: ignore[attr-defined]
-                if base is object:
-                    continue
-                for attr, obj in base.__dict__.items():
-                    if attr in seen:
-                        continue
-                    seen.add(attr)
-                    # Try to get the attribute from the docs class first, then
-                    # from the default parent (pandas), and if it's not in either,
-                    # set `parent_obj` to `None`.
-                    parent_obj = getattr(
-                        parent, attr, getattr(default_parent, attr, None)
-                    )
-                    if (
-                        parent_obj in excluded
-                        or not _documentable_obj(parent_obj)
-                        or not _documentable_obj(obj)
-                    ):
-                        continue
-
-                    _replace_doc(
-                        parent_obj,
-                        obj,
-                        overwrite_existing,
-                        apilink,
-                        parent_cls=cls_or_func,
-                        attr_name=attr,
-                    )
-
+        inherit_docstring_in_place = functools.partial(
+            _inherit_docstrings_in_place,
+            cls_or_func=cls_or_func,
+            parent=parent,
+            excluded=excluded,
+            overwrite_existing=overwrite_existing,
+            apilink=apilink,
+        )
+        inherit_docstring_in_place(doc_module=DocModule.get())
+        _docstring_inheritance_calls.append(inherit_docstring_in_place)
         return cls_or_func
 
     return decorator
+
+
+DocModule.subscribe(_update_inherited_docstrings)
 
 
 def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
