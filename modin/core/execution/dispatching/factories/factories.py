@@ -28,9 +28,7 @@ from pandas.util._decorators import doc
 
 from modin.config import NativeDataframeMode
 from modin.core.io import BaseIO
-from modin.experimental.core.storage_formats.pandas.native_query_compiler import (
-    NativeQueryCompiler,
-)
+from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 from modin.utils import get_current_execution
 
 _doc_abstract_factory_class = """
@@ -172,7 +170,7 @@ class BaseFactory(object):
         method="io.from_pandas",
     )
     def _from_pandas(cls, df):
-        if NativeDataframeMode.get():
+        if NativeDataframeMode.get() == "Pandas":
             df_copy = df.copy()
             return NativeQueryCompiler(df_copy)
         return cls.io_cls.from_pandas(df)

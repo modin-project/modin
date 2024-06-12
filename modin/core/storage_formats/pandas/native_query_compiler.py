@@ -406,8 +406,6 @@ def _fillna(df, value, **kwargs):  # noqa: GL08
         df = df.squeeze(axis=1)
     if squeeze_value and isinstance(value, pandas.DataFrame):
         value = value.squeeze(axis=1)
-    # if len(df.columns) == 1 and df.columns[0] == "__reduced__":
-    #     df = df["__reduced__"]
     return df.fillna(value, **kwargs)
 
 
@@ -495,12 +493,10 @@ def _get_dummies(df, columns, **kwargs):  # noqa: GL08
 def _register_default_pandas(
     func,
     is_series=False,
-    squeeze_series=False,
     squeeze_args=False,
     squeeze_kwargs=False,
-    return_modin=True,
+    return_raw=False,
     in_place=False,
-    df_copy=False,
     filter_kwargs=[],
 ):
     """
@@ -512,18 +508,14 @@ def _register_default_pandas(
         Function to apply.
     is_series : bool, default: False
         If True, the passed frame will always be squeezed to a series.
-    squeeze_series : bool, default: False
-        If True, the passed frame will always be squeezed to a series if there is a single column named "__reduced__".
     squeeze_args : bool, default: False
         If True, all passed arguments will be squeezed.
     squeeze_kwargs : bool, default: False
         If True, all passed key word arguments will be squeezed.
-    return_modin : bool, default: True
-        If True, the result will always try to convert to DataFrame or Series.
+    return_raw : bool, default: False
+        If True, and the result not DataFrame or Series it is returned as is without wrapping in query compiler.
     in_place : bool, default: False
         If True, the specified function will be applied on the passed frame in place.
-    df_copy : bool, default: False
-        If True, the specified function will be applied to a copy of the passed frame.
     filter_kwargs : list, default: []
         List of key word argument names to remove.
 
@@ -535,17 +527,9 @@ def _register_default_pandas(
 
     def caller(query_compiler, *args, **kwargs):
         df = query_compiler._modin_frame
-        if df_copy:
-            df = df.copy()
         if is_series:
             df = df.squeeze(axis=1)
-        exclude_names = [
-            # "broadcast",
-            "fold_axis",
-            # "squeeze_self",
-            # "squeeze_value",
-            "ignore_indices",
-        ] + filter_kwargs
+        exclude_names = ["fold_axis"] + filter_kwargs
         kwargs = kwargs.copy()
         for name in exclude_names:
             kwargs.pop(name, None)
@@ -553,12 +537,11 @@ def _register_default_pandas(
         kwargs = try_cast_to_pandas(kwargs, squeeze=squeeze_kwargs)
         result = func(df, *args, **kwargs)
         inplace_method = kwargs.get("inplace", False)
-
         if in_place:
             inplace_method = in_place
         if inplace_method:
             result = df
-        if not (return_modin or isinstance(result, (pandas.Series, pandas.DataFrame))):
+        if return_raw and not isinstance(result, (pandas.Series, pandas.DataFrame)):
             return result
         if isinstance(result, pandas.Series):
             if result.name is None:
@@ -576,8 +559,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
     Query compiler for the pandas storage format.
 
     This class translates common query compiler API into
-    plain pandas to execute operations on small data
-    depending on the threshold.
+    native library functions (e.g., pandas) to execute operations
+    on small data depending on the threshold.
 
     Parameters
     ----------
@@ -585,8 +568,11 @@ class NativeQueryCompiler(BaseQueryCompiler):
         Pandas frame to query with the compiled queries.
     """
 
-    def __init__(self, pandas_frame):
-        assert NativeDataframeMode.get() == "Native_Pandas"
+    _modin_frame: pandas.DataFrame
+    _shape_hint: Optional[str]
+
+    def __init__(self, pandas_frame, shape_hint: Optional[str] = None):
+        assert NativeDataframeMode.get() == "Pandas"
         if hasattr(pandas_frame, "_to_pandas"):
             pandas_frame = pandas_frame._to_pandas()
         if is_scalar(pandas_frame):
@@ -595,6 +581,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
             pandas_frame = pandas.DataFrame(pandas_frame)
 
         self._modin_frame = pandas_frame
+        self._shape_hint = shape_hint
 
     def execute(self):
         pass
@@ -617,6 +604,10 @@ class NativeQueryCompiler(BaseQueryCompiler):
         Parameters
         ----------
         dtypes : pandas.Series, ModinDtypes, callable or None
+
+        Notes
+        -----
+        This function is for consistency with other QCs, dtypes should be assigned directly on the frame.
         """
         pass
 
@@ -627,6 +618,10 @@ class NativeQueryCompiler(BaseQueryCompiler):
         Parameters
         ----------
         index : sequence, callable or None
+
+        Notes
+        -----
+        This function is for consistency with other QCs, dtypes should be assigned directly on the frame.
         """
         pass
 
@@ -665,27 +660,25 @@ class NativeQueryCompiler(BaseQueryCompiler):
         self._modin_frame.loc[row_loc._modin_frame.squeeze(axis=1), col_loc] = item
         return self.__constructor__(self._modin_frame)
 
-    __and__ = _register_default_pandas(pandas.DataFrame.__and__, squeeze_series=True)
+    __and__ = _register_default_pandas(pandas.DataFrame.__and__)
     __dir__ = _register_default_pandas(pandas.DataFrame.__dir__)
-    __eq__ = _register_default_pandas(pandas.DataFrame.__eq__, squeeze_series=True)
+    __eq__ = _register_default_pandas(pandas.DataFrame.__eq__)
     __format__ = _register_default_pandas(pandas.DataFrame.__format__)
-    __ge__ = _register_default_pandas(pandas.DataFrame.__ge__, squeeze_series=True)
-    __gt__ = _register_default_pandas(pandas.DataFrame.__gt__, squeeze_series=True)
-    __le__ = _register_default_pandas(pandas.DataFrame.__le__, squeeze_series=True)
-    __lt__ = _register_default_pandas(pandas.DataFrame.__lt__, squeeze_series=True)
-    __ne__ = _register_default_pandas(pandas.DataFrame.__ne__, squeeze_series=True)
-    __or__ = _register_default_pandas(pandas.DataFrame.__or__, squeeze_series=True)
-    __rand__ = _register_default_pandas(pandas.DataFrame.__rand__, squeeze_series=True)
-    __reduce__ = _register_default_pandas(
-        pandas.DataFrame.__reduce__, return_modin=False
-    )
+    __ge__ = _register_default_pandas(pandas.DataFrame.__ge__)
+    __gt__ = _register_default_pandas(pandas.DataFrame.__gt__)
+    __le__ = _register_default_pandas(pandas.DataFrame.__le__)
+    __lt__ = _register_default_pandas(pandas.DataFrame.__lt__)
+    __ne__ = _register_default_pandas(pandas.DataFrame.__ne__)
+    __or__ = _register_default_pandas(pandas.DataFrame.__or__)
+    __rand__ = _register_default_pandas(pandas.DataFrame.__rand__)
+    __reduce__ = _register_default_pandas(pandas.DataFrame.__reduce__, return_raw=True)
     __reduce_ex__ = _register_default_pandas(
-        pandas.DataFrame.__reduce_ex__, return_modin=False
+        pandas.DataFrame.__reduce_ex__, return_raw=True
     )
-    __ror__ = _register_default_pandas(pandas.DataFrame.__ror__, squeeze_series=True)
-    __rxor__ = _register_default_pandas(pandas.DataFrame.__rxor__, squeeze_series=True)
+    __ror__ = _register_default_pandas(pandas.DataFrame.__ror__)
+    __rxor__ = _register_default_pandas(pandas.DataFrame.__rxor__)
     __sizeof__ = _register_default_pandas(pandas.DataFrame.__sizeof__)
-    __xor__ = _register_default_pandas(pandas.DataFrame.__xor__, squeeze_series=True)
+    __xor__ = _register_default_pandas(pandas.DataFrame.__xor__)
     abs = _register_default_pandas(pandas.DataFrame.abs)
     add = _register_default_pandas(_register_binary("add"))
     all = _register_default_pandas(pandas.DataFrame.all)
@@ -696,10 +689,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
     astype = _register_default_pandas(pandas.DataFrame.astype)
     case_when = _register_default_pandas(pandas.Series.case_when)
     cat_codes = _register_default_pandas(lambda ser: ser.cat.codes, is_series=True)
-    combine = _register_default_pandas(_combine, squeeze_series=True)
-    combine_first = _register_default_pandas(
-        lambda df, other: df.combine_first(other), squeeze_series=True
-    )
+    combine = _register_default_pandas(_combine)
+    combine_first = _register_default_pandas(lambda df, other: df.combine_first(other))
     compare = _register_default_pandas(pandas.DataFrame.compare)
     concat = _register_default_pandas(_concat)
     conj = _register_default_pandas(
@@ -714,9 +705,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     cumprod = _register_default_pandas(pandas.DataFrame.cumprod)
     cumsum = _register_default_pandas(pandas.DataFrame.cumsum)
     delitem = _register_default_pandas(_delitem)
-    df_update = _register_default_pandas(
-        pandas.DataFrame.update, in_place=True, df_copy=True
-    )
+    df_update = _register_default_pandas(pandas.DataFrame.update, in_place=True)
     diff = _register_default_pandas(pandas.DataFrame.diff)
     dot = _register_default_pandas(_register_binary("dot"))
     drop = _register_default_pandas(_drop)
@@ -825,7 +814,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
     fillna = _register_default_pandas(_fillna)
     first_valid_index = _register_default_pandas(
-        pandas.DataFrame.first_valid_index, return_modin=False
+        pandas.DataFrame.first_valid_index, return_raw=True
     )
     floordiv = _register_default_pandas(_register_binary("floordiv"))
     ge = _register_default_pandas(_register_binary("ge"), filter_kwargs=["dtypes"])
@@ -859,7 +848,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     idxmax = _register_default_pandas(pandas.DataFrame.idxmax)
     idxmin = _register_default_pandas(pandas.DataFrame.idxmin)
     infer_objects = _register_default_pandas(
-        pandas.DataFrame.infer_objects, return_modin=False
+        pandas.DataFrame.infer_objects, return_raw=True
     )
     insert = _register_default_pandas(
         pandas.DataFrame.insert, in_place=True, squeeze_args=True
@@ -876,9 +865,9 @@ class NativeQueryCompiler(BaseQueryCompiler):
     )
     isna = _register_default_pandas(pandas.DataFrame.isna)
     join = _register_default_pandas(pandas.DataFrame.join)
-    kurt = _register_default_pandas(pandas.DataFrame.kurt, return_modin=False)
+    kurt = _register_default_pandas(pandas.DataFrame.kurt, return_raw=True)
     last_valid_index = _register_default_pandas(
-        pandas.DataFrame.last_valid_index, return_modin=False
+        pandas.DataFrame.last_valid_index, return_raw=True
     )
     le = _register_default_pandas(_register_binary("le"), filter_kwargs=["dtypes"])
     lt = _register_default_pandas(_register_binary("lt"), filter_kwargs=["dtypes"])
@@ -886,8 +875,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
     mask = _register_default_pandas(pandas.DataFrame.mask)
     max = _register_default_pandas(pandas.DataFrame.max)
     map = _register_default_pandas(pandas.DataFrame.map)
-    mean = _register_default_pandas(pandas.DataFrame.mean, return_modin=False)
-    median = _register_default_pandas(pandas.DataFrame.median, return_modin=False)
+    mean = _register_default_pandas(pandas.DataFrame.mean, return_raw=True)
+    median = _register_default_pandas(pandas.DataFrame.median, return_raw=True)
     melt = _register_default_pandas(pandas.DataFrame.melt)
     memory_usage = _register_default_pandas(pandas.DataFrame.memory_usage)
     merge = _register_default_pandas(pandas.DataFrame.merge)
@@ -899,9 +888,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     negative = _register_default_pandas(pandas.DataFrame.__neg__)
     nlargest = _register_default_pandas(pandas.DataFrame.nlargest)
     notna = _register_default_pandas(pandas.DataFrame.notna)
-    nsmallest = _register_default_pandas(
-        lambda df, **kwargs: df.nsmallest(**kwargs), squeeze_series=True
-    )
+    nsmallest = _register_default_pandas(lambda df, **kwargs: df.nsmallest(**kwargs))
     nunique = _register_default_pandas(pandas.DataFrame.nunique)
     pivot = _register_default_pandas(pandas.DataFrame.pivot)
     pivot_table = _register_default_pandas(pandas.DataFrame.pivot_table)
@@ -982,7 +969,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     series_view = _register_default_pandas(pandas.Series.view, is_series=True)
     set_index_from_columns = _register_default_pandas(pandas.DataFrame.set_index)
     setitem = _register_default_pandas(_setitem)
-    skew = _register_default_pandas(pandas.DataFrame.skew, return_modin=False)
+    skew = _register_default_pandas(pandas.DataFrame.skew, return_raw=True)
     sort_index = _register_default_pandas(_sort_index)
     sort_columns_by_row_values = _register_default_pandas(
         lambda df, columns, **kwargs: df.sort_values(by=columns, axis=1, **kwargs)
@@ -1044,13 +1031,13 @@ class NativeQueryCompiler(BaseQueryCompiler):
     sum_min_count = _register_default_pandas(pandas.DataFrame.sum)
     to_datetime = _register_default_pandas(_to_datetime)
     to_numeric = _register_default_pandas(_to_numeric)
-    to_numpy = _register_default_pandas(pandas.DataFrame.to_numpy, return_modin=False)
+    to_numpy = _register_default_pandas(pandas.DataFrame.to_numpy, return_raw=True)
     to_timedelta = _register_default_pandas(
         lambda ser, *args, **kwargs: pandas.to_timedelta(ser, *args, **kwargs),
         is_series=True,
     )
     transpose = _register_default_pandas(pandas.DataFrame.transpose)
-    truediv = _register_default_pandas(_register_binary("truediv"), squeeze_series=True)
+    truediv = _register_default_pandas(_register_binary("truediv"))
     unstack = _register_default_pandas(pandas.DataFrame.unstack)
     var = _register_default_pandas(pandas.DataFrame.var)
     where = _register_default_pandas(pandas.DataFrame.where)

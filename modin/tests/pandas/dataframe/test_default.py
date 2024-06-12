@@ -124,7 +124,7 @@ def test_to_numpy(data):
 
 
 @pytest.mark.skipif(
-    NativeDataframeMode.get() is not None,
+    NativeDataframeMode.get() == "Pandas",
     reason="NativeQueryCompiler does not contain partitions.",
 )
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -298,7 +298,7 @@ class TestCorr:
                 {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
             )
             modin_df = pd.concat([modin_df.iloc[:3], modin_df.iloc[3:]])
-            if not NativeDataframeMode.get():
+            if NativeDataframeMode.get() == "Default":
                 assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
             eval_general(
                 modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods)
@@ -318,7 +318,7 @@ class TestCorr:
         reason="doesn't make sense for non-partitioned executions",
     )
     @pytest.mark.skipif(
-        NativeDataframeMode.get() is not None,
+        NativeDataframeMode.get() == "Pandas",
         reason="NativeQueryCompiler does not contain partitions.",
     )
     def test_corr_nans_in_different_partitions(self):
@@ -611,7 +611,10 @@ def test_pivot(data, index, columns, values, request):
         or "default-one_column-several_columns_index" in request.node.callspec.id
         or "default-one_column-one_column_index" in request.node.callspec.id
         or (
-            (current_execution in ("BaseOnPython",) or NativeDataframeMode.get())
+            (
+                current_execution in ("BaseOnPython",)
+                or NativeDataframeMode.get() == "Pandas"
+            )
             and index is lib.no_default
         )
     ):
@@ -992,7 +995,7 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
             marks=pytest.mark.xfail(
                 condition=Engine.get() in ("Ray", "Unidist", "Dask", "Python")
                 and StorageFormat.get() != "Base"
-                and NativeDataframeMode.get() is None,
+                and NativeDataframeMode.get() == "Default",
                 reason="https://github.com/modin-project/modin/issues/6399",
             ),
         ),

@@ -211,7 +211,7 @@ def test_comparison(data, op, other, request):
     reason="Modin on this engine doesn't create virtual partitions.",
 )
 @pytest.mark.skipif(
-    NativeDataframeMode.get() is not None,
+    NativeDataframeMode.get() == "Pandas",
     reason="NativeQueryCompiler does not contain partitions.",
 )
 @pytest.mark.parametrize(

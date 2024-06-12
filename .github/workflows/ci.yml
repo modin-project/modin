@@ -222,7 +222,7 @@ jobs:
       with:
         filters: |
           test-small-query-compiler:
-            - 'modin/experimental/core/storage_formats/pandas/small_query_compiler.py'
+            - 'modin/experimental/core/storage_formats/pandas/native_query_compiler.py'
             - 'modin/core/storage_formats/pandas/query_compiler.py'
             - 'modin/core/storage_formats/base/query_compiler.py'
           shared: &shared
@@ -647,7 +647,7 @@ jobs:
       matrix:
         python-version: ["3.9"]
     env:
-      MODIN_NATIVE_DATAFRAME_MODE: "Native_pandas"
+      MODIN_NATIVE_DATAFRAME_MODE: "Pandas"
     name: test-small-query-compiler python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v4
