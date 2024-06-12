@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple, Type, Union
 if TYPE_CHECKING:
     from .config import Engine, StorageFormat
 
-from ._version import get_versions
+from . import _version
 
 
 def custom_formatwarning(
@@ -64,5 +64,4 @@ def set_execution(
     return old_engine, old_storage_format
 
 
-__version__ = get_versions()["version"]
-del get_versions
+__version__ = _version.get_versions()["version"]
