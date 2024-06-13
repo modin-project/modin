@@ -15,7 +15,7 @@ import numpy
 from numpy import e, euler_gamma, inf, nan, newaxis, pi
 from packaging import version
 
-if version.parse(numpy.__version__) < version.parse("2.0.0"):
+if version.parse(numpy.__version__) < version.parse("2.0.0b1"):
     from numpy import NAN, NINF, NZERO, PINF, PZERO, Inf, Infinity, NaN, infty
 
 __all__ = [
@@ -27,7 +27,7 @@ __all__ = [
     "pi",
 ]
 
-if version.parse(numpy.__version__) < version.parse("2.0.0"):
+if version.parse(numpy.__version__) < version.parse("2.0.0b1"):
     __all__ += [
         "Inf",
         "Infinity",

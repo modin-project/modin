@@ -20,7 +20,7 @@ from .array_creation import ones_like, tri, zeros_like
 from .array_shaping import append, hstack, ravel, shape, split, transpose
 from .constants import e, euler_gamma, inf, nan, newaxis, pi
 
-if version.parse(numpy.__version__) < version.parse("2.0.0"):
+if version.parse(numpy.__version__) < version.parse("2.0.0b1"):
     from .constants import (
         NAN,
         NINF,
@@ -169,7 +169,7 @@ __all__ = [  # noqa: F405
     "append",
     "tri",
 ]
-if version.parse(numpy.__version__) < version.parse("2.0.0"):
+if version.parse(numpy.__version__) < version.parse("2.0.0b1"):
     __all__ += [
         "Inf",
         "Infinity",
