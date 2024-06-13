@@ -62,7 +62,7 @@ class CorrCovBuilder:
                     method=method, min_periods=min_periods, numeric_only=numeric_only
                 )
 
-            if not numeric_only and qc._modin_frame.has_materialized_columns:
+            if not numeric_only and qc.frame_has_materialized_columns:
                 new_index, new_columns = (
                     qc._modin_frame.copy_columns_cache(),
                     qc._modin_frame.copy_columns_cache(),

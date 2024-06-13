@@ -623,7 +623,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = None
             if kwargs["drop"]:
                 dtypes = self._modin_frame.copy_dtypes_cache()
-                if self._modin_frame.has_columns_cache:
+                if self.frame_has_columns_cache:
                     new_columns = self._modin_frame.copy_columns_cache(
                         copy_lengths=True
                     )
@@ -642,7 +642,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     dtypes = None
                 if (
                     # can precompute new columns if we know columns and index names
-                    self._modin_frame.has_materialized_columns
+                    self.frame_has_materialized_columns
                     and index_dtypes is not None
                 ):
                     empty_index = (

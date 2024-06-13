@@ -4532,6 +4532,28 @@ class BaseQueryCompiler(
         """
         return self._modin_frame.has_materialized_dtypes
 
+    @property
+    def frame_has_materialized_columns(self) -> bool:
+        """
+        Check if the undelying dataframe has materialized columns.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.has_materialized_columns
+
+    @property
+    def frame_has_materialized_index(self) -> bool:
+        """
+        Check if the undelying dataframe has materialized index.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.has_materialized_index
+
     def set_frame_dtypes_cache(self, dtypes):
         """
         Set dtypes cache for the underlying dataframe frame.
@@ -4552,6 +4574,16 @@ class BaseQueryCompiler(
         """
         self._modin_frame.set_index_cache(index)
 
+    def set_frame_columns_cache(self, index):
+        """
+        Set columns cache for underlying dataframe.
+
+        Parameters
+        ----------
+        index : sequence, callable or None
+        """
+        self._modin_frame.set_columns_cache(index)
+
     @property
     def frame_has_index_cache(self):
         """
@@ -4562,6 +4594,17 @@ class BaseQueryCompiler(
         bool
         """
         return self._modin_frame.has_index_cache
+
+    @property
+    def frame_has_columns_cache(self):
+        """
+        Check if the columns cache exists for underlying dataframe.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.has_columns_cache
 
     @property
     def frame_has_dtypes_cache(self) -> bool:
