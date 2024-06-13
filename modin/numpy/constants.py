@@ -11,39 +11,31 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-# flake8: noqa
-from numpy import (
-    NAN,
-    NINF,
-    NZERO,
-    PINF,
-    PZERO,
-    Inf,
-    Infinity,
-    NaN,
-    e,
-    euler_gamma,
-    inf,
-    infty,
-    nan,
-    newaxis,
-    pi,
-)
+import numpy
+from numpy import e, euler_gamma, inf, nan, newaxis, pi
+from packaging import version
+
+if version.parse(numpy.__version__) < version.parse("2.0.0"):
+    from numpy import NAN, NINF, NZERO, PINF, PZERO, Inf, Infinity, NaN, infty
 
 __all__ = [
-    "Inf",
-    "Infinity",
-    "NAN",
-    "NINF",
-    "NZERO",
-    "NaN",
-    "PINF",
-    "PZERO",
     "e",
     "euler_gamma",
     "inf",
-    "infty",
     "nan",
     "newaxis",
     "pi",
 ]
+
+if version.parse(numpy.__version__) < version.parse("2.0.0"):
+    __all__ += [
+        "Inf",
+        "Infinity",
+        "NAN",
+        "NINF",
+        "NZERO",
+        "NaN",
+        "PINF",
+        "PZERO",
+        "infty",
+    ]

@@ -80,11 +80,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
-      - run: python -m pip install -e ".[all]"
+      - run: python -m pip install -r requirements-dev.txt
       - name: Ensure Ray and Dask engines start up
         run: |
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+          MODIN_ENGINE=ray python -m pytest modin/tests/numpy
+      - uses: ./.github/actions/run-core-tests/group_1
+      - uses: ./.github/actions/run-core-tests/group_2
+      - uses: ./.github/actions/run-core-tests/group_3
+      - uses: ./.github/actions/run-core-tests/group_4
       - name: Ensure MPI engine start up
         # Install a working MPI implementation beforehand so mpi4py can link to it
         run: |
