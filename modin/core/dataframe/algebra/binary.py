@@ -205,13 +205,10 @@ def maybe_build_dtypes_series(
     Finds a union of columns and finds dtypes for all these columns.
     """
     if not trigger_computations:
-        if not first._modin_frame.has_columns_cache:
+        if not first.frame_has_columns_cache:
             return None
 
-        if (
-            isinstance(second, type(first))
-            and not second._modin_frame.has_columns_cache
-        ):
+        if isinstance(second, type(first)) and not second.frame_has_columns_cache:
             return None
 
     columns_first = set(first.columns)
@@ -384,8 +381,8 @@ class Binary(Operator):
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     if (
-                        query_compiler._modin_frame.has_materialized_columns
-                        and other._modin_frame.has_materialized_columns
+                        query_compiler.frame_has_materialized_columns
+                        and other.frame_has_materialized_columns
                     ):
                         if (
                             len(query_compiler.columns) == 1
@@ -408,8 +405,8 @@ class Binary(Operator):
                     )
                 else:
                     if (
-                        query_compiler._modin_frame.has_materialized_columns
-                        and other._modin_frame.has_materialized_columns
+                        query_compiler.frame_has_materialized_columns
+                        and other.frame_has_materialized_columns
                     ):
                         if (
                             len(query_compiler.columns) == 1
@@ -440,7 +437,7 @@ class Binary(Operator):
                     )
                 else:
                     if (
-                        query_compiler._modin_frame.has_materialized_columns
+                        query_compiler.frame_has_materialized_columns
                         and len(query_compiler._modin_frame.columns) == 1
                         and is_scalar(other)
                     ):

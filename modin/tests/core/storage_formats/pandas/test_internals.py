@@ -1171,13 +1171,13 @@ def test_concat_dont_materialize_opposite_axis(axis):
 
     def assert_no_cache(df, axis):
         if axis:
-            assert not df._query_compiler._modin_frame.has_materialized_columns
+            assert not df._query_compiler.frame_has_materialized_columns
         else:
-            assert not df._query_compiler._modin_frame.has_materialized_index
+            assert not df._query_compiler.frame_has_materialized_index
 
     def remove_cache(df, axis):
         if axis:
-            df._query_compiler._modin_frame.set_columns_cache(None)
+            df._query_compiler.set_frame_columns_cache(None)
         else:
             df._query_compiler.set_frame_index_cache(None)
         assert_no_cache(df, axis)
@@ -2038,7 +2038,7 @@ class TestModinDtypes:
                 or remaining_dtype is not None
             )
             # setting columns cache to 'None', in order to prevent completing 'dtypes' with the materialized columns
-            md_df._query_compiler._modin_frame.set_columns_cache(None)
+            md_df._query_compiler.set_frame_columns_cache(None)
             md_df._query_compiler.set_frame_dtypes_cache(
                 ModinDtypes(
                     DtypesDescriptor(
@@ -2401,10 +2401,10 @@ class TestZeroComputationDtypes:
             # case 1: 'df' has complete dtype by default
             df = pd.DataFrame({"a": [1, 2, 3]})
             if has_materialized_index:
-                assert df._query_compiler._modin_frame.has_materialized_index
+                assert df._query_compiler.frame_has_materialized_index
             else:
                 df._query_compiler.set_frame_index_cache(None)
-                assert not df._query_compiler._modin_frame.has_materialized_index
+                assert not df._query_compiler.frame_has_materialized_index
             assert df._query_compiler.frame_has_materialized_dtypes
 
             res = df.reset_index(drop=drop)
@@ -2444,10 +2444,10 @@ class TestZeroComputationDtypes:
                 )
             )
             if has_materialized_index:
-                assert df._query_compiler._modin_frame.has_materialized_index
+                assert df._query_compiler.frame_has_materialized_index
             else:
                 df._query_compiler.set_frame_index_cache(None)
-                assert not df._query_compiler._modin_frame.has_materialized_index
+                assert not df._query_compiler.frame_has_materialized_index
 
             res = df.reset_index(drop=drop)
             if drop:

@@ -216,7 +216,7 @@ class MergeImpl:
             # it's fine too, we can also decide that by columns, which tend to be already
             # materialized quite often compared to the indexes.
             keep_index = False
-            if left._modin_frame.has_materialized_index:
+            if left.frame_has_materialized_index:
                 keep_index = should_keep_index(left, right)
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
@@ -286,7 +286,7 @@ class MergeImpl:
         new_columns = None
         new_dtypes = None
 
-        if not left._modin_frame.has_materialized_columns:
+        if not left.frame_has_materialized_columns:
             return new_columns, new_dtypes
 
         if left_on is None and right_on is None:
