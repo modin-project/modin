@@ -31,7 +31,8 @@ from modin.config import (
     BenchmarkMode,
     CpuCount,
     Engine,
-    MinPartitionSize,
+    MinColumnPartitionSize,
+    MinRowPartitionSize,
     NPartitions,
     PersistentPickle,
     ProgressBar,
@@ -1024,9 +1025,12 @@ class PandasDataframePartitionManager(
             A NumPy array with partitions (with dimensions or not).
         """
         num_splits = NPartitions.get()
-        min_block_size = MinPartitionSize.get()
-        row_chunksize = compute_chunksize(df.shape[0], num_splits, min_block_size)
-        col_chunksize = compute_chunksize(df.shape[1], num_splits, min_block_size)
+        min_row_block_size = MinRowPartitionSize.get()
+        min_column_block_size = MinColumnPartitionSize.get()
+        row_chunksize = compute_chunksize(df.shape[0], num_splits, min_row_block_size)
+        col_chunksize = compute_chunksize(
+            df.shape[1], num_splits, min_column_block_size
+        )
 
         bar_format = (
             "{l_bar}{bar}{r_bar}"

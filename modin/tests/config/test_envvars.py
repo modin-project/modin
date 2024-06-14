@@ -193,7 +193,14 @@ def test_context_manager_update_config(modify_config):
 
 @pytest.mark.parametrize(
     "config_name",
-    ["NPartitions", "CpuCount", "LogMemoryInterval", "LogFileSize", "MinPartitionSize"],
+    [
+        "NPartitions",
+        "CpuCount",
+        "LogMemoryInterval",
+        "LogFileSize",
+        "MinRowPartitionSize",
+        "MinColumnPartitionSize",
+    ],
 )
 def test_wrong_values(config_name):
     config: cfg.EnvironmentVariable = getattr(cfg, config_name)

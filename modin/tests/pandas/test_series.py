@@ -1110,12 +1110,12 @@ def test_astype_categorical(data):
 
 @pytest.mark.parametrize("data", [["a", "a", "b", "c", "c", "d", "b", "d"]])
 @pytest.mark.parametrize(
-    "set_min_partition_size",
+    "set_min_row_partition_size",
     [2, 4],
-    ids=["four_partitions", "two_partitions"],
+    ids=["four_row_partitions", "two_row_partitions"],
     indirect=True,
 )
-def test_astype_categorical_issue5722(data, set_min_partition_size):
+def test_astype_categorical_issue5722(data, set_min_row_partition_size):
     modin_series, pandas_series = create_test_series(data)
 
     modin_result = modin_series.astype("category")
@@ -4906,12 +4906,12 @@ def test_cat_codes(data):
 
 
 @pytest.mark.parametrize(
-    "set_min_partition_size",
+    "set_min_row_partition_size",
     [1, 2],
-    ids=["four_partitions", "two_partitions"],
+    ids=["four_row_partitions", "two_row_partitions"],
     indirect=True,
 )
-def test_cat_codes_issue5650(set_min_partition_size):
+def test_cat_codes_issue5650(set_min_row_partition_size):
     data = {"name": ["abc", "def", "ghi", "jkl"]}
     pandas_df = pandas.DataFrame(data)
     pandas_df = pandas_df.astype("category")

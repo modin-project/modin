@@ -31,13 +31,13 @@ Consider the following ipython script:
 .. code-block:: python
 
     import modin.pandas as pd
-    from modin.config import MinPartitionSize
+    from modin.config import MinRowPartitionSize
     import time
     import ray
 
     # Look at the Ray documentation with respect to the Ray configuration suited to you most.
     ray.init()
-    df = pd.DataFrame(list(range(MinPartitionSize.get() * 2)))
+    df = pd.DataFrame(list(range(MinRowPartitionSize.get() * 2)))
     %time result = df.map(lambda x: time.sleep(0.1) or x)
     %time print(result)
 
@@ -82,12 +82,12 @@ following script with benchmark mode on:
     from io import BytesIO
 
     import modin.pandas as pd
-    from modin.config import BenchmarkMode, MinPartitionSize
+    from modin.config import BenchmarkMode, MinRowPartitionSize
 
     BenchmarkMode.put(True)
 
     start = time.time()
-    df = pd.DataFrame(list(range(MinPartitionSize.get())), columns=['A'])
+    df = pd.DataFrame(list(range(MinRowPartitionSize.get())), columns=['A'])
     result1 = df.map(lambda x: time.sleep(0.2) or x + 1)
     result2 = df.map(lambda x: time.sleep(0.2) or x + 2)
     result1.to_parquet(BytesIO())
@@ -136,10 +136,10 @@ That will typically block on any asynchronous computation:
     from io import BytesIO
 
     import modin.pandas as pd
-    from modin.config import MinPartitionSize, NPartitions
+    from modin.config import MinRowPartitionSize, NPartitions
     import modin.utils
 
-    MinPartitionSize.put(32)
+    MinRowPartitionSize.put(32)
     NPartitions.put(16)
 
     def slow_add_one(x):

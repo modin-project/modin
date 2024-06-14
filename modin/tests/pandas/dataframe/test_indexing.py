@@ -21,7 +21,7 @@ import pytest
 from pandas._testing import ensure_clean
 
 import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions
+from modin.config import MinRowPartitionSize, NPartitions
 from modin.pandas.indexing import is_range_like
 from modin.pandas.testing import assert_index_equal
 from modin.tests.pandas.utils import (
@@ -2634,7 +2634,7 @@ def test__getitem_bool_with_empty_partition():
     # This test case comes from
     # https://github.com/modin-project/modin/issues/5188
 
-    size = MinPartitionSize.get()
+    size = MinRowPartitionSize.get()
 
     pandas_series = pandas.Series([True if i % 2 else False for i in range(size)])
     modin_series = pd.Series(pandas_series)

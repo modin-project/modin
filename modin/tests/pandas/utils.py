@@ -41,7 +41,8 @@ from pandas.core.dtypes.common import (
 import modin.pandas as pd
 from modin.config import (
     Engine,
-    MinPartitionSize,
+    MinColumnPartitionSize,
+    MinRowPartitionSize,
     NPartitions,
     RangePartitioning,
     TestDatasetSize,
@@ -247,11 +248,11 @@ test_data_categorical_keys = list(test_data_categorical.keys())
 
 # Fully fill all of the partitions used in tests.
 test_data_large_categorical_dataframe = {
-    i: pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
-    for i in range(NPartitions.get() * MinPartitionSize.get())
+    i: pandas.Categorical(np.arange(NPartitions.get() * MinRowPartitionSize.get()))
+    for i in range(NPartitions.get() * MinColumnPartitionSize.get())
 }
 test_data_large_categorical_series_values = [
-    pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
+    pandas.Categorical(np.arange(NPartitions.get() * MinRowPartitionSize.get()))
 ]
 test_data_large_categorical_series_keys = ["categorical_series"]
 

@@ -21,7 +21,7 @@ import pandas
 from pandas.core.dtypes.common import is_list_like
 from pandas.errors import MergeError
 
-from modin.config import MinPartitionSize, NPartitions
+from modin.config import MinRowPartitionSize, NPartitions
 from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.pandas.metadata import ModinDtypes
 
@@ -190,7 +190,8 @@ class MergeImpl:
             if (
                 left._modin_frame._partitions.shape[0] < 0.3 * NPartitions.get()
                 # to avoid empty partitions after repartition; can materialize index
-                and len(left._modin_frame) > NPartitions.get() * MinPartitionSize.get()
+                and len(left._modin_frame)
+                > NPartitions.get() * MinRowPartitionSize.get()
             ):
                 left = left.repartition(axis=0)
 

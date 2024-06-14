@@ -39,7 +39,7 @@ from modin.config import (
     AsyncReadMode,
     Engine,
     IsExperimental,
-    MinPartitionSize,
+    MinRowPartitionSize,
     ReadSqlEngine,
     StorageFormat,
     TestDatasetSize,
@@ -1556,7 +1556,7 @@ class TestParquet:
         # which fails when min_partition_size < nrows < min_partition_size * (num_partitions - 1)
 
         nrows = (
-            MinPartitionSize.get() + 1
+            MinRowPartitionSize.get() + 1
         )  # Use the minimal guaranteed failing value for nrows.
         unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
         make_parquet_file(filename=unique_filename, nrows=nrows)

@@ -650,12 +650,108 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         -------
         int
         """
+        from modin.error_message import ErrorMessage
+
+        ErrorMessage.single_warning(
+            "`MinPartitionSize` is deprecated and will be removed in a future version. "
+            + "This config has no longer effect, "
+            + "use `MinRowPartitionSize` and `MinColumnPartitionSize` instead.",
+            FutureWarning,
+        )
         min_partition_size = super().get()
         if min_partition_size <= 0:
             raise ValueError(
                 f"`MinPartitionSize` should be > 0; current value: {min_partition_size}"
             )
         return min_partition_size
+
+
+class MinRowPartitionSize(EnvironmentVariable, type=int):
+    """
+    Minimum number of rows in a single pandas partition split.
+
+    Once a partition for a pandas dataframe has more than this many elements,
+    Modin adds another partition.
+    """
+
+    varname = "MODIN_MIN_ROW_PARTITION_SIZE"
+    default = 32
+
+    @classmethod
+    def put(cls, value: int) -> None:
+        """
+        Set ``MinRowPartitionSize`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(
+                f"Min row partition size should be > 0, passed value {value}"
+            )
+        super().put(value)
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``MinRowPartitionSize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        min_row_partition_size = super().get()
+        if min_row_partition_size <= 0:
+            raise ValueError(
+                f"`MinRowPartitionSize` should be > 0; current value: {min_row_partition_size}"
+            )
+        return min_row_partition_size
+
+
+class MinColumnPartitionSize(EnvironmentVariable, type=int):
+    """
+    Minimum number of columns in a single pandas partition split.
+
+    Once a partition for a pandas dataframe has more than this many elements,
+    Modin adds another partition.
+    """
+
+    varname = "MODIN_MIN_COLUMN_PARTITION_SIZE"
+    default = 32
+
+    @classmethod
+    def put(cls, value: int) -> None:
+        """
+        Set ``MinColumnPartitionSize`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(
+                f"Min column partition size should be > 0, passed value {value}"
+            )
+        super().put(value)
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``MinColumnPartitionSize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        min_column_partition_size = super().get()
+        if min_column_partition_size <= 0:
+            raise ValueError(
+                f"`MinColumnPartitionSize` should be > 0; current value: {min_column_partition_size}"
+            )
+        return min_column_partition_size
 
 
 class TestReadFromSqlServer(EnvironmentVariable, type=bool):

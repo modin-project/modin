@@ -23,7 +23,8 @@ import modin.pandas as pd
 from modin.config import (
     CpuCount,
     Engine,
-    MinPartitionSize,
+    MinColumnPartitionSize,
+    MinRowPartitionSize,
     NPartitions,
     RangePartitioning,
     context,
@@ -151,7 +152,7 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
         axis=0,
         num_splits=len(row_lengths),
         result=pandas_df,
-        min_block_size=MinPartitionSize.get(),
+        min_block_size=MinRowPartitionSize.get(),
         length_list=row_lengths,
     )
     partitions = [
@@ -159,7 +160,7 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
             axis=1,
             num_splits=len(column_widths),
             result=row_part,
-            min_block_size=MinPartitionSize.get(),
+            min_block_size=MinColumnPartitionSize.get(),
             length_list=column_widths,
         )
         for row_part in row_partitions
@@ -717,7 +718,8 @@ def test_reorder_labels_dtypes():
 
 @pytest.mark.parametrize(
     "left_partitioning, right_partitioning, ref_with_cache_available, ref_with_no_cache",
-    # Note: this test takes into consideration that `MinPartitionSize == 32` and `NPartitions == 4`
+    # Note: this test takes into consideration that `MinRowPartitionSize == 32`,
+    # `MinColumnPartitionSize == 32` and `NPartitions == 4`
     [
         (
             [2],
@@ -752,7 +754,9 @@ def test_reorder_labels_dtypes():
     ],
 )
 @pytest.mark.parametrize(
-    "modify_config", [{NPartitions: 4, MinPartitionSize: 32}], indirect=True
+    "modify_config",
+    [{NPartitions: 4, MinRowPartitionSize: 32, MinColumnPartitionSize: 32}],
+    indirect=True,
 )
 def test_merge_partitioning(
     left_partitioning,
@@ -2655,7 +2659,7 @@ def test_remote_function():
     ],
 )
 def test_map_approaches(partitioning_scheme, expected_map_approach):
-    data_size = MinPartitionSize.get() * CpuCount.get()
+    data_size = MinRowPartitionSize.get() * CpuCount.get()
     data = {f"col{i}": np.ones(data_size) for i in range(data_size)}
     df = pandas.DataFrame(data)
 
@@ -2674,8 +2678,8 @@ def test_map_approaches(partitioning_scheme, expected_map_approach):
 
 def test_map_partitions_joined_by_column():
     with context(NPartitions=CpuCount.get() * 2):
-        ncols = MinPartitionSize.get()
-        nrows = MinPartitionSize.get() * CpuCount.get() * 2
+        ncols = MinColumnPartitionSize.get()
+        nrows = MinRowPartitionSize.get() * CpuCount.get() * 2
         data = {f"col{i}": np.ones(nrows) for i in range(ncols)}
         df = pd.DataFrame(data)
         partitions = df._query_compiler._modin_frame._partitions

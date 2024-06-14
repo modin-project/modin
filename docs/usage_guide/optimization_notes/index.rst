@@ -49,11 +49,14 @@ How Modin partitions a dataframe
 Modin uses a partitioning scheme that partitions a dataframe along both axes, resulting in a matrix
 of partitions. The row and column chunk sizes are computed independently based
 on the length of the appropriate axis and Modin's special :doc:`configuration variables </flow/modin/config>`
-(``NPartitions`` and ``MinPartitionSize``):
+(``NPartitions``, ``MinRowPartitionSize`` and ``MinColumnPartitionSize``):
 
 - ``NPartitions`` is the maximum number of splits along an axis; by default, it equals to the number of cores
   on your local machine or cluster of nodes.
-- ``MinPartitionSize`` is the minimum number of rows/columns to do a split. For instance, if ``MinPartitionSize``
+- ``MinRowPartitionSize`` is the minimum number of rows to do a split. For instance, if ``MinRowPartitionSize``
+  is 32, the row axis will not be split unless the amount of rows is greater than 32. If it is is greater, for example, 34,
+  then the row axis is sliced into two partitions: containing 32 and 2 rows accordingly.
+- ``MinColumnPartitionSize`` is the minimum number of columns to do a split. For instance, if ``MinColumnPartitionSize``
   is 32, the column axis will not be split unless the amount of columns is greater than 32. If it is is greater, for example, 34,
   then the column axis is sliced into two partitions: containing 32 and 2 columns accordingly.
 

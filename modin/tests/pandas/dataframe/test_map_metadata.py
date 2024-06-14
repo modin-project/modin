@@ -19,7 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions, StorageFormat
+from modin.config import MinRowPartitionSize, NPartitions, StorageFormat
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.pandas.testing import assert_index_equal, assert_series_equal
@@ -586,7 +586,7 @@ class TestCategoricalProxyDtype:
             axis=0,
             num_splits=nchunks,
             result=pandas_df,
-            min_block_size=MinPartitionSize.get(),
+            min_block_size=MinRowPartitionSize.get(),
             length_list=[2, 2, 2],
         )
 
