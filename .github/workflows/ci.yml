@@ -43,7 +43,7 @@ jobs:
         then
           echo "python-version=3.11" >> "$GITHUB_OUTPUT"
         else
-          echo "python-version=3.9" >> "$GITHUB_OUTPUT"
+          echo "python-version=3.11" >> "$GITHUB_OUTPUT"
         fi
 
   lint-mypy:
