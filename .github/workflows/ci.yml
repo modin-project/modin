@@ -17,6 +17,9 @@ on:
       - setup.py
       - versioneer.py
   push:
+  schedule:
+    - cron: "30 2 * * WED"
+    - cron: "30 2 * * THU"
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
@@ -26,21 +29,44 @@ env:
   MODIN_GITHUB_CI: true
 
 jobs:
+  python-filter:
+    runs-on: ubuntu-latest
+    outputs:
+      python-version: ${{ steps.choose.outputs.python-version }}
+    steps:
+    - id: choose
+      run: |
+        if [[ "${{ github.event.schedule }}" = "30 2 * * WED" ]]
+        then
+          echo "python-version=3.10" >> "$GITHUB_OUTPUT"
+        elif [[ "${{ github.event.schedule }}" = "30 2 * * THU" ]]
+        then
+          echo "python-version=3.11" >> "$GITHUB_OUTPUT"
+        else
+          echo "python-version=3.9" >> "$GITHUB_OUTPUT"
+        fi
+
   lint-mypy:
+    needs: [python-filter]
     name: lint (mypy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
+        with:
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       - run: pip install -r requirements-dev.txt
       - run: mypy --config-file mypy.ini
 
   lint-flake8:
+    needs: [python-filter]
     name: lint (flake8)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
+        with:
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
       - run: pip install flake8 flake8-print flake8-no-implicit-concat
@@ -49,6 +75,7 @@ jobs:
       - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api-and-no-engine:
+    needs: [python-filter]
     name: Test API, headers and no-engine mode
     runs-on: ubuntu-latest
     defaults:
@@ -59,6 +86,7 @@ jobs:
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: requirements/requirements-no-engine.yml
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       - run: python -m pytest modin/tests/pandas/test_api.py
       - run: python -m pytest modin/tests/test_executions_api.py
       - run: python -m pytest modin/tests/test_headers.py
@@ -66,7 +94,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-clean-install:
-    needs: [lint-flake8]
+    needs: [lint-flake8, python-filter]
     strategy:
       matrix:
         os:
@@ -80,6 +108,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
+        with:
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       - run: python -m pip install -e ".[all]"
       - name: Ensure Ray and Dask engines start up
         run: |
@@ -94,7 +124,7 @@ jobs:
         if: matrix.os == 'ubuntu'
 
   test-internals:
-    needs: [lint-flake8]
+    needs: [lint-flake8, python-filter]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -105,6 +135,7 @@ jobs:
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       - name: Internals tests
         run: python -m pytest modin/tests/core/test_dispatcher.py
       - run: python -m pytest modin/tests/config
@@ -120,7 +151,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-defaults:
-    needs: [lint-flake8]
+    needs: [lint-flake8, python-filter]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -130,12 +161,13 @@ jobs:
         execution: [BaseOnPython]
     env:
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python 3.9
+    name: Test ${{ matrix.execution }} execution, Python ${{ needs.python-filter.outputs.python-version }}"
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: xgboost tests
@@ -240,7 +272,7 @@ jobs:
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
 
   test-all-unidist:
-    needs: [lint-flake8, execution-filter]
+    needs: [lint-flake8, execution-filter, python-filter]
     if: github.event_name == 'push' || needs.execution-filter.outputs.unidist == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -248,7 +280,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
         unidist-backend: ["mpi"]
     env:
       MODIN_ENGINE: "Unidist"
@@ -314,13 +346,13 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-all:
-    needs: [lint-flake8, execution-filter]
+    needs: [lint-flake8, execution-filter, python-filter]
     strategy:
       matrix:
         os:
           - ubuntu
           - windows
-        python-version: ["3.9"]
+        python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
         engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
@@ -446,14 +478,14 @@ jobs:
         if: matrix.os == 'windows'
 
   test-sanity:
-    needs: [lint-flake8, execution-filter]
+    needs: [lint-flake8, execution-filter, python-filter]
     if: github.event_name == 'pull_request'
     strategy:
       matrix:
         os:
           - ubuntu
           - windows
-        python-version: ["3.9"]
+        python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
         execution:
           - name: ray
             shell-ex: "python -m pytest"
@@ -579,7 +611,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
-    needs: [lint-flake8]
+    needs: [lint-flake8, python-filter]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -601,6 +633,7 @@ jobs:
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest -n 2 modin/tests/pandas/dataframe/test_map_metadata.py
@@ -610,14 +643,14 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-spreadsheet:
-    needs: [lint-flake8]
+    needs: [lint-flake8, python-filter]
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
@@ -647,7 +680,7 @@ jobs:
           delete-merged: true
 
   upload-coverage:
-    needs: [merge-coverage-artifacts]
+    needs: [merge-coverage-artifacts, python-filter]
     if: always()  # we need to run it regardless of some job being skipped, like in PR
     runs-on: ubuntu-latest
     defaults:
@@ -656,6 +689,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
+        with:
+          python-version: ${{ needs.python-filter.outputs.python-version }}
       - name: Download coverage data
         uses: actions/download-artifact@v4
         with:
