@@ -35,7 +35,7 @@ jobs:
           activate-environment: modin_on_unidist
         if: matrix.execution == 'pandas_on_unidist'
       - name: Cache datasets
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
