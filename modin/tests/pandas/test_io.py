@@ -653,7 +653,7 @@ class TestCsv:
     # Quoting, Compression parameters tests
     @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
     @pytest.mark.parametrize("encoding", [None, "latin8", "utf16"])
-    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize("engine", [None, "python", "c", "pyarrow"])
     def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
         unique_filename = make_csv_file(encoding=encoding, compression=compression)
         expected_exception = None
