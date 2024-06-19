@@ -1473,3 +1473,37 @@ def test_df_from_series_with_tuple_name():
     df_equals(pd.DataFrame(pandas.Series(name=("a", 1))), pandas_result)
     # 2. Creating a Modin DF from Modin Series
     df_equals(pd.DataFrame(pd.Series(name=("a", 1))), pandas_result)
+
+
+def test_large_df_warns_distributing_takes_time():
+    # https://github.com/modin-project/modin/issues/6574
+
+    regex = r"Distributing (.*) object\. This may take some time\."
+    with pytest.warns(UserWarning, match=regex):
+        pd.DataFrame(np.random.randint(1_000_000, size=(100_000, 10)))
+
+
+def test_large_series_warns_distributing_takes_time():
+    # https://github.com/modin-project/modin/issues/6574
+
+    regex = r"Distributing (.*) object\. This may take some time\."
+    with pytest.warns(UserWarning, match=regex):
+        pd.Series(np.random.randint(1_000_000, size=(2_500_000)))
+
+
+def test_df_does_not_warn_distributing_takes_time():
+    # https://github.com/modin-project/modin/issues/6574
+
+    regex = r"Distributing (.*) object\. This may take some time\."
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", regex, UserWarning)
+        pd.DataFrame(np.random.randint(1_000_000, size=(100_000, 9)))
+
+
+def test_series_does_not_warn_distributing_takes_time():
+    # https://github.com/modin-project/modin/issues/6574
+
+    regex = r"Distributing (.*) object\. This may take some time\."
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", regex, UserWarning)
+        pd.Series(np.random.randint(1_000_000, size=(2_400_000)))

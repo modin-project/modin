@@ -205,9 +205,6 @@ class DataFrame(BasePandasDataset):
                 self._query_compiler = distributed_frame._query_compiler
                 return
 
-            warnings.warn(
-                "Distributing {} object. This may take some time.".format(type(data))
-            )
             if isinstance(data, pandas.Index):
                 pass
             elif (
@@ -253,6 +250,12 @@ class DataFrame(BasePandasDataset):
             pandas_df = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )
+            if pandas_df.size >= 1_000_000:
+                warnings.warn(
+                    "Distributing {} object. This may take some time.".format(
+                        type(data)
+                    )
+                )
             self._query_compiler = from_pandas(pandas_df)._query_compiler
         else:
             self._query_compiler = query_compiler
