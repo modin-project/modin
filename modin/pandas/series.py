@@ -137,26 +137,28 @@ class Series(BasePandasDataset):
                 query_compiler.columns = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
         if query_compiler is None:
             # Defaulting to pandas
-            warnings.warn(
-                "Distributing {} object. This may take some time.".format(type(data))
-            )
             if name is None:
                 name = MODIN_UNNAMED_SERIES_LABEL
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
 
-            query_compiler = from_pandas(
-                pandas.DataFrame(
-                    pandas.Series(
-                        data=data,
-                        index=index,
-                        dtype=dtype,
-                        name=name,
-                        copy=copy,
-                        fastpath=fastpath,
+            pandas_df = pandas.DataFrame(
+                pandas.Series(
+                    data=data,
+                    index=index,
+                    dtype=dtype,
+                    name=name,
+                    copy=copy,
+                    fastpath=fastpath,
+                )
+            )
+            if pandas_df.size >= 2_500_000:
+                warnings.warn(
+                    "Distributing {} object. This may take some time.".format(
+                        type(data)
                     )
                 )
-            )._query_compiler
+            query_compiler = from_pandas(pandas_df)._query_compiler
         self._query_compiler = query_compiler.columnarize()
         if name is not None:
             self.name = name
