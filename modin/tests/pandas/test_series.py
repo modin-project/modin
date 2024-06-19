@@ -27,7 +27,7 @@ import pandas._libs.lib as lib
 import pytest
 from numpy.testing import assert_array_equal
 from pandas.core.indexing import IndexingError
-from pandas.errors import SpecificationError, PerformanceWarning
+from pandas.errors import PerformanceWarning, SpecificationError
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
