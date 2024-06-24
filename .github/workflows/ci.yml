@@ -222,7 +222,7 @@ jobs:
       with:
         filters: |
           test-small-query-compiler:
-            - 'modin/experimental/core/storage_formats/pandas/native_query_compiler.py'
+            - 'modin/core/storage_formats/pandas/native_query_compiler.py'
             - 'modin/core/storage_formats/pandas/query_compiler.py'
             - 'modin/core/storage_formats/base/query_compiler.py'
           shared: &shared

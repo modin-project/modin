@@ -21,11 +21,7 @@ import pytest
 from pandas._testing import ensure_clean
 
 import modin.pandas as pd
-<<<<<<< HEAD
-from modin.config import MinRowPartitionSize, NPartitions, UsePlainPandasQueryCompiler
-=======
-from modin.config import MinPartitionSize, NativeDataframeMode, NPartitions
->>>>>>> 1984aa1f (renaming to PlainPandasQueryCompiler to NativeDataframeMode)
+from modin.config import MinRowPartitionSize, NativeDataframeMode, NPartitions
 from modin.pandas.indexing import is_range_like
 from modin.pandas.testing import assert_index_equal
 from modin.tests.pandas.utils import (
