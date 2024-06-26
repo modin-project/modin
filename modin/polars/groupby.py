@@ -1,5 +1,6 @@
 from modin.polars.dataframe import DataFrame
 
+
 class GroupBy:
 
     def __init__(
@@ -97,7 +98,9 @@ class GroupBy:
                 drop=False,
             )
         )
-        result._query_compiler.columns = [c if c != "size" else name for c in result.columns]
+        result._query_compiler.columns = [
+            c if c != "size" else name for c in result.columns
+        ]
         return result
 
     def max(self) -> DataFrame:
