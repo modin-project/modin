@@ -527,3 +527,30 @@ def test_arithmetic_with_tricky_dtypes(val1, val2, op, request):
         lambda dfs: getattr(dfs[0], op)(dfs[1]),
         expected_exception=expected_exception,
     )
+
+
+@pytest.mark.parametrize(
+    "data, other_data",
+    [
+        ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, 5, 6], "C": [7, 8, 9]}),
+        ({"C": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, 5, 6], "A": [7, 8, 9]}),
+    ],
+)
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("match_index", [True, False])
+def test_bin_op_mismatched_columns(data, other_data, axis, match_index):
+    modin_df, pandas_df = create_test_dfs(data)
+    other_modin_df, other_pandas_df = create_test_dfs(other_data)
+    if axis == 0:
+        if not match_index:
+            modin_df.index = pandas_df.index = ["1", "2", "3"]
+            other_modin_df.index = other_pandas_df.index = ["2", "1", "3"]
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: (
+            df.add(other_modin_df, axis=axis)
+            if isinstance(df, pd.DataFrame)
+            else df.add(other_pandas_df, axis=axis)
+        ),
+    )

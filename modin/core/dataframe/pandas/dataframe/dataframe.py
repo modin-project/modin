@@ -3823,6 +3823,7 @@ class PandasDataframe(
         op,
         right_frames: list[PandasDataframe],
         join_type="outer",
+        sort=None,
         copartition_along_columns=True,
         labels="replace",
         dtypes: Optional[pandas.Series] = None,
@@ -3838,6 +3839,8 @@ class PandasDataframe(
             Modin DataFrames to join with.
         join_type : str, default: "outer"
             Type of join to apply.
+        sort : bool, default: None
+            Whether to sort index and columns or not.
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
@@ -3854,7 +3857,16 @@ class PandasDataframe(
             New Modin DataFrame.
         """
         left_parts, list_of_right_parts, joined_index, row_lengths = self._copartition(
-            0, right_frames, join_type, sort=True
+            0,
+            right_frames,
+            join_type,
+            sort=(
+                not all(
+                    self.get_axis(0).equals(right.get_axis(0)) for right in right_frames
+                )
+                if sort is None
+                else sort
+            ),
         )
         if copartition_along_columns:
             new_left_frame = self.__constructor__(
@@ -3886,7 +3898,14 @@ class PandasDataframe(
                 1,
                 new_right_frames,
                 join_type,
-                sort=False,
+                sort=(
+                    not all(
+                        self.get_axis(1).equals(right.get_axis(1))
+                        for right in new_right_frames
+                    )
+                    if sort is None
+                    else sort
+                ),
             )
         else:
             joined_columns = self.copy_columns_cache(copy_lengths=True)
