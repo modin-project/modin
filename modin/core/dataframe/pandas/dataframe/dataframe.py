@@ -3886,7 +3886,7 @@ class PandasDataframe(
                 1,
                 new_right_frames,
                 join_type,
-                sort=True,
+                sort=False,
             )
         else:
             joined_columns = self.copy_columns_cache(copy_lengths=True)
