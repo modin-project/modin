@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, Sequence
+
 import polars
-from typing import Any, Sequence, TYPE_CHECKING
 
 from modin.core.storage_formats import BaseQueryCompiler
 
 if TYPE_CHECKING:
     import numpy as np
+
     from modin.polars import DataFrame, Series
 
 

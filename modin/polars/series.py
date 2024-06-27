@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
 import pandas
 import polars
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.pandas.io import from_pandas
 from modin.pandas import Series as ModinPandasSeries
+from modin.pandas.io import from_pandas
 from modin.polars.base import BasePolarsDataset
 
-
 if TYPE_CHECKING:
-    from polars import PolarsDataType
     from numpy.typing import ArrayLike
+    from polars import PolarsDataType
 
     from modin.polars import DataFrame
 

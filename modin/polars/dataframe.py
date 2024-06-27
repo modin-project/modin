@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Sequence
+
 import numpy as np
 import pandas
-from pandas.core.dtypes.common import is_list_like
 import polars
-from typing import Any, Sequence, Iterator, Iterable, Literal, TYPE_CHECKING
+from pandas.core.dtypes.common import is_list_like
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.pandas.io import from_pandas
 from modin.pandas import DataFrame as ModinPandasDataFrame
 from modin.pandas import Series as ModinPandasSeries
+from modin.pandas.io import from_pandas
 from modin.polars.base import BasePolarsDataset
-
 
 if TYPE_CHECKING:
     from modin.polars import Series
