@@ -1,15 +1,18 @@
-from modin.polars.dataframe import DataFrame
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from modin.polars import DataFrame
 
 
 class GroupBy:
 
     def __init__(
         self,
-        df: DataFrame,
+        df: "DataFrame",
         *by,
         maintain_order: bool = False,
         **named_by,
-    ):
+    ) -> None:
         self.df = df
         if len(by) == 1:
             self.by = by[0]
@@ -29,7 +32,7 @@ class GroupBy:
     def all(self):
         raise NotImplementedError("not yet")
 
-    def map_groups(self, function) -> DataFrame:
+    def map_groups(self, function) -> "DataFrame":
         raise NotImplementedError("not yet")
 
     apply = map_groups
@@ -37,7 +40,7 @@ class GroupBy:
     def count(self):
         return self.len(name="count")
 
-    def first(self) -> DataFrame:
+    def first(self) -> "DataFrame":
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_first(
                 self.by,
@@ -67,7 +70,7 @@ class GroupBy:
             )
         )
 
-    def last(self) -> DataFrame:
+    def last(self) -> "DataFrame":
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_last(
                 self.by,
@@ -82,7 +85,7 @@ class GroupBy:
             ).reset_index(drop=False)
         )
 
-    def len(self, name: str | None = None) -> DataFrame:
+    def len(self, name: str | None = None) -> "DataFrame":
         if name is None:
             name = "len"
         result = self.df.__constructor__(
@@ -103,7 +106,7 @@ class GroupBy:
         ]
         return result
 
-    def max(self) -> DataFrame:
+    def max(self) -> "DataFrame":
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_max(
                 self.by,
@@ -118,7 +121,7 @@ class GroupBy:
             )
         )
 
-    def mean(self) -> DataFrame:
+    def mean(self) -> "DataFrame":
         # TODO: Non numeric columns are dropped, but in Polars they are converted to null
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_mean(
@@ -134,7 +137,7 @@ class GroupBy:
             ).reset_index(drop=False)
         )
 
-    def median(self) -> DataFrame:
+    def median(self) -> "DataFrame":
         # TODO: Non numeric columns are dropped, but in Polars they are converted to null
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_median(
@@ -150,7 +153,7 @@ class GroupBy:
             ).reset_index(drop=False)
         )
 
-    def min(self) -> DataFrame:
+    def min(self) -> "DataFrame":
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_min(
                 self.by,
@@ -165,7 +168,7 @@ class GroupBy:
             )
         )
 
-    def n_unique(self) -> DataFrame:
+    def n_unique(self) -> "DataFrame":
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_nunique(
                 self.by,
@@ -180,7 +183,7 @@ class GroupBy:
             )
         )
 
-    def quantile(self, quantile: float, interpolation="nearest") -> DataFrame:
+    def quantile(self, quantile: float, interpolation="nearest") -> "DataFrame":
         # TODO: Non numeric columns are dropped, but in Polars they are converted to null
         # TODO: interpolation types not yet supported
         return self.df.__constructor__(
@@ -197,7 +200,7 @@ class GroupBy:
             ).reset_index(drop=False)
         )
 
-    def sum(self) -> DataFrame:
+    def sum(self) -> "DataFrame":
         # TODO: Non numeric columns are dropped, but in Polars they are converted to null
         return self.df.__constructor__(
             _query_compiler=self.df._query_compiler.groupby_sum(

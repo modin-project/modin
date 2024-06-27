@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any, Sequence, TYPE_CHECKING
 
 import numpy as np
 import pandas
@@ -12,18 +12,25 @@ from modin.pandas import Series as ModinPandasSeries
 from modin.polars.base import BasePolarsDataset
 
 
+if TYPE_CHECKING:
+    from polars import PolarsDataType
+    from numpy.typing import ArrayLike
+
+    from modin.polars import DataFrame
+
+
 class Series(BasePolarsDataset):
     def __init__(
         self,
-        name: "str | ArrayLike | None" = None,
-        values: "ArrayLike | None" = None,
+        name: str | "ArrayLike" | None = None,
+        values: "ArrayLike" | None = None,
         dtype: "PolarsDataType | None" = None,
         *,
         strict: "bool" = True,
         nan_to_null: "bool" = False,
         dtype_if_empty: "PolarsDataType" = polars.Null,
         _query_compiler: BaseQueryCompiler | None = None,
-    ):
+    ) -> None:
         if _query_compiler is None:
             if isinstance(values, ModinPandasSeries):
                 self._query_compiler = values._query_compiler.copy()
@@ -1445,7 +1452,8 @@ class Series(BasePolarsDataset):
 
     @property
     def list(self):
-        # TODO: implement list object https://docs.pola.rs/api/python/stable/reference/series/list.html
+        # TODO: implement list object
+        #  https://docs.pola.rs/api/python/stable/reference/series/list.html
         raise NotImplementedError("not yet")
 
     def alias(self, name: str) -> "Series":
@@ -1490,6 +1498,8 @@ class Series(BasePolarsDataset):
         result = self.__constructor__(values=self.to_pandas().argsort())
         if descending:
             return result.reverse()
+        else:
+            return result
 
     def ceil(self) -> "Series":
         """
@@ -1621,18 +1631,6 @@ class Series(BasePolarsDataset):
             Item at the index.
         """
         return self.to_pandas().iloc[index]
-
-    def limit(self, n: int = 10) -> "Series":
-        """
-        Limit the number of elements.
-
-        Args:
-            n: Number of elements.
-
-        Returns:
-            Limited Series.
-        """
-        return self.head(n)
 
     def new_from_index(self, index: int, length: int) -> "Series":
         """
@@ -1915,15 +1913,18 @@ class Series(BasePolarsDataset):
 
     @property
     def str(self):
-        # TODO: implement str object https://docs.pola.rs/api/python/stable/reference/series/string.html
+        # TODO: implement str object
+        #  https://docs.pola.rs/api/python/stable/reference/series/string.html
         raise NotImplementedError("not yet")
 
     @property
     def struct(self):
-        # TODO: implement struct object https://docs.pola.rs/api/python/stable/reference/series/struct.html
+        # TODO: implement struct object
+        #  https://docs.pola.rs/api/python/stable/reference/series/struct.html
         raise NotImplementedError("not yet")
 
     @property
     def dt(self):
-        # TODO: implement dt object https://docs.pola.rs/api/python/stable/reference/series/temporal.html
+        # TODO: implement dt object
+        #  https://docs.pola.rs/api/python/stable/reference/series/temporal.html
         raise NotImplementedError("not yet")

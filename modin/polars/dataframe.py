@@ -5,13 +5,19 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_list_like
 import polars
-from typing import Any, Sequence, Iterator, Iterable, Literal
+from typing import Any, Sequence, Iterator, Iterable, Literal, TYPE_CHECKING
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.pandas.io import from_pandas
 from modin.pandas import DataFrame as ModinPandasDataFrame
 from modin.pandas import Series as ModinPandasSeries
 from modin.polars.base import BasePolarsDataset
+
+
+if TYPE_CHECKING:
+    from modin.polars import Series
+    from modin.polars.groupby import GroupBy
+    from modin.polars.lazyframe import LazyFrame
 
 
 class DataFrame(BasePolarsDataset):
@@ -27,7 +33,7 @@ class DataFrame(BasePolarsDataset):
         infer_schema_length=100,
         nan_to_null=False,
         _query_compiler=None,
-    ):
+    ) -> None:
         """
         Constructor for DataFrame object.
 
@@ -159,7 +165,7 @@ class DataFrame(BasePolarsDataset):
         Returns:
             OrderedDict of column names and dtypes.
         """
-        return OrderedDict(zip(self.columns, self.dtypes))
+        return OrderedDict(zip(self.columns, self.dtypes, strict=True))
 
     @property
     def shape(self):
@@ -242,7 +248,9 @@ class DataFrame(BasePolarsDataset):
             DataFrame with non-numeric columns converted to null.
         """
         non_numeric_cols = [
-            c for c, t in zip(self.columns, self.dtypes) if not t.is_numeric()
+            c
+            for c, t in zip(self.columns, self.dtypes, strict=True)
+            if not t.is_numeric()
         ]
         if len(non_numeric_cols) > 0:
             return self.__constructor__(
@@ -438,7 +446,7 @@ class DataFrame(BasePolarsDataset):
                 ).astype(
                     {
                         k: str
-                        for k, v in zip(self.columns, self.dtypes)
+                        for k, v in zip(self.columns, self.dtypes, strict=True)
                         if v == polars.String
                     }
                 )
@@ -819,8 +827,6 @@ class DataFrame(BasePolarsDataset):
             )
         )
 
-    limit = head
-
     def melt(
         self,
         id_vars=None,
@@ -1180,6 +1186,7 @@ class DataFrame(BasePolarsDataset):
         raise NotImplementedError("not yet")
 
     def upsample(
+        self,
         time_column: str,
         *,
         every: str,

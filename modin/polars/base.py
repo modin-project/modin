@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import polars
-from typing import Any, Sequence
+from typing import Any, Sequence, TYPE_CHECKING
 
 from modin.core.storage_formats import BaseQueryCompiler
+
+if TYPE_CHECKING:
+    import numpy as np
+    from modin.polars import DataFrame, Series
 
 
 class BasePolarsDataset:
 
     _query_compiler: BaseQueryCompiler
-
-    def __init__(self, _query_compiler=None):
-        raise NotImplementedError("Do not instantiate BasePolarsDataset directly.")
 
     @property
     def __constructor__(self):
@@ -269,6 +272,7 @@ class BasePolarsDataset:
         return polars.from_pandas(self._query_compiler.to_pandas()).to_torch()
 
     def bottom_k(
+        self,
         k: int,
         *,
         by,
@@ -444,7 +448,7 @@ class BasePolarsDataset:
             )
         )
 
-    def head(self, n: int = 5):
+    def head(self, n: int = 5) -> "BasePolarsDataset":
         """
         Get the first n rows of the DataFrame.
 
@@ -457,6 +461,18 @@ class BasePolarsDataset:
         return self.__constructor__(
             _query_compiler=self._query_compiler.getitem_row_array(slice(0, n))
         )
+
+    def limit(self, n: int = 10) -> "BasePolarsDataset":
+        """
+        Limit the DataFrame to the first n rows.
+
+        Args:
+            n: Number of rows to limit to.
+
+        Returns:
+            DataFrame with the first n rows.
+        """
+        return self.head(n)
 
     def interpolate(self) -> "BasePolarsDataset":
         """
@@ -644,9 +660,7 @@ class BasePolarsDataset:
         Returns:
             DataFrame with the unique values in each column.
         """
-        if keep == "any":
-            keep = "first"
-        elif keep == "none":
+        if keep == "none" or keep == "last":
             # TODO: support keep="none"
             raise NotImplementedError("not yet")
         return self.__constructor__(
