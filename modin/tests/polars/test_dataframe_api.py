@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import polars
+
 import modin.polars as pl
 
 
