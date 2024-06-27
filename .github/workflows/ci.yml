@@ -430,6 +430,7 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest modin/tests/polars/test_dataframe.py
       - run: |
           python -m pip install lazy_import
           python -m pytest modin/tests/pandas/integrations/
