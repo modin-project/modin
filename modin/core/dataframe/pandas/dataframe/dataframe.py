@@ -3255,7 +3255,6 @@ class PandasDataframe(
                 axis,
                 other,
                 join_type,
-                sort=not self.get_axis(axis).equals(other.get_axis(axis)),
             )
             # unwrap list returned by `copartition`.
             right_parts = right_parts[0]
@@ -3681,7 +3680,7 @@ class PandasDataframe(
         ) and self._get_axis_lengths(axis) == other._get_axis_lengths(axis)
 
     def _copartition(
-        self, axis, other, how, sort, force_repartition=False, fill_value=None
+        self, axis, other, how, sort=None, force_repartition=False, fill_value=None
     ):
         """
         Copartition two Modin DataFrames.
@@ -3696,8 +3695,9 @@ class PandasDataframe(
             Other Modin DataFrame(s) to copartition against.
         how : str
             How to manage joining the index object ("left", "right", etc.).
-        sort : bool
+        sort : bool, default: None
             Whether sort the joined index or not.
+            If ``None``, sort is defined in depend on labels equality along the axis.
         force_repartition : bool, default: False
             Whether force the repartitioning or not. By default,
             this method will skip repartitioning if it is possible. This is because
@@ -3729,6 +3729,9 @@ class PandasDataframe(
                 self.copy_axis_cache(axis, copy_lengths=True),
                 self._get_axis_lengths_cache(axis),
             )
+
+        if sort is None:
+            sort = not all(self.get_axis(axis).equals(o.get_axis(axis)) for o in other)
 
         self_index = self.get_axis(axis)
         others_index = [o.get_axis(axis) for o in other]
@@ -3823,6 +3826,7 @@ class PandasDataframe(
         op,
         right_frames: list[PandasDataframe],
         join_type="outer",
+        sort=None,
         copartition_along_columns=True,
         labels="replace",
         dtypes: Optional[pandas.Series] = None,
@@ -3838,6 +3842,8 @@ class PandasDataframe(
             Modin DataFrames to join with.
         join_type : str, default: "outer"
             Type of join to apply.
+        sort : bool, default: None
+            Whether to sort index and columns or not.
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
@@ -3854,7 +3860,10 @@ class PandasDataframe(
             New Modin DataFrame.
         """
         left_parts, list_of_right_parts, joined_index, row_lengths = self._copartition(
-            0, right_frames, join_type, sort=True
+            0,
+            right_frames,
+            join_type,
+            sort=sort,
         )
         if copartition_along_columns:
             new_left_frame = self.__constructor__(
@@ -3886,7 +3895,7 @@ class PandasDataframe(
                 1,
                 new_right_frames,
                 join_type,
-                sort=True,
+                sort=sort,
             )
         else:
             joined_columns = self.copy_columns_cache(copy_lengths=True)
@@ -3978,7 +3987,7 @@ class PandasDataframe(
                 joined_index,
                 partition_sizes_along_axis,
             ) = self._copartition(
-                axis.value ^ 1, others, how, sort, force_repartition=False
+                axis.value ^ 1, others, how, sort=sort, force_repartition=False
             )
             if axis == Axis.COL_WISE:
                 new_lengths = partition_sizes_along_axis

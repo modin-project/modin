@@ -298,6 +298,7 @@ class Binary(Operator):
         cls,
         func: Callable[..., pandas.DataFrame],
         join_type: str = "outer",
+        sort: bool = None,
         labels: str = "replace",
         infer_dtypes: Optional[str] = None,
     ) -> Callable[..., PandasQueryCompiler]:
@@ -310,6 +311,8 @@ class Binary(Operator):
             Binary function to execute. Have to be able to accept at least two arguments.
         join_type : {'left', 'right', 'outer', 'inner', None}, default: 'outer'
             Type of join that will be used if indices of operands are not aligned.
+        sort : bool, default: None
+            Whether to sort index and columns or not.
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
@@ -419,6 +422,7 @@ class Binary(Operator):
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
                             join_type=join_type,
+                            sort=sort,
                             labels=labels,
                             dtypes=dtypes,
                         ),
