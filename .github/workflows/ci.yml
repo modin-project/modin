@@ -246,12 +246,17 @@ jobs:
       unidist: ${{ steps.filter.outputs.unidist }}
       engines: ${{ steps.engines.outputs.engines }}
       experimental: ${{ steps.experimental.outputs.experimental }}
+      test-small-query-compiler: ${{ steps.filter.outputs.test-small-query-compiler }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
       id: filter
       with:
         filters: |
+          test-small-query-compiler:
+            - 'modin/core/storage_formats/pandas/native_query_compiler.py'
+            - 'modin/core/storage_formats/pandas/query_compiler.py'
+            - 'modin/core/storage_formats/base/query_compiler.py'
           shared: &shared
             - 'modin/core/execution/dispatching/**'
           ray:
@@ -663,6 +668,39 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
       - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
+
+  test-small-query-compiler:
+    needs: [ lint-flake8, execution-filter]
+    if: ${{ needs.execution-filter.outputs.test-small-query-compiler == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    env:
+      MODIN_NATIVE_DATAFRAME_MODE: "Pandas"
+    name: test-small-query-compiler python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/mamba-env
+        with:
+          environment-file: environment-dev.yml
+          python-version: ${{matrix.python-version}}
+      - run: python -m pytest modin/tests/config/test_envvars.py
+      - run: python -m pytest modin/tests/config/test_parameter.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_binary.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_default.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_indexing.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_iter.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_pickle.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_udf.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
+      - uses: ./.github/actions/upload-coverage
 
   merge-coverage-artifacts:
     needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity]

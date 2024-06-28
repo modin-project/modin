@@ -52,7 +52,6 @@ def test__reduce__():
     # pre-processed for the distributed engine.
     dataframe_data = ["Major League Baseball", "National Basketball Association"]
     abbr_md, abbr_pd = create_test_dfs(dataframe_data, index=["MLB", "NBA"])
-    # breakpoint()
 
     dataframe_data = {
         "name": ["Mariners", "Lakers"] * 500,

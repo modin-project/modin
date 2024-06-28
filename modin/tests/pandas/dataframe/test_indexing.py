@@ -21,7 +21,7 @@ import pytest
 from pandas._testing import ensure_clean
 
 import modin.pandas as pd
-from modin.config import MinRowPartitionSize, NPartitions
+from modin.config import MinRowPartitionSize, NativeDataframeMode, NPartitions
 from modin.pandas.indexing import is_range_like
 from modin.pandas.testing import assert_index_equal
 from modin.tests.pandas.utils import (
@@ -586,6 +586,10 @@ def test_loc_setting_single_categorical_column():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    NativeDataframeMode.get() == "Pandas",
+    reason="NativeQueryCompiler does not currently support IO functions.",
+)
 def test_loc_multi_index():
     modin_df = pd.read_csv(
         "modin/tests/pandas/data/blah.csv", header=[0, 1, 2, 3], index_col=0
@@ -2238,6 +2242,10 @@ def test___setitem__partitions_aligning():
     df_equals(md_df, pd_df)
 
 
+@pytest.mark.skipif(
+    NativeDataframeMode.get() == "Pandas",
+    reason="NativeQueryCompiler does not currently support IO functions.",
+)
 def test___setitem__with_mismatched_partitions():
     with ensure_clean(".csv") as fname:
         np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
