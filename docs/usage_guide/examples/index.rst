@@ -16,8 +16,7 @@ The following tutorials cover the basic usage of Modin. `Here <https://www.youtu
 The following tutorials covers more advanced features in Modin:
 
 - Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source PandasOnRay <https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb>`__, `Source PandasOnDask <https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_4.ipynb>`__]
-- Exercise 5: Setting up Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`__]
-- Exercise 6: Running Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`__]
+- Exercise 5: Setting up Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.py>`__]
 
 How to get required dependencies for the tutorial notebooks and to run them please refer to the respective `README.md <https://github.com/modin-project/modin/tree/main/examples/tutorial/jupyter/README.md>`__ file.
 
@@ -25,7 +24,7 @@ How to get required dependencies for the tutorial notebooks and to run them plea
 Data Science Benchmarks
 '''''''''''''''''''''''
 
-- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/main/examples/jupyter/NYC_Taxi.ipynb>`__]
+- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/main/examples/jupyter/Modin_Taxi.ipynb>`__]
 - Using Modin with the Census Dataset (coming soon...)
 - Using Modin with the Plasticc Dataset (coming soon...)
 
