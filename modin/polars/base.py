@@ -434,12 +434,9 @@ class BasePolarsDataset:
         )
 
     def filter(self, *predicates, **constraints: Any) -> "BasePolarsDataset":
-        if len(predicates) > 1:
-            predicates = predicates[0]
-            for p in predicates[1:]:
-                predicates = predicates & p
-        else:
-            predicates = predicates[0]
+        predicates = predicates[0]
+        for p in predicates[1:]:
+            predicates = predicates & p
         if constraints:
             raise NotImplementedError("Named constraints are not supported")
         return self.__constructor__(
