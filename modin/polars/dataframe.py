@@ -104,6 +104,15 @@ class DataFrame(BasePolarsDataset):
 
             return Series(_query_compiler=self._query_compiler.getitem_array([item]))
 
+    def _to_polars(self) -> polars.DataFrame:
+        """
+        Convert the DataFrame to Polars format.
+
+        Returns:
+            Polars representation of the DataFrame.
+        """
+        return polars.from_pandas(self._query_compiler.to_pandas())
+
     def _get_columns(self):
         """
         Get columns of the DataFrame.
@@ -564,16 +573,21 @@ class DataFrame(BasePolarsDataset):
 
     groupby = group_by
 
-    def drop(self, *columns):
+    def drop(self, *columns, strict: bool = True) -> "DataFrame":
         """
         Drop the given columns.
 
         Args:
             columns: Columns to drop.
+            strict: Whether to raise an error if a column is not found.
 
         Returns:
             DataFrame with the columns dropped.
         """
+        if strict:
+            for c in columns:
+                if c not in self.columns:
+                    raise KeyError(c)
         columns = list(columns) if not isinstance(columns[0], list) else columns[0]
         return self.__constructor__(_query_compiler=self._query_compiler.drop(columns))
 
