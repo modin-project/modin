@@ -79,6 +79,7 @@ from modin.utils import (
 from .aggregations import CorrCovBuilder
 from .groupby import GroupbyReduceImpl, PivotTableImpl
 from .merge import MergeImpl
+from .query_compiler_validator import QueryCompilerTypeCaster
 from .utils import get_group_names, merge_partitioning
 
 if TYPE_CHECKING:
@@ -253,7 +254,7 @@ def copy_df_for_func(func, display_name: str = None):
 
 
 @_inherit_docstrings(BaseQueryCompiler)
-class PandasQueryCompiler(BaseQueryCompiler):
+class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerTypeCaster):
     """
     Query compiler for the pandas storage format.
 

@@ -24,13 +24,14 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_list_like, is_scalar
 
-from modin.config.envvars import NativeDataframeMode
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
     try_cast_to_pandas,
 )
+
+from .query_compiler_validator import QueryCompilerTypeCaster
 
 
 def _get_axis(axis):
@@ -565,7 +566,7 @@ def _register_default_pandas(
 
 
 @_inherit_docstrings(BaseQueryCompiler)
-class NativeQueryCompiler(BaseQueryCompiler):
+class NativeQueryCompiler(BaseQueryCompiler, QueryCompilerTypeCaster):
     """
     Query compiler for the pandas storage format.
 
@@ -585,7 +586,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
     _shape_hint: Optional[str]
 
     def __init__(self, pandas_frame, shape_hint: Optional[str] = None):
-        assert NativeDataframeMode.get() == "Pandas"
         if hasattr(pandas_frame, "_to_pandas"):
             pandas_frame = pandas_frame._to_pandas()
         if is_scalar(pandas_frame):
