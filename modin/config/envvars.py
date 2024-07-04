@@ -956,7 +956,7 @@ class NativeDataframeMode(EnvironmentVariable, type=str):
     """
 
     varname = "MODIN_NATIVE_DATAFRAME_MODE"
-    choices = ("Pandas",)
+    choices = ("Default", "Pandas",)
     default = "Default"
 
 
