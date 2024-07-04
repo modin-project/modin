@@ -352,6 +352,20 @@ def _register_binary(op):
 
 
 def _register_expanding(func):
+    """
+    Build function that apply specified expanding window functions.
+
+    Parameters
+    ----------
+    func : str
+        Expanding window functionname to apply.
+
+    Returns
+    -------
+    callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+        Function to be applied to the frame.
+    """
+
     def expanding_operator(df, fold_axis, rolling_args, *args, **kwargs):
         squeeze_self = kwargs.pop("squeeze_self", False)
 
@@ -497,7 +511,6 @@ def _register_default_pandas(
     squeeze_kwargs=False,
     return_raw=False,
     in_place=False,
-    filter_kwargs=[],
 ):
     """
     Build function that apply specified method of the passed frame.
@@ -516,8 +529,6 @@ def _register_default_pandas(
         If True, and the result not DataFrame or Series it is returned as is without wrapping in query compiler.
     in_place : bool, default: False
         If True, the specified function will be applied on the passed frame in place.
-    filter_kwargs : list, default: []
-        List of key word argument names to remove.
 
     Returns
     -------
@@ -529,7 +540,7 @@ def _register_default_pandas(
         df = query_compiler._modin_frame
         if is_series:
             df = df.squeeze(axis=1)
-        exclude_names = ["fold_axis"] + filter_kwargs
+        exclude_names = ["fold_axis", "dtypes"]
         kwargs = kwargs.copy()
         for name in exclude_names:
             kwargs.pop(name, None)
@@ -565,7 +576,9 @@ class NativeQueryCompiler(BaseQueryCompiler):
     Parameters
     ----------
     pandas_frame : pandas.DataFrame
-        Pandas frame to query with the compiled queries.
+        The pandas frame to query with the compiled queries.
+    shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
     """
 
     _modin_frame: pandas.DataFrame
@@ -767,7 +780,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     dt_weekofyear = _register_default_pandas(_dt_prop_map("weekofyear"))
     dt_year = _register_default_pandas(_dt_prop_map("year"))
     duplicated = _register_default_pandas(pandas.DataFrame.duplicated)
-    eq = _register_default_pandas(_register_binary("eq"), filter_kwargs=["dtypes"])
+    eq = _register_default_pandas(_register_binary("eq"))
     equals = _register_default_pandas(_register_binary("equals"))
     eval = _register_default_pandas(pandas.DataFrame.eval)
     explode = _register_default_pandas(pandas.DataFrame.explode)
@@ -819,7 +832,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
         pandas.DataFrame.first_valid_index, return_raw=True
     )
     floordiv = _register_default_pandas(_register_binary("floordiv"))
-    ge = _register_default_pandas(_register_binary("ge"), filter_kwargs=["dtypes"])
+    ge = _register_default_pandas(_register_binary("ge"))
     get_dummies = _register_default_pandas(_get_dummies)
     getitem_array = _register_default_pandas(_getitem_array)
     getitem_row_array = _register_default_pandas(_getitem_row_array)
@@ -846,7 +859,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     groupby_std = _register_default_pandas(_groupby("std"))
     groupby_sum = _register_default_pandas(_groupby("sum"))
     groupby_var = _register_default_pandas(_groupby("var"))
-    gt = _register_default_pandas(_register_binary("gt"), filter_kwargs=["dtypes"])
+    gt = _register_default_pandas(_register_binary("gt"))
     idxmax = _register_default_pandas(pandas.DataFrame.idxmax)
     idxmin = _register_default_pandas(pandas.DataFrame.idxmin)
     infer_objects = _register_default_pandas(
@@ -871,8 +884,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
     last_valid_index = _register_default_pandas(
         pandas.DataFrame.last_valid_index, return_raw=True
     )
-    le = _register_default_pandas(_register_binary("le"), filter_kwargs=["dtypes"])
-    lt = _register_default_pandas(_register_binary("lt"), filter_kwargs=["dtypes"])
+    le = _register_default_pandas(_register_binary("le"))
+    lt = _register_default_pandas(_register_binary("lt"))
     # mad = _register_default_pandas(pandas.DataFrame.mad)
     mask = _register_default_pandas(pandas.DataFrame.mask)
     max = _register_default_pandas(pandas.DataFrame.max)
@@ -886,7 +899,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     mod = _register_default_pandas(_register_binary("mod"))
     mode = _register_default_pandas(pandas.DataFrame.mode)
     mul = _register_default_pandas(_register_binary("mul"))
-    ne = _register_default_pandas(_register_binary("ne"), filter_kwargs=["dtypes"])
+    ne = _register_default_pandas(_register_binary("ne"))
     negative = _register_default_pandas(pandas.DataFrame.__neg__)
     nlargest = _register_default_pandas(pandas.DataFrame.nlargest)
     notna = _register_default_pandas(pandas.DataFrame.notna)
@@ -1214,7 +1227,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_arrow(cls, at, data_cls):
-        return
+        return cls(at.to_pandas())
 
     def free(self):
         return
@@ -1231,7 +1244,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_dataframe(cls, df, data_cls):
-        return cls(data_cls.from_dataframe(df))
+        return cls(pandas.api.interchange.from_dataframe(df))
 
     # END Dataframe exchange protocol
 

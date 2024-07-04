@@ -221,9 +221,8 @@ jobs:
       id: filter
       with:
         filters: |
-          test-small-query-compiler:
+          test-native-dataframe-mode:
             - 'modin/core/storage_formats/pandas/native_query_compiler.py'
-            - 'modin/core/storage_formats/pandas/query_compiler.py'
             - 'modin/core/storage_formats/base/query_compiler.py'
           shared: &shared
             - 'modin/core/execution/dispatching/**'
@@ -636,9 +635,9 @@ jobs:
           python-version: ${{matrix.python-version}}
       - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
 
-  test-small-query-compiler:
+  test-native-dataframe-mode:
     needs: [ lint-flake8, execution-filter]
-    if: ${{ needs.execution-filter.outputs.test-small-query-compiler == 'true' }}
+    if: ${{ needs.execution-filter.outputs.test-native-dataframe-mode == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -648,15 +647,13 @@ jobs:
         python-version: ["3.9"]
     env:
       MODIN_NATIVE_DATAFRAME_MODE: "Pandas"
-    name: test-small-query-compiler python ${{matrix.python-version}})
+    name: test-native-dataframe-mode python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
-      - run: python -m pytest modin/tests/config/test_envvars.py
-      - run: python -m pytest modin/tests/config/test_parameter.py
       - run: python -m pytest modin/tests/pandas/dataframe/test_binary.py
       - run: python -m pytest modin/tests/pandas/dataframe/test_default.py
       - run: python -m pytest modin/tests/pandas/dataframe/test_indexing.py
