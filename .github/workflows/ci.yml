@@ -214,7 +214,7 @@ jobs:
       unidist: ${{ steps.filter.outputs.unidist }}
       engines: ${{ steps.engines.outputs.engines }}
       experimental: ${{ steps.experimental.outputs.experimental }}
-      test-small-query-compiler: ${{ steps.filter.outputs.test-small-query-compiler }}
+      test-native-dataframe-mode: ${{ steps.filter.outputs.test-native-dataframe-mode }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3

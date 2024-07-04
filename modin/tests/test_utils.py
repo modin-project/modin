@@ -263,7 +263,7 @@ def warns_that_defaulting_to_pandas(prefix=None, suffix=None, force=False):
         If specified, checks that the end of the warning message matches this argument
         after "[Dd]efaulting to pandas".
     force : Optional[bool]
-        If true return the pytest.recwarn.WarningsChecker irrespective of ``NativeDataframeMode``
+        If ``True``, return the ``pytest.recwarn.WarningsChecker`` irrespective of ``NativeDataframeMode``.
 
     Returns
     -------

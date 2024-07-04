@@ -44,7 +44,7 @@ def _get_axis(axis):
 
     Returns
     -------
-    callable(PandasQueryCompiler) -> pandas.Index
+    callable(NativeQueryCompiler) -> pandas.Index
     """
     if axis == 0:
         return lambda self: self._modin_frame.index
@@ -63,7 +63,7 @@ def _set_axis(axis):
 
     Returns
     -------
-    callable(PandasQueryCompiler)
+    callable(NativeQueryCompiler)
     """
     if axis == 0:
 
@@ -607,7 +607,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
         Notes
         -----
-        This function is for consistency with other QCs, dtypes should be assigned directly on the frame.
+        This function is for consistency with other QCs,
+        dtypes should be assigned directly on the frame.
         """
         pass
 
@@ -621,7 +622,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
         Notes
         -----
-        This function is for consistency with other QCs, dtypes should be assigned directly on the frame.
+        This function is for consistency with other QCs,
+        index should be assigned directly on the frame.
         """
         pass
 
