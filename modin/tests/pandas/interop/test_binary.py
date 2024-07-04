@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from itertools import product
+
 import matplotlib
 import numpy as np
 import pandas
@@ -28,6 +30,7 @@ from modin.tests.pandas.utils import (
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
+    eval_general_interop,
     test_data,
     test_data_keys,
     test_data_values,
@@ -75,8 +78,11 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
     ],
 )
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
 @pytest.mark.parametrize("backend", [None, "pyarrow"])
-def test_math_functions(other, axis, op, backend):
+def test_math_functions(other, axis, op, backend, data_frame_mode_pair):
     data = test_data["float_nan_data"]
     if (op == "floordiv" or op == "rfloordiv") and axis == "rows":
         # lambda == "series_or_list"
@@ -88,16 +94,27 @@ def test_math_functions(other, axis, op, backend):
 
     if op in ("mod", "rmod") and backend == "pyarrow":
         pytest.skip(reason="These functions are not implemented in pandas itself")
-    eval_general(
-        *create_test_dfs(data, backend=backend),
-        lambda df: getattr(df, op)(other(df, axis), axis=axis),
+
+    eval_general_interop(
+        data,
+        backend,
+        lambda df1, df2: getattr(df1, op)(other(df2, axis), axis=axis),
+        data_frame_mode_pair
     )
 
 
 @pytest.mark.parametrize("other", [lambda df: 2, lambda df: df])
-def test___divmod__(other):
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test___divmod__(other, data_frame_mode_pair):
     data = test_data["float_nan_data"]
-    eval_general(*create_test_dfs(data), lambda df: divmod(df, other(df)))
+    eval_general_interop(
+        data,
+        None,
+        lambda df1, df2: divmod(df1, other(df2)),
+        data_frame_mode_pair
+    )
 
 
 def test___rdivmod__():
@@ -118,23 +135,27 @@ def test___rdivmod__():
         *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
     ],
 )
-def test_math_functions_fill_value(other, fill_value, op, request):
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test_math_functions_fill_value(other, fill_value, op, request, data_frame_mode_pair):
     data = test_data["int_data"]
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
     expected_exception = None
     if "check_different_index" in request.node.callspec.id and fill_value == 3.0:
         expected_exception = NotImplementedError("fill_value 3.0 not supported.")
 
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: getattr(df, op)(other(df), axis=0, fill_value=fill_value),
+    eval_general_interop(
+        data,
+        None,
+        lambda df1, df2: getattr(df1, op)(other(df2), axis=0, fill_value=fill_value),
+        data_frame_mode_pair,
         expected_exception=expected_exception,
         # This test causes an empty slice to be generated thus triggering:
         # https://github.com/modin-project/modin/issues/5974
         comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
     )
+    
 
 
 @pytest.mark.parametrize(

@@ -44,35 +44,31 @@ class QueryCompilerTypeCaster:
         apply_argument_casting()(cls)
 
 
-def cast_nested_args(arguments, type_to_cast):
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+def cast_nested_args_to_current_qc_type(arguments, current_qc):
+    def cast_arg_to_current_qc(arg):
+        current_qc_type = type(current_qc)
+        if isinstance(arg, BaseQueryCompiler) and not isinstance(arg, current_qc_type):
+            data_cls = current_qc._modin_frame
+            return current_qc_type.from_pandas(arg.to_pandas(), data_cls)
+        else:
+            return arg
 
     if isinstance(arguments, tuple):
         arguments = list(arguments)
-        arguments = cast_nested_args(arguments, type_to_cast)
+        arguments = cast_nested_args_to_current_qc_type(arguments, current_qc)
         return tuple(arguments)
     if isinstance(arguments, list):
         for i in range(len(arguments)):
             if isinstance(arguments[i], (list, dict)):
-                cast_nested_args(arguments[i], type_to_cast)
+                cast_nested_args_to_current_qc_type(arguments[i], current_qc)
             else:
-                if isinstance(arguments[i], BaseQueryCompiler) and not isinstance(
-                    arguments[i], type_to_cast
-                ):
-                    arguments[i] = FactoryDispatcher.from_pandas(
-                        arguments[i].to_pandas()
-                    )
+                arguments[i] = cast_arg_to_current_qc(arguments[i])
     elif isinstance(arguments, dict):
         for key in arguments:
             if isinstance(arguments[key], (list, dict)):
-                cast_nested_args(arguments[key], type_to_cast)
+                cast_nested_args_to_current_qc_type(arguments[key], current_qc)
             else:
-                if isinstance(arguments[key], BaseQueryCompiler) and not isinstance(
-                    arguments[key], type_to_cast
-                ):
-                    arguments[key] = FactoryDispatcher.from_pandas(
-                        arguments[key].to_pandas()
-                    )
+                arguments[key] = cast_arg_to_current_qc(arguments[key])
     return arguments
 
 
@@ -122,13 +118,12 @@ def apply_argument_casting():
             -------
             Any
             """
-            current_qc_type = None
+            current_qc = None
             if isinstance(args[0], BaseQueryCompiler):
-                current_qc_type = type(args[0])
-            elif issubclass(args[0], BaseQueryCompiler):
-                current_qc_type = type(args[0])
-            if current_qc_type:
-                args = cast_nested_args(args, current_qc_type)
+                current_qc = args[0]
+
+            if current_qc:
+                args = cast_nested_args_to_current_qc_type(args, current_qc)
             return obj(*args, **kwargs)
 
         return cast_args
