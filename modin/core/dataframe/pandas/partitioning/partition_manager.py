@@ -440,7 +440,7 @@ class PandasDataframePartitionManager(
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right):
+    def base_broadcast_apply(cls, axis, apply_func, left, right):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -492,6 +492,68 @@ class PandasDataframePartitionManager(
                 for row_idx in range(len(left))
             ]
         )
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def broadcast_axis(
+        cls,
+        axis,
+        apply_func,
+        left,
+        right,
+        keep_partitioning=False,
+    ):
+        """
+        Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to apply and broadcast over.
+        apply_func : callable
+            Function to apply.
+        left : NumPy 2D array
+            Left partitions.
+        right : NumPy 2D array
+            Right partitions.
+        keep_partitioning : boolean, default: False
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+
+        Returns
+        -------
+        NumPy array
+            An array of partition objects.
+
+        Notes
+        -----
+        This method differs from `broadcast_axis_partitions` in that it does not send
+        all right partitions for each remote task based on the left partitions.
+        """
+        num_splits = len(left) if axis == 0 else len(left.T)
+        preprocessed_map_func = cls.preprocess_func(apply_func)
+        left_partitions = cls.axis_partition(left, axis)
+        right_partitions = None if right is None else cls.axis_partition(right, axis)
+        kw = {
+            "num_splits": num_splits,
+            "maintain_partitioning": keep_partitioning,
+        }
+
+        result_blocks = np.array(
+            [
+                left_partitions[i].apply(
+                    preprocessed_map_func,
+                    other_axis_partition=right_partitions[i],
+                    **kw,
+                )
+                for i in np.arange(len(left_partitions))
+            ]
+        )
+        # If we are mapping over columns, they are returned to use the same as
+        # rows, so we need to transpose the returned 2D NumPy array to return
+        # the structure to the correct order.
+        return result_blocks.T if not axis else result_blocks
 
     @classmethod
     @wait_computations_if_benchmark_mode
@@ -647,6 +709,63 @@ class PandasDataframePartitionManager(
                 for row_of_parts in partitions
             ]
         )
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def broadcast_apply(
+        cls,
+        axis,
+        apply_func,
+        left,
+        right,
+    ):
+        """
+        Broadcast the `right` partitions to `left` and apply `apply_func` function
+        using different approaches to achieve the best performance.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to apply and broadcast over.
+        apply_func : callable
+            Function to apply.
+        left : np.ndarray
+            NumPy array of left partitions.
+        right : np.ndarray
+            NumPy array of right partitions.
+
+        Returns
+        -------
+        np.ndarray
+            NumPy array of result partition objects.
+        """
+        # The condition for the execution of `base_broadcast_apply` is different from
+        # the same condition in the `map_partitions`, since the columnar partitioning approach
+        # cannot be implemented for the `broadcast_apply`. This is due to the fact that different
+        # partitions of the left and right dataframes are possible for the `broadcast_apply`,
+        # as a result of which it is necessary to merge partitions on both axes at once,
+        # which leads to large slowdowns.
+        if (
+            np.prod(left.shape) <= 1.5 * CpuCount.get()
+            or left.shape[axis] < CpuCount.get() // 5
+        ):
+            # block-wise broadcast
+            new_partitions = cls.base_broadcast_apply(
+                axis,
+                apply_func,
+                left,
+                right,
+            )
+        else:
+            # axis-wise broadcast
+            new_partitions = cls.broadcast_axis(
+                axis=axis ^ 1,
+                left=left,
+                right=right,
+                apply_func=apply_func,
+                keep_partitioning=True,
+            )
+        return new_partitions
 
     @classmethod
     @wait_computations_if_benchmark_mode
