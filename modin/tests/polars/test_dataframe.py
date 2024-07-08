@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import polars
+import polars.testing
 
 import modin.polars as pl
 
@@ -21,4 +22,4 @@ def test_init_roundtrip():
     df = pl.DataFrame(data)
     polars_df = polars.DataFrame(data)
     to_polars = polars.from_pandas(df._query_compiler.to_pandas())
-    assert polars_df.frame_equal(to_polars)
+    polars.testing.assert_frame_equal(polars_df, to_polars)
