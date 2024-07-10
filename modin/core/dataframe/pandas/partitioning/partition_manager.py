@@ -339,9 +339,7 @@ class PandasDataframePartitionManager(
                 f"the number of partitions along {axis=} is not equal: "
                 + f"{partitions.shape[axis]} != {by.shape[axis]}"
             )
-            mapped_partitions = cls.broadcast_apply(
-                axis, map_func, left=partitions, right=by
-            )
+            mapped_partitions = cls.apply(axis, map_func, left=partitions, right=by)
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
 
@@ -440,7 +438,7 @@ class PandasDataframePartitionManager(
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def base_broadcast_apply(cls, axis, apply_func, left, right):
+    def broadcast_apply(cls, axis, apply_func, left, right):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -495,13 +493,12 @@ class PandasDataframePartitionManager(
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_axis(
+    def apply_axis_partitions(
         cls,
         axis,
         apply_func,
         left,
         right,
-        keep_partitioning=False,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -531,21 +528,15 @@ class PandasDataframePartitionManager(
         This method differs from `broadcast_axis_partitions` in that it does not send
         all right partitions for each remote task based on the left partitions.
         """
-        num_splits = len(left) if axis == 0 else len(left.T)
         preprocessed_map_func = cls.preprocess_func(apply_func)
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
-        kw = {
-            "num_splits": num_splits,
-            "maintain_partitioning": keep_partitioning,
-        }
 
         result_blocks = np.array(
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
                     other_axis_partition=right_partitions[i],
-                    **kw,
                 )
                 for i in np.arange(len(left_partitions))
             ]
@@ -712,7 +703,7 @@ class PandasDataframePartitionManager(
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(
+    def apply(
         cls,
         axis,
         apply_func,
@@ -739,10 +730,10 @@ class PandasDataframePartitionManager(
         np.ndarray
             NumPy array of result partition objects.
         """
-        # The condition for the execution of `base_broadcast_apply` is different from
+        # The condition for the execution of `broadcast_apply` is different from
         # the same condition in the `map_partitions`, since the columnar partitioning approach
-        # cannot be implemented for the `broadcast_apply`. This is due to the fact that different
-        # partitions of the left and right dataframes are possible for the `broadcast_apply`,
+        # cannot be implemented for the `apply`. This is due to the fact that different
+        # partitions of the left and right dataframes are possible for the `apply`,
         # as a result of which it is necessary to merge partitions on both axes at once,
         # which leads to large slowdowns.
         if (
@@ -750,7 +741,7 @@ class PandasDataframePartitionManager(
             or left.shape[axis] < CpuCount.get() // 5
         ):
             # block-wise broadcast
-            new_partitions = cls.base_broadcast_apply(
+            new_partitions = cls.broadcast_apply(
                 axis,
                 apply_func,
                 left,
@@ -758,12 +749,11 @@ class PandasDataframePartitionManager(
             )
         else:
             # axis-wise broadcast
-            new_partitions = cls.broadcast_axis(
+            new_partitions = cls.apply_axis_partitions(
                 axis=axis ^ 1,
                 left=left,
                 right=right,
                 apply_func=apply_func,
-                keep_partitioning=True,
             )
         return new_partitions
 
