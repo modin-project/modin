@@ -1212,8 +1212,11 @@ def create_test_dfs(
 
 
 def create_test_series(
-    vals, sort=False, backend=None, **kwargs
+    vals, sort=False, backend=None, data_frame_mode=None, **kwargs
 ) -> tuple[pd.Series, pandas.Series]:
+    if data_frame_mode:
+        actual_data_frame_mode = NativeDataframeMode().get()
+        NativeDataframeMode().put(data_frame_mode)
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
@@ -1227,6 +1230,8 @@ def create_test_series(
     if backend is not None:
         modin_series = modin_series.convert_dtypes(dtype_backend=backend)
         pandas_series = pandas_series.convert_dtypes(dtype_backend=backend)
+    if data_frame_mode:
+        NativeDataframeMode().put(actual_data_frame_mode)
     return modin_series, pandas_series
 
 
