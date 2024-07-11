@@ -513,10 +513,6 @@ class PandasDataframePartitionManager(
             Left partitions.
         right : NumPy 2D array
             Right partitions.
-        keep_partitioning : boolean, default: False
-            The flag to keep partition boundaries for Modin Frame if possible.
-            Setting it to True disables shuffling data from one partition to another in case the resulting
-            number of splits is equal to the initial number of splits.
 
         Returns
         -------
