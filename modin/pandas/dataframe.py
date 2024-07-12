@@ -2993,9 +2993,8 @@ class DataFrame(BasePandasDataset):
         DataFrame or None
             None if update was done, ``DataFrame`` otherwise.
         """
-        assert (
-            isinstance(new_query_compiler, type(self._query_compiler))
-            or type(new_query_compiler) in self._query_compiler.__class__.__bases__
+        assert isinstance(
+            new_query_compiler, self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
             return self.__constructor__(query_compiler=new_query_compiler)
