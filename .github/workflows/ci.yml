@@ -698,6 +698,16 @@ jobs:
       - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
       - run: python -m pytest modin/tests/pandas/dataframe/test_udf.py
       - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
+      - run: python -m pytest modin/tests/pandas/interop/test_binary.py
+      - run: python -m pytest modin/tests/pandas/interop/test_default.py
+      - run: python -m pytest modin/tests/pandas/interop/test_indexing.py
+      - run: python -m pytest modin/tests/pandas/interop/test_iter.py
+      - run: python -m pytest modin/tests/pandas/interop/test_join_sort.py
+      - run: python -m pytest modin/tests/pandas/interop/test_map_metadata.py
+      - run: python -m pytest modin/tests/pandas/interop/test_pickle.py
+      - run: python -m pytest modin/tests/pandas/interop/test_reduce.py
+      - run: python -m pytest modin/tests/pandas/interop/test_udf.py
+      - run: python -m pytest modin/tests/pandas/interop/test_window.py
       - uses: ./.github/actions/upload-coverage
 
   merge-coverage-artifacts:
