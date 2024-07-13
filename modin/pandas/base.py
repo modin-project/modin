@@ -20,7 +20,16 @@ import pickle as pkl
 import re
 import warnings
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Literal, Optional, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Hashable,
+    Literal,
+    Optional,
+    Sequence,
+    Union,
+)
 
 import numpy as np
 import pandas
@@ -2147,7 +2156,7 @@ class BasePandasDataset(ClassLogger):
     def _stat_operation(
         self,
         op_name: str,
-        axis: int | str,
+        axis: Optional[Union[int, str]],
         skipna: bool,
         numeric_only: Optional[bool] = False,
         **kwargs,
