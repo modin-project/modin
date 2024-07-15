@@ -45,7 +45,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
-from modin.config import CpuCount, RangePartitioning
+from modin.config import RangePartitioning
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -3157,14 +3157,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lib.no_default,
             None,
         )
-        # FIXME: this is a naive workaround for this problem: https://github.com/modin-project/modin/issues/5394
-        # if there are too many partitions then all non-full-axis implementations start acting very badly.
-        # The here threshold is pretty random though it works fine on simple scenarios
-        processable_amount_of_partitions = (
-            self._modin_frame.num_parts < CpuCount.get() * 32
-        )
 
-        if is_column_wise and no_thresh_passed and processable_amount_of_partitions:
+        if is_column_wise and no_thresh_passed:
             how = kwargs.get("how", "any")
             subset = kwargs.get("subset")
             how = "any" if how in (lib.no_default, None) else how

@@ -3265,7 +3265,9 @@ class PandasDataframe(
                 axis
             ), self.copy_axis_cache(axis)
 
-        new_frame = self._partition_mgr_cls.apply(axis, func, left_parts, right_parts)
+        new_frame = self._partition_mgr_cls.broadcast_apply(
+            axis, func, left_parts, right_parts
+        )
         if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
 
