@@ -533,7 +533,7 @@ class PandasDataframePartitionManager(
             then the number of splits is preserved.
         apply_indices : list of ints, default: None
             Indices of `axis ^ 1` to apply function over.
-        send_all_right: bool, default: True
+        send_all_right : bool, default: True
             Whether or not to pass all right axis partitions to each of the left axis partitions.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `apply_func`.
@@ -663,8 +663,7 @@ class PandasDataframePartitionManager(
         right,
     ):
         """
-        Broadcast the `right` partitions to `left` and apply `apply_func` function
-        using different approaches to achieve the best performance.
+        Broadcast the `right` partitions to `left` and apply `apply_func` function using different approaches to achieve the best performance.
 
         Parameters
         ----------
@@ -682,12 +681,9 @@ class PandasDataframePartitionManager(
         np.ndarray
             NumPy array of result partition objects.
         """
-        # The condition for the execution of `broadcast_apply` is different from
-        # the same condition in the `map_partitions`, since the columnar partitioning approach
-        # cannot be implemented for the `apply`. This is due to the fact that different
-        # partitions of the left and right dataframes are possible for the `apply`,
-        # as a result of which it is necessary to merge partitions on both axes at once,
-        # which leads to large slowdowns.
+        # The `broadcast_apply` runtime condition differs from
+        # the same condition in `map_partitions` because the columnar
+        # approach for `broadcast_apply` results in a slowdown.
         if np.prod(left.shape) <= 1.5 * CpuCount.get():
             # block-wise broadcast
             new_partitions = cls.base_broadcast_apply(
