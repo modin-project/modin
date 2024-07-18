@@ -2114,7 +2114,9 @@ class Series(BasePolarsDataset):
             _query_compiler=self._query_compiler.pow(exponent, axis=0)
         )
 
-    def replace_strict(self, old, new=no_default, *, default=no_default, return_dtype=None) -> "Series":
+    def replace_strict(
+        self, old, new=no_default, *, default=no_default, return_dtype=None
+    ) -> "Series":
         """
         Replace values strictly.
 
@@ -2144,4 +2146,6 @@ class Series(BasePolarsDataset):
         Returns:
             Series without NaN values.
         """
-        return self.__constructor__(_query_compiler=self._query_compiler.dropna(how="any"))
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.dropna(how="any")
+        )
