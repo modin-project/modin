@@ -704,7 +704,11 @@ class DataFrame(BasePolarsDataset):
             column = 0
         if isinstance(column, str):
             column = self.columns.index(column)
-        return self.to_pandas().iloc[row, column]
+        return (
+            self._query_compiler.take_2d_labels(row, column)
+            .to_pandas()
+            .squeeze(axis=None)
+        )
 
     def iter_columns(self) -> Iterator["Series"]:
         """
