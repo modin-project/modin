@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 import numpy as np
 import pandas
 import polars
+from polars._utils.various import no_default
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.pandas import Series as ModinPandasSeries
@@ -241,8 +242,6 @@ class Series(BasePolarsDataset):
         return polars.from_pandas(
             pandas.Series().astype(self._query_compiler.dtypes.iloc[0])
         ).dtype
-
-    inner_dtype = None
 
     @property
     def name(self) -> str:
@@ -770,8 +769,6 @@ class Series(BasePolarsDataset):
             self.to_pandas().apply(lambda x: mapping.get(x, default))
         )
 
-    map_dict = replace
-
     def pct_change(self, n: int = 1) -> "Series":
         """
         Calculate the percentage change.
@@ -848,8 +845,6 @@ class Series(BasePolarsDataset):
             .rolling(window=window_size, min_periods=min_periods, center=center)
             .apply(function)
         )
-
-    rolling_apply = rolling_map
 
     def rolling_max(
         self,
@@ -1202,15 +1197,6 @@ class Series(BasePolarsDataset):
 
     has_validity = has_nulls
 
-    def is_boolean(self) -> bool:
-        """
-        Check if the data type is boolean.
-
-        Returns:
-            True if the data type is boolean, False otherwise.
-        """
-        return self.dtype == polars.datatypes.Boolean
-
     def is_finite(self) -> "Series":
         """
         Check if the values are finite.
@@ -1228,17 +1214,6 @@ class Series(BasePolarsDataset):
             True if the values are the first occurrence, False otherwise.
         """
         raise NotImplementedError("not yet")
-
-    is_first = is_first_distinct
-
-    def is_float(self) -> bool:
-        """
-        Check if the data type is float.
-
-        Returns:
-            True if the data type is float, False otherwise.
-        """
-        return self.dtype in polars.datatypes.FLOAT_DTYPES
 
     def is_in(self, other: "Series" | list[Any]) -> "Series":
         """
@@ -1261,23 +1236,6 @@ class Series(BasePolarsDataset):
         """
         return self.__eq__(np.inf)
 
-    def is_integer(self, signed: bool | None = None) -> bool:
-        """
-        Check if the data type is integer.
-
-        Args:
-            signed: Signed integer.
-
-        Returns:
-            True if the data type is integer, False otherwise.
-        """
-        if signed is None:
-            return self.dtype in polars.datatypes.INTEGER_DTYPES
-        elif signed:
-            return self.dtype in polars.datatypes.SIGNED_INTEGER_DTYPES
-        else:
-            return self.dtype in polars.datatypes.UNSIGNED_INTEGER_DTYPES
-
     def is_last_distinct(self) -> "Series":
         """
         Check if the values are the last occurrence.
@@ -1286,8 +1244,6 @@ class Series(BasePolarsDataset):
             True if the values are the last occurrence, False otherwise.
         """
         raise NotImplementedError("not yet")
-
-    is_last = is_last_distinct
 
     def is_nan(self) -> "Series":
         """
@@ -1325,15 +1281,6 @@ class Series(BasePolarsDataset):
         """
         return self.is_nan()
 
-    def is_numeric(self) -> bool:
-        """
-        Check if the data type is numeric.
-
-        Returns:
-            True if the data type is numeric, False otherwise.
-        """
-        return self.dtype in polars.datatypes.NUMERIC_DTYPES
-
     def is_sorted(
         self,
         *,
@@ -1354,27 +1301,6 @@ class Series(BasePolarsDataset):
             if not descending
             else self.to_pandas().is_monotonic_decreasing
         )
-
-    def is_temporal(self, excluding=None) -> bool:
-        """
-        Check if the data type is temporal.
-
-        Args:
-            excluding: Excluding data types.
-
-        Returns:
-            True if the data type is temporal, False otherwise.
-        """
-        return self.dtype in polars.datatypes.DATETIME_DTYPES
-
-    def is_utf8(self) -> bool:
-        """
-        Check if the data type is UTF-8.
-
-        Returns:
-            True if the data type is UTF-8, False otherwise.
-        """
-        return self.dtype == polars.String
 
     def len(self) -> int:
         """
@@ -1550,30 +1476,6 @@ class Series(BasePolarsDataset):
         return self.__constructor__(
             values=self.to_pandas().clip(lower_bound, upper_bound)
         )
-
-    def clip_max(self, upper_bound) -> "Series":
-        """
-        Clip the maximum values.
-
-        Args:
-            upper_bound: Upper bound.
-
-        Returns:
-            Clipped maximum values Series.
-        """
-        return self.clip(lower_bound=None, upper_bound=upper_bound)
-
-    def clip_min(self, lower_bound) -> "Series":
-        """
-        Clip the minimum values.
-
-        Args:
-            lower_bound: Lower bound.
-
-        Returns:
-            Clipped minimum values Series.
-        """
-        return self.clip(lower_bound=lower_bound, upper_bound=None)
 
     def cut(
         self,
@@ -1793,19 +1695,6 @@ class Series(BasePolarsDataset):
         """
         raise NotImplementedError("not yet")
 
-    def set_at_idx(self, indices, values) -> "Series":
-        """
-        Set values by indices.
-
-        Args:
-            indices: Indices.
-            value: Value.
-
-        Returns:
-            Set Series.
-        """
-        raise NotImplementedError("not yet")
-
     def shrink_dtype(self) -> "Series":
         """
         Shrink the data type.
@@ -1825,11 +1714,6 @@ class Series(BasePolarsDataset):
         Returns:
             Shuffled Series.
         """
-        raise NotImplementedError("not yet")
-
-    take = gather
-
-    def view(self, *, ignore_nulls: bool = False):
         raise NotImplementedError("not yet")
 
     def zip_with(self, mask: "Series", other: "Series") -> "Series":
@@ -1867,8 +1751,6 @@ class Series(BasePolarsDataset):
         """
         return self.__constructor__(values=self.to_pandas().apply(function))
 
-    apply = map_elements
-
     def reinterpret(self, *, signed: bool = True) -> "Series":
         """
         Reinterpret the data type of the series as signed or unsigned.
@@ -1880,18 +1762,6 @@ class Series(BasePolarsDataset):
             Reinterpreted Series.
         """
         raise NotImplementedError("not yet")
-
-    def series_equal(self, other: "Series", *, null_equal: bool = True) -> bool:
-        """
-        Check if the Series are equal.
-
-        Args:
-            other: Other Series.
-
-        Returns:
-            True if the Series are equal, False otherwise.
-        """
-        return self.equals(other, null_equal=null_equal)
 
     def set_sorted(self, *, descending: bool = False) -> "Series":
         """
@@ -1942,3 +1812,336 @@ class Series(BasePolarsDataset):
         # TODO: implement dt object
         #  https://docs.pola.rs/api/python/stable/reference/series/temporal.html
         raise NotImplementedError("not yet")
+
+    def __len__(self) -> int:
+        """
+        Get the length of the Series.
+        """
+        return self.len()
+
+    def __matmul__(self, other) -> "Series":
+        """
+        Matrix multiplication.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Matrix multiplication Series.
+        """
+        raise NotImplementedError("not yet")
+
+    def __radd__(self, other) -> "Series":
+        """
+        Right addition.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Added Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.radd(other, axis=0)
+        )
+
+    def __rand__(self, other) -> "Series":
+        """
+        Right and.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            And Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.__rand__(other, axis=0)
+        )
+
+    def __rfloordiv__(self, other) -> "Series":
+        """
+        Right floor division.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Floored Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.rfloordiv(other, axis=0)
+        )
+
+    def __rmatmul__(self, other) -> "Series":
+        """
+        Right matrix multiplication.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Matrix multiplication Series.
+        """
+        raise NotImplementedError("not yet")
+
+    def __rmod__(self, other) -> "Series":
+        """
+        Right modulo.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Modulo Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.rmod(other, axis=0)
+        )
+
+    def __rmul__(self, other) -> "Series":
+        """
+        Right multiplication.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Multiplied Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.rmul(other, axis=0)
+        )
+
+    def __ror__(self, other) -> "Series":
+        """
+        Right or.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Or Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.__ror__(other, axis=0)
+        )
+
+    def __rpow__(self, other) -> "Series":
+        """
+        Right power.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Powered Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.rpow(other, axis=0)
+        )
+
+    def __rsub__(self, other) -> "Series":
+        """
+        Right subtraction.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Subtracted Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.rsub(other, axis=0)
+        )
+
+    def __rtruediv__(self, other) -> "Series":
+        """
+        Right true division.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Divided Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.rtruediv(other, axis=0)
+        )
+
+    def __rxor__(self, other) -> "Series":
+        """
+        Right xor.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Xor Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.__rxor__(other, axis=0)
+        )
+
+    def eq(self, other) -> "Series":
+        """
+        Check if the values are equal to the other Series.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.eq(other._query_compiler)
+        )
+
+    def eq_missing(self, other) -> "Series":
+        """
+        Check if the values are equal to the other Series, including missing values.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        raise NotImplementedError("not yet")
+
+    def ge(self, other) -> "Series":
+        """
+        Check if the values are greater than or equal to the other Series.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.ge(other._query_compiler)
+        )
+
+    def gt(self, other) -> "Series":
+        """
+        Check if the values are greater than the other Series.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.gt(other._query_compiler)
+        )
+
+    def le(self, other) -> "Series":
+        """
+        Check if the values are less than or equal to the other Series.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.le(other._query_compiler)
+        )
+
+    def lt(self, other) -> "Series":
+        """
+        Check if the values are less than the other Series.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.lt(other._query_compiler)
+        )
+
+    def n_unique(self) -> int:
+        """
+        Get the number of unique values.
+
+        Returns:
+            Number of unique values.
+        """
+        return self._query_compiler.nunique().to_pandas().squeeze(axis=None)
+
+    def ne(self, other) -> "Series":
+        """
+        Check if the values are not equal to the other Series.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.ne(other._query_compiler)
+        )
+
+    def ne_missing(self, other) -> "Series":
+        """
+        Check if the values are not equal to the other Series, including missing values.
+
+        Args:
+            other: Other Series.
+
+        Returns:
+            Boolean Series.
+        """
+        raise NotImplementedError("not yet")
+
+    def pow(self, exponent) -> "Series":
+        """
+        Raise the values to the power of the exponent.
+
+        Args:
+            exponent: Exponent.
+
+        Returns:
+            Powered Series.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.pow(exponent, axis=0)
+        )
+
+    def replace_strict(self, old, new=no_default, *, default=no_default, return_dtype=None) -> "Series":
+        """
+        Replace values strictly.
+
+        Args:
+            old: Old values.
+            new: New values.
+            default: Default value.
+
+        Returns:
+            Replaced Series.
+        """
+        raise NotImplementedError("not yet")
+
+    def to_list(self) -> list:
+        """
+        Convert the Series to a list.
+
+        Returns:
+            List representation of the Series.
+        """
+        return self._to_polars().tolist()
+
+    def drop_nans(self) -> "Series":
+        """
+        Drop NaN values.
+
+        Returns:
+            Series without NaN values.
+        """
+        return self.__constructor__(_query_compiler=self._query_compiler.dropna(how="any"))

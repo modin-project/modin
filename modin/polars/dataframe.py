@@ -129,9 +129,8 @@ class DataFrame(BasePolarsDataset):
         Args:
             new_columns: New columns to set.
         """
-        new_query_compiler = self.__constructor__(
-            self.to_pandas().rename(columns=new_columns)
-        )._query_compiler
+        new_query_compiler = self._query_compiler.copy()
+        new_query_compiler.columns = new_columns
         self._query_compiler = new_query_compiler
 
     columns = property(_get_columns, _set_columns)
@@ -220,24 +219,6 @@ class DataFrame(BasePolarsDataset):
         """
         return repr(polars.from_pandas(self._query_compiler.to_pandas()))
 
-    def copy(self):
-        """
-        Copy the DataFrame.
-
-        Returns:
-            Copied DataFrame.
-        """
-        return self.__constructor__(_query_compiler=self._query_compiler.copy())
-
-    def count(self):
-        """
-        Get the number of non-null values in each column.
-
-        Returns:
-            DataFrame with the counts.
-        """
-        return self.__constructor__(_query_compiler=self._query_compiler.count(axis=0))
-
     def max(self, axis=None):
         """
         Get the maximum value in each column.
@@ -278,9 +259,12 @@ class DataFrame(BasePolarsDataset):
         ]
         if len(non_numeric_cols) > 0:
             return self.__constructor__(
-                self.to_pandas().assign(
-                    **{c: None for c in non_numeric_cols}
-                )  # .astype(self._query_compiler.dtypes)
+                _query_compiler=self._query_compiler.write_items(
+                    slice(None),
+                    [self.columns.index(c) for c in non_numeric_cols],
+                    pandas.NA,
+                    need_columns_reindex=False,
+                ).astype({c: self._query_compiler.dtypes[c] for c in non_numeric_cols})
             )
         return self.copy()
 
@@ -308,6 +292,19 @@ class DataFrame(BasePolarsDataset):
             return obj.mean_horizontal(
                 ignore_nulls=True if null_strategy == "ignore" else False
             )
+
+    def median(self) -> "DataFrame":
+        """
+        Get the median of each column.
+
+        Returns:
+            DataFrame with the median of each column.
+        """
+        return self.__constructor__(
+            _query_compiler=self._convert_non_numeric_to_null()._query_compiler.median(
+                0
+            )
+        )
 
     def mean_horizontal(self, *, ignore_nulls: bool = True):
         """
@@ -571,8 +568,6 @@ class DataFrame(BasePolarsDataset):
 
         return GroupBy(self, *by, maintain_order=maintain_order, **named_by)
 
-    groupby = group_by
-
     def drop(self, *columns, strict: bool = True) -> "DataFrame":
         """
         Drop the given columns.
@@ -629,8 +624,6 @@ class DataFrame(BasePolarsDataset):
         """
         return self.columns.index(name)
 
-    find_column_index_by_name = get_column_index
-
     def get_columns(self) -> list["Series"]:
         """
         Get the columns of the DataFrame.
@@ -653,19 +646,6 @@ class DataFrame(BasePolarsDataset):
         label,
         group_by,
         start_by,
-        check_sorted,
-    ):
-        raise NotImplementedError("not yet")
-
-    def group_by_rolling(
-        self,
-        index_column,
-        *,
-        every,
-        period,
-        closed,
-        offset,
-        by,
         check_sorted,
     ):
         raise NotImplementedError("not yet")
@@ -992,25 +972,6 @@ class DataFrame(BasePolarsDataset):
         new_obj.columns = new_columns
         return new_obj
 
-    def replace(self, column: str, new_column: "Series") -> "DataFrame":
-        """
-        Replace the column with the new column.
-
-        Args:
-            column: Column to replace.
-            new_column: New column to replace with.
-
-        Returns:
-            DataFrame with the column replaced.
-        """
-        new_loc = self.get_column_index(column)
-        self._query_compiler = self._query_compiler.drop([column]).insert(
-            new_loc,
-            column,
-            new_column._query_compiler,
-        )
-        return self
-
     def replace_column(self, index: int, column: "Series") -> "DataFrame":
         """
         Replace the column at the given index with the new column.
@@ -1028,8 +989,6 @@ class DataFrame(BasePolarsDataset):
             column._query_compiler,
         )
         return self
-
-    replace_at_idx = replace_column
 
     def reverse(self) -> "DataFrame":
         """
@@ -1296,8 +1255,6 @@ class DataFrame(BasePolarsDataset):
             _query_compiler=self._query_compiler.apply(function, axis=1)
         )
 
-    apply = map_rows
-
     def corr(self, **kwargs: Any) -> "DataFrame":
         """
         Compute the correlation of the DataFrame.
@@ -1306,18 +1263,6 @@ class DataFrame(BasePolarsDataset):
             DataFrame with the correlation.
         """
         return self.__constructor__(_query_compiler=self._query_compiler.corr(**kwargs))
-
-    def frame_equal(self, other: "DataFrame", *, null_equal: bool = True) -> bool:
-        """
-        Check if the DataFrame is equal to another DataFrame.
-
-        Args:
-            other: DataFrame to compare with.
-
-        Returns:
-            Whether the DataFrames are equal.
-        """
-        return self.equals(other, null_equal=null_equal)
 
     def lazy(self) -> "LazyFrame":
         """
@@ -1352,3 +1297,139 @@ class DataFrame(BasePolarsDataset):
             Serialized DataFrame.
         """
         return polars.from_pandas(self._query_compiler.to_pandas()).serialize(file)
+
+    @property
+    def style(self):
+        """
+        Create a Great Table for styling.
+
+        Returns:
+            GreatTable object.
+        """
+        return self._to_polars().style
+
+    def to_dict(
+        self, *, as_series: bool = True
+    ) -> dict[str, "Series"] | dict[str, list[Any]]:
+        """
+        Convert the DataFrame to a dictionary representation.
+
+        Args:
+            as_series: Whether to convert the columns to Series.
+
+        Returns:
+            Dictionary representation of the DataFrame.
+        """
+        if as_series:
+            return {name: self[name] for name in self.columns}
+        else:
+            return polars.from_pandas(self._query_compiler.to_pandas()).to_dict(
+                as_series=as_series
+            )
+
+    def to_dicts(self) -> list[dict[str, Any]]:
+        """
+        Convert the DataFrame to a list of dictionaries.
+
+        Returns:
+            List of dictionaries.
+        """
+        return self._to_polars().to_dicts()
+
+    def to_init_repr(self, n: int = 1000) -> str:
+        """
+        Get the string representation of the DataFrame for initialization.
+
+        Returns:
+            String representation of the DataFrame for initialization.
+        """
+        return self._to_polars().to_init_repr(n)
+
+    def to_struct(self, name: str = "") -> "Series":
+        """
+        Convert the DataFrame to a struct.
+
+        Args:
+            name: Name of the struct.
+
+        Returns:
+            Series representation of the DataFrame as a struct.
+        """
+        raise NotImplementedError("not yet")
+
+    def unpivot(
+        self,
+        on,
+        *,
+        index,
+        variable_name: str | None = None,
+        value_name: str | None = None,
+    ) -> "DataFrame":
+        """
+        Unpivot a DataFrame from wide to long format.
+
+        Args:
+            on: Columns to unpivot.
+            index: Columns to keep.
+            variable_name: Name of the variable column.
+            value_name: Name of the value column.
+
+        Returns:
+            Unpivoted DataFrame.
+        """
+        return self.__constructor__(
+            _query_compiler=self._query_compiler.melt(
+                on=on,
+                index=index,
+                var_name=variable_name,
+                value_name=value_name,
+            )
+        )
+
+    write_avro = write_clipboard = write_csv = write_database = write_delta = (
+        write_excel
+    ) = write_ipc = write_ipc_stream = write_json = write_ndjson = write_parquet = (
+        write_parquet_partitioned
+    ) = lambda *args, **kwargs: (_ for _ in ()).throw(NotImplementedError("not yet"))
+
+    def clear(self, n: int = 0) -> "DataFrame":
+        """
+        Create an empty (n=0) or null filled (n>0) DataFrame.
+
+        Args:
+            n: Number of rows to create.
+
+        Returns:
+            Empty or null filled DataFrame.
+        """
+        return self.__constructor__(polars.DataFrame(schema=self.schema).clear(n=n))
+
+    def collect_schema(self) -> dict[str, str]:
+        """
+        Collect the schema of the DataFrame.
+
+        Returns:
+            Dictionary of the schema.
+        """
+        return self.schema
+
+    def fold(self, operation: callable) -> "Series":
+        """
+        Fold the DataFrame.
+
+        Args:
+            operation: Operation to fold the DataFrame with.
+
+        Returns:
+            Series with the folded DataFrame.
+        """
+        raise NotImplementedError("not yet")
+
+    def hash_rows(
+        self,
+        seed: int = 0,
+        seed_1: int | None = None,
+        seed_2: int | None = None,
+        seed_3: int | None = None,
+    ) -> "Series":
+        raise NotImplementedError("not yet")

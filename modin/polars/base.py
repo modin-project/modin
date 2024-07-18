@@ -205,25 +205,6 @@ class BasePolarsDataset:
         """
         return polars.from_pandas(self._query_compiler.to_pandas()).to_arrow()
 
-    def to_dict(
-        self, *, as_series: bool = True
-    ) -> dict[str, "Series"] | dict[str, list[Any]]:
-        """
-        Convert the DataFrame to a dictionary representation.
-
-        Args:
-            as_series: Whether to convert the columns to Series.
-
-        Returns:
-            Dictionary representation of the DataFrame.
-        """
-        if as_series:
-            return {name: self[name] for name in self.columns}
-        else:
-            return polars.from_pandas(self._query_compiler.to_pandas()).to_dict(
-                as_series=as_series
-            )
-
     def to_jax(self, device=None):
         """
         Convert the DataFrame to JAX format.
@@ -236,20 +217,6 @@ class BasePolarsDataset:
         """
         return polars.from_pandas(self._query_compiler.to_pandas()).to_jax(
             device=device
-        )
-
-    def to_list(self, *, use_pyarrow: bool | None = None) -> list[Any]:
-        """
-        Convert the DataFrame to a list representation.
-
-        Args:
-            use_pyarrow: Whether to use PyArrow for conversion.
-
-        Returns:
-            List representation of the DataFrame.
-        """
-        return polars.from_pandas(self._query_compiler.to_pandas()).to_list(
-            use_pyarrow=use_pyarrow
         )
 
     def to_numpy(
@@ -313,15 +280,6 @@ class BasePolarsDataset:
         # TODO: support strict
         return self.__constructor__(_query_compiler=self._query_compiler.astype(dtypes))
 
-    def copy(self):
-        """
-        Copy the DataFrame.
-
-        Returns:
-            Copied DataFrame.
-        """
-        return self.__constructor__(_query_compiler=self._query_compiler.copy())
-
     def clone(self) -> "BasePolarsDataset":
         """
         Clone the DataFrame.
@@ -344,8 +302,6 @@ class BasePolarsDataset:
         return self.__constructor__(
             _query_compiler=self._query_compiler.dropna(subset=subset, how="any")
         )
-
-    drop_nans = drop_nulls
 
     def explode(self, columns: str, *more_columns: str) -> "BasePolarsDataset":
         """
@@ -528,9 +484,6 @@ class BasePolarsDataset:
     def shift(self, n: int = 1, *, fill_value=None) -> "DataFrame":
         raise NotImplementedError("not yet")
 
-    def shift_and_fill(self, fill_value=None, *, n: int = 1) -> "DataFrame":
-        return self.shift(n=n, fill_value=fill_value)
-
     def shrink_to_fit(self) -> "DataFrame":
         """
         Shrink the DataFrame to fit in memory.
@@ -604,8 +557,6 @@ class BasePolarsDataset:
         return self.__constructor__(
             _query_compiler=self._query_compiler.getitem_row_array(slice(-n, None))
         )
-
-    take_every = gather_every
 
     def to_dummies(
         self,
@@ -706,3 +657,12 @@ class BasePolarsDataset:
     @property
     def plot(self):
         return polars.from_pandas(self._query_compiler.to_pandas()).plot
+
+    def count(self):
+        """
+        Get the number of non-null values in each column.
+
+        Returns:
+            DataFrame with the counts.
+        """
+        return self.__constructor__(_query_compiler=self._query_compiler.count(axis=0))
