@@ -504,7 +504,7 @@ class PandasDataframePartitionManager(
         keep_partitioning=False,
         num_splits=None,
         apply_indices=None,
-        send_all_right=True,
+        broadcast_all=True,
         enumerate_partitions=False,
         lengths=None,
         apply_func_args=None,
@@ -533,7 +533,7 @@ class PandasDataframePartitionManager(
             then the number of splits is preserved.
         apply_indices : list of ints, default: None
             Indices of `axis ^ 1` to apply function over.
-        send_all_right : bool, default: True
+        broadcast_all : bool, default: True
             Whether or not to pass all right axis partitions to each of the left axis partitions.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `apply_func`.
@@ -596,7 +596,7 @@ class PandasDataframePartitionManager(
                     preprocessed_map_func,
                     *(apply_func_args if apply_func_args else []),
                     other_axis_partition=(
-                        right_partitions if send_all_right else right_partitions[i]
+                        right_partitions if broadcast_all else right_partitions[i]
                     ),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
@@ -699,7 +699,8 @@ class PandasDataframePartitionManager(
                 left=left,
                 right=right,
                 apply_func=apply_func,
-                send_all_right=False,
+                broadcast_all=False,
+                keep_partitioning=True,
             )
         return new_partitions
 
