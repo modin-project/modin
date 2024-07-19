@@ -1084,7 +1084,7 @@ class DataFrame(BasePandasDataset):
                     + f"{len(value.columns)} columns instead."
                 )
             value = value.squeeze(axis=1)
-        if not self._query_compiler.lazy_execution and len(self.index) == 0:
+        if not self._query_compiler.lazy_row_count and len(self.index) == 0:
             if not hasattr(value, "index"):
                 try:
                     value = pandas.Series(value)
@@ -2783,7 +2783,7 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, (Series, Categorical, np.ndarray, list, range)):
                 value = list(value)
 
-        if not self._query_compiler.lazy_execution and len(self.index) == 0:
+        if not self._query_compiler.lazy_row_count and len(self.index) == 0:
             new_self = self.__constructor__({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
