@@ -2659,7 +2659,10 @@ class BasePandasDataset(ClassLogger):
         # exist.
         if (
             not drop
-            and not self._query_compiler.lazy_column_labels
+            and not (
+                self._query_compiler.lazy_column_labels
+                or self._query_compiler.lazy_row_labels
+            )
             and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
