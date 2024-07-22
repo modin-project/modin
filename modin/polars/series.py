@@ -23,6 +23,7 @@ import polars
 from polars._utils.various import no_default
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.error_message import ErrorMessage
 from modin.pandas import Series as ModinPandasSeries
 from modin.pandas.io import from_pandas
 from modin.polars.base import BasePolarsDataset
@@ -815,6 +816,9 @@ class Series(BasePolarsDataset):
         Returns:
             Rank Series.
         """
+        # TODO: support seed
+        if method not in ["average", "min", "max", "first", "dense"]:
+            raise ValueError(f"method {method} not supported")
         return self.__constructor__(
             self.to_pandas().rank(method=method, ascending=not descending)
         )
@@ -1749,6 +1753,10 @@ class Series(BasePolarsDataset):
         Returns:
             Mapped Series.
         """
+        if return_dtype is not None or skip_nulls is False:
+            ErrorMessage.warn(
+                f"`return_dtype` and `skip_nulls=False` are not supported yet"
+            )
         return self.__constructor__(values=self.to_pandas().apply(function))
 
     def reinterpret(self, *, signed: bool = True) -> "Series":
