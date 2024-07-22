@@ -3,9 +3,8 @@ document.addEventListener("DOMContentLoaded", function () {
   script.type = "module";
   script.id = "runllm-widget-script"
 
-  script.src = "https://cdn.jsdelivr.net/npm/@runllm/search-widget@stable/dist/run-llm-search-widget.es.js";
+  script.src = "https://widget.runllm.com";
 
-  script.setAttribute("version", "stable");
   script.setAttribute("runllm-keyboard-shortcut", "Mod+j"); // cmd-j or ctrl-j to open the widget.
   script.setAttribute("runllm-name", "Modin");
   script.setAttribute("runllm-position", "BOTTOM_RIGHT");
