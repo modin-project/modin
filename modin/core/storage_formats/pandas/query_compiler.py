@@ -277,22 +277,67 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     @property
     def lazy_row_labels(self):
+        """
+        Whether the row labels are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_index`.
+
+        Returns
+        -------
+        bool
+        """
         return not self.frame_has_materialized_index
 
     @property
     def lazy_row_count(self):
+        """
+        Whether the row count is computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_index`.
+
+        Returns
+        -------
+        bool
+        """
         return not self.frame_has_materialized_index
 
     @property
     def lazy_column_types(self):
+        """
+        Whether the dtypes are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_dtypes`.
+
+        Returns
+        -------
+        bool
+        """
         return not self.frame_has_materialized_dtypes
 
     @property
     def lazy_column_labels(self):
+        """
+        Whether the column labels are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_columns`.
+
+        Returns
+        -------
+        bool
+        """
         return not self.frame_has_materialized_columns
 
     @property
     def lazy_column_count(self):
+        """
+        Whether the column count is are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_columns`.
+
+        Returns
+        -------
+        bool
+        """
         return not self.frame_has_materialized_columns
 
     def finalize(self):
@@ -1803,9 +1848,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index = (
                 get_unique_level_values(index)
                 if consider_index
-                else index
-                if isinstance(index, list)
-                else [index]
+                else index if isinstance(index, list) else [index]
             )
 
             new_columns = (

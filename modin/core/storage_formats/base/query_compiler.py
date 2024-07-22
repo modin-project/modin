@@ -135,8 +135,6 @@ class BaseQueryCompiler(
     lazy_column_count : bool, default False
         True if the backend defers computations of the number of columns (`len(df.columns)`).
         Used by the frontend to avoid unnecessary execution or defer error validation.
-    lazy_shape : bool
-        True if either lazy_row_count or lazy_column_count is True.
     _shape_hint : {"row", "column", None}, default: None
         Shape hint for frames known to be a column or a row, otherwise None.
 
@@ -218,6 +216,15 @@ class BaseQueryCompiler(
 
     @property
     def lazy_shape(self):
+        """
+        Whether either of the underlying dataframe's dimensions (row count/column count) are computed lazily.
+
+        If True, the frontend should avoid length/shape checks as much as possible.
+
+        Returns
+        -------
+        bool
+        """
         return self.lazy_row_count or self.lazy_column_count
 
     _shape_hint = None
