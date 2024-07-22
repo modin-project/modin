@@ -2784,3 +2784,23 @@ def test_default_property_warning_name():
         match="<function DataFrame.<property fget:_test_default_property>> is not currently supported",
     ):
         pd.DataFrame([[1]]).dataframe_test_default_property
+
+def test_daemonic_worker_protection():
+    # Test for issue #7346, wherein some operations on Dask cause a second submission of a task to
+    # the Dask client from the worker scope, which should not cause a new client to be created
+
+    def submission_triggering_row_operation(row):
+        row_to_dict = row.to_dict()
+        dict_to_row = pd.Series(row_to_dict)
+        return dict_to_row
+    
+    df = pd.DataFrame(
+        {
+            "A": ["a", "b", "c", "d"],
+            "B": [1, 2, 3, 4],
+            "C": [1, 2, 3, 4],
+            "D": [1, 2, 3, 4],
+        }
+    )
+
+    df = df.apply(submission_triggering_row_operation, axis=1)
