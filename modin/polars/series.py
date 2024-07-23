@@ -1755,7 +1755,7 @@ class Series(BasePolarsDataset):
         """
         if return_dtype is not None or skip_nulls is False:
             ErrorMessage.warn(
-                f"`return_dtype` and `skip_nulls=False` are not supported yet"
+                "`return_dtype` and `skip_nulls=False` are not supported yet"
             )
         return self.__constructor__(values=self.to_pandas().apply(function))
 
