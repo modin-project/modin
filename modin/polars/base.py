@@ -44,112 +44,112 @@ class BasePolarsDataset:
     def __eq__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.eq(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __ne__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.ne(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __add__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.add(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __sub__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.sub(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __mul__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.mul(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __truediv__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.truediv(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __floordiv__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.floordiv(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __mod__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.mod(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __pow__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.pow(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __and__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.__and__(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __or__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.__or__(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __xor__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.__xor__(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __lt__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.lt(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __le__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.le(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __gt__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.gt(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
     def __ge__(self, other) -> "BasePolarsDataset":
         return self.__constructor__(
             _query_compiler=self._query_compiler.ge(
-                other._query_compiler if hasattr(other, "_query_compiler") else other
+                other._query_compiler if isinstance(other, BasePolarsDataset) else other
             )
         )
 
