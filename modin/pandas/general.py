@@ -491,7 +491,7 @@ def concat(
             for obj in list_of_objs
             if (
                 isinstance(obj, (Series, pandas.Series))
-                or (isinstance(obj, DataFrame) and obj._query_compiler.lazy_execution)
+                or (isinstance(obj, DataFrame) and obj._query_compiler.lazy_shape)
                 or sum(obj.shape) > 0
             )
         ]

@@ -2752,7 +2752,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
             donor_obj = pd.DataFrame()._query_compiler
 
             self._mock_obj = mock.patch(
-                f"{donor_obj.__module__}.{donor_obj.__class__.__name__}.lazy_execution",
+                f"{donor_obj.__module__}.{donor_obj.__class__.__name__}.lazy_shape",
                 new_callable=mock.PropertyMock,
             )
             patch_obj = self._mock_obj.__enter__()
@@ -2760,7 +2760,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
 
             df = pd.DataFrame(**self._df_kwargs)
             # The frame is lazy until `self.__exit__()` is called
-            assert df._query_compiler.lazy_execution
+            assert df._query_compiler.lazy_shape
             return df
 
         def __enter__(self):

@@ -276,19 +276,69 @@ class PandasQueryCompiler(BaseQueryCompiler):
         self._shape_hint = shape_hint
 
     @property
-    def lazy_execution(self):
+    def lazy_row_labels(self):
         """
-        Whether underlying Modin frame should be executed in a lazy mode.
+        Whether the row labels are computed lazily.
 
-        If True, such QueryCompiler will be handled differently at the front-end in order
-        to reduce triggering the computation as much as possible.
+        Equivalent to `not self.frame_has_materialized_index`.
 
         Returns
         -------
         bool
         """
-        frame = self._modin_frame
-        return not frame.has_materialized_index or not frame.has_materialized_columns
+        return not self.frame_has_materialized_index
+
+    @property
+    def lazy_row_count(self):
+        """
+        Whether the row count is computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_index`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_index
+
+    @property
+    def lazy_column_types(self):
+        """
+        Whether the dtypes are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_dtypes`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_dtypes
+
+    @property
+    def lazy_column_labels(self):
+        """
+        Whether the column labels are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_columns`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_columns
+
+    @property
+    def lazy_column_count(self):
+        """
+        Whether the column count is are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_columns`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_columns
 
     def finalize(self):
         self._modin_frame.finalize()
@@ -607,7 +657,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def reset_index(self, **kwargs) -> PandasQueryCompiler:
-        if self.lazy_execution:
+        if self.lazy_row_labels:
 
             def _reset(df, *axis_lengths, partition_idx):  # pragma: no cover
                 df = df.reset_index(**kwargs)
