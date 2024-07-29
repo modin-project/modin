@@ -2785,6 +2785,7 @@ def test_default_property_warning_name():
     ):
         pd.DataFrame([[1]]).dataframe_test_default_property
 
+
 @pytest.mark.parametrize(
     "modify_config",
     [
@@ -2801,7 +2802,7 @@ def test_daemonic_worker_protection():
         row_to_dict = row.to_dict()
         dict_to_row = pd.Series(row_to_dict)
         return dict_to_row
-    
+
     df = pd.DataFrame(
         {
             "A": ["a", "b", "c", "d"],
