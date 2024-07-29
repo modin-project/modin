@@ -2785,6 +2785,14 @@ def test_default_property_warning_name():
     ):
         pd.DataFrame([[1]]).dataframe_test_default_property
 
+@pytest.mark.parametrize(
+    "modify_config",
+    [
+        {Engine: "Ray"},
+        {Engine: "Dask"},
+    ],
+    indirect=True,
+)
 def test_daemonic_worker_protection():
     # Test for issue #7346, wherein some operations on Dask cause a second submission of a task to
     # the Dask client from the worker scope, which should not cause a new client to be created
