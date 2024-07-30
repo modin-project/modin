@@ -462,7 +462,18 @@ def _inherit_docstrings_in_place(
     if doc_module != DocModule.default and "pandas" in str(
         getattr(parent, "__module__", "")
     ):
-        parent = getattr(imported_doc_module, getattr(parent, "__name__", ""), parent)
+        parent_name = (
+            # DocModule should use the class BasePandasDataset to override the
+            # docstrings of BasePandasDataset, even if BasePandasDataset
+            # normally inherits docstrings from a different `parent`.
+            "BasePandasDataset"
+            if getattr(cls_or_func, "__name__", "") == "BasePandasDataset"
+            # For other classes, override docstrings with the class that has the
+            # same name as the `parent` class, e.g. DataFrame inherits
+            # docstrings from doc_module.DataFrame.
+            else getattr(parent, "__name__", "")
+        )
+        parent = getattr(imported_doc_module, parent_name, parent)
     if parent != default_parent:
         # Reset API link in case the docs are overridden.
         apilink = None
