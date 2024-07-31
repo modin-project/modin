@@ -20,6 +20,7 @@ import modin.config as cfg
 import modin.pandas as pd
 from modin.config.envvars import _check_vars
 from modin.config.pubsub import _UNSET, ExactStr
+from modin.pandas.base import BasePandasDataset
 
 
 def reset_vars(*vars: tuple[cfg.Parameter]):
@@ -89,6 +90,12 @@ class TestDocModule:
         cfg.DocModule.put("modin.tests.config.docs_module")
 
         # Test for override
+        assert BasePandasDataset.__doc__ == (
+            "This is a test of the documentation module for BasePandasDataSet."
+        )
+        assert BasePandasDataset.apply.__doc__ == (
+            "This is a test of the documentation module for BasePandasDataSet.apply."
+        )
         assert (
             pd.DataFrame.apply.__doc__
             == "This is a test of the documentation module for DataFrame."
@@ -96,6 +103,7 @@ class TestDocModule:
         # Test for pandas doc when method is not defined on the plugin module
         assert pandas.DataFrame.isna.__doc__ in pd.DataFrame.isna.__doc__
         assert pandas.DataFrame.isnull.__doc__ in pd.DataFrame.isnull.__doc__
+        assert BasePandasDataset.astype.__doc__ in pd.DataFrame.astype.__doc__
         # Test for override
         assert (
             pd.Series.isna.__doc__

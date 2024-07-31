@@ -22,3 +22,11 @@ class Series:
     def isna(self):
         """This is a test of the documentation module for Series."""
         return
+
+
+class BasePandasDataset:
+    """This is a test of the documentation module for BasePandasDataSet."""
+
+    def apply():
+        """This is a test of the documentation module for BasePandasDataSet.apply."""
+        return
