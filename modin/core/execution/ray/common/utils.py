@@ -151,6 +151,7 @@ def initialize_ray(
 
     num_cpus = int(ray.cluster_resources()["CPU"])
     NPartitions._put(num_cpus)
+    CpuCount._put(num_cpus)
 
     # TODO(https://github.com/ray-project/ray/issues/28216): remove this
     # workaround once Ray gives a better way to suppress task errors.

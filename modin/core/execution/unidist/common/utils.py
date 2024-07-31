@@ -42,6 +42,7 @@ def initialize_unidist():
 
     num_cpus = sum(v["CPU"] for v in unidist.cluster_resources().values())
     modin_cfg.NPartitions._put(num_cpus)
+    modin_cfg.CpuCount._put(num_cpus)
 
 
 def deserialize(obj):  # pragma: no cover

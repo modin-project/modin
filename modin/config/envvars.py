@@ -333,6 +333,24 @@ class CpuCount(EnvironmentVariable, type=int):
     varname = "MODIN_CPUS"
 
     @classmethod
+    def _put(cls, value: int) -> None:
+        """
+        Put specific value if CpuCount wasn't set by a user yet.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+
+        Notes
+        -----
+        This method is used to set CpuCount from cluster resources internally
+        and should not be called by a user.
+        """
+        if cls.get_value_source() == ValueSource.DEFAULT:
+            cls.put(value)
+
+    @classmethod
     def _get_default(cls) -> int:
         """
         Get default value of the config.
