@@ -30,3 +30,6 @@ class BasePandasDataset:
     def apply():
         """This is a test of the documentation module for BasePandasDataSet.apply."""
         return
+
+    def astype():
+        """This is a test of the documentation module for BasePandasDataSet.astype."""
