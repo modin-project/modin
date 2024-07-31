@@ -516,7 +516,7 @@ def _inherit_docstrings_in_place(
                     obj,
                     overwrite_existing,
                     apilink,
-                    parent_cls=cls_or_func,
+                    parent_cls=base,
                     attr_name=attr,
                 )
 
