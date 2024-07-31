@@ -99,7 +99,13 @@ sentinel = object()
 
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
-_ATTRS_NO_LOOKUP = {"__name__", "_cache"}
+_ATTRS_NO_LOOKUP = {
+    "__name__",
+    "_cache",
+    "_ipython_canary_method_should_not_exist_",
+    "_ipython_display_",
+    "_repr_mimebundle_",
+}
 
 _DEFAULT_BEHAVIOUR = {
     "__init__",
