@@ -2794,10 +2794,10 @@ def test_default_property_warning_name():
     ],
     indirect=True,
 )
-def test_daemonic_worker_protection():
+def test_daemonic_worker_protection(modify_config):
     # Test for issue #7346, wherein some operations on Dask cause a second submission of a task to
     # the Dask client from the worker scope, which should not cause a new client to be created
-
+    
     def submission_triggering_row_operation(row):
         row_to_dict = row.to_dict()
         dict_to_row = pd.Series(row_to_dict)
@@ -2812,4 +2812,4 @@ def test_daemonic_worker_protection():
         }
     )
 
-    df = df.apply(submission_triggering_row_operation, axis=1)
+    df.apply(submission_triggering_row_operation, axis=1)
