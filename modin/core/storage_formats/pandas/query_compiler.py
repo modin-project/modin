@@ -46,6 +46,7 @@ from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
 from modin.config import RangePartitioning
+from modin.config.envvars import CpuCount
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -3157,8 +3158,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lib.no_default,
             None,
         )
+        # The map reduce approach works well for frames with few columnar partitions
+        processable_amount_of_partitions = (
+            self._modin_frame.num_parts < CpuCount.get() * 32
+        )
 
-        if is_column_wise and no_thresh_passed:
+        if is_column_wise and no_thresh_passed and processable_amount_of_partitions:
             how = kwargs.get("how", "any")
             subset = kwargs.get("subset")
             how = "any" if how in (lib.no_default, None) else how
