@@ -11,25 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from .classes import BasePandasDataset
 
-class DataFrame:
-    def apply(self):
-        """This is a test of the documentation module for DataFrame."""
-        return
-
-
-class Series:
-    def isna(self):
-        """This is a test of the documentation module for Series."""
-        return
-
-
-class BasePandasDataset:
-    """This is a test of the documentation module for BasePandasDataSet."""
-
-    def apply():
-        """This is a test of the documentation module for BasePandasDataSet.apply."""
-        return
-
-    def astype():
-        """This is a test of the documentation module for BasePandasDataSet.astype."""
+__all__ = ["BasePandasDataset"]
