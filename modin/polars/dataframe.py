@@ -104,6 +104,9 @@ class DataFrame(BasePolarsDataset):
 
             return Series(_query_compiler=self._query_compiler.getitem_array([item]))
 
+    def _copy(self):
+        return self.__constructor__(_query_compiler=self._query_compiler.copy())
+
     def _to_polars(self) -> polars.DataFrame:
         """
         Convert the DataFrame to Polars format.
@@ -266,7 +269,7 @@ class DataFrame(BasePolarsDataset):
                     need_columns_reindex=False,
                 ).astype({c: self._query_compiler.dtypes[c] for c in non_numeric_cols})
             )
-        return self.copy()
+        return self._copy()
 
     def mean(self, *, axis=None, null_strategy="ignore"):
         """
@@ -956,7 +959,7 @@ class DataFrame(BasePolarsDataset):
         Returns:
             Rechunked DataFrame.
         """
-        return self.copy()
+        return self._copy()
 
     def rename(self, mapping: dict[str, str] | callable) -> "DataFrame":
         """
@@ -972,7 +975,7 @@ class DataFrame(BasePolarsDataset):
             mapping = {c: mapping(c) for c in self.columns}
         # TODO: add a query compiler method for `rename`
         new_columns = {c: mapping.get(c, c) for c in self.columns}
-        new_obj = self.copy()
+        new_obj = self._copy()
         new_obj.columns = new_columns
         return new_obj
 
@@ -1076,7 +1079,7 @@ class DataFrame(BasePolarsDataset):
         if isinstance(column, str):
             column = [column]
         new_sorted_columns = [c in column for c in self.columns]
-        obj = self.copy()
+        obj = self._copy()
         obj._sorted_columns = new_sorted_columns
         return obj
 
@@ -1231,7 +1234,7 @@ class DataFrame(BasePolarsDataset):
             DataFrame with the row index added.
         """
         if offset != 0:
-            obj = self.copy()
+            obj = self._copy()
             obj.index = obj.index + offset
         result = self.__constructor__(
             _query_compiler=self._query_compiler.reset_index(drop=False)
