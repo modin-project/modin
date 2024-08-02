@@ -142,7 +142,9 @@ def test_display_options_for___repr__(max_rows_columns, expand_frame_repr, frame
 
 def test___finalize__():
     data = test_data_values[0]
-    with warns_that_defaulting_to_pandas():
+    # Using `force` for `NativeDataframeMode` as the warnings are raised at the API layer,
+    # before geting into the Query Compiler layer.
+    with warns_that_defaulting_to_pandas(force=True):
         pd.DataFrame(data).__finalize__(None)
 
 
@@ -230,7 +232,9 @@ def test___repr__():
 "2016-08-26 09:00:16.413",5,60.193055,24.767427,5,"WALKING",85,"ON_BICYCLE",15,"UNKNOWN",0
 "2016-08-26 09:00:20.578",3,60.152996,24.745216,3.90000009536743,"STILL",69,"IN_VEHICLE",31,"UNKNOWN",0"""
     pandas_df = pandas.read_csv(io.StringIO(string_data))
-    with warns_that_defaulting_to_pandas():
+    # Using `force` for `NativeDataframeMode` as the warnings are raised at the API layer,
+    # before geting into the Query Compiler layer.
+    with warns_that_defaulting_to_pandas(force=True):
         modin_df = pd.read_csv(io.StringIO(string_data))
     assert repr(pandas_df) == repr(modin_df)
 
