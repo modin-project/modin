@@ -30,6 +30,17 @@ from modin.core.execution.utils import set_env
 def initialize_dask():
     """Initialize Dask environment."""
     from distributed.client import default_client
+    from distributed.worker import get_worker
+
+    try:
+        # Check if running within a Dask worker process
+        get_worker()
+        # If the above line does not raise an error, we are in a worker process
+        # and should not create a new client
+        return
+    except ValueError:
+        # Not in a Dask worker, proceed to check for or create a client
+        pass
 
     try:
         client = default_client()
