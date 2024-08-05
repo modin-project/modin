@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pickle
+from itertools import product
 
 import numpy as np
 import pytest
 
 import modin.pandas as pd
-from modin.config import PersistentPickle
+from modin.config import NativeDataframeMode, PersistentPickle
 from modin.tests.pandas.utils import create_test_dfs, df_equals
 
 
@@ -40,24 +40,23 @@ def persistent(request):
 
 
 @pytest.mark.parametrize(
-    "modin_df", [pytest.param(modin_df), pytest.param(pd.DataFrame(), id="empty_df")]
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_dataframe_pickle(modin_df, persistent):
-    other = pickle.loads(pickle.dumps(modin_df))
-    df_equals(modin_df, other)
-
-
-def test__reduce__():
+def test__reduce__(data_frame_mode_pair):
     # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
     dataframe_data = ["Major League Baseball", "National Basketball Association"]
-    abbr_md, abbr_pd = create_test_dfs(dataframe_data, index=["MLB", "NBA"])
+    abbr_md, abbr_pd = create_test_dfs(
+        dataframe_data, index=["MLB", "NBA"], data_frame_mode=data_frame_mode_pair[0]
+    )
 
     dataframe_data = {
         "name": ["Mariners", "Lakers"] * 500,
         "league_abbreviation": ["MLB", "NBA"] * 500,
     }
-    teams_md, teams_pd = create_test_dfs(dataframe_data)
+    teams_md, teams_pd = create_test_dfs(
+        dataframe_data, data_frame_mode=data_frame_mode_pair[1]
+    )
 
     result_md = (
         teams_md.set_index("name")
@@ -71,13 +70,3 @@ def test__reduce__():
         .rename("league")
     )
     df_equals(result_md, result_pd)
-
-
-def test_column_pickle(modin_column, modin_df, persistent):
-    dmp = pickle.dumps(modin_column)
-    other = pickle.loads(dmp)
-    df_equals(modin_column.to_frame(), other.to_frame())
-
-    # make sure we don't pickle the whole frame if doing persistent storage
-    if persistent:
-        assert len(dmp) < len(pickle.dumps(modin_df))

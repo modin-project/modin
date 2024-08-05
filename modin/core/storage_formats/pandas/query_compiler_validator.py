@@ -16,7 +16,7 @@ Module contains ``QueryCompilerTypeCaster`` class.
 
 ``QueryCompilerTypeCaster`` is used for va.
 """
-
+import inspect
 from types import FunctionType, MethodType
 from typing import Any, Dict, Tuple, TypeVar
 
@@ -82,10 +82,20 @@ def apply_argument_casting():
     """
 
     def decorator(obj: Fn) -> Fn:
-        """Decorate function or class to cast all arguments that are query comilers to the current query compiler"""
+        """Decorate function or class to cast all arguments that are query compilers to the current query compiler"""
         if isinstance(obj, type):
             seen: Dict[Any, Any] = {}
-            for attr_name, attr_value in vars(obj).items():
+
+            all_attrs = dict(inspect.getmembers(obj))
+            all_attrs.pop("__abstractmethods__")
+
+            # This is required because inspect converts class methods to member functions
+            current_class_attrs = vars(obj)
+            for key in current_class_attrs:
+                if key in current_class_attrs:
+                    all_attrs[key] = current_class_attrs[key]
+
+            for attr_name, attr_value in all_attrs.items():
                 if isinstance(
                     attr_value, (FunctionType, MethodType, classmethod, staticmethod)
                 ):
@@ -123,6 +133,7 @@ def apply_argument_casting():
                 current_qc = args[0]
 
             if current_qc:
+                kwargs = cast_nested_args_to_current_qc_type(kwargs, current_qc)
                 args = cast_nested_args_to_current_qc_type(args, current_qc)
             return obj(*args, **kwargs)
 

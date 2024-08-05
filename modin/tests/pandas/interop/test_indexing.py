@@ -18,8 +18,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import MinRowPartitionSize, NativeDataframeMode, NPartitions
-from modin.pandas.testing import assert_index_equal
+from modin.config import NativeDataframeMode, NPartitions
 from modin.tests.pandas.utils import (
     RAND_HIGH,
     RAND_LOW,
@@ -434,96 +433,30 @@ def test_setitem_on_empty_df(
     )
 
 
-def test_setitem_on_empty_df_4407():
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test_setitem_on_empty_df_4407(data_frame_mode_pair):
     data = {}
     index = pd.date_range(end="1/1/2018", periods=0, freq="D")
     column = pd.date_range(end="1/1/2018", periods=1, freq="h")[0]
-    modin_df = pd.DataFrame(data, columns=index)
-    pandas_df = pandas.DataFrame(data, columns=index)
-
-    modin_df[column] = pd.Series([1])
-    pandas_df[column] = pandas.Series([1])
+    modin_df, pandas_df = create_test_dfs(
+        data, columns=index, data_frame_mode=data_frame_mode_pair[0]
+    )
+    modin_ser, pandas_ser = create_test_series(
+        [1], data_frame_mode=data_frame_mode_pair[1]
+    )
+    modin_df[column] = modin_ser
+    pandas_df[column] = pandas_ser
 
     df_equals(modin_df, pandas_df)
     assert modin_df.columns.freq == pandas_df.columns.freq
 
 
-def test___setitem__unhashable_list():
-    # from #3258 and #3291
-    cols = ["a", "b"]
-    modin_df = pd.DataFrame([[0, 0]], columns=cols)
-    modin_df[cols] = modin_df[cols]
-    pandas_df = pandas.DataFrame([[0, 0]], columns=cols)
-    pandas_df[cols] = pandas_df[cols]
-    df_equals(modin_df, pandas_df)
-
-
-def test_setitem_unhashable_key():
-    source_modin_df, source_pandas_df = create_test_dfs(test_data["float_nan_data"])
-    row_count = source_modin_df.shape[0]
-
-    def _make_copy(df1, df2):
-        return df1.copy(deep=True), df2.copy(deep=True)
-
-    for key in (["col1", "col2"], ["new_col1", "new_col2"]):
-        # 1d list case
-        value = [1, 2]
-        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key)
-
-        # 2d list case
-        value = [[1, 2]] * row_count
-        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key)
-
-        # pandas DataFrame case
-        df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
-        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, df_value, key)
-
-        # numpy array case
-        value = df_value.to_numpy()
-        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key)
-
-        # pandas Series case
-        value = df_value["value_col1"]
-        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(
-            modin_df,
-            pandas_df,
-            value,
-            key[:1],
-            expected_exception=ValueError("Columns must be same length as key"),
-        )
-
-        # pandas Index case
-        value = df_value.index
-        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(
-            modin_df,
-            pandas_df,
-            value,
-            key[:1],
-            expected_exception=ValueError("Columns must be same length as key"),
-        )
-
-        # scalar case
-        value = 3
-        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key)
-
-        # test failed case: ValueError('Columns must be same length as key')
-        eval_setitem(
-            modin_df,
-            pandas_df,
-            df_value[["value_col1"]],
-            key,
-            expected_exception=ValueError("Columns must be same length as key"),
-        )
-
-
-def test_setitem_2d_insertion():
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test_setitem_2d_insertion(data_frame_mode_pair):
     def build_value_picker(modin_value, pandas_value):
         """Build a function that returns either Modin or pandas DataFrame depending on the passed frame."""
         return lambda source_df, *args, **kwargs: (
@@ -532,11 +465,17 @@ def test_setitem_2d_insertion():
             else pandas_value
         )
 
-    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
+    modin_df, pandas_df = create_test_dfs(
+        test_data["int_data"], data_frame_mode=data_frame_mode_pair[0]
+    )
 
     # Easy case - key and value.columns are equal
     modin_value, pandas_value = create_test_dfs(
-        {"new_value1": np.arange(len(modin_df)), "new_value2": np.arange(len(modin_df))}
+        {
+            "new_value1": np.arange(len(modin_df)),
+            "new_value2": np.arange(len(modin_df)),
+        },
+        data_frame_mode=data_frame_mode_pair[1],
     )
     eval_setitem(
         modin_df,
@@ -576,7 +515,10 @@ def test_setitem_2d_insertion():
 
 
 @pytest.mark.parametrize("does_value_have_different_columns", [True, False])
-def test_setitem_2d_update(does_value_have_different_columns):
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test_setitem_2d_update(does_value_have_different_columns, data_frame_mode_pair):
     def test(dfs, iloc):
         """Update columns on the given numeric indices."""
         df1, df2 = dfs
@@ -585,8 +527,12 @@ def test_setitem_2d_update(does_value_have_different_columns):
         df1[cols1] = df2[cols2]
         return df1
 
-    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
-    modin_df2, pandas_df2 = create_test_dfs(test_data["int_data"])
+    modin_df, pandas_df = create_test_dfs(
+        test_data["int_data"], data_frame_mode=data_frame_mode_pair[0]
+    )
+    modin_df2, pandas_df2 = create_test_dfs(
+        test_data["int_data"], data_frame_mode=data_frame_mode_pair[1]
+    )
     modin_df2 *= 10
     pandas_df2 *= 10
 
@@ -623,35 +569,21 @@ def test_setitem_2d_update(does_value_have_different_columns):
     )  # (start=None, stop=None, step=2)
 
 
-def test___setitem__single_item_in_series():
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test___setitem__single_item_in_series(data_frame_mode_pair):
     # Test assigning a single item in a Series for issue
     # https://github.com/modin-project/modin/issues/3860
-    modin_series = pd.Series(99)
-    pandas_series = pandas.Series(99)
-    modin_series[:1] = pd.Series(100)
-    pandas_series[:1] = pandas.Series(100)
-    df_equals(modin_series, pandas_series)
-
-
-def test___setitem__assigning_single_categorical_sets_correct_dtypes():
-    # This test case comes from
-    # https://github.com/modin-project/modin/issues/3895
-    modin_df = pd.DataFrame({"categories": ["A"]})
-    modin_df["categories"] = pd.Categorical(["A"])
-    pandas_df = pandas.DataFrame({"categories": ["A"]})
-    pandas_df["categories"] = pandas.Categorical(["A"])
-    df_equals(modin_df, pandas_df)
-
-
-def test_iloc_assigning_scalar_none_to_string_frame():
-    # This test case comes from
-    # https://github.com/modin-project/modin/issues/3981
-    data = [["A"]]
-    modin_df = pd.DataFrame(data, dtype="string")
-    modin_df.iloc[0, 0] = None
-    pandas_df = pandas.DataFrame(data, dtype="string")
-    pandas_df.iloc[0, 0] = None
-    df_equals(modin_df, pandas_df)
+    modin_series1, pandas_series1 = create_test_series(
+        99, data_frame_mode=data_frame_mode_pair[0]
+    )
+    modin_series2, pandas_series2 = create_test_series(
+        100, data_frame_mode=data_frame_mode_pair[1]
+    )
+    modin_series1[:1] = modin_series2
+    pandas_series1[:1] = pandas_series2
+    df_equals(modin_series1, pandas_series1)
 
 
 @pytest.mark.parametrize(
@@ -666,7 +598,10 @@ def test_iloc_assigning_scalar_none_to_string_frame():
         True,
     ],
 )
-def test_loc_boolean_assignment_scalar_dtypes(value):
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test_loc_boolean_assignment_scalar_dtypes(value, data_frame_mode_pair):
     modin_df, pandas_df = create_test_dfs(
         {
             "a": [1, 2, 3],
@@ -675,10 +610,11 @@ def test_loc_boolean_assignment_scalar_dtypes(value):
             "d": [1.0, "c", 2.0],
             "e": pandas.to_datetime(["1/1/2018", "1/2/2018", "1/3/2018"]),
             "f": [True, False, True],
-        }
+        },
+        data_frame_mode=data_frame_mode_pair[1],
     )
-    modin_idx, pandas_idx = pd.Series([False, True, True]), pandas.Series(
-        [False, True, True]
+    modin_idx, pandas_idx = create_test_series(
+        [False, True, True], data_frame_mode=data_frame_mode_pair[1]
     )
 
     modin_df.loc[modin_idx] = value
@@ -686,87 +622,16 @@ def test_loc_boolean_assignment_scalar_dtypes(value):
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___len__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    assert len(modin_df) == len(pandas_df)
-
-
-def test_index_order():
-    # see #1708 and #1869 for details
-    df_modin, df_pandas = (
-        pd.DataFrame(test_data["float_nan_data"]),
-        pandas.DataFrame(test_data["float_nan_data"]),
-    )
-    rows_number = len(df_modin.index)
-    level_0 = np.random.choice([x for x in range(10)], rows_number)
-    level_1 = np.random.choice([x for x in range(10)], rows_number)
-    index = pandas.MultiIndex.from_arrays([level_0, level_1])
-
-    df_modin.index = index
-    df_pandas.index = index
-
-    for func in ["all", "any", "count"]:
-        df_equals(
-            getattr(df_modin, func)().index,
-            getattr(df_pandas, func)().index,
-        )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("sortorder", [0, 3, 5])
-def test_multiindex_from_frame(data, sortorder):
-    modin_df, pandas_df = create_test_dfs(data)
-
-    def call_from_frame(df):
-        if type(df).__module__.startswith("pandas"):
-            return pandas.MultiIndex.from_frame(df, sortorder)
-        else:
-            return pd.MultiIndex.from_frame(df, sortorder)
-
-    eval_general(modin_df, pandas_df, call_from_frame, comparator=assert_index_equal)
-
-
-def test__getitem_bool_single_row_dataframe():
-    # This test case comes from
-    # https://github.com/modin-project/modin/issues/4845
-    eval_general(pd, pandas, lambda lib: lib.DataFrame([1])[lib.Series([True])])
-
-
-def test__getitem_bool_with_empty_partition():
-    # This test case comes from
-    # https://github.com/modin-project/modin/issues/5188
-
-    size = MinRowPartitionSize.get()
-
-    pandas_series = pandas.Series([True if i % 2 else False for i in range(size)])
-    modin_series = pd.Series(pandas_series)
-
-    pandas_df = pandas.DataFrame([i for i in range(size + 1)])
-    pandas_df.iloc[size] = np.nan
-    modin_df = pd.DataFrame(pandas_df)
-
-    pandas_tmp_result = pandas_df.dropna()
-    modin_tmp_result = modin_df.dropna()
-
-    eval_general(
-        modin_tmp_result,
-        pandas_tmp_result,
-        lambda df: (
-            df[modin_series] if isinstance(df, pd.DataFrame) else df[pandas_series]
-        ),
-    )
-
-
 # This is a very subtle bug that comes from:
 # https://github.com/modin-project/modin/issues/4945
-def test_lazy_eval_index():
-    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test_lazy_eval_index(data_frame_mode_pair):
+    data = {"col0": [0, 1]}
 
-    def func(df):
-        df_copy = df[df["col0"] < 6].copy()
+    def func(df1, df2):
+        df_copy = df1[df2["col0"] < 6].copy()
         # The problem here is that the index is not copied over so it needs
         # to get recomputed at some point. Our implementation of __setitem__
         # requires us to build a mask and insert the value from the right
@@ -776,25 +641,30 @@ def test_lazy_eval_index():
         df_copy["col0"] = df_copy["col0"].apply(lambda x: x + 1)
         return df_copy
 
-    eval_general(modin_df, pandas_df, func)
+    eval_general_interop(data, None, func, data_frame_mode_pair=data_frame_mode_pair)
 
 
-def test_index_of_empty_frame():
+@pytest.mark.parametrize(
+    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+)
+def test_index_of_empty_frame(data_frame_mode_pair):
     # Test on an empty frame created by user
-    md_df, pd_df = create_test_dfs(
-        {}, index=pandas.Index([], name="index name"), columns=["a", "b"]
-    )
-    assert md_df.empty and pd_df.empty
-    df_equals(md_df.index, pd_df.index)
 
     # Test on an empty frame produced by Modin's logic
     data = test_data_values[0]
-    md_df, pd_df = create_test_dfs(
-        data, index=pandas.RangeIndex(len(next(iter(data.values()))), name="index name")
+    md_df1, pd_df1 = create_test_dfs(
+        data,
+        index=pandas.RangeIndex(len(next(iter(data.values()))), name="index name"),
+        data_frame_mode=data_frame_mode_pair[0],
+    )
+    md_df2, pd_df2 = create_test_dfs(
+        data,
+        index=pandas.RangeIndex(len(next(iter(data.values()))), name="index name"),
+        data_frame_mode=data_frame_mode_pair[1],
     )
 
-    md_res = md_df.query(f"{md_df.columns[0]} > {RAND_HIGH}")
-    pd_res = pd_df.query(f"{pd_df.columns[0]} > {RAND_HIGH}")
+    md_res = md_df1.query(f"{md_df2.columns[0]} > {RAND_HIGH}")
+    pd_res = pd_df1.query(f"{pd_df2.columns[0]} > {RAND_HIGH}")
 
     assert md_res.empty and pd_res.empty
     df_equals(md_res.index, pd_res.index)
