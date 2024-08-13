@@ -892,6 +892,18 @@ class DaskThreadsPerWorker(EnvironmentVariable, type=int):
     default = 1
 
 
+class DynamicPartitioning(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's dynamic-partitioning implementation where possible.
+
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/usage_guide/optimization_notes/index.html#dynamic-partitioning-in-modin
+    """
+
+    varname = "MODIN_DYNAMIC_PARTITIONING"
+    default = False
+
+
 def _check_vars() -> None:
     """
     Check validity of environment variables.
