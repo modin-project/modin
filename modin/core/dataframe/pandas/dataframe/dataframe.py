@@ -33,7 +33,6 @@ from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_d
 from pandas.core.indexes.api import Index, RangeIndex
 
 from modin.config import (
-    CpuCount,
     Engine,
     IsRayCluster,
     MinColumnPartitionSize,
@@ -211,22 +210,6 @@ class PandasDataframe(
         int
         """
         return np.prod(self._partitions.shape)
-
-    @property
-    def size(self) -> Optional[int]:
-        """
-        Get an int representing the number of elements in this frame, if known.
-
-        Returns
-        -------
-        int or None
-        """
-        if self.has_index_cache and self.has_columns_cache:
-            return len(self.index) * len(self.columns)
-        elif self._row_lengths_cache and self._column_widths_cache:
-            return sum(self._row_lengths_cache) * sum(self._column_widths_cache)
-        else:
-            return None
 
     @property
     def row_lengths(self):
@@ -3282,31 +3265,9 @@ class PandasDataframe(
                 axis
             ), self.copy_axis_cache(axis)
 
-        # check the conditions for use of dynamic partitioning
-        use_dynamic_partitioning = False
-        if self.num_parts <= 1.5 * CpuCount.get():
-            use_dynamic_partitioning = True
-
-            # When the frame is large, dynamic partitioning
-            # performs worse than the based approach
-            frame_size = self.size
-            if frame_size and (frame_size >= 4 * 10**9 or len(self) >= 10**7):
-                use_dynamic_partitioning = False
-
-        if use_dynamic_partitioning:
-            new_frame = self._partition_mgr_cls.broadcast_axis_partitions(
-                axis=axis ^ 1,
-                left=left_parts,
-                right=right_parts,
-                apply_func=func,
-                broadcast_all=False,
-                keep_partitioning=True,
-            )
-        else:
-            new_frame = self._partition_mgr_cls.broadcast_apply(
-                axis, func, left_parts, right_parts
-            )
-
+        new_frame = self._partition_mgr_cls.broadcast_apply(
+            axis, func, left_parts, right_parts
+        )
         if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
 
