@@ -77,7 +77,8 @@ def cast_nested_args_to_current_qc_type(arguments, current_qc):
 
 def apply_argument_cast():
     """
-    Cast args of all functions that are members of query compilers.
+    Cast any of args that is a query compiler to the type of left query compiler.
+
     Returns
     -------
     func
