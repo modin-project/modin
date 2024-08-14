@@ -31,7 +31,7 @@ from modin.utils import (
     try_cast_to_pandas,
 )
 
-from .query_compiler_validator import QueryCompilerTypeCaster
+from .query_compiler_validator import QueryCompilerCaster
 
 
 def _get_axis(axis):
@@ -566,7 +566,7 @@ def _register_default_pandas(
 
 
 @_inherit_docstrings(BaseQueryCompiler)
-class NativeQueryCompiler(BaseQueryCompiler, QueryCompilerTypeCaster):
+class NativeQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     """
     Query compiler for the pandas storage format.
 

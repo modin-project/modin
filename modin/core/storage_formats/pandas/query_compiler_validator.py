@@ -12,10 +12,13 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains ``QueryCompilerTypeCaster`` class.
+Module contains ``QueryCompilerCaster`` class.
 
-``QueryCompilerTypeCaster`` is used for va.
+``QueryCompilerCaster`` is used for automatically casting query compiler
+arguments to the type of the current query compiler for query compiler class functions.
+This ensures compatibility between different query compiler classes.
 """
+import functools
 import inspect
 from types import FunctionType, MethodType
 from typing import Any, Dict, Tuple, TypeVar
@@ -25,7 +28,7 @@ from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 Fn = TypeVar("Fn", bound=Any)
 
 
-class QueryCompilerTypeCaster:
+class QueryCompilerCaster:
     """
     Cast all query compiler arguments of a the member function to current query compiler.
 
@@ -37,11 +40,11 @@ class QueryCompilerTypeCaster:
         **kwargs: Dict,
     ) -> None:
         """
-        Apply type casting to all children of ``QueryCompilerTypeCaster``.
+        Apply type casting to all children of ``QueryCompilerCaster``.
 
         """
         super().__init_subclass__(**kwargs)
-        apply_argument_casting()(cls)
+        apply_argument_cast()(cls)
 
 
 def cast_nested_args_to_current_qc_type(arguments, current_qc):
@@ -72,7 +75,7 @@ def cast_nested_args_to_current_qc_type(arguments, current_qc):
     return arguments
 
 
-def apply_argument_casting():
+def apply_argument_cast():
     """
     Cast args of all functions that are members of query compilers.
     Returns
@@ -102,10 +105,7 @@ def apply_argument_casting():
                     try:
                         wrapped = seen[attr_value]
                     except KeyError:
-                        wrapped = seen[attr_value] = apply_argument_casting()(
-                            attr_value
-                        )
-
+                        wrapped = seen[attr_value] = apply_argument_cast()(attr_value)
                     setattr(obj, attr_name, wrapped)
             return obj  # type: ignore [return-value]
         elif isinstance(obj, classmethod):
@@ -113,6 +113,7 @@ def apply_argument_casting():
         elif isinstance(obj, staticmethod):
             return staticmethod(decorator(obj.__func__))
 
+        @functools.wraps(obj)
         def cast_args(*args: Tuple, **kwargs: Dict) -> Any:
             """
             Add casting for query compiler arguments.
