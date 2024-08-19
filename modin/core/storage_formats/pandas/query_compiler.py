@@ -45,8 +45,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
-from modin.config import RangePartitioning
-from modin.config.envvars import CpuCount
+from modin.config import CpuCount, RangePartitioning
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,

@@ -681,10 +681,7 @@ class PandasDataframePartitionManager(
         np.ndarray
             NumPy array of result partition objects.
         """
-        # The `broadcast_apply` runtime condition differs from
-        # the same condition in `map_partitions` because the columnar
-        # approach for `broadcast_apply` results in a slowdown.
-        if np.prod(left.shape) <= 1.5 * CpuCount.get():
+        if not DynamicPartitioning.get():
             # block-wise broadcast
             new_partitions = cls.base_broadcast_apply(
                 axis,
@@ -693,6 +690,8 @@ class PandasDataframePartitionManager(
                 right,
             )
         else:
+            # The dynamic partitioning behavior of `broadcast_apply` differs from that of `map_partitions`,
+            # since the columnar approach for `broadcast_apply` results in slowdown.
             # axis-wise broadcast
             new_partitions = cls.broadcast_axis_partitions(
                 axis=axis ^ 1,
