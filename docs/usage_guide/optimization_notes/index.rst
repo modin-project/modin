@@ -65,6 +65,10 @@ the combined tasks carries more overhead than assigning them separately.
 Unfortunately, the use of Dynamic-partitioning depends on various factors such as data size, number of CPUs, operations performed, 
 and it is up to the user to determine whether Dynamic-partitioning will give a boost in his case or not.
 
+..
+  TODO: Define heuristics to automatically enable dynamic partitioning without performance penalty.
+  `Issue #7370 <https://github.com/modin-project/modin/issues/7370>`_
+
 Understanding Modin's partitioning mechanism
 """"""""""""""""""""""""""""""""""""""""""""
 
