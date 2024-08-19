@@ -2658,7 +2658,7 @@ def test_remote_function():
         ),
     ],
 )
-def test_map_approaches(partitioning_scheme, expected_map_approach):
+def test_dynamic_partitioning(partitioning_scheme, expected_map_approach):
     data_size = MinRowPartitionSize.get() * CpuCount.get()
     data = {f"col{i}": np.ones(data_size) for i in range(data_size)}
     df = pandas.DataFrame(data)
@@ -2672,8 +2672,9 @@ def test_map_approaches(partitioning_scheme, expected_map_approach):
         expected_map_approach,
         wraps=getattr(partition_mgr_cls, expected_map_approach),
     ) as expected_method:
-        partition_mgr_cls.map_partitions(partitions, lambda x: x * 2)
-        expected_method.assert_called()
+        with context(DynamicPartitioning=True):
+            partition_mgr_cls.map_partitions(partitions, lambda x: x * 2)
+            expected_method.assert_called()
 
 
 def test_map_partitions_joined_by_column():

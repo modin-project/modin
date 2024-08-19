@@ -30,6 +30,7 @@ from pandas._libs.lib import no_default
 from modin.config import (
     BenchmarkMode,
     CpuCount,
+    DynamicPartitioning,
     Engine,
     MinColumnPartitionSize,
     MinRowPartitionSize,
@@ -675,7 +676,7 @@ class PandasDataframePartitionManager(
         NumPy array
             An array of partitions
         """
-        if np.prod(partitions.shape) <= 1.5 * CpuCount.get():
+        if not DynamicPartitioning.get():
             # block-wise map
             new_partitions = cls.base_map_partitions(
                 partitions, map_func, func_args, func_kwargs

@@ -23,6 +23,7 @@ from modin.config.envvars import (
     CpuCount,
     DaskThreadsPerWorker,
     DocModule,
+    DynamicPartitioning,
     Engine,
     EnvironmentVariable,
     GithubCI,
@@ -95,6 +96,7 @@ __all__ = [
     "AsyncReadMode",
     "ReadSqlEngine",
     "IsExperimental",
+    "DynamicPartitioning",
     # For tests
     "TrackFileLeaks",
     "TestReadFromSqlServer",
