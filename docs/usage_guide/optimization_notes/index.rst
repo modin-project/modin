@@ -40,7 +40,7 @@ enable it: :doc:`operations that support range-partitioning </usage_guide/optimi
 Dynamic-partitioning in Modin
 """""""""""""""""""""""""""""
 
-Ray enigne experiences slowdowns when running a large number of small remote tasks at the same time. Ray Core recommends to `avoid tiny task`_.
+Ray engine experiences slowdowns when running a large number of small remote tasks at the same time. Ray Core recommends to `avoid tiny task`_.
 When modin DataFrame has a large number of partitions, some functions produce a large number of remote tasks, which can cause slowdowns. 
 To solve this problem, Modin suggests using dynamic partitioning. This approach reduces the number of remote tasks 
 by combining multiple partitions into a single virtual partition and perform a common remote task on them.
