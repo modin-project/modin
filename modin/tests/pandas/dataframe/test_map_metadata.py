@@ -1837,3 +1837,18 @@ def test_constructor_from_index():
     data = pd.Index([1, 2, 3], name="pricing_date")
     modin_df, pandas_df = create_test_dfs(data)
     df_equals(modin_df, pandas_df)
+
+
+def test_insert_datelike_string_issue_7371():
+    # When a new value is inserted into a frame, we call pandas.api.types.pandas_dtype(value) to
+    # extract the dtype of an object like a pandas Series or numpy array. When a scalar value is passed,
+    # this usually raises a TypeError, so we construct a local pandas Series from the object and
+    # extract the dtype from there.
+    # When the passed value is a date-like string, pandas will instead raise a ValueError because
+    # it tries to parse it as a numpy structured dtype. After fixing GH#7371, we now catch
+    # ValueError in addition to TypeError to handle this case.
+    modin_df = pd.DataFrame({"a": [0]})
+    modin_df["c"] = "2020-01-01"
+    pandas_df = pandas.DataFrame({"a": [0]})
+    pandas_df["c"] = "2020-01-01"
+    df_equals(modin_df, pandas_df)
