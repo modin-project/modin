@@ -293,7 +293,7 @@ jobs:
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
     services:
       moto:
-        image: motoserver/moto
+        image: motoserver/moto:5.0.13
         ports:
           - 5000:5000
         env:
@@ -382,7 +382,7 @@ jobs:
       # Using workaround https://github.com/actions/runner/issues/822#issuecomment-1524826092
       moto:
         # we only need moto service on Ubuntu and for group_4 task or python engine
-        image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')) && 'motoserver/moto' || '' }}
+        image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')) && 'motoserver/moto:5.0.13' || '' }}
         ports:
           - 5000:5000
         env:
@@ -508,7 +508,7 @@ jobs:
     name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
-        image: ${{ matrix.os != 'windows' && 'motoserver/moto' || '' }}
+        image: ${{ matrix.os != 'windows' && 'motoserver/moto:5.0.13' || '' }}
         ports:
           - 5000:5000
         env:
@@ -623,7 +623,7 @@ jobs:
     name: test experimental
     services:
       moto:
-        image: motoserver/moto
+        image: motoserver/moto:5.0.13
         ports:
           - 5000:5000
         env:

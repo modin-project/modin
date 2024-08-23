@@ -19,7 +19,7 @@ jobs:
         shell: bash -l {0}
     services:
       moto:
-        image: motoserver/moto
+        image: motoserver/moto:5.0.13
         ports:
           - 5000:5000
         env:
