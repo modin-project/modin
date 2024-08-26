@@ -148,8 +148,6 @@ def test_set_index(data, key_func, drop_kwargs, request, data_frame_mode_pair):
     "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_loc(data, data_frame_mode_pair):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
     modin_df, pandas_df = create_test_dfs(data, data_frame_mode=data_frame_mode_pair[0])
 
     indices = [i % 3 == 0 for i in range(len(modin_df.index))]

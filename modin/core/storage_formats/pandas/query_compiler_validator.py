@@ -31,10 +31,7 @@ Fn = TypeVar("Fn", bound=Any)
 
 
 class QueryCompilerCaster:
-    """
-    Cast all query compiler arguments of a the member function to current query compiler.
-
-    """
+    """Cast all query compiler arguments of a the member function to current query compiler."""
 
     @classmethod
     def __init_subclass__(
@@ -44,12 +41,34 @@ class QueryCompilerCaster:
         """
         Apply type casting to all children of ``QueryCompilerCaster``.
 
+        This method is called automatically when a class inherits from
+        ``QueryCompilerCaster``. It ensures that all member functions within the
+        subclass have their arguments automatically casted to the current query
+        compiler type.
+
+        Parameters
+        ----------
+        **kwargs : Additional keyword arguments
         """
         super().__init_subclass__(**kwargs)
         apply_argument_cast()(cls)
 
 
 def cast_nested_args_to_current_qc_type(arguments, current_qc):
+    """
+    Cast all arguments in nested fashion to current query compiler.
+
+    Parameters
+    ----------
+    arguments : tuple or dict
+    current_qc : BaseQueryCompiler
+
+    Returns
+    -------
+    tuple or dict
+        Returns args and kwargs with all query compilers casted to current_qc.
+    """
+
     def cast_arg_to_current_qc(arg):
         current_qc_type = type(current_qc)
         if isinstance(arg, BaseQueryCompiler) and not isinstance(arg, current_qc_type):
@@ -91,7 +110,7 @@ def apply_argument_cast():
     """
 
     def decorator(obj: Fn) -> Fn:
-        """Decorate function or class to cast all arguments that are query compilers to the current query compiler"""
+        """Cast all arguments that are query compilers to the current query compiler."""
         if isinstance(obj, type):
             all_attrs = dict(inspect.getmembers(obj))
             all_attrs.pop("__abstractmethods__")

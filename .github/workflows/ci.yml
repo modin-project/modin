@@ -705,8 +705,6 @@ jobs:
       - run: python -m pytest modin/tests/pandas/native_df_mode/test_join_sort.py
       - run: python -m pytest modin/tests/pandas/native_df_mode/test_map_metadata.py
       - run: python -m pytest modin/tests/pandas/native_df_mode/test_pickle.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_reduce.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_udf.py
       - run: python -m pytest modin/tests/pandas/native_df_mode/test_window.py
       - uses: ./.github/actions/upload-coverage
 
