@@ -19,7 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import Engine, NativeDataframeMode, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     arg_keys,
@@ -732,7 +732,7 @@ def test_sort_values_descending_with_only_two_bins():
     modin_df = pd.concat([part1, part2])
     pandas_df = modin_df._to_pandas()
 
-    if StorageFormat.get() == "Pandas":
+    if StorageFormat.get() == "Pandas" and NativeDataframeMode.get() == "Default":
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
 
     eval_general(
@@ -772,7 +772,7 @@ def test_sort_values_with_one_partition(ascending):
         np.array([["hello", "goodbye"], ["hello", "Hello"]])
     )
 
-    if StorageFormat.get() == "Pandas":
+    if StorageFormat.get() == "Pandas" and NativeDataframeMode.get() == "Default":
         assert modin_df._query_compiler._modin_frame._partitions.shape == (1, 1)
 
     eval_general(
@@ -892,7 +892,8 @@ def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_positio
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    Engine.get() not in ("Ray", "Unidist", "Dask")
+    or NativeDataframeMode.get() == "Pandas",
     reason="We only need to test this case where sort does not default to pandas.",
 )
 def test_sort_values_with_sort_key_on_partition_boundary():

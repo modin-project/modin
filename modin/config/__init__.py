@@ -40,6 +40,7 @@ from modin.config.envvars import (
     MinPartitionSize,
     MinRowPartitionSize,
     ModinNumpy,
+    NativeDataframeMode,
     NPartitions,
     PersistentPickle,
     ProgressBar,
@@ -69,6 +70,7 @@ __all__ = [
     "CpuCount",
     "GpuCount",
     "Memory",
+    "NativeDataframeMode",
     # Ray specific
     "IsRayCluster",
     "RayRedisAddress",
