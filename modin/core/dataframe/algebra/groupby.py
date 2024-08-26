@@ -655,9 +655,11 @@ class GroupByReduce(TreeReduce):
                     )
 
             native_res_part = [] if native_agg_res is None else [native_agg_res]
-            result = pandas.concat(
-                [*native_res_part, *custom_results], axis=1, copy=False
-            )
+            parts = [*native_res_part, *custom_results]
+            if parts:
+                result = pandas.concat(parts, axis=1, copy=False)
+            else:
+                result = pandas.DataFrame(columns=result_columns)
 
             # The order is naturally preserved if there's no custom aggregations
             if preserve_aggregation_order and len(custom_aggs):

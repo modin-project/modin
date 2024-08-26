@@ -3157,9 +3157,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lib.no_default,
             None,
         )
-        # FIXME: this is a naive workaround for this problem: https://github.com/modin-project/modin/issues/5394
-        # if there are too many partitions then all non-full-axis implementations start acting very badly.
-        # The here threshold is pretty random though it works fine on simple scenarios
+        # The map reduce approach works well for frames with few columnar partitions
         processable_amount_of_partitions = (
             self._modin_frame.num_parts < CpuCount.get() * 32
         )

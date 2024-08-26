@@ -440,7 +440,7 @@ class PandasDataframePartitionManager(
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right):
+    def base_broadcast_apply(cls, axis, apply_func, left, right):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -504,6 +504,7 @@ class PandasDataframePartitionManager(
         keep_partitioning=False,
         num_splits=None,
         apply_indices=None,
+        broadcast_all=True,
         enumerate_partitions=False,
         lengths=None,
         apply_func_args=None,
@@ -532,6 +533,8 @@ class PandasDataframePartitionManager(
             then the number of splits is preserved.
         apply_indices : list of ints, default: None
             Indices of `axis ^ 1` to apply function over.
+        broadcast_all : bool, default: True
+            Whether or not to pass all right axis partitions to each of the left axis partitions.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `apply_func`.
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
@@ -578,7 +581,6 @@ class PandasDataframePartitionManager(
         # load-balance the data as well.
         kw = {
             "num_splits": num_splits,
-            "other_axis_partition": right_partitions,
             "maintain_partitioning": keep_partitioning,
         }
         if lengths:
@@ -593,6 +595,9 @@ class PandasDataframePartitionManager(
                 left_partitions[i].apply(
                     preprocessed_map_func,
                     *(apply_func_args if apply_func_args else []),
+                    other_axis_partition=(
+                        right_partitions if broadcast_all else right_partitions[i]
+                    ),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,
@@ -647,6 +652,56 @@ class PandasDataframePartitionManager(
                 for row_of_parts in partitions
             ]
         )
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def broadcast_apply(
+        cls,
+        axis,
+        apply_func,
+        left,
+        right,
+    ):
+        """
+        Broadcast the `right` partitions to `left` and apply `apply_func` function using different approaches to achieve the best performance.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to apply and broadcast over.
+        apply_func : callable
+            Function to apply.
+        left : np.ndarray
+            NumPy array of left partitions.
+        right : np.ndarray
+            NumPy array of right partitions.
+
+        Returns
+        -------
+        np.ndarray
+            NumPy array of result partition objects.
+        """
+        if not DynamicPartitioning.get():
+            # block-wise broadcast
+            new_partitions = cls.base_broadcast_apply(
+                axis,
+                apply_func,
+                left,
+                right,
+            )
+        else:
+            # The dynamic partitioning behavior of `broadcast_apply` differs from that of `map_partitions`,
+            # since the columnar approach for `broadcast_apply` results in slowdown.
+            # axis-wise broadcast
+            new_partitions = cls.broadcast_axis_partitions(
+                axis=axis ^ 1,
+                left=left,
+                right=right,
+                apply_func=apply_func,
+                broadcast_all=False,
+                keep_partitioning=True,
+            )
+        return new_partitions
 
     @classmethod
     @wait_computations_if_benchmark_mode

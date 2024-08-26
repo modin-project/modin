@@ -21,7 +21,13 @@ import pandas._libs.lib as lib
 import pytest
 
 import modin.pandas as pd
-from modin.config import IsRayCluster, NPartitions, RangePartitioning, StorageFormat
+from modin.config import (
+    IsRayCluster,
+    NPartitions,
+    RangePartitioning,
+    StorageFormat,
+    context,
+)
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -2429,6 +2435,31 @@ def test_multi_column_groupby_different_partitions(
     eval___getitem__(
         md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]], expected_exception=False
     )
+
+
+def test_empty_partitions_after_groupby():
+    def func_to_apply(grp):
+        return grp.agg(
+            {
+                list(test_data_values[0].keys())[1]: "sum",
+                list(test_data_values[0].keys())[-1]: "sum",
+            }
+        )
+
+    data = test_data_values[0]
+    md_df, pd_df = create_test_dfs(data)
+    by = pd_df.columns[0]
+
+    with context(DynamicPartitioning=True):
+        md_grp, pd_grp = (
+            md_df.groupby(by),
+            pd_df.groupby(by),
+        )
+        eval_general(
+            md_grp,
+            pd_grp,
+            func_to_apply,
+        )
 
 
 @pytest.mark.parametrize(
