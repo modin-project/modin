@@ -18,6 +18,7 @@ Module contains ``QueryCompilerCaster`` class.
 arguments to the type of the current query compiler for query compiler class functions.
 This ensures compatibility between different query compiler classes.
 """
+
 import functools
 import inspect
 from types import FunctionType, MethodType
@@ -31,7 +32,7 @@ Fn = TypeVar("Fn", bound=Any)
 
 
 class QueryCompilerCaster:
-    """Cast all query compiler arguments of a the member function to current query compiler."""
+    """Cast all query compiler arguments of the member function to current query compiler."""
 
     @classmethod
     def __init_subclass__(
@@ -149,11 +150,8 @@ def apply_argument_cast():
             -------
             Any
             """
-            current_qc = None
-            if isinstance(args[0], BaseQueryCompiler):
-                current_qc = args[0]
-
-            if current_qc:
+            current_qc = args[0]
+            if isinstance(current_qc, BaseQueryCompiler):
                 kwargs = cast_nested_args_to_current_qc_type(kwargs, current_qc)
                 args = cast_nested_args_to_current_qc_type(args, current_qc)
             return obj(*args, **kwargs)
