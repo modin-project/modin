@@ -10,6 +10,7 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
+
 from modin.config import Engine
 from modin.config.pubsub import context
 from modin.tests.pandas.utils import (
@@ -25,16 +26,14 @@ def create_test_df_in_defined_mode(
     *args, post_fn=None, backend=None, df_mode=None, **kwargs
 ):
     with context(NativeDataframeMode=df_mode):
-        return create_test_dfs(
-            *args, post_fn=None, backend=None, df_mode=None, **kwargs
-        )
+        return create_test_dfs(*args, post_fn=post_fn, backend=backend, **kwargs)
 
 
 def create_test_series_in_defined_mode(
     vals, sort=False, backend=None, df_mode=None, **kwargs
 ):
     with context(NativeDataframeMode=df_mode):
-        return create_test_series(vals, sort=False, backend=None, **kwargs)
+        return create_test_series(vals, sort=sort, backend=backend, **kwargs)
 
 
 def eval_general_interop(
