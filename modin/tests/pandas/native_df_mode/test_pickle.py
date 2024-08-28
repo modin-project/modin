@@ -40,23 +40,21 @@ def persistent(request):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test__reduce__(data_frame_mode_pair):
+def test__reduce__(df_mode_pair):
     # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
     dataframe_data = ["Major League Baseball", "National Basketball Association"]
     abbr_md, abbr_pd = create_test_dfs(
-        dataframe_data, index=["MLB", "NBA"], data_frame_mode=data_frame_mode_pair[0]
+        dataframe_data, index=["MLB", "NBA"], df_mode=df_mode_pair[0]
     )
 
     dataframe_data = {
         "name": ["Mariners", "Lakers"] * 500,
         "league_abbreviation": ["MLB", "NBA"] * 500,
     }
-    teams_md, teams_pd = create_test_dfs(
-        dataframe_data, data_frame_mode=data_frame_mode_pair[1]
-    )
+    teams_md, teams_pd = create_test_dfs(dataframe_data, df_mode=df_mode_pair[1])
 
     result_md = (
         teams_md.set_index("name")

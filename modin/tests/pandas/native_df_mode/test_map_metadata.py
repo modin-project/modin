@@ -66,33 +66,31 @@ def eval_insert(modin_df, pandas_df, **kwargs):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_empty_df(data_frame_mode_pair):
-    modin_df, pd_df = create_test_dfs(None, data_frame_mode=data_frame_mode_pair[0])
-    md_series, pd_series = create_test_series(
-        [1, 2, 3, 4, 5], data_frame_mode=data_frame_mode_pair[1]
-    )
+def test_empty_df(df_mode_pair):
+    modin_df, pd_df = create_test_dfs(None, df_mode=df_mode_pair[0])
+    md_series, pd_series = create_test_series([1, 2, 3, 4, 5], df_mode=df_mode_pair[1])
     modin_df["a"] = md_series
     pd_df["a"] = pd_series
     df_equals(modin_df, pd_df)
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_astype(data_frame_mode_pair):
+def test_astype(df_mode_pair):
     td = pandas.DataFrame(test_data["int_data"])[["col1", "index", "col3", "col4"]]
     modin_df, pandas_df = create_test_dfs(
         td.values,
         index=td.index,
         columns=td.columns,
-        data_frame_mode=data_frame_mode_pair[0],
+        df_mode=df_mode_pair[0],
     )
 
     def astype_func(df):
         md_ser, pd_ser = create_test_series(
-            [str, str], index=["col1", "col1"], data_frame_mode=data_frame_mode_pair[1]
+            [str, str], index=["col1", "col1"], df_mode=df_mode_pair[1]
         )
         if isinstance(df, pd.DataFrame):
             return df.astype(md_ser)
@@ -114,14 +112,14 @@ def test_astype(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_convert_dtypes_5653(data_frame_mode_pair):
+def test_convert_dtypes_5653(df_mode_pair):
     modin_part1, _ = create_test_dfs(
-        {"col1": ["a", "b", "c", "d"]}, data_frame_mode=data_frame_mode_pair[0]
+        {"col1": ["a", "b", "c", "d"]}, df_mode=df_mode_pair[0]
     )
     modin_part2, _ = create_test_dfs(
-        {"col1": [None, None, None, None]}, data_frame_mode=data_frame_mode_pair[1]
+        {"col1": [None, None, None, None]}, df_mode=df_mode_pair[1]
     )
     modin_df = pd.concat([modin_part1, modin_part2])
     if StorageFormat.get() == "Pandas" and NativeDataframeMode.get() == "Default":
@@ -136,10 +134,10 @@ def test_convert_dtypes_5653(data_frame_mode_pair):
 @pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
 @pytest.mark.exclude_in_sanity
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_clip(request, data, axis, bound_type, data_frame_mode_pair):
-    modin_df, pandas_df = create_test_dfs(data, data_frame_mode=data_frame_mode_pair[0])
+def test_clip(request, data, axis, bound_type, df_mode_pair):
+    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
 
     if name_contains(request.node.name, numeric_dfs):
         ind_len = (
@@ -153,10 +151,10 @@ def test_clip(request, data, axis, bound_type, data_frame_mode_pair):
 
         if bound_type == "series":
             modin_lower, pandas_lower = create_test_series(
-                lower, data_frame_mode=data_frame_mode_pair[1]
+                lower, df_mode=df_mode_pair[1]
             )
             modin_upper, pandas_upper = create_test_series(
-                upper, data_frame_mode=data_frame_mode_pair[0]
+                upper, df_mode=df_mode_pair[0]
             )
         else:
             modin_lower = pandas_lower = lower
@@ -190,12 +188,12 @@ def test_clip(request, data, axis, bound_type, data_frame_mode_pair):
 )
 @pytest.mark.parametrize("errors", ["raise", "ignore"])
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_update(data, other_data, errors, data_frame_mode_pair):
-    modin_df, pandas_df = create_test_dfs(data, data_frame_mode=data_frame_mode_pair[0])
+def test_update(data, other_data, errors, df_mode_pair):
+    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
     other_modin_df, other_pandas_df = create_test_dfs(
-        other_data, data_frame_mode=data_frame_mode_pair[1]
+        other_data, df_mode=df_mode_pair[1]
     )
     expected_exception = None
     if errors == "raise":
@@ -234,14 +232,10 @@ def test_update(data, other_data, errors, data_frame_mode_pair):
 @pytest.mark.parametrize("dtype", [None, "str"])
 @pytest.mark.exclude_in_sanity
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_constructor_from_modin_series(
-    get_index, get_columns, dtype, data_frame_mode_pair
-):
-    modin_df, pandas_df = create_test_dfs(
-        test_data_values[0], data_frame_mode=data_frame_mode_pair[0]
-    )
+def test_constructor_from_modin_series(get_index, get_columns, dtype, df_mode_pair):
+    modin_df, pandas_df = create_test_dfs(test_data_values[0], df_mode=df_mode_pair[0])
 
     modin_data = {f"new_col{i}": modin_df.iloc[:, i] for i in range(modin_df.shape[1])}
     pandas_data = {

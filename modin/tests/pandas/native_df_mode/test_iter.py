@@ -34,19 +34,17 @@ matplotlib.use("Agg")
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test___setattr__mutating_column(data_frame_mode_pair):
+def test___setattr__mutating_column(df_mode_pair):
     # Use case from issue #4577
     modin_df, pandas_df = create_test_dfs(
-        [[1]], columns=["col0"], data_frame_mode=data_frame_mode_pair[0]
+        [[1]], columns=["col0"], df_mode=df_mode_pair[0]
     )
     # Replacing a column with a list should mutate the column in place.
     pandas_df.col0 = [3]
     modin_df.col0 = [3]
-    modin_ser, pandas_ser = create_test_series(
-        [3], data_frame_mode=data_frame_mode_pair[1]
-    )
+    modin_ser, pandas_ser = create_test_series([3], df_mode=df_mode_pair[1])
     df_equals(modin_df, pandas_df)
     # Check that the col0 attribute reflects the value update.
     df_equals(modin_df.col0, pandas_df.col0)
@@ -94,14 +92,14 @@ def test___setattr__mutating_column(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_isin_with_modin_objects(data_frame_mode_pair):
+def test_isin_with_modin_objects(df_mode_pair):
     modin_df1, pandas_df1 = create_test_dfs(
-        {"a": [1, 2], "b": [3, 4]}, data_frame_mode=data_frame_mode_pair[0]
+        {"a": [1, 2], "b": [3, 4]}, df_mode=df_mode_pair[0]
     )
     modin_series, pandas_series = create_test_series(
-        [1, 4, 5, 6], data_frame_mode=data_frame_mode_pair[1]
+        [1, 4, 5, 6], df_mode=df_mode_pair[1]
     )
 
     eval_general(
@@ -123,7 +121,7 @@ def test_isin_with_modin_objects(data_frame_mode_pair):
     modin_df1, pandas_df1 = create_test_dfs(
         {"a": [1, 2], "b": [3, 4]},
         index=[10, 11],
-        data_frame_mode=data_frame_mode_pair[0],
+        df_mode=df_mode_pair[0],
     )
 
     eval_general(

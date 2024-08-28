@@ -59,13 +59,13 @@ def eval_setitem(md_df, pd_df, value, col=None, loc=None, expected_exception=Non
         __inplace__=True,
         expected_exception=expected_exception,
     )
-    data_frame_mode_pair_list = list(product(NativeDataframeMode.choices, repeat=2))
-    for data_frame_mode_pair in data_frame_mode_pair_list:
+    df_mode_pair_list = list(product(NativeDataframeMode.choices, repeat=2))
+    for df_mode_pair in df_mode_pair_list:
         eval_general_interop(
             pd_df,
             None,
             lambda df1, df2: df1.__setitem__(col, value_getter(df2)),
-            data_frame_mode_pair,
+            df_mode_pair,
             __inplace__=True,
             expected_exception=expected_exception,
         )
@@ -118,9 +118,9 @@ def eval_loc(md_df, pd_df, value, key):
     ids=["drop_True", "drop_False", "no_drop_param"],
 )
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_set_index(data, key_func, drop_kwargs, request, data_frame_mode_pair):
+def test_set_index(data, key_func, drop_kwargs, request, df_mode_pair):
     if (
         "list_of_index_and_first_column_name" in request.node.name
         and "drop_False" in request.node.name
@@ -139,24 +139,24 @@ def test_set_index(data, key_func, drop_kwargs, request, data_frame_mode_pair):
         None,
         lambda df1, df2: df1.set_index(key_func(df2), **drop_kwargs),
         expected_exception=expected_exception,
-        data_frame_mode_pair=data_frame_mode_pair,
+        df_mode_pair=df_mode_pair,
     )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_loc(data, data_frame_mode_pair):
-    modin_df, pandas_df = create_test_dfs(data, data_frame_mode=data_frame_mode_pair[0])
+def test_loc(data, df_mode_pair):
+    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
 
     indices = [i % 3 == 0 for i in range(len(modin_df.index))]
     columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
 
     # Key is a Modin or pandas series of booleans
-    series1, _ = create_test_series(indices, data_frame_mode=data_frame_mode_pair[0])
+    series1, _ = create_test_series(indices, df_mode=df_mode_pair[0])
     series2, _ = create_test_series(
-        columns, index=modin_df.columns, data_frame_mode=data_frame_mode_pair[0]
+        columns, index=modin_df.columns, df_mode=df_mode_pair[0]
     )
     df_equals(
         modin_df.loc[series1, series2],
@@ -168,9 +168,9 @@ def test_loc(data, data_frame_mode_pair):
 
 @pytest.mark.parametrize("left, right", [(2, 1), (6, 1), (lambda df: 70, 1), (90, 70)])
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_loc_insert_row(left, right, data_frame_mode_pair):
+def test_loc_insert_row(left, right, df_mode_pair):
     # This test case comes from
     # https://github.com/modin-project/modin/issues/3764
     data = [[1, 2, 3], [4, 5, 6]]
@@ -188,26 +188,26 @@ def test_loc_insert_row(left, right, data_frame_mode_pair):
         None,
         _test_loc_rows,
         expected_exception=expected_exception,
-        data_frame_mode_pair=data_frame_mode_pair,
+        df_mode_pair=df_mode_pair,
     )
 
 
 @pytest.fixture(params=list(product(NativeDataframeMode.choices, repeat=2)))
 def loc_iter_dfs_interop(request):
-    data_frame_mode_pair = request.param
+    df_mode_pair = request.param
     columns = ["col1", "col2", "col3"]
     index = ["row1", "row2", "row3"]
     md_df1, pd_df1 = create_test_dfs(
         {col: ([idx] * len(index)) for idx, col in enumerate(columns)},
         columns=columns,
         index=index,
-        data_frame_mode=data_frame_mode_pair[0],
+        df_mode=df_mode_pair[0],
     )
     md_df2, pd_df2 = create_test_dfs(
         {col: ([idx] * len(index)) for idx, col in enumerate(columns)},
         columns=columns,
         index=index,
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     return md_df1, pd_df1, md_df2, pd_df2
 
@@ -232,14 +232,14 @@ def test_loc_iter_assignment(loc_iter_dfs_interop, reverse_order, axis):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_loc_series(data_frame_mode_pair):
+def test_loc_series(df_mode_pair):
     md_df1, pd_df1 = create_test_dfs(
-        {"a": [1, 2], "b": [3, 4]}, data_frame_mode=data_frame_mode_pair[0]
+        {"a": [1, 2], "b": [3, 4]}, df_mode=df_mode_pair[0]
     )
     md_df2, pd_df2 = create_test_dfs(
-        {"a": [1, 2], "b": [3, 4]}, data_frame_mode=data_frame_mode_pair[1]
+        {"a": [1, 2], "b": [3, 4]}, df_mode=df_mode_pair[1]
     )
 
     pd_df1.loc[pd_df2["a"] > 1, "b"] = np.log(pd_df1["b"])
@@ -249,9 +249,9 @@ def test_loc_series(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_reindex_like(data_frame_mode_pair):
+def test_reindex_like(df_mode_pair):
     o_data = [
         [24.3, 75.7, "high"],
         [31, 87.8, "high"],
@@ -267,13 +267,13 @@ def test_reindex_like(data_frame_mode_pair):
         o_data,
         columns=o_columns,
         index=o_index,
-        data_frame_mode=data_frame_mode_pair[0],
+        df_mode=df_mode_pair[0],
     )
     modin_df2, pandas_df2 = create_test_dfs(
         new_data,
         columns=new_columns,
         index=new_index,
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     modin_result = modin_df2.reindex_like(modin_df1)
     pandas_result = pandas_df2.reindex_like(pandas_df1)
@@ -281,19 +281,19 @@ def test_reindex_like(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_reindex_multiindex(data_frame_mode_pair):
+def test_reindex_multiindex(df_mode_pair):
     data1, data2 = np.random.randint(1, 20, (5, 5)), np.random.randint(10, 25, 6)
     index = np.array(["AUD", "BRL", "CAD", "EUR", "INR"])
     pandas_midx = pandas.MultiIndex.from_product(
         [["Bank_1", "Bank_2"], ["AUD", "CAD", "EUR"]], names=["Bank", "Curency"]
     )
     modin_df1, pandas_df1 = create_test_dfs(
-        data=data1, index=index, columns=index, data_frame_mode=data_frame_mode_pair[0]
+        data=data1, index=index, columns=index, df_mode=df_mode_pair[0]
     )
     modin_df2, pandas_df2 = create_test_dfs(
-        data=data2, index=pandas_midx, data_frame_mode=data_frame_mode_pair[1]
+        data=data2, index=pandas_midx, df_mode=df_mode_pair[1]
     )
 
     modin_df2.columns, pandas_df2.columns = ["Notional"], ["Notional"]
@@ -316,31 +316,25 @@ def test_reindex_multiindex(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_getitem_empty_mask(data_frame_mode_pair):
+def test_getitem_empty_mask(df_mode_pair):
     # modin-project/modin#517
     modin_frames = []
     pandas_frames = []
     data1 = np.random.randint(0, 100, size=(100, 4))
-    mdf1, pdf1 = create_test_dfs(
-        data1, columns=list("ABCD"), data_frame_mode=data_frame_mode_pair[0]
-    )
+    mdf1, pdf1 = create_test_dfs(data1, columns=list("ABCD"), df_mode=df_mode_pair[0])
 
     modin_frames.append(mdf1)
     pandas_frames.append(pdf1)
 
     data2 = np.random.randint(0, 100, size=(100, 4))
-    mdf2, pdf2 = create_test_dfs(
-        data2, columns=list("ABCD"), data_frame_mode=data_frame_mode_pair[1]
-    )
+    mdf2, pdf2 = create_test_dfs(data2, columns=list("ABCD"), df_mode=df_mode_pair[1])
     modin_frames.append(mdf2)
     pandas_frames.append(pdf2)
 
     data3 = np.random.randint(0, 100, size=(100, 4))
-    mdf3, pdf3 = create_test_dfs(
-        data3, columns=list("ABCD"), data_frame_mode=data_frame_mode_pair[0]
-    )
+    mdf3, pdf3 = create_test_dfs(data3, columns=list("ABCD"), df_mode=df_mode_pair[0])
     modin_frames.append(mdf3)
     pandas_frames.append(pdf3)
 
@@ -353,17 +347,13 @@ def test_getitem_empty_mask(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test___setitem__mask(data_frame_mode_pair):
+def test___setitem__mask(df_mode_pair):
     # DataFrame mask:
     data = test_data["int_data"]
-    modin_df1, pandas_df1 = create_test_dfs(
-        data, data_frame_mode=data_frame_mode_pair[0]
-    )
-    modin_df2, pandas_df2 = create_test_dfs(
-        data, data_frame_mode=data_frame_mode_pair[0]
-    )
+    modin_df1, pandas_df1 = create_test_dfs(data, df_mode=df_mode_pair[0])
+    modin_df2, pandas_df2 = create_test_dfs(data, df_mode=df_mode_pair[0])
 
     mean = int((RAND_HIGH + RAND_LOW) / 2)
     pandas_df1[pandas_df2 > mean] = -50
@@ -390,21 +380,17 @@ def test___setitem__mask(data_frame_mode_pair):
 @pytest.mark.parametrize("convert_to_series", [False, True])
 @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_setitem_on_empty_df(
-    data, value, convert_to_series, new_col_id, data_frame_mode_pair
-):
-    modin_df, pandas_df = create_test_dfs(data, data_frame_mode=data_frame_mode_pair[0])
+def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id, df_mode_pair):
+    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
 
     def applyier(df):
         if convert_to_series:
             converted_value = (
                 pandas.Series(value)
                 if isinstance(df, pandas.DataFrame)
-                else create_test_series(value, data_frame_mode=data_frame_mode_pair[1])[
-                    1
-                ]
+                else create_test_series(value, df_mode=df_mode_pair[1])[1]
             )
         else:
             converted_value = value
@@ -432,18 +418,14 @@ def test_setitem_on_empty_df(
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_setitem_on_empty_df_4407(data_frame_mode_pair):
+def test_setitem_on_empty_df_4407(df_mode_pair):
     data = {}
     index = pd.date_range(end="1/1/2018", periods=0, freq="D")
     column = pd.date_range(end="1/1/2018", periods=1, freq="h")[0]
-    modin_df, pandas_df = create_test_dfs(
-        data, columns=index, data_frame_mode=data_frame_mode_pair[0]
-    )
-    modin_ser, pandas_ser = create_test_series(
-        [1], data_frame_mode=data_frame_mode_pair[1]
-    )
+    modin_df, pandas_df = create_test_dfs(data, columns=index, df_mode=df_mode_pair[0])
+    modin_ser, pandas_ser = create_test_series([1], df_mode=df_mode_pair[1])
     modin_df[column] = modin_ser
     pandas_df[column] = pandas_ser
 
@@ -452,9 +434,9 @@ def test_setitem_on_empty_df_4407(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_setitem_2d_insertion(data_frame_mode_pair):
+def test_setitem_2d_insertion(df_mode_pair):
     def build_value_picker(modin_value, pandas_value):
         """Build a function that returns either Modin or pandas DataFrame depending on the passed frame."""
         return lambda source_df, *args, **kwargs: (
@@ -464,7 +446,7 @@ def test_setitem_2d_insertion(data_frame_mode_pair):
         )
 
     modin_df, pandas_df = create_test_dfs(
-        test_data["int_data"], data_frame_mode=data_frame_mode_pair[0]
+        test_data["int_data"], df_mode=df_mode_pair[0]
     )
 
     # Easy case - key and value.columns are equal
@@ -473,7 +455,7 @@ def test_setitem_2d_insertion(data_frame_mode_pair):
             "new_value1": np.arange(len(modin_df)),
             "new_value2": np.arange(len(modin_df)),
         },
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     eval_setitem(
         modin_df,
@@ -514,9 +496,9 @@ def test_setitem_2d_insertion(data_frame_mode_pair):
 
 @pytest.mark.parametrize("does_value_have_different_columns", [True, False])
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_setitem_2d_update(does_value_have_different_columns, data_frame_mode_pair):
+def test_setitem_2d_update(does_value_have_different_columns, df_mode_pair):
     def test(dfs, iloc):
         """Update columns on the given numeric indices."""
         df1, df2 = dfs
@@ -526,10 +508,10 @@ def test_setitem_2d_update(does_value_have_different_columns, data_frame_mode_pa
         return df1
 
     modin_df, pandas_df = create_test_dfs(
-        test_data["int_data"], data_frame_mode=data_frame_mode_pair[0]
+        test_data["int_data"], df_mode=df_mode_pair[0]
     )
     modin_df2, pandas_df2 = create_test_dfs(
-        test_data["int_data"], data_frame_mode=data_frame_mode_pair[1]
+        test_data["int_data"], df_mode=df_mode_pair[1]
     )
     modin_df2 *= 10
     pandas_df2 *= 10
@@ -568,17 +550,13 @@ def test_setitem_2d_update(does_value_have_different_columns, data_frame_mode_pa
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test___setitem__single_item_in_series(data_frame_mode_pair):
+def test___setitem__single_item_in_series(df_mode_pair):
     # Test assigning a single item in a Series for issue
     # https://github.com/modin-project/modin/issues/3860
-    modin_series1, pandas_series1 = create_test_series(
-        99, data_frame_mode=data_frame_mode_pair[0]
-    )
-    modin_series2, pandas_series2 = create_test_series(
-        100, data_frame_mode=data_frame_mode_pair[1]
-    )
+    modin_series1, pandas_series1 = create_test_series(99, df_mode=df_mode_pair[0])
+    modin_series2, pandas_series2 = create_test_series(100, df_mode=df_mode_pair[1])
     modin_series1[:1] = modin_series2
     pandas_series1[:1] = pandas_series2
     df_equals(modin_series1, pandas_series1)
@@ -597,9 +575,9 @@ def test___setitem__single_item_in_series(data_frame_mode_pair):
     ],
 )
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_loc_boolean_assignment_scalar_dtypes(value, data_frame_mode_pair):
+def test_loc_boolean_assignment_scalar_dtypes(value, df_mode_pair):
     modin_df, pandas_df = create_test_dfs(
         {
             "a": [1, 2, 3],
@@ -609,10 +587,10 @@ def test_loc_boolean_assignment_scalar_dtypes(value, data_frame_mode_pair):
             "e": pandas.to_datetime(["1/1/2018", "1/2/2018", "1/3/2018"]),
             "f": [True, False, True],
         },
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     modin_idx, pandas_idx = create_test_series(
-        [False, True, True], data_frame_mode=data_frame_mode_pair[1]
+        [False, True, True], df_mode=df_mode_pair[1]
     )
 
     modin_df.loc[modin_idx] = value
@@ -623,9 +601,9 @@ def test_loc_boolean_assignment_scalar_dtypes(value, data_frame_mode_pair):
 # This is a very subtle bug that comes from:
 # https://github.com/modin-project/modin/issues/4945
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_lazy_eval_index(data_frame_mode_pair):
+def test_lazy_eval_index(df_mode_pair):
     data = {"col0": [0, 1]}
 
     def func(df1, df2):
@@ -639,13 +617,13 @@ def test_lazy_eval_index(data_frame_mode_pair):
         df_copy["col0"] = df_copy["col0"].apply(lambda x: x + 1)
         return df_copy
 
-    eval_general_interop(data, None, func, data_frame_mode_pair=data_frame_mode_pair)
+    eval_general_interop(data, None, func, df_mode_pair=df_mode_pair)
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_index_of_empty_frame(data_frame_mode_pair):
+def test_index_of_empty_frame(df_mode_pair):
     # Test on an empty frame created by user
 
     # Test on an empty frame produced by Modin's logic
@@ -653,12 +631,12 @@ def test_index_of_empty_frame(data_frame_mode_pair):
     md_df1, pd_df1 = create_test_dfs(
         data,
         index=pandas.RangeIndex(len(next(iter(data.values()))), name="index name"),
-        data_frame_mode=data_frame_mode_pair[0],
+        df_mode=df_mode_pair[0],
     )
     md_df2, pd_df2 = create_test_dfs(
         data,
         index=pandas.RangeIndex(len(next(iter(data.values()))), name="index name"),
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
 
     md_res = md_df1.query(f"{md_df2.columns[0]} > {RAND_HIGH}")

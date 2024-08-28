@@ -68,10 +68,10 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
     ],
 )
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 @pytest.mark.parametrize("backend", [None, "pyarrow"])
-def test_math_functions(other, axis, op, backend, data_frame_mode_pair):
+def test_math_functions(other, axis, op, backend, df_mode_pair):
     data = test_data["float_nan_data"]
     if (op == "floordiv" or op == "rfloordiv") and axis == "rows":
         # lambda == "series_or_list"
@@ -88,18 +88,18 @@ def test_math_functions(other, axis, op, backend, data_frame_mode_pair):
         data,
         backend,
         lambda df1, df2: getattr(df1, op)(other(df2, axis), axis=axis),
-        data_frame_mode_pair,
+        df_mode_pair,
     )
 
 
 @pytest.mark.parametrize("other", [lambda df: 2, lambda df: df])
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test___divmod__(other, data_frame_mode_pair):
+def test___divmod__(other, df_mode_pair):
     data = test_data["float_nan_data"]
     eval_general_interop(
-        data, None, lambda df1, df2: divmod(df1, other(df2)), data_frame_mode_pair
+        data, None, lambda df1, df2: divmod(df1, other(df2)), df_mode_pair
     )
 
 
@@ -107,9 +107,9 @@ def test___divmod__(other, data_frame_mode_pair):
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_comparison(data, op, other, request, data_frame_mode_pair):
+def test_comparison(data, op, other, request, df_mode_pair):
     def operation(df1, df2):
         return getattr(df1, op)(df2 if other == "as_left" else other)
 
@@ -124,7 +124,7 @@ def test_comparison(data, op, other, request, data_frame_mode_pair):
         data,
         None,
         operation,
-        data_frame_mode_pair,
+        df_mode_pair,
         expected_exception=expected_exception,
     )
 
@@ -150,15 +150,11 @@ def test_comparison(data, op, other, request, data_frame_mode_pair):
     ],
 )
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_equals(frame1_data, frame2_data, expected_pandas_equals, data_frame_mode_pair):
-    modin_df1, pandas_df1 = create_test_dfs(
-        frame1_data, data_frame_mode=data_frame_mode_pair[0]
-    )
-    modin_df2, pandas_df2 = create_test_dfs(
-        frame2_data, data_frame_mode=data_frame_mode_pair[1]
-    )
+def test_equals(frame1_data, frame2_data, expected_pandas_equals, df_mode_pair):
+    modin_df1, pandas_df1 = create_test_dfs(frame1_data, df_mode=df_mode_pair[0])
+    modin_df2, pandas_df2 = create_test_dfs(frame2_data, df_mode=df_mode_pair[1])
 
     pandas_equals = pandas_df1.equals(pandas_df2)
     assert pandas_equals == expected_pandas_equals, (
@@ -173,15 +169,11 @@ def test_equals(frame1_data, frame2_data, expected_pandas_equals, data_frame_mod
 
 @pytest.mark.parametrize("empty_operand", ["right", "left", "both"])
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_empty_df(empty_operand, data_frame_mode_pair):
-    modin_df, pandas_df = create_test_dfs(
-        [0, 1, 2, 0, 1, 2], data_frame_mode=data_frame_mode_pair[0]
-    )
-    modin_df_empty, pandas_df_empty = create_test_dfs(
-        data_frame_mode=data_frame_mode_pair[1]
-    )
+def test_empty_df(empty_operand, df_mode_pair):
+    modin_df, pandas_df = create_test_dfs([0, 1, 2, 0, 1, 2], df_mode=df_mode_pair[0])
+    modin_df_empty, pandas_df_empty = create_test_dfs(df_mode=df_mode_pair[1])
 
     if empty_operand == "right":
         modin_res = modin_df + modin_df_empty

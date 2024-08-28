@@ -29,18 +29,18 @@ matplotlib.use("Agg")
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_fillna_4660(data_frame_mode_pair):
+def test_fillna_4660(df_mode_pair):
     modin_df_1, pandas_df_1 = create_test_dfs(
         {"a": ["a"], "b": ["b"], "c": [pd.NA]},
         index=["row1"],
-        data_frame_mode=data_frame_mode_pair[0],
+        df_mode=df_mode_pair[0],
     )
     modin_df_2, pandas_df_2 = create_test_dfs(
         {"a": ["a"], "b": ["b"], "c": [pd.NA]},
         index=["row1"],
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     modin_result = modin_df_1["c"].fillna(modin_df_2["b"])
     pandas_result = pandas_df_1["c"].fillna(pandas_df_2["b"])
@@ -48,9 +48,9 @@ def test_fillna_4660(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_fillna_dict_series(data_frame_mode_pair):
+def test_fillna_dict_series(df_mode_pair):
     frame_data = {
         "a": [np.nan, 1, 2, np.nan, np.nan],
         "b": [1, 2, 3, np.nan, np.nan],
@@ -58,12 +58,8 @@ def test_fillna_dict_series(data_frame_mode_pair):
     }
     df = pandas.DataFrame(frame_data)
     modin_df = pd.DataFrame(frame_data)
-    modin_df_1, pandas_df_1 = create_test_dfs(
-        frame_data, data_frame_mode=data_frame_mode_pair[0]
-    )
-    modin_df_2, pandas_df_2 = create_test_dfs(
-        frame_data, data_frame_mode=data_frame_mode_pair[1]
-    )
+    modin_df_1, pandas_df_1 = create_test_dfs(frame_data, df_mode=df_mode_pair[0])
+    modin_df_2, pandas_df_2 = create_test_dfs(frame_data, df_mode=df_mode_pair[1])
 
     df_equals(modin_df.fillna({"a": 0, "b": 5}), df.fillna({"a": 0, "b": 5}))
 
@@ -79,21 +75,21 @@ def test_fillna_dict_series(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_fillna_dataframe(data_frame_mode_pair):
+def test_fillna_dataframe(df_mode_pair):
     frame_data = {
         "a": [np.nan, 1, 2, np.nan, np.nan],
         "b": [1, 2, 3, np.nan, np.nan],
         "c": [np.nan, 1, 2, 3, 4],
     }
     modin_df_1, pandas_df_1 = create_test_dfs(
-        frame_data, index=list("VWXYZ"), data_frame_mode=data_frame_mode_pair[0]
+        frame_data, index=list("VWXYZ"), df_mode=df_mode_pair[0]
     )
     modin_df_2, pandas_df_2 = create_test_dfs(
         {"a": [np.nan, 10, 20, 30, 40], "b": [50, 60, 70, 80, 90], "foo": ["bar"] * 5},
         index=list("VWXuZ"),
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
 
     # only those columns and indices which are shared get filled

@@ -919,7 +919,7 @@ def eval_general_interop(
     data,
     backend,
     operation,
-    data_frame_mode_pair,
+    df_mode_pair,
     comparator=df_equals,
     __inplace__=False,
     expected_exception=None,
@@ -928,13 +928,9 @@ def eval_general_interop(
     comparator_kwargs=None,
     **kwargs,
 ):
-    data_frame_mode1, data_frame_mode2 = data_frame_mode_pair
-    modin_df1, pandas_df1 = create_test_dfs(
-        data, backend=backend, data_frame_mode=data_frame_mode1
-    )
-    modin_df2, pandas_df2 = create_test_dfs(
-        data, backend=backend, data_frame_mode=data_frame_mode2
-    )
+    df_mode1, df_mode2 = df_mode_pair
+    modin_df1, pandas_df1 = create_test_dfs(data, backend=backend, df_mode=df_mode1)
+    modin_df2, pandas_df2 = create_test_dfs(data, backend=backend, df_mode=df_mode2)
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
@@ -1188,7 +1184,7 @@ def create_test_dfs(
     *args,
     post_fn=None,
     backend=None,
-    data_frame_mode=None,
+    df_mode=None,
     **kwargs,
 ) -> tuple[pd.DataFrame, pandas.DataFrame]:
     if post_fn is None:
@@ -1199,24 +1195,24 @@ def create_test_dfs(
         post_fn = lambda df: post_fn(df).convert_dtypes(  # noqa: E731
             dtype_backend=backend
         )
-    if data_frame_mode:
-        actual_data_frame_mode = NativeDataframeMode().get()
-        NativeDataframeMode().put(data_frame_mode)
+    if df_mode:
+        actual_df_mode = NativeDataframeMode().get()
+        NativeDataframeMode().put(df_mode)
     test_dfs = tuple(
         map(post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)])
     )
-    if data_frame_mode:
-        NativeDataframeMode().put(actual_data_frame_mode)
+    if df_mode:
+        NativeDataframeMode().put(actual_df_mode)
 
     return test_dfs
 
 
 def create_test_series(
-    vals, sort=False, backend=None, data_frame_mode=None, **kwargs
+    vals, sort=False, backend=None, df_mode=None, **kwargs
 ) -> tuple[pd.Series, pandas.Series]:
-    if data_frame_mode:
-        actual_data_frame_mode = NativeDataframeMode().get()
-        NativeDataframeMode().put(data_frame_mode)
+    if df_mode:
+        actual_df_mode = NativeDataframeMode().get()
+        NativeDataframeMode().put(df_mode)
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
@@ -1230,8 +1226,8 @@ def create_test_series(
     if backend is not None:
         modin_series = modin_series.convert_dtypes(dtype_backend=backend)
         pandas_series = pandas_series.convert_dtypes(dtype_backend=backend)
-    if data_frame_mode:
-        NativeDataframeMode().put(actual_data_frame_mode)
+    if df_mode:
+        NativeDataframeMode().put(actual_df_mode)
     return modin_series, pandas_series
 
 

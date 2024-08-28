@@ -78,18 +78,18 @@ pytestmark = [
     ],
 )
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_ops_defaulting_to_pandas(op, make_args, data_frame_mode_pair):
+def test_ops_defaulting_to_pandas(op, make_args, df_mode_pair):
     modin_df1, _ = create_test_dfs(
         test_data_diff_dtype,
         post_fn=lambda df: df.drop(["str_col", "bool_col"], axis=1),
-        data_frame_mode=data_frame_mode_pair[0],
+        df_mode=df_mode_pair[0],
     )
     modin_df2, _ = create_test_dfs(
         test_data_diff_dtype,
         post_fn=lambda df: df.drop(["str_col", "bool_col"], axis=1),
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     with warns_that_defaulting_to_pandas():
         operation = getattr(modin_df1, op)
@@ -114,14 +114,14 @@ def test_to_numpy(data):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_asfreq(data_frame_mode_pair):
+def test_asfreq(df_mode_pair):
     index = pd.date_range("1/1/2000", periods=4, freq="min")
     series, _ = create_test_series(
-        [0.0, None, 2.0, 3.0], index=index, data_frame_mode=data_frame_mode_pair[0]
+        [0.0, None, 2.0, 3.0], index=index, df_mode=df_mode_pair[0]
     )
-    df, _ = create_test_dfs({"s": series}, data_frame_mode=data_frame_mode_pair[1])
+    df, _ = create_test_dfs({"s": series}, df_mode=df_mode_pair[1])
     with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
@@ -129,36 +129,32 @@ def test_asfreq(data_frame_mode_pair):
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_assign(data_frame_mode_pair):
+def test_assign(df_mode_pair):
     data = test_data_values[0]
 
     def assign_one_column(df1, df2):
         df1.assign(new_column=pd.Series(df2.iloc[:, 0]))
 
-    eval_general_interop(data, None, assign_one_column, data_frame_mode_pair)
+    eval_general_interop(data, None, assign_one_column, df_mode_pair)
 
     def assign_multiple_columns(df1, df2):
         df1.assign(
             new_column=pd.Series(df2.iloc[:, 0]), new_column2=pd.Series(df2.iloc[:, 1])
         )
 
-    eval_general_interop(data, None, assign_multiple_columns, data_frame_mode_pair)
+    eval_general_interop(data, None, assign_multiple_columns, df_mode_pair)
 
 
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_combine_first(data_frame_mode_pair):
+def test_combine_first(df_mode_pair):
     data1 = {"A": [None, 0], "B": [None, 4]}
-    modin_df1, pandas_df1 = create_test_dfs(
-        data1, data_frame_mode=data_frame_mode_pair[0]
-    )
+    modin_df1, pandas_df1 = create_test_dfs(data1, df_mode=df_mode_pair[0])
     data2 = {"A": [1, 1], "B": [3, 3]}
-    modin_df2, pandas_df2 = create_test_dfs(
-        data2, data_frame_mode=data_frame_mode_pair[1]
-    )
+    modin_df2, pandas_df2 = create_test_dfs(data2, df_mode=df_mode_pair[1])
 
     df_equals(
         modin_df1.combine_first(modin_df2),
@@ -170,18 +166,18 @@ def test_combine_first(data_frame_mode_pair):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_dot(data, data_frame_mode_pair):
+def test_dot(data, df_mode_pair):
 
-    modin_df, pandas_df = create_test_dfs(data, data_frame_mode=data_frame_mode_pair[0])
+    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
     col_len = len(modin_df.columns)
 
     # Test series input
     modin_series, pandas_series = create_test_series(
         np.arange(col_len),
         index=pandas_df.columns,
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     modin_result = modin_df.dot(modin_series)
     pandas_result = pandas_df.dot(pandas_series)
@@ -194,26 +190,26 @@ def test_dot(data, data_frame_mode_pair):
     # pandas_result = pandas_df.dot(pandas_df.T)
     # df_equals(modin_result, pandas_result)
     # Test dataframe input
-    eval_general_interop(data, None, dot_func, data_frame_mode_pair)
+    eval_general_interop(data, None, dot_func, df_mode_pair)
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
         modin_series_without_index, _ = create_test_series(
-            np.arange(col_len), data_frame_mode=data_frame_mode_pair[1]
+            np.arange(col_len), df_mode=df_mode_pair[1]
         )
         modin_df.dot(modin_series_without_index)
 
     # Test case when left dataframe has size (n x 1)
     # and right dataframe has size (1 x n)
-    eval_general_interop(pandas_series, None, dot_func, data_frame_mode_pair)
+    eval_general_interop(pandas_series, None, dot_func, df_mode_pair)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_matmul(data, data_frame_mode_pair):
-    modin_df, pandas_df = create_test_dfs(data, data_frame_mode=data_frame_mode_pair[0])
+def test_matmul(data, df_mode_pair):
+    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
     col_len = len(modin_df.columns)
 
     # Test list input
@@ -230,7 +226,7 @@ def test_matmul(data, data_frame_mode_pair):
     modin_series, pandas_series = create_test_series(
         np.arange(col_len),
         index=pandas_df.columns,
-        data_frame_mode=data_frame_mode_pair[1],
+        df_mode=df_mode_pair[1],
     )
     modin_result = modin_df @ modin_series
     pandas_result = pandas_df @ pandas_series
@@ -241,12 +237,12 @@ def test_matmul(data, data_frame_mode_pair):
         return df1 @ df2.T
 
     # Test dataframe input
-    eval_general_interop(data, None, matmul_func, data_frame_mode_pair)
+    eval_general_interop(data, None, matmul_func, df_mode_pair)
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
         modin_series_without_index, _ = create_test_series(
-            np.arange(col_len), data_frame_mode=data_frame_mode_pair[1]
+            np.arange(col_len), df_mode=df_mode_pair[1]
         )
         modin_df @ modin_series_without_index
 
@@ -293,11 +289,9 @@ def test_matmul(data, data_frame_mode_pair):
     ],
 )
 @pytest.mark.parametrize(
-    "data_frame_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
+    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
-def test_pivot_table_data(
-    data, index, columns, values, aggfunc, request, data_frame_mode_pair
-):
+def test_pivot_table_data(data, index, columns, values, aggfunc, request, df_mode_pair):
     if (
         "callable_tree_reduce_func-single_value_col-multiple_cols-multiple_index_cols"
         in request.node.callspec.id
@@ -329,7 +323,7 @@ def test_pivot_table_data(
         operation=lambda df, _, *args, **kwargs: df.pivot_table(
             *args, **kwargs
         ).sort_index(axis=int(index is not None)),
-        data_frame_mode_pair=data_frame_mode_pair,
+        df_mode_pair=df_mode_pair,
         index=index,
         columns=columns,
         values=values,
