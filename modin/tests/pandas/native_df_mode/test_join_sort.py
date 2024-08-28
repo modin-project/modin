@@ -21,13 +21,13 @@ import pytest
 import modin.pandas as pd
 from modin.config import NativeDataframeMode, NPartitions
 from modin.pandas.io import to_pandas
+from modin.tests.pandas.native_df_mode.utils import eval_general_interop
 from modin.tests.pandas.utils import (
     create_test_dfs,
     create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
-    eval_general_interop,
     random_state,
     test_data_keys,
     test_data_values,

@@ -25,13 +25,12 @@ import pandas
 from pandas.core.dtypes.common import is_list_like, is_scalar
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
     try_cast_to_pandas,
 )
-
-from .query_compiler_validator import QueryCompilerCaster
 
 
 def _get_axis(axis):

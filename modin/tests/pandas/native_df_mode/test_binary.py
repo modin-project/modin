@@ -17,11 +17,11 @@ import matplotlib
 import pytest
 
 from modin.config import NativeDataframeMode, NPartitions
+from modin.tests.pandas.native_df_mode.utils import eval_general_interop
 from modin.tests.pandas.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
     df_equals,
-    eval_general_interop,
     test_data,
     test_data_keys,
     test_data_values,

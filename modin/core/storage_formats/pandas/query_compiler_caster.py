@@ -119,8 +119,7 @@ def apply_argument_cast():
             # This is required because inspect converts class methods to member functions
             current_class_attrs = vars(obj)
             for key in current_class_attrs:
-                if key in current_class_attrs:
-                    all_attrs[key] = current_class_attrs[key]
+                all_attrs[key] = current_class_attrs[key]
 
             for attr_name, attr_value in all_attrs.items():
                 if isinstance(

@@ -23,12 +23,12 @@ from numpy.testing import assert_array_equal
 import modin.pandas as pd
 from modin.config import NativeDataframeMode, NPartitions
 from modin.pandas.io import to_pandas
+from modin.tests.pandas.native_df_mode.utils import eval_general_interop
 from modin.tests.pandas.utils import (
     create_test_dfs,
     create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
-    eval_general_interop,
     test_data,
     test_data_diff_dtype,
     test_data_keys,

@@ -66,6 +66,7 @@ from modin.core.dataframe.pandas.metadata import (
     extract_dtype,
 )
 from modin.core.storage_formats import BaseQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.error_message import ErrorMessage
 from modin.logging import get_logger
 from modin.utils import (
@@ -79,7 +80,6 @@ from modin.utils import (
 from .aggregations import CorrCovBuilder
 from .groupby import GroupbyReduceImpl, PivotTableImpl
 from .merge import MergeImpl
-from .query_compiler_validator import QueryCompilerCaster
 from .utils import get_group_names, merge_partitioning
 
 if TYPE_CHECKING:
