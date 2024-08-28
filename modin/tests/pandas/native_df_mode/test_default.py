@@ -23,10 +23,12 @@ from numpy.testing import assert_array_equal
 import modin.pandas as pd
 from modin.config import NativeDataframeMode, NPartitions
 from modin.pandas.io import to_pandas
-from modin.tests.pandas.native_df_mode.utils import eval_general_interop
+from modin.tests.pandas.native_df_mode.utils import (
+    create_test_df_in_defined_mode,
+    create_test_series_in_defined_mode,
+    eval_general_interop,
+)
 from modin.tests.pandas.utils import (
-    create_test_dfs,
-    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     test_data,
@@ -81,12 +83,12 @@ pytestmark = [
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_ops_defaulting_to_pandas(op, make_args, df_mode_pair):
-    modin_df1, _ = create_test_dfs(
+    modin_df1, _ = create_test_df_in_defined_mode(
         test_data_diff_dtype,
         post_fn=lambda df: df.drop(["str_col", "bool_col"], axis=1),
         df_mode=df_mode_pair[0],
     )
-    modin_df2, _ = create_test_dfs(
+    modin_df2, _ = create_test_df_in_defined_mode(
         test_data_diff_dtype,
         post_fn=lambda df: df.drop(["str_col", "bool_col"], axis=1),
         df_mode=df_mode_pair[1],
@@ -118,10 +120,10 @@ def test_to_numpy(data):
 )
 def test_asfreq(df_mode_pair):
     index = pd.date_range("1/1/2000", periods=4, freq="min")
-    series, _ = create_test_series(
+    series, _ = create_test_series_in_defined_mode(
         [0.0, None, 2.0, 3.0], index=index, df_mode=df_mode_pair[0]
     )
-    df, _ = create_test_dfs({"s": series}, df_mode=df_mode_pair[1])
+    df, _ = create_test_df_in_defined_mode({"s": series}, df_mode=df_mode_pair[1])
     with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
@@ -152,9 +154,13 @@ def test_assign(df_mode_pair):
 )
 def test_combine_first(df_mode_pair):
     data1 = {"A": [None, 0], "B": [None, 4]}
-    modin_df1, pandas_df1 = create_test_dfs(data1, df_mode=df_mode_pair[0])
+    modin_df1, pandas_df1 = create_test_df_in_defined_mode(
+        data1, df_mode=df_mode_pair[0]
+    )
     data2 = {"A": [1, 1], "B": [3, 3]}
-    modin_df2, pandas_df2 = create_test_dfs(data2, df_mode=df_mode_pair[1])
+    modin_df2, pandas_df2 = create_test_df_in_defined_mode(
+        data2, df_mode=df_mode_pair[1]
+    )
 
     df_equals(
         modin_df1.combine_first(modin_df2),
@@ -170,11 +176,11 @@ def test_combine_first(df_mode_pair):
 )
 def test_dot(data, df_mode_pair):
 
-    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
+    modin_df, pandas_df = create_test_df_in_defined_mode(data, df_mode=df_mode_pair[0])
     col_len = len(modin_df.columns)
 
     # Test series input
-    modin_series, pandas_series = create_test_series(
+    modin_series, pandas_series = create_test_series_in_defined_mode(
         np.arange(col_len),
         index=pandas_df.columns,
         df_mode=df_mode_pair[1],
@@ -194,7 +200,7 @@ def test_dot(data, df_mode_pair):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_series_without_index, _ = create_test_series(
+        modin_series_without_index, _ = create_test_series_in_defined_mode(
             np.arange(col_len), df_mode=df_mode_pair[1]
         )
         modin_df.dot(modin_series_without_index)
@@ -209,7 +215,7 @@ def test_dot(data, df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_matmul(data, df_mode_pair):
-    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
+    modin_df, pandas_df = create_test_df_in_defined_mode(data, df_mode=df_mode_pair[0])
     col_len = len(modin_df.columns)
 
     # Test list input
@@ -223,7 +229,7 @@ def test_matmul(data, df_mode_pair):
         modin_df @ np.arange(col_len + 10)
 
     # Test series input
-    modin_series, pandas_series = create_test_series(
+    modin_series, pandas_series = create_test_series_in_defined_mode(
         np.arange(col_len),
         index=pandas_df.columns,
         df_mode=df_mode_pair[1],
@@ -241,7 +247,7 @@ def test_matmul(data, df_mode_pair):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_series_without_index, _ = create_test_series(
+        modin_series_without_index, _ = create_test_series_in_defined_mode(
             np.arange(col_len), df_mode=df_mode_pair[1]
         )
         modin_df @ modin_series_without_index

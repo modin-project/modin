@@ -11,8 +11,30 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 from modin.config import Engine
-from modin.tests.pandas.utils import NoModinException, create_test_dfs, df_equals
+from modin.config.pubsub import context
+from modin.tests.pandas.utils import (
+    NoModinException,
+    create_test_dfs,
+    create_test_series,
+    df_equals,
+)
 from modin.utils import try_cast_to_pandas
+
+
+def create_test_df_in_defined_mode(
+    *args, post_fn=None, backend=None, df_mode=None, **kwargs
+):
+    with context(NativeDataframeMode=df_mode):
+        return create_test_dfs(
+            *args, post_fn=None, backend=None, df_mode=None, **kwargs
+        )
+
+
+def create_test_series_in_defined_mode(
+    vals, sort=False, backend=None, df_mode=None, **kwargs
+):
+    with context(NativeDataframeMode=df_mode):
+        return create_test_series(vals, sort=False, backend=None, **kwargs)
 
 
 def eval_general_interop(
@@ -29,8 +51,12 @@ def eval_general_interop(
     **kwargs,
 ):
     df_mode1, df_mode2 = df_mode_pair
-    modin_df1, pandas_df1 = create_test_dfs(data, backend=backend, df_mode=df_mode1)
-    modin_df2, pandas_df2 = create_test_dfs(data, backend=backend, df_mode=df_mode2)
+    modin_df1, pandas_df1 = create_test_df_in_defined_mode(
+        data, backend=backend, df_mode=df_mode1
+    )
+    modin_df2, pandas_df2 = create_test_df_in_defined_mode(
+        data, backend=backend, df_mode=df_mode2
+    )
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):

@@ -52,7 +52,7 @@ class QueryCompilerCaster:
         **kwargs : Additional keyword arguments
         """
         super().__init_subclass__(**kwargs)
-        apply_argument_cast()(cls)
+        apply_argument_cast(cls)
 
 
 def cast_nested_args_to_current_qc_type(arguments, current_qc):
@@ -100,61 +100,60 @@ def cast_nested_args_to_current_qc_type(arguments, current_qc):
     return arguments
 
 
-def apply_argument_cast():
+def apply_argument_cast(obj: Fn) -> Fn:
     """
-    Cast any of args that is a query compiler to the type of left query compiler.
+    Cast all arguments that are query compilers to the current query compiler.
+
+    Parameters
+    ----------
+    obj : function
 
     Returns
     -------
-    func
-        A decorator function.
+    function
+        Returns decorated function which does argument casting.
     """
+    if isinstance(obj, type):
+        all_attrs = dict(inspect.getmembers(obj))
+        all_attrs.pop("__abstractmethods__")
 
-    def decorator(obj: Fn) -> Fn:
-        """Cast all arguments that are query compilers to the current query compiler."""
-        if isinstance(obj, type):
-            all_attrs = dict(inspect.getmembers(obj))
-            all_attrs.pop("__abstractmethods__")
+        # This is required because inspect converts class methods to member functions
+        current_class_attrs = vars(obj)
+        for key in current_class_attrs:
+            all_attrs[key] = current_class_attrs[key]
 
-            # This is required because inspect converts class methods to member functions
-            current_class_attrs = vars(obj)
-            for key in current_class_attrs:
-                all_attrs[key] = current_class_attrs[key]
+        for attr_name, attr_value in all_attrs.items():
+            if isinstance(
+                attr_value, (FunctionType, MethodType, classmethod, staticmethod)
+            ):
+                wrapped = apply_argument_cast(attr_value)
+                setattr(obj, attr_name, wrapped)
+        return obj  # type: ignore [return-value]
+    elif isinstance(obj, classmethod):
+        return classmethod(apply_argument_cast(obj.__func__))  # type: ignore [return-value, arg-type]
+    elif isinstance(obj, staticmethod):
+        return staticmethod(apply_argument_cast(obj.__func__))
 
-            for attr_name, attr_value in all_attrs.items():
-                if isinstance(
-                    attr_value, (FunctionType, MethodType, classmethod, staticmethod)
-                ):
-                    wrapped = apply_argument_cast()(attr_value)
-                    setattr(obj, attr_name, wrapped)
-            return obj  # type: ignore [return-value]
-        elif isinstance(obj, classmethod):
-            return classmethod(decorator(obj.__func__))  # type: ignore [return-value, arg-type]
-        elif isinstance(obj, staticmethod):
-            return staticmethod(decorator(obj.__func__))
+    @functools.wraps(obj)
+    def cast_args(*args: Tuple, **kwargs: Dict) -> Any:
+        """
+        Add casting for query compiler arguments.
 
-        @functools.wraps(obj)
-        def cast_args(*args: Tuple, **kwargs: Dict) -> Any:
-            """
-            Add casting for query compiler arguments.
+        Parameters
+        ----------
+        *args : tuple
+            The function arguments.
+        **kwargs : dict
+            The function keyword arguments.
 
-            Parameters
-            ----------
-            *args : tuple
-                The function arguments.
-            **kwargs : dict
-                The function keyword arguments.
+        Returns
+        -------
+        Any
+        """
+        current_qc = args[0]
+        if isinstance(current_qc, BaseQueryCompiler):
+            kwargs = cast_nested_args_to_current_qc_type(kwargs, current_qc)
+            args = cast_nested_args_to_current_qc_type(args, current_qc)
+        return obj(*args, **kwargs)
 
-            Returns
-            -------
-            Any
-            """
-            current_qc = args[0]
-            if isinstance(current_qc, BaseQueryCompiler):
-                kwargs = cast_nested_args_to_current_qc_type(kwargs, current_qc)
-                args = cast_nested_args_to_current_qc_type(args, current_qc)
-            return obj(*args, **kwargs)
-
-        return cast_args
-
-    return decorator
+    return cast_args

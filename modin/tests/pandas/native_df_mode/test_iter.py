@@ -20,12 +20,11 @@ import pytest
 import modin.pandas as pd
 from modin.config import NativeDataframeMode, NPartitions
 from modin.pandas.utils import SET_DATAFRAME_ATTRIBUTE_WARNING
-from modin.tests.pandas.utils import (
-    create_test_dfs,
-    create_test_series,
-    df_equals,
-    eval_general,
+from modin.tests.pandas.native_df_mode.utils import (
+    create_test_df_in_defined_mode,
+    create_test_series_in_defined_mode,
 )
+from modin.tests.pandas.utils import df_equals, eval_general
 
 NPartitions.put(4)
 
@@ -38,13 +37,15 @@ matplotlib.use("Agg")
 )
 def test___setattr__mutating_column(df_mode_pair):
     # Use case from issue #4577
-    modin_df, pandas_df = create_test_dfs(
+    modin_df, pandas_df = create_test_df_in_defined_mode(
         [[1]], columns=["col0"], df_mode=df_mode_pair[0]
     )
     # Replacing a column with a list should mutate the column in place.
     pandas_df.col0 = [3]
     modin_df.col0 = [3]
-    modin_ser, pandas_ser = create_test_series([3], df_mode=df_mode_pair[1])
+    modin_ser, pandas_ser = create_test_series_in_defined_mode(
+        [3], df_mode=df_mode_pair[1]
+    )
     df_equals(modin_df, pandas_df)
     # Check that the col0 attribute reflects the value update.
     df_equals(modin_df.col0, pandas_df.col0)
@@ -95,10 +96,10 @@ def test___setattr__mutating_column(df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_isin_with_modin_objects(df_mode_pair):
-    modin_df1, pandas_df1 = create_test_dfs(
+    modin_df1, pandas_df1 = create_test_df_in_defined_mode(
         {"a": [1, 2], "b": [3, 4]}, df_mode=df_mode_pair[0]
     )
-    modin_series, pandas_series = create_test_series(
+    modin_series, pandas_series = create_test_series_in_defined_mode(
         [1, 4, 5, 6], df_mode=df_mode_pair[1]
     )
 
@@ -118,7 +119,7 @@ def test_isin_with_modin_objects(df_mode_pair):
     )
 
     # Check case when indices are not matching
-    modin_df1, pandas_df1 = create_test_dfs(
+    modin_df1, pandas_df1 = create_test_df_in_defined_mode(
         {"a": [1, 2], "b": [3, 4]},
         index=[10, 11],
         df_mode=df_mode_pair[0],

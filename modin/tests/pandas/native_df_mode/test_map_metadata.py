@@ -21,13 +21,15 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import NativeDataframeMode, NPartitions, StorageFormat
+from modin.tests.pandas.native_df_mode.utils import (
+    create_test_df_in_defined_mode,
+    create_test_series_in_defined_mode,
+)
 from modin.tests.pandas.utils import (
     RAND_HIGH,
     RAND_LOW,
     axis_keys,
     axis_values,
-    create_test_dfs,
-    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
@@ -69,8 +71,10 @@ def eval_insert(modin_df, pandas_df, **kwargs):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_empty_df(df_mode_pair):
-    modin_df, pd_df = create_test_dfs(None, df_mode=df_mode_pair[0])
-    md_series, pd_series = create_test_series([1, 2, 3, 4, 5], df_mode=df_mode_pair[1])
+    modin_df, pd_df = create_test_df_in_defined_mode(None, df_mode=df_mode_pair[0])
+    md_series, pd_series = create_test_series_in_defined_mode(
+        [1, 2, 3, 4, 5], df_mode=df_mode_pair[1]
+    )
     modin_df["a"] = md_series
     pd_df["a"] = pd_series
     df_equals(modin_df, pd_df)
@@ -81,7 +85,7 @@ def test_empty_df(df_mode_pair):
 )
 def test_astype(df_mode_pair):
     td = pandas.DataFrame(test_data["int_data"])[["col1", "index", "col3", "col4"]]
-    modin_df, pandas_df = create_test_dfs(
+    modin_df, pandas_df = create_test_df_in_defined_mode(
         td.values,
         index=td.index,
         columns=td.columns,
@@ -89,7 +93,7 @@ def test_astype(df_mode_pair):
     )
 
     def astype_func(df):
-        md_ser, pd_ser = create_test_series(
+        md_ser, pd_ser = create_test_series_in_defined_mode(
             [str, str], index=["col1", "col1"], df_mode=df_mode_pair[1]
         )
         if isinstance(df, pd.DataFrame):
@@ -115,10 +119,10 @@ def test_astype(df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_convert_dtypes_5653(df_mode_pair):
-    modin_part1, _ = create_test_dfs(
+    modin_part1, _ = create_test_df_in_defined_mode(
         {"col1": ["a", "b", "c", "d"]}, df_mode=df_mode_pair[0]
     )
-    modin_part2, _ = create_test_dfs(
+    modin_part2, _ = create_test_df_in_defined_mode(
         {"col1": [None, None, None, None]}, df_mode=df_mode_pair[1]
     )
     modin_df = pd.concat([modin_part1, modin_part2])
@@ -137,7 +141,7 @@ def test_convert_dtypes_5653(df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_clip(request, data, axis, bound_type, df_mode_pair):
-    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
+    modin_df, pandas_df = create_test_df_in_defined_mode(data, df_mode=df_mode_pair[0])
 
     if name_contains(request.node.name, numeric_dfs):
         ind_len = (
@@ -150,10 +154,10 @@ def test_clip(request, data, axis, bound_type, df_mode_pair):
         upper = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
 
         if bound_type == "series":
-            modin_lower, pandas_lower = create_test_series(
+            modin_lower, pandas_lower = create_test_series_in_defined_mode(
                 lower, df_mode=df_mode_pair[1]
             )
-            modin_upper, pandas_upper = create_test_series(
+            modin_upper, pandas_upper = create_test_series_in_defined_mode(
                 upper, df_mode=df_mode_pair[0]
             )
         else:
@@ -191,8 +195,8 @@ def test_clip(request, data, axis, bound_type, df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_update(data, other_data, errors, df_mode_pair):
-    modin_df, pandas_df = create_test_dfs(data, df_mode=df_mode_pair[0])
-    other_modin_df, other_pandas_df = create_test_dfs(
+    modin_df, pandas_df = create_test_df_in_defined_mode(data, df_mode=df_mode_pair[0])
+    other_modin_df, other_pandas_df = create_test_df_in_defined_mode(
         other_data, df_mode=df_mode_pair[1]
     )
     expected_exception = None
@@ -235,7 +239,9 @@ def test_update(data, other_data, errors, df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_constructor_from_modin_series(get_index, get_columns, dtype, df_mode_pair):
-    modin_df, pandas_df = create_test_dfs(test_data_values[0], df_mode=df_mode_pair[0])
+    modin_df, pandas_df = create_test_df_in_defined_mode(
+        test_data_values[0], df_mode=df_mode_pair[0]
+    )
 
     modin_data = {f"new_col{i}": modin_df.iloc[:, i] for i in range(modin_df.shape[1])}
     pandas_data = {

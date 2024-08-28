@@ -17,9 +17,11 @@ import matplotlib
 import pytest
 
 from modin.config import NativeDataframeMode, NPartitions
-from modin.tests.pandas.native_df_mode.utils import eval_general_interop
+from modin.tests.pandas.native_df_mode.utils import (
+    create_test_df_in_defined_mode,
+    eval_general_interop,
+)
 from modin.tests.pandas.utils import (
-    create_test_dfs,
     default_to_pandas_ignore_string,
     df_equals,
     test_data,
@@ -153,8 +155,12 @@ def test_comparison(data, op, other, request, df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_equals(frame1_data, frame2_data, expected_pandas_equals, df_mode_pair):
-    modin_df1, pandas_df1 = create_test_dfs(frame1_data, df_mode=df_mode_pair[0])
-    modin_df2, pandas_df2 = create_test_dfs(frame2_data, df_mode=df_mode_pair[1])
+    modin_df1, pandas_df1 = create_test_df_in_defined_mode(
+        frame1_data, df_mode=df_mode_pair[0]
+    )
+    modin_df2, pandas_df2 = create_test_df_in_defined_mode(
+        frame2_data, df_mode=df_mode_pair[1]
+    )
 
     pandas_equals = pandas_df1.equals(pandas_df2)
     assert pandas_equals == expected_pandas_equals, (
@@ -172,8 +178,12 @@ def test_equals(frame1_data, frame2_data, expected_pandas_equals, df_mode_pair):
     "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
 )
 def test_empty_df(empty_operand, df_mode_pair):
-    modin_df, pandas_df = create_test_dfs([0, 1, 2, 0, 1, 2], df_mode=df_mode_pair[0])
-    modin_df_empty, pandas_df_empty = create_test_dfs(df_mode=df_mode_pair[1])
+    modin_df, pandas_df = create_test_df_in_defined_mode(
+        [0, 1, 2, 0, 1, 2], df_mode=df_mode_pair[0]
+    )
+    modin_df_empty, pandas_df_empty = create_test_df_in_defined_mode(
+        df_mode=df_mode_pair[1]
+    )
 
     if empty_operand == "right":
         modin_res = modin_df + modin_df_empty

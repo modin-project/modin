@@ -18,7 +18,8 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import NativeDataframeMode, PersistentPickle
-from modin.tests.pandas.utils import create_test_dfs, df_equals
+from modin.tests.pandas.native_df_mode.utils import create_test_df_in_defined_mode
+from modin.tests.pandas.utils import df_equals
 
 
 @pytest.fixture
@@ -46,7 +47,7 @@ def test__reduce__(df_mode_pair):
     # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
     dataframe_data = ["Major League Baseball", "National Basketball Association"]
-    abbr_md, abbr_pd = create_test_dfs(
+    abbr_md, abbr_pd = create_test_df_in_defined_mode(
         dataframe_data, index=["MLB", "NBA"], df_mode=df_mode_pair[0]
     )
 
@@ -54,7 +55,9 @@ def test__reduce__(df_mode_pair):
         "name": ["Mariners", "Lakers"] * 500,
         "league_abbreviation": ["MLB", "NBA"] * 500,
     }
-    teams_md, teams_pd = create_test_dfs(dataframe_data, df_mode=df_mode_pair[1])
+    teams_md, teams_pd = create_test_df_in_defined_mode(
+        dataframe_data, df_mode=df_mode_pair[1]
+    )
 
     result_md = (
         teams_md.set_index("name")
