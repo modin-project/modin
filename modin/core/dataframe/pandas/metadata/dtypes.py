@@ -1225,7 +1225,7 @@ def extract_dtype(value) -> DtypeObj | pandas.Series:
     """
     try:
         dtype = pandas.api.types.pandas_dtype(value)
-    except TypeError:
+    except (TypeError, ValueError):
         dtype = pandas.Series(value).dtype
 
     return dtype
