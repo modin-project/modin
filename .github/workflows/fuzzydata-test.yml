@@ -48,3 +48,4 @@ jobs:
            name: fuzzydata-test-workflow-${{matrix.engine}}
            path: /tmp/fuzzydata-test-wf-${{matrix.engine}}/* # Must match output dir in test_fuzzydata.py
            if-no-files-found: error
+           include-hidden-files: true
