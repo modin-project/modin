@@ -314,6 +314,37 @@ Copy-pastable example, showing how mixing pandas and Modin DataFrames in a singl
   # Possible output: TypeError
 
 
+Execute DataFrame operations using NativeQueryCompiler
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+By default, Modin distributes data across partitions and performs operations
+using the ``PandasQueryCompiler``. However, for certain scenarios such as handling small or empty DataFrames,
+distributing them may introduce unnecessary overhead. In such cases, it's more efficient to default
+to pandas at the query compiler layer. This can be achieved by setting the ``cfg.NativeDataframeMode``
+:doc:`configuration variable: </flow/modin/config>` to ``Pandas``. When set to ``Pandas``, all operations in Modin default to pandas, and the DataFrames are not distributed,
+avoiding additional overhead. This configuration can be toggled on or off depending on whether
+DataFrame distribution is required.
+
+DataFrames created while the ``NativeDataframeMode`` is active will continue to use the ``NativeQueryCompiler``
+even after the config is disabled. Modin supports interoperability between distributed Modin DataFrames and
+those using the ``NativeQueryCompiler``.
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  # This dataframe will be distributed and use `PandasQueryCompiler` by default
+  df_distributed = pd.DataFrame(...)
+
+  # Set mode to "Pandas" to avoid distribution and use `NativeQueryCompiler`
+  cfg.NativeDataframeMode.put("Pandas")
+  df_native_qc = pd.DataFrame(...)
+
+  # Revert to default settings for distributed dataframes
+  cfg.NativeDataframeMode.put("Default")
+  df_distributed = pd.DataFrame(...)
+
 Operation-specific optimizations
 """"""""""""""""""""""""""""""""
 
