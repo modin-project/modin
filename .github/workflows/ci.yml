@@ -443,12 +443,28 @@ jobs:
       - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_1
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_2
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - uses: ./.github/actions/run-core-tests/group_3
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - uses: ./.github/actions/run-core-tests/group_4
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/tests/numpy
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
