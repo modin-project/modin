@@ -721,6 +721,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: coverage-data
+          path: .coverage
           pattern: coverage-data-*
           delete-merged: true
 
@@ -740,6 +741,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-data
+          path: .coverage
       - run: pip install coverage
       - name: Combine coverage
         run: python -m coverage combine

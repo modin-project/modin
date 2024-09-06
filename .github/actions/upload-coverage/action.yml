@@ -14,5 +14,5 @@ runs:
     - uses: actions/upload-artifact@v4
       with:
         name: coverage-data-${{ env.COVERAGE_UUID }}
-        path: .coverage*
+        path: .coverage
         include-hidden-files: true
