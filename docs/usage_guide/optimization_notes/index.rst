@@ -314,20 +314,20 @@ Copy-pastable example, showing how mixing pandas and Modin DataFrames in a singl
   # Possible output: TypeError
 
 
-Execute dataframe operations using pandas NativeQueryCompiler
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Execute DataFrame operations using NativeQueryCompiler
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-By default, Modin distributes every dataframe across partitions and performs operations
-using the PandasQueryCompiler. However, for certain scenarios such as handling small or empty dataframes,
+By default, Modin distributes data across partitions and performs operations
+using the ``PandasQueryCompiler``. However, for certain scenarios such as handling small or empty DataFrames,
 distributing them may introduce unnecessary overhead. In such cases, it's more efficient to default
-to Pandas at the query compiler level. This can be achieved by setting the ``cfg.NativeDataframeMode``
-:doc:`configuration variable: </flow/modin/config>` to "Pandas". When enabled, all operations in Modin default to Pandas, and the dataframes are not distributed,
+to pandas at the query compiler layer. This can be achieved by setting the ``cfg.NativeDataframeMode``
+:doc:`configuration variable: </flow/modin/config>` to ``Pandas``. When set to ``Pandas``, all operations in Modin default to pandas, and the DataFrames are not distributed,
 avoiding additional overhead. This configuration can be toggled on or off depending on whether
-dataframe distribution is required.
+DataFrame distribution is required.
 
-Dataframes created while the NativeDataframeMode is active will continue to use the NativeQueryCompiler
-even after the config is disabled. Modin supports interoperability between distributed Modin dataframes and
-those using the NativeQueryCompiler.
+DataFrames created while the ``NativeDataframeMode`` is active will continue to use the ``NativeQueryCompiler``
+even after the config is disabled. Modin supports interoperability between distributed Modin DataFrames and
+those using the ``NativeQueryCompiler``.
 
 .. code-block:: python
 
