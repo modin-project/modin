@@ -717,6 +717,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
+      - uses: actions/checkout@v4
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
