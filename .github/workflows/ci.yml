@@ -717,12 +717,12 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v4
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
           name: coverage-data
           pattern: coverage-data-*
+          include-hidden-files: true
           delete-merged: true
 
   upload-coverage:
