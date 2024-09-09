@@ -38,6 +38,7 @@ jobs:
       with:
         name: modin-wheel-and-source-tarball 
         path: ./dist/
+        include-hidden-files: true
 
     - name: Publish Modin wheel to PyPI
       if: github.event_name == 'push'
