@@ -395,6 +395,27 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     index: pandas.Index = property(_get_axis(0), _set_axis(0))
     columns: pandas.Index = property(_get_axis(1), _set_axis(1))
 
+    def get_axis_len(self, axis: Literal[0, 1]) -> int:
+        """
+        Return the length of the specified axis.
+
+        A query compiler may choose to override this method if it has a more efficient way
+        of computing the length of an axis without materializing it.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+
+        Returns
+        -------
+        int
+        """
+        if axis == 0:
+            return len(self._modin_frame)
+        else:
+            return self._modin_frame.column_widths
+
     @property
     def dtypes(self) -> pandas.Series:
         return self._modin_frame.dtypes

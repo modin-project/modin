@@ -288,7 +288,7 @@ class BasePandasDataset(ClassLogger):
             A pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
-        if len(self.index) == 0 or (self._is_dataframe and len(self.columns) == 0):
+        if len(self) == 0 or (self._is_dataframe and self._query_compiler.get_axis_len(1) == 0):
             return pandas.DataFrame(
                 index=self.index,
                 columns=self.columns if self._is_dataframe else None,
@@ -1004,7 +1004,7 @@ class BasePandasDataset(ClassLogger):
                 return result._query_compiler
             return result
         elif isinstance(func, dict):
-            if len(self.columns) != len(set(self.columns)):
+            if self._query_compiler.get_axis_len(1) != len(set(self.columns)):
                 warnings.warn(
                     "duplicate column names not supported with apply().",
                     FutureWarning,
@@ -2860,7 +2860,7 @@ class BasePandasDataset(ClassLogger):
             axis_length = len(axis_labels)
         else:
             # Getting rows requires indices instead of labels. RangeIndex provides this.
-            axis_labels = pandas.RangeIndex(len(self.index))
+            axis_labels = pandas.RangeIndex(len(self))
             axis_length = len(axis_labels)
         if weights is not None:
             # Index of the weights Series should correspond to the index of the
@@ -3217,7 +3217,7 @@ class BasePandasDataset(ClassLogger):
         """
         if n != 0:
             return self.iloc[-n:]
-        return self.iloc[len(self.index) :]
+        return self.iloc[len(self) :]
 
     def take(self, indices, axis=0, **kwargs) -> Self:  # noqa: PR01, RT01, D200
         """
@@ -4149,7 +4149,7 @@ class BasePandasDataset(ClassLogger):
         -------
         int
         """
-        return len(self.index)
+        return self._query_compiler.get_axis_len(0)
 
     @_doc_binary_op(
         operation="less than comparison",

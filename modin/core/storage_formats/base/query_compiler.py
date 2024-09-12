@@ -4270,6 +4270,24 @@ class BaseQueryCompiler(
         """
         return self.index if axis == 0 else self.columns
 
+    def get_axis_len(self, axis: Literal[0, 1]) -> int:
+        """
+        Return the length of the specified axis.
+
+        A query compiler may choose to override this method if it has a more efficient way
+        of computing the length of an axis without materializing it.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+
+        Returns
+        -------
+        int
+        """
+        return len(self.get_axis(axis))
+
     def take_2d_labels(
         self,
         index,
