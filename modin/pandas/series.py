@@ -1032,7 +1032,12 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return new_self._binary_op(
-            "eq", new_other, level=level, fill_value=fill_value, axis=axis
+            "eq",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, (pandas.Series, Series)),
         )
 
     def equals(self, other) -> bool:  # noqa: PR01, RT01, D200
@@ -1143,7 +1148,12 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return new_self._binary_op(
-            "ge", new_other, level=level, fill_value=fill_value, axis=axis
+            "ge",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, (pandas.Series, Series)),
         )
 
     def groupby(
@@ -1193,7 +1203,12 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return new_self._binary_op(
-            "gt", new_other, level=level, fill_value=fill_value, axis=axis
+            "gt",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, (pandas.Series, Series)),
         )
 
     def hist(
@@ -1313,7 +1328,12 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return new_self._binary_op(
-            "le", new_other, level=level, fill_value=fill_value, axis=axis
+            "le",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, (pandas.Series, Series)),
         )
 
     def lt(
@@ -1324,7 +1344,12 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return new_self._binary_op(
-            "lt", new_other, level=level, fill_value=fill_value, axis=axis
+            "lt",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, (pandas.Series, Series)),
         )
 
     def map(self, arg, na_action=None) -> Series:  # noqa: PR01, RT01, D200
@@ -1453,7 +1478,12 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return new_self._binary_op(
-            "ne", new_other, level=level, fill_value=fill_value, axis=axis
+            "ne",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, (pandas.Series, Series)),
         )
 
     def nlargest(self, n=5, keep="first") -> Series:  # noqa: PR01, RT01, D200

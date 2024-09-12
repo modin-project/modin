@@ -268,7 +268,7 @@ def _series_logical_binop(func):
     """
     return lambda x, y, **kwargs: func(
         x.squeeze(axis=1),
-        y.squeeze(axis=1) if isinstance(y, pandas.DataFrame) else y,
+        y.squeeze(axis=1) if kwargs.pop("squeeze_other", False) else y,
         **kwargs,
     ).to_frame()
 
