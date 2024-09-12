@@ -650,7 +650,7 @@ class BaseQueryCompiler(
     @doc_utils.doc_binary_method(
         operation="equality comparison", sign="==", op_type="series_comparison"
     )
-    def series_eq(self, other, **kwargs):
+    def series_eq(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.Series.eq)(
             self,
             other=other,
@@ -702,7 +702,7 @@ class BaseQueryCompiler(
         sign=">=",
         op_type="series_comparison",
     )
-    def series_ge(self, other, **kwargs):
+    def series_ge(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.Series.ge)(
             self,
             other=other,
@@ -720,7 +720,7 @@ class BaseQueryCompiler(
     @doc_utils.doc_binary_method(
         operation="greater than comparison", sign=">", op_type="series_comparison"
     )
-    def series_gt(self, other, **kwargs):
+    def series_gt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.Series.gt)(
             self,
             other=other,
@@ -740,7 +740,7 @@ class BaseQueryCompiler(
         sign="<=",
         op_type="series_comparison",
     )
-    def series_le(self, other, **kwargs):
+    def series_le(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.Series.le)(
             self,
             other=other,
@@ -758,7 +758,7 @@ class BaseQueryCompiler(
     @doc_utils.doc_binary_method(
         operation="less than", sign="<", op_type="series_comparison"
     )
-    def series_lt(self, other, **kwargs):
+    def series_lt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.Series.lt)(
             self,
             other=other,
@@ -885,7 +885,7 @@ class BaseQueryCompiler(
     @doc_utils.doc_binary_method(
         operation="not equal comparison", sign="!=", op_type="series_comparison"
     )
-    def series_ne(self, other, **kwargs):
+    def series_ne(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.Series.ne)(
             self,
             other=other,
