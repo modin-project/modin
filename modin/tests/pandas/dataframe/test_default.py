@@ -1181,6 +1181,16 @@ def test_stack(data, is_multi_idx, is_multi_col):
         df_equals(modin_df.stack(level=[0, 1, 2]), pandas_df.stack(level=[0, 1, 2]))
 
 
+@pytest.mark.parametrize("sort", [True, False])
+def test_stack_sort(sort):
+    # Example frame slightly modified from pandas docs to be unsorted
+    cols = pd.MultiIndex.from_tuples([("weight", "pounds"), ("weight", "kg")])
+    modin_df, pandas_df = create_test_dfs(
+        [[1, 2], [2, 4]], index=["cat", "dog"], columns=cols
+    )
+    df_equals(modin_df.stack(sort=sort), pandas_df.stack(sort=sort))
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis1", [0, 1])
 @pytest.mark.parametrize("axis2", [0, 1])

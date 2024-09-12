@@ -1944,7 +1944,7 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
             result = result.reindex(0, new_index)
         return result
 
-    def stack(self, level, dropna):
+    def stack(self, level, dropna, sort):
         if not isinstance(self.columns, pandas.MultiIndex) or (
             isinstance(self.columns, pandas.MultiIndex)
             and is_list_like(level)
@@ -1956,7 +1956,9 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
 
         new_modin_frame = self._modin_frame.apply_full_axis(
             1,
-            lambda df: pandas.DataFrame(df.stack(level=level, dropna=dropna)),
+            lambda df: pandas.DataFrame(
+                df.stack(level=level, dropna=dropna, sort=sort)
+            ),
             new_columns=new_columns,
         )
         return self.__constructor__(new_modin_frame)

@@ -2113,11 +2113,11 @@ class DataFrame(BasePandasDataset):
             is_multiindex and is_list_like(level) and len(level) == self.columns.nlevels
         ):
             return self._reduce_dimension(
-                query_compiler=self._query_compiler.stack(level, dropna)
+                query_compiler=self._query_compiler.stack(level, dropna, sort)
             )
         else:
             return self.__constructor__(
-                query_compiler=self._query_compiler.stack(level, dropna)
+                query_compiler=self._query_compiler.stack(level, dropna, sort)
             )
 
     def sub(
