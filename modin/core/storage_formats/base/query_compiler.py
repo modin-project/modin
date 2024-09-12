@@ -652,7 +652,7 @@ class BaseQueryCompiler(
             self,
             other=other,
             squeeze_self=True,
-            squeeze_other=True,
+            squeeze_other=isinstance(other, pandas.DataFrame),
             **kwargs,
         )
 
@@ -699,7 +699,7 @@ class BaseQueryCompiler(
             self,
             other=other,
             squeeze_self=True,
-            squeeze_other=True,
+            squeeze_other=isinstance(other, pandas.DataFrame),
             **kwargs,
         )
 
@@ -714,7 +714,7 @@ class BaseQueryCompiler(
             self,
             other=other,
             squeeze_self=True,
-            squeeze_other=True,
+            squeeze_other=isinstance(other, pandas.DataFrame),
             **kwargs,
         )
 
@@ -729,7 +729,7 @@ class BaseQueryCompiler(
             self,
             other=other,
             squeeze_self=True,
-            squeeze_other=True,
+            squeeze_other=isinstance(other, pandas.DataFrame),
             **kwargs,
         )
 
@@ -744,7 +744,7 @@ class BaseQueryCompiler(
             self,
             other=other,
             squeeze_self=True,
-            squeeze_other=True,
+            squeeze_other=isinstance(other, pandas.DataFrame),
             **kwargs,
         )
 
@@ -868,7 +868,7 @@ class BaseQueryCompiler(
             self,
             other=other,
             squeeze_self=True,
-            squeeze_other=True,
+            squeeze_other=isinstance(other, pandas.DataFrame),
             **kwargs,
         )
 

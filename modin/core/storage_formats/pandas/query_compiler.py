@@ -256,6 +256,15 @@ def copy_df_for_func(func, display_name: str = None):
 def _series_logical_binop(func):
     """
     Build a callable function to pass to Binary.register for Series logical operators.
+
+    Parameters
+    ----------
+    func : callable
+        Binary operator method of pandas.Series to be applied.
+
+    Returns
+    -------
+    callable
     """
     return lambda x, y, **kwargs: func(
         x.squeeze(axis=1),
