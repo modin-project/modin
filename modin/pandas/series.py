@@ -1022,7 +1022,11 @@ class Series(BasePandasDataset):
         """
         Indicate duplicate Series values.
         """
-        return self.to_frame().duplicated(keep=keep)
+        name = self.name
+        result = self.to_frame().duplicated(keep=keep)
+        # DataFrame.duplicated drops the name, so we need to manually restore it
+        result.name = name
+        return result
 
     def eq(
         self, other, level=None, fill_value=None, axis=0

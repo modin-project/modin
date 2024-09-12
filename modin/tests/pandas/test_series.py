@@ -1942,6 +1942,12 @@ def test_duplicated(data, keep):
     df_equals(modin_result, pandas_series.duplicated(keep=keep))
 
 
+def test_duplicated_keeps_name_issue_7375():
+    # Ensure that the name property of a series is preserved across duplicated
+    modin_series, pandas_series = create_test_series([1, 2, 3, 1], name="a")
+    df_equals(modin_series.duplicated(), pandas_series.duplicated())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_empty(data):
     modin_series, pandas_series = create_test_series(data)
