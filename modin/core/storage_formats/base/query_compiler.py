@@ -647,7 +647,9 @@ class BaseQueryCompiler(
     def eq(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
 
-    @doc_utils.add_refer_to("Series.eq")
+    @doc_utils.doc_binary_method(
+        operation="equality comparison", sign="==", op_type="series_comparison"
+    )
     def series_eq(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.eq)(
             self,
@@ -695,7 +697,11 @@ class BaseQueryCompiler(
     def ge(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.ge)(self, other=other, **kwargs)
 
-    @doc_utils.add_refer_to("Series.ge")
+    @doc_utils.doc_binary_method(
+        operation="greater than or equal comparison",
+        sign=">=",
+        op_type="series_comparison",
+    )
     def series_ge(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.ge)(
             self,
@@ -711,7 +717,9 @@ class BaseQueryCompiler(
     def gt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.gt)(self, other=other, **kwargs)
 
-    @doc_utils.add_refer_to("Series.gt")
+    @doc_utils.doc_binary_method(
+        operation="greater than comparison", sign=">", op_type="series_comparison"
+    )
     def series_gt(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.gt)(
             self,
@@ -727,7 +735,11 @@ class BaseQueryCompiler(
     def le(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.le)(self, other=other, **kwargs)
 
-    @doc_utils.add_refer_to("Series.le")
+    @doc_utils.doc_binary_method(
+        operation="less than or equal comparison",
+        sign="<=",
+        op_type="series_comparison",
+    )
     def series_le(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.le)(
             self,
@@ -743,7 +755,9 @@ class BaseQueryCompiler(
     def lt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.lt)(self, other=other, **kwargs)
 
-    @doc_utils.add_refer_to("Series.lt")
+    @doc_utils.doc_binary_method(
+        operation="less than", sign="<", op_type="series_comparison"
+    )
     def series_lt(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.lt)(
             self,
@@ -868,7 +882,9 @@ class BaseQueryCompiler(
     def ne(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.ne)(self, other=other, **kwargs)
 
-    @doc_utils.add_refer_to("Series.ne")
+    @doc_utils.doc_binary_method(
+        operation="not equal comparison", sign="!=", op_type="series_comparison"
+    )
     def series_ne(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.ne)(
             self,
