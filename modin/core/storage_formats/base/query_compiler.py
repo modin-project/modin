@@ -647,6 +647,15 @@ class BaseQueryCompiler(
     def eq(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
 
+    def series_eq(self, other, **kwargs):
+        return BinaryDefault.register(pandas.Series.eq)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
+        )
+
     @doc_utils.add_refer_to("DataFrame.equals")
     def equals(self, other):  # noqa: PR01, RT01
         return BinaryDefault.register(pandas.DataFrame.equals)(self, other=other)
@@ -685,11 +694,29 @@ class BaseQueryCompiler(
     def ge(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.ge)(self, other=other, **kwargs)
 
+    def series_ge(self, other, **kwargs):
+        return BinaryDefault.register(pandas.Series.ge)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
+        )
+
     @doc_utils.doc_binary_method(
         operation="greater than comparison", sign=">", op_type="comparison"
     )
     def gt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.gt)(self, other=other, **kwargs)
+
+    def series_gt(self, other, **kwargs):
+        return BinaryDefault.register(pandas.Series.gt)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
+        )
 
     @doc_utils.doc_binary_method(
         operation="less than or equal comparison", sign="<=", op_type="comparison"
@@ -697,11 +724,29 @@ class BaseQueryCompiler(
     def le(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.le)(self, other=other, **kwargs)
 
+    def series_le(self, other, **kwargs):
+        return BinaryDefault.register(pandas.Series.le)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
+        )
+
     @doc_utils.doc_binary_method(
         operation="less than comparison", sign="<", op_type="comparison"
     )
     def lt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.lt)(self, other=other, **kwargs)
+
+    def series_lt(self, other, **kwargs):
+        return BinaryDefault.register(pandas.Series.lt)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
+        )
 
     @doc_utils.doc_binary_method(operation="modulo", sign="%")
     def mod(self, other, **kwargs):  # noqa: PR02
@@ -817,6 +862,15 @@ class BaseQueryCompiler(
     )
     def ne(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.ne)(self, other=other, **kwargs)
+
+    def series_ne(self, other, **kwargs):
+        return BinaryDefault.register(pandas.Series.ne)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
+        )
 
     @doc_utils.doc_binary_method(operation="exponential power", sign="**")
     def pow(self, other, **kwargs):  # noqa: PR02
