@@ -5096,34 +5096,37 @@ def test__reduce__():
     df_equals(result_md, result_pd)
 
 
-@pytest.mark.parametrize("op", [
-    "add",
-    "radd",
-    "divmod",
-    "eq",
-    "floordiv",
-    "ge",
-    "gt",
-    "le",
-    "lt",
-    "mod",
-    "mul",
-    "rmul",
-    "ne",
-    "pow",
-    "rdivmod",
-    "rfloordiv",
-    "rmod",
-    "rpow",
-    "rsub",
-    "rtruediv",
-    "sub",
-    "truediv",
-])
+@pytest.mark.parametrize(
+    "op",
+    [
+        "add",
+        "radd",
+        "divmod",
+        "eq",
+        "floordiv",
+        "ge",
+        "gt",
+        "le",
+        "lt",
+        "mod",
+        "mul",
+        "rmul",
+        "ne",
+        "pow",
+        "rdivmod",
+        "rfloordiv",
+        "rmod",
+        "rpow",
+        "rsub",
+        "rtruediv",
+        "sub",
+        "truediv",
+    ],
+)
 def test_binary_with_fill_value_issue_7381(op):
     # Ensures that series binary operations respect the fill_value flag
     series_md, series_pd = create_test_series([0, 1, 2, 3])
     rhs_md, rhs_pd = create_test_series([0])
     result_md = getattr(series_md, op)(rhs_md, fill_value=2)
     result_pd = getattr(series_pd, op)(rhs_pd, fill_value=2)
-    df_equals(result_md, result_pd)    
+    df_equals(result_md, result_pd)

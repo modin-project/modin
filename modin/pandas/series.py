@@ -1031,7 +1031,9 @@ class Series(BasePandasDataset):
         Return Equal to of series and `other`, element-wise (binary operator `eq`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return new_self._binary_op("eq", new_other, level=level, fill_value=fill_value, axis=axis)
+        return new_self._binary_op(
+            "eq", new_other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def equals(self, other) -> bool:  # noqa: PR01, RT01, D200
         """
@@ -1140,7 +1142,9 @@ class Series(BasePandasDataset):
         Return greater than or equal to of series and `other`, element-wise (binary operator `ge`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return new_self._binary_op("ge", new_other, level=level, fill_value=fill_value, axis=axis)
+        return new_self._binary_op(
+            "ge", new_other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def groupby(
         self,
@@ -1188,7 +1192,9 @@ class Series(BasePandasDataset):
         Return greater than of series and `other`, element-wise (binary operator `gt`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return new_self._binary_op("gt", new_other, level=level, fill_value=fill_value, axis=axis)
+        return new_self._binary_op(
+            "gt", new_other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def hist(
         self,
@@ -1306,7 +1312,9 @@ class Series(BasePandasDataset):
         Return less than or equal to of series and `other`, element-wise (binary operator `le`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return new_self._binary_op("le", new_other, level=level, fill_value=fill_value, axis=axis)
+        return new_self._binary_op(
+            "le", new_other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def lt(
         self, other, level=None, fill_value=None, axis=0
@@ -1315,7 +1323,9 @@ class Series(BasePandasDataset):
         Return less than of series and `other`, element-wise (binary operator `lt`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return new_self._binary_op("lt", new_other, level=level, fill_value=fill_value, axis=axis)
+        return new_self._binary_op(
+            "lt", new_other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def map(self, arg, na_action=None) -> Series:  # noqa: PR01, RT01, D200
         """
@@ -1442,7 +1452,9 @@ class Series(BasePandasDataset):
         Return not equal to of series and `other`, element-wise (binary operator `ne`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return new_self._binary_op("ne", new_other, level=level, fill_value=fill_value, axis=axis)
+        return new_self._binary_op(
+            "ne", new_other, level=level, fill_value=fill_value, axis=axis
+        )
 
     def nlargest(self, n=5, keep="first") -> Series:  # noqa: PR01, RT01, D200
         """
