@@ -258,7 +258,9 @@ def _series_logical_binop(func):
     Build a callable function to pass to Binary.register for Series logical operators.
     """
     return lambda x, y, **kwargs: func(
-        x.squeeze(axis=1), y.squeeze(axis=1), **kwargs
+        x.squeeze(axis=1),
+        y.squeeze(axis=1) if isinstance(y, pandas.DataFrame) else y,
+        **kwargs,
     ).to_frame()
 
 
