@@ -647,6 +647,7 @@ class BaseQueryCompiler(
     def eq(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
 
+    @doc_utils.add_refer_to("Series.eq")
     def series_eq(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.eq)(
             self,
@@ -694,6 +695,7 @@ class BaseQueryCompiler(
     def ge(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.ge)(self, other=other, **kwargs)
 
+    @doc_utils.add_refer_to("Series.ge")
     def series_ge(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.ge)(
             self,
@@ -709,6 +711,7 @@ class BaseQueryCompiler(
     def gt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.gt)(self, other=other, **kwargs)
 
+    @doc_utils.add_refer_to("Series.gt")
     def series_gt(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.gt)(
             self,
@@ -724,6 +727,7 @@ class BaseQueryCompiler(
     def le(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.le)(self, other=other, **kwargs)
 
+    @doc_utils.add_refer_to("Series.le")
     def series_le(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.le)(
             self,
@@ -739,6 +743,7 @@ class BaseQueryCompiler(
     def lt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.lt)(self, other=other, **kwargs)
 
+    @doc_utils.add_refer_to("Series.lt")
     def series_lt(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.lt)(
             self,
@@ -863,6 +868,7 @@ class BaseQueryCompiler(
     def ne(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.ne)(self, other=other, **kwargs)
 
+    @doc_utils.add_refer_to("Series.ne")
     def series_ne(self, other, **kwargs):
         return BinaryDefault.register(pandas.Series.ne)(
             self,
