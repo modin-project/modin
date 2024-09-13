@@ -1025,7 +1025,8 @@ class Series(BasePandasDataset):
         name = self.name
         result = self.to_frame().duplicated(keep=keep)
         # DataFrame.duplicated drops the name, so we need to manually restore it
-        result.name = name
+        if name is not None:
+            result.name = name
         return result
 
     def eq(
