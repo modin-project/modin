@@ -1037,7 +1037,7 @@ class Series(BasePandasDataset):
             level=level,
             fill_value=fill_value,
             axis=axis,
-            squeeze_other=isinstance(other, (pandas.Series, Series)),
+            squeeze_other=isinstance(other, Series),
         )
 
     def equals(self, other) -> bool:  # noqa: PR01, RT01, D200
@@ -1153,7 +1153,7 @@ class Series(BasePandasDataset):
             level=level,
             fill_value=fill_value,
             axis=axis,
-            squeeze_other=isinstance(other, (pandas.Series, Series)),
+            squeeze_other=isinstance(other, Series),
         )
 
     def groupby(
@@ -1208,7 +1208,7 @@ class Series(BasePandasDataset):
             level=level,
             fill_value=fill_value,
             axis=axis,
-            squeeze_other=isinstance(other, (pandas.Series, Series)),
+            squeeze_other=isinstance(other, Series),
         )
 
     def hist(
@@ -1333,7 +1333,7 @@ class Series(BasePandasDataset):
             level=level,
             fill_value=fill_value,
             axis=axis,
-            squeeze_other=isinstance(other, (pandas.Series, Series)),
+            squeeze_other=isinstance(other, Series),
         )
 
     def lt(
@@ -1349,7 +1349,7 @@ class Series(BasePandasDataset):
             level=level,
             fill_value=fill_value,
             axis=axis,
-            squeeze_other=isinstance(other, (pandas.Series, Series)),
+            squeeze_other=isinstance(other, Series),
         )
 
     def map(self, arg, na_action=None) -> Series:  # noqa: PR01, RT01, D200
@@ -1483,7 +1483,7 @@ class Series(BasePandasDataset):
             level=level,
             fill_value=fill_value,
             axis=axis,
-            squeeze_other=isinstance(other, (pandas.Series, Series)),
+            squeeze_other=isinstance(other, Series),
         )
 
     def nlargest(self, n=5, keep="first") -> Series:  # noqa: PR01, RT01, D200
