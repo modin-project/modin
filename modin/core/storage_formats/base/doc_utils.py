@@ -193,6 +193,14 @@ def doc_binary_method(operation, sign, self_on_right=False, op_type="arithmetic"
         fill_value : float or None
             Value to fill missing elements during frame alignment.
         """,
+        "series_comparison": """
+        level : int or label
+            In case of MultiIndex match index values on the passed level.
+        fill_value : float or None
+            Value to fill missing elements during frame alignment.
+        axis : {{0, 1}}
+            Unused. Parameter needed for compatibility with DataFrame.
+        """,
     }
 
     verbose_substitution = (

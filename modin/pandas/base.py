@@ -509,6 +509,17 @@ class BasePandasDataset(ClassLogger):
         ]
         if op in exclude_list:
             kwargs.pop("axis")
+        # Series logical operations take an additional fill_value argument that DF does not
+        series_specialize_list = [
+            "eq",
+            "ge",
+            "gt",
+            "le",
+            "lt",
+            "ne",
+        ]
+        if not self._is_dataframe and op in series_specialize_list:
+            op = "series_" + op
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 

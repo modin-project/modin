@@ -1036,7 +1036,14 @@ class Series(BasePandasDataset):
         Return Equal to of series and `other`, element-wise (binary operator `eq`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).eq(new_other, level=level, axis=axis)
+        return new_self._binary_op(
+            "eq",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, Series),
+        )
 
     def equals(self, other) -> bool:  # noqa: PR01, RT01, D200
         """
@@ -1135,7 +1142,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).floordiv(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     def ge(
@@ -1145,7 +1152,14 @@ class Series(BasePandasDataset):
         Return greater than or equal to of series and `other`, element-wise (binary operator `ge`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).ge(new_other, level=level, axis=axis)
+        return new_self._binary_op(
+            "ge",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, Series),
+        )
 
     def groupby(
         self,
@@ -1193,7 +1207,14 @@ class Series(BasePandasDataset):
         Return greater than of series and `other`, element-wise (binary operator `gt`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).gt(new_other, level=level, axis=axis)
+        return new_self._binary_op(
+            "gt",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, Series),
+        )
 
     def hist(
         self,
@@ -1311,7 +1332,14 @@ class Series(BasePandasDataset):
         Return less than or equal to of series and `other`, element-wise (binary operator `le`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).le(new_other, level=level, axis=axis)
+        return new_self._binary_op(
+            "le",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, Series),
+        )
 
     def lt(
         self, other, level=None, fill_value=None, axis=0
@@ -1320,7 +1348,14 @@ class Series(BasePandasDataset):
         Return less than of series and `other`, element-wise (binary operator `lt`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).lt(new_other, level=level, axis=axis)
+        return new_self._binary_op(
+            "lt",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, Series),
+        )
 
     def map(self, arg, na_action=None) -> Series:  # noqa: PR01, RT01, D200
         """
@@ -1407,7 +1442,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).mod(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     def mode(self, dropna=True) -> Series:  # noqa: PR01, RT01, D200
@@ -1424,7 +1459,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).mul(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     multiply = mul
@@ -1437,7 +1472,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rmul(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     def ne(
@@ -1447,7 +1482,14 @@ class Series(BasePandasDataset):
         Return not equal to of series and `other`, element-wise (binary operator `ne`).
         """
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).ne(new_other, level=level, axis=axis)
+        return new_self._binary_op(
+            "ne",
+            new_other,
+            level=level,
+            fill_value=fill_value,
+            axis=axis,
+            squeeze_other=isinstance(other, Series),
+        )
 
     def nlargest(self, n=5, keep="first") -> Series:  # noqa: PR01, RT01, D200
         """
@@ -1567,7 +1609,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).pow(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     @_inherit_docstrings(pandas.Series.prod, apilink="pandas.Series.prod")
@@ -1768,7 +1810,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rfloordiv(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     def rmod(
@@ -1779,7 +1821,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rmod(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     def rpow(
@@ -1790,7 +1832,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rpow(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     def rsub(
@@ -1801,7 +1843,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rsub(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     def rtruediv(
@@ -1812,7 +1854,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rtruediv(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     rdiv = rtruediv
@@ -1960,7 +2002,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).sub(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     subtract = sub
@@ -2135,7 +2177,7 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).truediv(
-            new_other, level=level, fill_value=None, axis=axis
+            new_other, level=level, fill_value=fill_value, axis=axis
         )
 
     div = divide = truediv

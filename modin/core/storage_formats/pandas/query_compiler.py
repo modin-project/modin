@@ -253,6 +253,26 @@ def copy_df_for_func(func, display_name: str = None):
     return caller
 
 
+def _series_logical_binop(func):
+    """
+    Build a callable function to pass to Binary.register for Series logical operators.
+
+    Parameters
+    ----------
+    func : callable
+        Binary operator method of pandas.Series to be applied.
+
+    Returns
+    -------
+    callable
+    """
+    return lambda x, y, **kwargs: func(
+        x.squeeze(axis=1),
+        y.squeeze(axis=1) if kwargs.pop("squeeze_other", False) else y,
+        **kwargs,
+    ).to_frame()
+
+
 @_inherit_docstrings(BaseQueryCompiler)
 class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     """
@@ -520,6 +540,26 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         ),
         join_type="left",
         sort=False,
+    )
+
+    # Series logical operators take an additional fill_value flag that dataframe does not
+    series_eq = Binary.register(
+        _series_logical_binop(pandas.Series.eq), infer_dtypes="bool"
+    )
+    series_ge = Binary.register(
+        _series_logical_binop(pandas.Series.ge), infer_dtypes="bool"
+    )
+    series_gt = Binary.register(
+        _series_logical_binop(pandas.Series.gt), infer_dtypes="bool"
+    )
+    series_le = Binary.register(
+        _series_logical_binop(pandas.Series.le), infer_dtypes="bool"
+    )
+    series_lt = Binary.register(
+        _series_logical_binop(pandas.Series.lt), infer_dtypes="bool"
+    )
+    series_ne = Binary.register(
+        _series_logical_binop(pandas.Series.ne), infer_dtypes="bool"
     )
 
     # Needed for numpy API
