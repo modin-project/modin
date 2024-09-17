@@ -22,7 +22,7 @@ from __future__ import annotations
 import abc
 import warnings
 from functools import cached_property
-from typing import TYPE_CHECKING, Hashable, List, Optional
+from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
