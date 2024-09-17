@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
+import sys
 
 import pandas
 import pytest
@@ -20,6 +21,7 @@ import modin.config as cfg
 import modin.pandas as pd
 from modin.config.envvars import _check_vars
 from modin.config.pubsub import _UNSET, ExactStr
+from modin.pandas.base import BasePandasDataset
 
 
 def reset_vars(*vars: tuple[cfg.Parameter]):
@@ -89,6 +91,19 @@ class TestDocModule:
         cfg.DocModule.put("modin.tests.config.docs_module")
 
         # Test for override
+        assert BasePandasDataset.__doc__ == (
+            "This is a test of the documentation module for BasePandasDataSet."
+        )
+        assert BasePandasDataset.apply.__doc__ == (
+            "This is a test of the documentation module for BasePandasDataSet.apply."
+        )
+        # Test scenario 2 from https://github.com/modin-project/modin/issues/7113:
+        # We can correctly override the docstring for BasePandasDataset.astype,
+        # which is the same method as Series.astype.
+        assert pd.Series.astype is BasePandasDataset.astype
+        assert BasePandasDataset.astype.__doc__ == (
+            "This is a test of the documentation module for BasePandasDataSet.astype."
+        )
         assert (
             pd.DataFrame.apply.__doc__
             == "This is a test of the documentation module for DataFrame."
@@ -96,6 +111,7 @@ class TestDocModule:
         # Test for pandas doc when method is not defined on the plugin module
         assert pandas.DataFrame.isna.__doc__ in pd.DataFrame.isna.__doc__
         assert pandas.DataFrame.isnull.__doc__ in pd.DataFrame.isnull.__doc__
+        assert BasePandasDataset.astype.__doc__ in pd.DataFrame.astype.__doc__
         # Test for override
         assert (
             pd.Series.isna.__doc__
@@ -121,6 +137,16 @@ class TestDocModule:
         )
 
         assert pd.DataFrame is original_dataframe_class
+
+    def test_base_docstring_override_with_no_dataframe_or_series_class_issue_7113(
+        self,
+    ):
+        # This test case tests scenario 1 from issue 7113.
+        sys.path.append(f"{os.path.dirname(__file__)}")
+        cfg.DocModule.put("docs_module_with_just_base")
+        assert BasePandasDataset.astype.__doc__ == (
+            "This is a test of the documentation module for BasePandasDataSet.astype."
+        )
 
 
 @pytest.mark.skipif(cfg.Engine.get() != "Ray", reason="Ray specific test")

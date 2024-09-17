@@ -21,7 +21,13 @@ import pandas._libs.lib as lib
 import pytest
 
 import modin.pandas as pd
-from modin.config import IsRayCluster, NPartitions, RangePartitioning, StorageFormat
+from modin.config import (
+    IsRayCluster,
+    NPartitions,
+    RangePartitioning,
+    StorageFormat,
+    context,
+)
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -2431,6 +2437,31 @@ def test_multi_column_groupby_different_partitions(
     )
 
 
+def test_empty_partitions_after_groupby():
+    def func_to_apply(grp):
+        return grp.agg(
+            {
+                list(test_data_values[0].keys())[1]: "sum",
+                list(test_data_values[0].keys())[-1]: "sum",
+            }
+        )
+
+    data = test_data_values[0]
+    md_df, pd_df = create_test_dfs(data)
+    by = pd_df.columns[0]
+
+    with context(DynamicPartitioning=True):
+        md_grp, pd_grp = (
+            md_df.groupby(by),
+            pd_df.groupby(by),
+        )
+        eval_general(
+            md_grp,
+            pd_grp,
+            func_to_apply,
+        )
+
+
 @pytest.mark.parametrize(
     "by",
     [
@@ -2752,7 +2783,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
             donor_obj = pd.DataFrame()._query_compiler
 
             self._mock_obj = mock.patch(
-                f"{donor_obj.__module__}.{donor_obj.__class__.__name__}.lazy_execution",
+                f"{donor_obj.__module__}.{donor_obj.__class__.__name__}.lazy_shape",
                 new_callable=mock.PropertyMock,
             )
             patch_obj = self._mock_obj.__enter__()
@@ -2760,7 +2791,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
 
             df = pd.DataFrame(**self._df_kwargs)
             # The frame is lazy until `self.__exit__()` is called
-            assert df._query_compiler.lazy_execution
+            assert df._query_compiler.lazy_shape
             return df
 
         def __enter__(self):

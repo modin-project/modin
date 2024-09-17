@@ -19,7 +19,12 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import MinRowPartitionSize, NPartitions, StorageFormat
+from modin.config import (
+    MinRowPartitionSize,
+    NativeDataframeMode,
+    NPartitions,
+    StorageFormat,
+)
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.pandas.testing import assert_index_equal, assert_series_equal
@@ -299,7 +304,10 @@ def test_copy(data):
     assert new_modin_df.columns is not modin_df.columns
     assert new_modin_df.dtypes is not modin_df.dtypes
 
-    if get_current_execution() != "BaseOnPython":
+    if (
+        get_current_execution() != "BaseOnPython"
+        and NativeDataframeMode.get() == "Default"
+    ):
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
             modin_df._query_compiler._modin_frame._partitions,
@@ -565,6 +573,10 @@ def test_astype_int64_to_astype_category_github_issue_6259():
     get_current_execution() == "BaseOnPython",
     reason="BaseOnPython doesn't have proxy categories",
 )
+@pytest.mark.skipif(
+    NativeDataframeMode.get() == "Pandas",
+    reason="NativeQueryCompiler doesn't have proxy categories",
+)
 class TestCategoricalProxyDtype:
     """This class contains test and test usilities for the ``LazyProxyCategoricalDtype`` class."""
 
@@ -787,6 +799,10 @@ def test_convert_dtypes_dtype_backend(dtype_backend):
     )
 
 
+@pytest.mark.skipif(
+    NativeDataframeMode.get() == "Pandas",
+    reason="NativeQueryCompiler does not contain partitions.",
+)
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
@@ -811,7 +827,7 @@ def test_convert_dtypes_5653():
     modin_part1 = pd.DataFrame({"col1": ["a", "b", "c", "d"]})
     modin_part2 = pd.DataFrame({"col1": [None, None, None, None]})
     modin_df = pd.concat([modin_part1, modin_part2])
-    if StorageFormat.get() == "Pandas":
+    if StorageFormat.get() == "Pandas" and NativeDataframeMode.get() == "Default":
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     modin_df = modin_df.convert_dtypes()
     assert len(modin_df.dtypes) == 1
@@ -1820,4 +1836,19 @@ def test_constructor_columns_and_index():
 def test_constructor_from_index():
     data = pd.Index([1, 2, 3], name="pricing_date")
     modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df, pandas_df)
+
+
+def test_insert_datelike_string_issue_7371():
+    # When a new value is inserted into a frame, we call pandas.api.types.pandas_dtype(value) to
+    # extract the dtype of an object like a pandas Series or numpy array. When a scalar value is passed,
+    # this usually raises a TypeError, so we construct a local pandas Series from the object and
+    # extract the dtype from there.
+    # When the passed value is a date-like string, pandas will instead raise a ValueError because
+    # it tries to parse it as a numpy structured dtype. After fixing GH#7371, we now catch
+    # ValueError in addition to TypeError to handle this case.
+    modin_df = pd.DataFrame({"a": [0]})
+    modin_df["c"] = "2020-01-01"
+    pandas_df = pandas.DataFrame({"a": [0]})
+    pandas_df["c"] = "2020-01-01"
     df_equals(modin_df, pandas_df)

@@ -384,6 +384,13 @@ def _replace_doc(
 # inherited docstrings.
 _docstring_inheritance_calls: list[Callable[[str], None]] = []
 
+# This is a set of (class, attribute_name) pairs whose docstrings we have
+# already replaced since we last updated DocModule. Note that we don't store
+# the attributes themselves since we replace property attributes instead of
+# modifying them in place:
+# https://github.com/modin-project/modin/blob/e9dbcc127913db77473a83936e8b6bb94ef84f0d/modin/utils.py#L353
+_attributes_with_docstrings_replaced: set[tuple[type, str]] = set()
+
 
 def _documentable_obj(obj: object) -> bool:
     """
@@ -417,6 +424,7 @@ def _update_inherited_docstrings(doc_module: DocModule) -> None:
     doc_module : DocModule
         The current DocModule.
     """
+    _attributes_with_docstrings_replaced.clear()
     _doc_module = doc_module.get()
     for doc_inheritance_call in _docstring_inheritance_calls:
         doc_inheritance_call(doc_module=_doc_module)  # type: ignore[call-arg]
@@ -462,7 +470,18 @@ def _inherit_docstrings_in_place(
     if doc_module != DocModule.default and "pandas" in str(
         getattr(parent, "__module__", "")
     ):
-        parent = getattr(imported_doc_module, getattr(parent, "__name__", ""), parent)
+        parent_name = (
+            # DocModule should use the class BasePandasDataset to override the
+            # docstrings of BasePandasDataset, even if BasePandasDataset
+            # normally inherits docstrings from a different `parent`.
+            "BasePandasDataset"
+            if getattr(cls_or_func, "__name__", "") == "BasePandasDataset"
+            # For other classes, override docstrings with the class that has the
+            # same name as the `parent` class, e.g. DataFrame inherits
+            # docstrings from doc_module.DataFrame.
+            else getattr(parent, "__name__", "")
+        )
+        parent = getattr(imported_doc_module, parent_name, parent)
     if parent != default_parent:
         # Reset API link in case the docs are overridden.
         apilink = None
@@ -477,7 +496,8 @@ def _inherit_docstrings_in_place(
             if base is object:
                 continue
             for attr, obj in base.__dict__.items():
-                if attr in seen:
+                # only replace docstrings once to prevent https://github.com/modin-project/modin/issues/7113
+                if attr in seen or (base, attr) in _attributes_with_docstrings_replaced:
                     continue
                 seen.add(attr)
                 # Try to get the attribute from the docs class first, then
@@ -496,9 +516,11 @@ def _inherit_docstrings_in_place(
                     obj,
                     overwrite_existing,
                     apilink,
-                    parent_cls=cls_or_func,
+                    parent_cls=base,
                     attr_name=attr,
                 )
+
+                _attributes_with_docstrings_replaced.add((base, attr))
 
 
 def _inherit_docstrings(

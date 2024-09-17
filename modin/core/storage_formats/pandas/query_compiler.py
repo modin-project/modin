@@ -66,6 +66,7 @@ from modin.core.dataframe.pandas.metadata import (
     extract_dtype,
 )
 from modin.core.storage_formats import BaseQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.error_message import ErrorMessage
 from modin.logging import get_logger
 from modin.utils import (
@@ -253,7 +254,7 @@ def copy_df_for_func(func, display_name: str = None):
 
 
 @_inherit_docstrings(BaseQueryCompiler)
-class PandasQueryCompiler(BaseQueryCompiler):
+class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     """
     Query compiler for the pandas storage format.
 
@@ -276,19 +277,69 @@ class PandasQueryCompiler(BaseQueryCompiler):
         self._shape_hint = shape_hint
 
     @property
-    def lazy_execution(self):
+    def lazy_row_labels(self):
         """
-        Whether underlying Modin frame should be executed in a lazy mode.
+        Whether the row labels are computed lazily.
 
-        If True, such QueryCompiler will be handled differently at the front-end in order
-        to reduce triggering the computation as much as possible.
+        Equivalent to `not self.frame_has_materialized_index`.
 
         Returns
         -------
         bool
         """
-        frame = self._modin_frame
-        return not frame.has_materialized_index or not frame.has_materialized_columns
+        return not self.frame_has_materialized_index
+
+    @property
+    def lazy_row_count(self):
+        """
+        Whether the row count is computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_index`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_index
+
+    @property
+    def lazy_column_types(self):
+        """
+        Whether the dtypes are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_dtypes`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_dtypes
+
+    @property
+    def lazy_column_labels(self):
+        """
+        Whether the column labels are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_columns`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_columns
+
+    @property
+    def lazy_column_count(self):
+        """
+        Whether the column count is are computed lazily.
+
+        Equivalent to `not self.frame_has_materialized_columns`.
+
+        Returns
+        -------
+        bool
+        """
+        return not self.frame_has_materialized_columns
 
     def finalize(self):
         self._modin_frame.finalize()
@@ -607,7 +658,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def reset_index(self, **kwargs) -> PandasQueryCompiler:
-        if self.lazy_execution:
+        if self.lazy_row_labels:
 
             def _reset(df, *axis_lengths, partition_idx):  # pragma: no cover
                 df = df.reset_index(**kwargs)
@@ -3107,9 +3158,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lib.no_default,
             None,
         )
-        # FIXME: this is a naive workaround for this problem: https://github.com/modin-project/modin/issues/5394
-        # if there are too many partitions then all non-full-axis implementations start acting very badly.
-        # The here threshold is pretty random though it works fine on simple scenarios
+        # The map reduce approach works well for frames with few columnar partitions
         processable_amount_of_partitions = (
             self._modin_frame.num_parts < CpuCount.get() * 32
         )

@@ -196,7 +196,7 @@ class DataFrameGroupBy(ClassLogger):  # noqa: GL08
 
     def __getattribute__(self, item):
         attr = super().__getattribute__(item)
-        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
+        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_shape:
             # We default to pandas on empty DataFrames. This avoids a large amount of
             # pain in underlying implementation and returns a result immediately rather
             # than dealing with the edge cases that empty DataFrames have.

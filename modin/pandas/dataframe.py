@@ -1084,7 +1084,7 @@ class DataFrame(BasePandasDataset):
                     + f"{len(value.columns)} columns instead."
                 )
             value = value.squeeze(axis=1)
-        if not self._query_compiler.lazy_execution and len(self.index) == 0:
+        if not self._query_compiler.lazy_row_count and len(self.index) == 0:
             if not hasattr(value, "index"):
                 try:
                     value = pandas.Series(value)
@@ -2783,7 +2783,7 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, (Series, Categorical, np.ndarray, list, range)):
                 value = list(value)
 
-        if not self._query_compiler.lazy_execution and len(self.index) == 0:
+        if not self._query_compiler.lazy_row_count and len(self.index) == 0:
             new_self = self.__constructor__({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
@@ -2993,9 +2993,8 @@ class DataFrame(BasePandasDataset):
         DataFrame or None
             None if update was done, ``DataFrame`` otherwise.
         """
-        assert (
-            isinstance(new_query_compiler, type(self._query_compiler))
-            or type(new_query_compiler) in self._query_compiler.__class__.__bases__
+        assert isinstance(
+            new_query_compiler, self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
             return self.__constructor__(query_compiler=new_query_compiler)

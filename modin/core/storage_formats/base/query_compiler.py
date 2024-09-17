@@ -120,10 +120,21 @@ class BaseQueryCompiler(
 
     Attributes
     ----------
-    lazy_execution : bool
-        Whether underlying execution engine is designed to be executed in a lazy mode only.
-        If True, such QueryCompiler will be handled differently at the front-end in order
-        to reduce execution triggering as much as possible.
+    lazy_row_labels : bool, default False
+        True if the backend defers computations of the row labels (`df.index` for a frame).
+        Used by the frontend to avoid unnecessary execution or defer error validation.
+    lazy_row_count : bool, default False
+        True if the backend defers computations of the number of rows (`len(df.index)`).
+        Used by the frontend to avoid unnecessary execution or defer error validation.
+    lazy_column_types : bool, default False
+        True if the backend defers computations of the column types (`df.dtypes`).
+        Used by the frontend to avoid unnecessary execution or defer error validation.
+    lazy_column_labels : bool, default False
+        True if the backend defers computations of the column labels (`df.columns`).
+        Used by the frontend to avoid unnecessary execution or defer error validation.
+    lazy_column_count : bool, default False
+        True if the backend defers computations of the number of columns (`len(df.columns)`).
+        Used by the frontend to avoid unnecessary execution or defer error validation.
     _shape_hint : {"row", "column", None}, default: None
         Shape hint for frames known to be a column or a row, otherwise None.
 
@@ -197,7 +208,25 @@ class BaseQueryCompiler(
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
 
-    lazy_execution = False
+    lazy_row_labels = False
+    lazy_row_count = False
+    lazy_column_types = False
+    lazy_column_labels = False
+    lazy_column_count = False
+
+    @property
+    def lazy_shape(self):
+        """
+        Whether either of the underlying dataframe's dimensions (row count/column count) are computed lazily.
+
+        If True, the frontend should avoid length/shape checks as much as possible.
+
+        Returns
+        -------
+        bool
+        """
+        return self.lazy_row_count or self.lazy_column_count
+
     _shape_hint = None
 
     # Metadata modification abstract methods
@@ -4524,7 +4553,7 @@ class BaseQueryCompiler(
     @property
     def frame_has_materialized_dtypes(self) -> bool:
         """
-        Check if the undelying dataframe has materialized dtypes.
+        Check if the underlying dataframe has materialized dtypes.
 
         Returns
         -------
@@ -4535,7 +4564,7 @@ class BaseQueryCompiler(
     @property
     def frame_has_materialized_columns(self) -> bool:
         """
-        Check if the undelying dataframe has materialized columns.
+        Check if the underlying dataframe has materialized columns.
 
         Returns
         -------
@@ -4546,7 +4575,7 @@ class BaseQueryCompiler(
     @property
     def frame_has_materialized_index(self) -> bool:
         """
-        Check if the undelying dataframe has materialized index.
+        Check if the underlying dataframe has materialized index.
 
         Returns
         -------

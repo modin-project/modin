@@ -235,6 +235,7 @@ jobs:
         with:
           name: Benchmarks log
           path: asv_bench/benchmarks.log
+          include-hidden-files: true
         if: failure()
 
   execution-filter:
@@ -246,12 +247,16 @@ jobs:
       unidist: ${{ steps.filter.outputs.unidist }}
       engines: ${{ steps.engines.outputs.engines }}
       experimental: ${{ steps.experimental.outputs.experimental }}
+      test-native-dataframe-mode: ${{ steps.filter.outputs.test-native-dataframe-mode }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
       id: filter
       with:
         filters: |
+          test-native-dataframe-mode:
+            - 'modin/core/storage_formats/pandas/native_query_compiler.py'
+            - 'modin/core/storage_formats/base/query_compiler.py'
           shared: &shared
             - 'modin/core/execution/dispatching/**'
           ray:
@@ -293,7 +298,7 @@ jobs:
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
     services:
       moto:
-        image: motoserver/moto
+        image: motoserver/moto:5.0.13
         ports:
           - 5000:5000
         env:
@@ -382,7 +387,7 @@ jobs:
       # Using workaround https://github.com/actions/runner/issues/822#issuecomment-1524826092
       moto:
         # we only need moto service on Ubuntu and for group_4 task or python engine
-        image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')) && 'motoserver/moto' || '' }}
+        image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')) && 'motoserver/moto:5.0.13' || '' }}
         ports:
           - 5000:5000
         env:
@@ -439,12 +444,28 @@ jobs:
       - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_1
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_2
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - uses: ./.github/actions/run-core-tests/group_3
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - uses: ./.github/actions/run-core-tests/group_4
+        with:
+          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+          # See https://github.com/modin-project/modin/issues/7387.
+          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/tests/numpy
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
@@ -462,6 +483,7 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest modin/tests/polars/test_dataframe.py
       - run: |
           python -m pip install lazy_import
           python -m pytest modin/tests/pandas/integrations/
@@ -507,7 +529,7 @@ jobs:
     name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
-        image: ${{ matrix.os != 'windows' && 'motoserver/moto' || '' }}
+        image: ${{ matrix.os != 'windows' && 'motoserver/moto:5.0.13' || '' }}
         ports:
           - 5000:5000
         env:
@@ -622,7 +644,7 @@ jobs:
     name: test experimental
     services:
       moto:
-        image: motoserver/moto
+        image: motoserver/moto:5.0.13
         ports:
           - 5000:5000
         env:
@@ -664,6 +686,45 @@ jobs:
           python-version: ${{matrix.python-version}}
       - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
 
+  test-native-dataframe-mode:
+    needs: [ lint-flake8, execution-filter]
+    if: ${{ needs.execution-filter.outputs.test-native-dataframe-mode == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    env:
+      MODIN_NATIVE_DATAFRAME_MODE: "Pandas"
+    name: test-native-dataframe-mode python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/mamba-env
+        with:
+          environment-file: environment-dev.yml
+          python-version: ${{matrix.python-version}}
+      - run: python -m pytest modin/tests/pandas/dataframe/test_binary.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_default.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_indexing.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_iter.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_pickle.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_udf.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_binary.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_default.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_indexing.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_iter.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_join_sort.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_map_metadata.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_pickle.py
+      - run: python -m pytest modin/tests/pandas/native_df_mode/test_window.py
+      - uses: ./.github/actions/upload-coverage
+
   merge-coverage-artifacts:
     needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity]
     if: always()  # we need to run it regardless of some job being skipped, like in PR
@@ -677,6 +738,7 @@ jobs:
         with:
           name: coverage-data
           pattern: coverage-data-*
+          include-hidden-files: true
           delete-merged: true
 
   upload-coverage:

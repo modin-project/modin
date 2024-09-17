@@ -85,3 +85,4 @@ def initialize_dask():
 
     num_cpus = len(client.ncores())
     NPartitions._put(num_cpus)
+    CpuCount._put(num_cpus)

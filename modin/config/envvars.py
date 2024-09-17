@@ -333,6 +333,24 @@ class CpuCount(EnvironmentVariable, type=int):
     varname = "MODIN_CPUS"
 
     @classmethod
+    def _put(cls, value: int) -> None:
+        """
+        Put specific value if CpuCount wasn't set by a user yet.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+
+        Notes
+        -----
+        This method is used to set CpuCount from cluster resources internally
+        and should not be called by a user.
+        """
+        if cls.get_value_source() == ValueSource.DEFAULT:
+            cls.put(value)
+
+    @classmethod
     def _get_default(cls) -> int:
         """
         Get default value of the config.
@@ -874,6 +892,18 @@ class DaskThreadsPerWorker(EnvironmentVariable, type=int):
     default = 1
 
 
+class DynamicPartitioning(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's dynamic-partitioning implementation where possible.
+
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/usage_guide/optimization_notes/index.html#dynamic-partitioning-in-modin
+    """
+
+    varname = "MODIN_DYNAMIC_PARTITIONING"
+    default = False
+
+
 def _check_vars() -> None:
     """
     Check validity of environment variables.
@@ -911,6 +941,28 @@ def _check_vars() -> None:
             deprecated[depr_var].deprecation_message(use_envvar_names=True),
             FutureWarning,
         )
+
+
+class NativeDataframeMode(EnvironmentVariable, type=str):
+    """
+    Configures the query compiler to process Modin data.
+
+    When this config is set to ``Default``, ``PandasQueryCompiler`` is used,
+    which leads to Modin executing dataframes in distributed fashion.
+    When set to a string (e.g., ``pandas``), ``NativeQueryCompiler`` is used,
+    which handles the dataframes without distributing,
+    falling back to native library functions (e.g., ``pandas``).
+
+    This could be beneficial for handling relatively small dataframes
+    without involving additional overhead of communication between processes.
+    """
+
+    varname = "MODIN_NATIVE_DATAFRAME_MODE"
+    choices = (
+        "Default",
+        "Pandas",
+    )
+    default = "Default"
 
 
 _check_vars()

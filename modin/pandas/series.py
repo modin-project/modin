@@ -517,7 +517,7 @@ class Series(BasePandasDataset):
         return self.rtruediv(left)
 
     __iadd__ = __add__
-    __imul__ = __add__
+    __imul__ = __mul__
     __ipow__ = __pow__
     __isub__ = __sub__
     __itruediv__ = __truediv__
@@ -1022,7 +1022,12 @@ class Series(BasePandasDataset):
         """
         Indicate duplicate Series values.
         """
-        return self.to_frame().duplicated(keep=keep)
+        name = self.name
+        result = self.to_frame().duplicated(keep=keep)
+        # DataFrame.duplicated drops the name, so we need to manually restore it
+        if name is not None:
+            result.name = name
+        return result
 
     def eq(
         self, other, level=None, fill_value=None, axis=0

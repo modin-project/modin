@@ -11,7 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .classes import BasePandasDataset, DataFrame, Series
-from .functions import read_csv
+import polars
+import polars.testing
 
-__all__ = ["BasePandasDataset", "DataFrame", "Series", "read_csv"]
+import modin.polars as pl
+
+
+def test_init_roundtrip():
+    data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    df = pl.DataFrame(data)
+    polars_df = polars.DataFrame(data)
+    to_polars = polars.from_pandas(df._query_compiler.to_pandas())
+    polars.testing.assert_frame_equal(polars_df, to_polars)

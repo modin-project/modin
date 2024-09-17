@@ -22,7 +22,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import Engine, NativeDataframeMode, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     axis_keys,
@@ -123,6 +123,10 @@ def test_to_numpy(data):
     assert_array_equal(modin_df.values, pandas_df.values)
 
 
+@pytest.mark.skipif(
+    NativeDataframeMode.get() == "Pandas",
+    reason="NativeQueryCompiler does not contain partitions.",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_partition_to_numpy(data):
     frame = pd.DataFrame(data)
@@ -294,8 +298,8 @@ class TestCorr:
                 {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
             )
             modin_df = pd.concat([modin_df.iloc[:3], modin_df.iloc[3:]])
-
-            assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+            if NativeDataframeMode.get() == "Default":
+                assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
             eval_general(
                 modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods)
             )
@@ -312,6 +316,10 @@ class TestCorr:
     @pytest.mark.skipif(
         StorageFormat.get() != "Pandas",
         reason="doesn't make sense for non-partitioned executions",
+    )
+    @pytest.mark.skipif(
+        NativeDataframeMode.get() == "Pandas",
+        reason="NativeQueryCompiler does not contain partitions.",
     )
     def test_corr_nans_in_different_partitions(self):
         # NaN in the first partition
@@ -602,7 +610,13 @@ def test_pivot(data, index, columns, values, request):
         in request.node.callspec.id
         or "default-one_column-several_columns_index" in request.node.callspec.id
         or "default-one_column-one_column_index" in request.node.callspec.id
-        or (current_execution in ("BaseOnPython",) and index is lib.no_default)
+        or (
+            (
+                current_execution in ("BaseOnPython",)
+                or NativeDataframeMode.get() == "Pandas"
+            )
+            and index is lib.no_default
+        )
     ):
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
 
@@ -980,7 +994,8 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
             "DateColumn",
             marks=pytest.mark.xfail(
                 condition=Engine.get() in ("Ray", "Unidist", "Dask", "Python")
-                and StorageFormat.get() != "Base",
+                and StorageFormat.get() != "Base"
+                and NativeDataframeMode.get() == "Default",
                 reason="https://github.com/modin-project/modin/issues/6399",
             ),
         ),

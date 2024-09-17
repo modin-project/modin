@@ -23,6 +23,7 @@ from modin.config.envvars import (
     CpuCount,
     DaskThreadsPerWorker,
     DocModule,
+    DynamicPartitioning,
     Engine,
     EnvironmentVariable,
     GithubCI,
@@ -39,6 +40,7 @@ from modin.config.envvars import (
     MinPartitionSize,
     MinRowPartitionSize,
     ModinNumpy,
+    NativeDataframeMode,
     NPartitions,
     PersistentPickle,
     ProgressBar,
@@ -68,6 +70,7 @@ __all__ = [
     "CpuCount",
     "GpuCount",
     "Memory",
+    "NativeDataframeMode",
     # Ray specific
     "IsRayCluster",
     "RayRedisAddress",
@@ -95,6 +98,7 @@ __all__ = [
     "AsyncReadMode",
     "ReadSqlEngine",
     "IsExperimental",
+    "DynamicPartitioning",
     # For tests
     "TrackFileLeaks",
     "TestReadFromSqlServer",

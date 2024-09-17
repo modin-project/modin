@@ -37,6 +37,38 @@ Range-partitioning is not a silver bullet, meaning that enabling it is not alway
 a link to the list of operations that have support for range-partitioning and practical advices on when one should
 enable it: :doc:`operations that support range-partitioning </usage_guide/optimization_notes/range_partitioning_ops>`.
 
+Dynamic-partitioning in Modin
+"""""""""""""""""""""""""""""
+
+Ray engine experiences slowdowns when running a large number of small remote tasks at the same time. Ray Core recommends to `avoid tiny task`_.
+When modin DataFrame has a large number of partitions, some functions produce a large number of remote tasks, which can cause slowdowns. 
+To solve this problem, Modin suggests using dynamic partitioning. This approach reduces the number of remote tasks 
+by combining multiple partitions into a single virtual partition and perform a common remote task on them.
+
+Dynamic partitioning is typically used for operations that are fully or partially executed on all partitions separately.
+
+.. code-block:: python
+
+    import modin.pandas as pd
+    from modin.config import context
+
+    df = pd.DataFrame(...)
+
+    with context(DynamicPartitioning=True):
+        df.abs()
+
+Dynamic partitioning is also not always useful, and this approach is usually used for medium-sized DataFrames with a large number of columns.
+If the number of columns is small, the number of partitions will be close to the number of CPUs, and Ray will not have this problem.
+If the DataFrame has too many rows, this is also not a good case for using Dynamic-partitioning, since each task is no longer tiny and performing 
+the combined tasks carries more overhead than assigning them separately.
+
+Unfortunately, the use of Dynamic-partitioning depends on various factors such as data size, number of CPUs, operations performed, 
+and it is up to the user to determine whether Dynamic-partitioning will give a boost in his case or not.
+
+..
+  TODO: Define heuristics to automatically enable dynamic partitioning without performance penalty.
+  `Issue #7370 <https://github.com/modin-project/modin/issues/7370>`_
+
 Understanding Modin's partitioning mechanism
 """"""""""""""""""""""""""""""""""""""""""""
 
@@ -282,6 +314,37 @@ Copy-pastable example, showing how mixing pandas and Modin DataFrames in a singl
   # Possible output: TypeError
 
 
+Execute DataFrame operations using NativeQueryCompiler
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+By default, Modin distributes data across partitions and performs operations
+using the ``PandasQueryCompiler``. However, for certain scenarios such as handling small or empty DataFrames,
+distributing them may introduce unnecessary overhead. In such cases, it's more efficient to default
+to pandas at the query compiler layer. This can be achieved by setting the ``cfg.NativeDataframeMode``
+:doc:`configuration variable: </flow/modin/config>` to ``Pandas``. When set to ``Pandas``, all operations in Modin default to pandas, and the DataFrames are not distributed,
+avoiding additional overhead. This configuration can be toggled on or off depending on whether
+DataFrame distribution is required.
+
+DataFrames created while the ``NativeDataframeMode`` is active will continue to use the ``NativeQueryCompiler``
+even after the config is disabled. Modin supports interoperability between distributed Modin DataFrames and
+those using the ``NativeQueryCompiler``.
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  # This dataframe will be distributed and use `PandasQueryCompiler` by default
+  df_distributed = pd.DataFrame(...)
+
+  # Set mode to "Pandas" to avoid distribution and use `NativeQueryCompiler`
+  cfg.NativeDataframeMode.put("Pandas")
+  df_native_qc = pd.DataFrame(...)
+
+  # Revert to default settings for distributed dataframes
+  cfg.NativeDataframeMode.put("Default")
+  df_distributed = pd.DataFrame(...)
+
 Operation-specific optimizations
 """"""""""""""""""""""""""""""""
 
@@ -311,3 +374,4 @@ an inner join you may want to swap left and right DataFrames.
 Note that result columns order may differ for first and second ``merge``.
 
 .. _range-partitioning: https://www.techopedia.com/definition/31994/range-partitioning
+.. _`avoid tiny task`: https://docs.ray.io/en/latest/ray-core/tips-for-first-time.html#tip-2-avoid-tiny-tasks

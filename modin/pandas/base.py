@@ -99,7 +99,13 @@ sentinel = object()
 
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
-_ATTRS_NO_LOOKUP = {"__name__", "_cache"}
+_ATTRS_NO_LOOKUP = {
+    "__name__",
+    "_cache",
+    "_ipython_canary_method_should_not_exist_",
+    "_ipython_display_",
+    "_repr_mimebundle_",
+}
 
 _DEFAULT_BEHAVIOUR = {
     "__init__",
@@ -1068,7 +1074,7 @@ class BasePandasDataset(ClassLogger):
             # will handle errors where dtype dict includes keys that are not
             # in columns.
             if (
-                not self._query_compiler.lazy_execution
+                not self._query_compiler.lazy_column_labels
                 and not set(dtype.keys()).issubset(set(self._query_compiler.columns))
                 and errors == "raise"
             ):
@@ -1462,7 +1468,9 @@ class BasePandasDataset(ClassLogger):
                     axes[axis] = [axes[axis]]
                 # In case of lazy execution we should bypass these error checking components
                 # because they can force the materialization of the row or column labels.
-                if self._query_compiler.lazy_execution:
+                if (axis == "index" and self._query_compiler.lazy_row_labels) or (
+                    axis == "columns" and self._query_compiler.lazy_column_labels
+                ):
                     continue
                 if errors == "raise":
                     non_existent = pandas.Index(axes[axis]).difference(
@@ -2657,7 +2665,10 @@ class BasePandasDataset(ClassLogger):
         # exist.
         if (
             not drop
-            and not self._query_compiler.lazy_execution
+            and not (
+                self._query_compiler.lazy_column_labels
+                or self._query_compiler.lazy_row_labels
+            )
             and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
@@ -3944,7 +3955,7 @@ class BasePandasDataset(ClassLogger):
         BasePandasDataset
             Located dataset.
         """
-        if not self._query_compiler.lazy_execution and len(self) == 0:
+        if not self._query_compiler.lazy_row_count and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
         # This lets us reuse code in pandas to error check
@@ -4075,7 +4086,7 @@ class BasePandasDataset(ClassLogger):
         if is_full_grab_slice(
             key,
             # Avoid triggering shape computation for lazy executions
-            sequence_len=(None if self._query_compiler.lazy_execution else len(self)),
+            sequence_len=(None if self._query_compiler.lazy_row_count else len(self)),
         ):
             return self.copy()
         return self.iloc[key]
@@ -4301,7 +4312,7 @@ class BasePandasDataset(ClassLogger):
         Any
         """
         attr = super().__getattribute__(item)
-        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
+        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_shape:
             # We default to pandas on empty DataFrames. This avoids a large amount of
             # pain in underlying implementation and returns a result immediately rather
             # than dealing with the edge cases that empty DataFrames have.
