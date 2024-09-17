@@ -414,7 +414,7 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         if axis == 0:
             return len(self._modin_frame)
         else:
-            return self._modin_frame.column_widths
+            return sum(self._modin_frame.column_widths)
 
     @property
     def dtypes(self) -> pandas.Series:
