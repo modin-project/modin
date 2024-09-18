@@ -269,7 +269,9 @@ class DataFrame(BasePandasDataset):
         str
         """
         num_rows = pandas.get_option("display.max_rows") or len(self)
-        num_cols = pandas.get_option("display.max_columns") or self._query_compiler.get_axis_len(1)
+        num_cols = pandas.get_option(
+            "display.max_columns"
+        ) or self._query_compiler.get_axis_len(1)
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self) > num_rows or self._query_compiler.get_axis_len(1) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
@@ -297,9 +299,7 @@ class DataFrame(BasePandasDataset):
             # We split so that we insert our correct dataframe dimensions.
             return result.split("<p>")[
                 0
-            ] + "<p>{0} rows x {1} columns</p>\n</div>".format(
-                *self.shape
-            )
+            ] + "<p>{0} rows x {1} columns</p>\n</div>".format(*self.shape)
         else:
             return result
 
@@ -781,7 +781,9 @@ class DataFrame(BasePandasDataset):
         """
         if isinstance(other, BasePandasDataset):
             common = self.columns.union(other.index)
-            if len(common) > self._query_compiler.get_axis_len(1) or len(common) > len(other.index):
+            if len(common) > self._query_compiler.get_axis_len(1) or len(common) > len(
+                other.index
+            ):
                 raise ValueError("Matrices are not aligned")
 
             qc = other.reindex(index=common)._query_compiler
@@ -1119,7 +1121,11 @@ class DataFrame(BasePandasDataset):
                 )
             if allow_duplicates is not True and column in self.columns:
                 raise ValueError(f"cannot insert {column}, already exists")
-            if not -self._query_compiler.get_axis_len(1) <= loc <= self._query_compiler.get_axis_len(1):
+            if (
+                not -self._query_compiler.get_axis_len(1)
+                <= loc
+                <= self._query_compiler.get_axis_len(1)
+            ):
                 raise IndexError(
                     f"index {loc} is out of bounds for axis 0 with size {self._query_compiler.get_axis_len(1)}"
                 )
@@ -2074,7 +2080,9 @@ class DataFrame(BasePandasDataset):
         Squeeze 1 dimensional axis objects into scalars.
         """
         axis = self._get_axis_number(axis) if axis is not None else None
-        if axis is None and (self._query_compiler.get_axis_len(1) == 1 or len(self) == 1):
+        if axis is None and (
+            self._query_compiler.get_axis_len(1) == 1 or len(self) == 1
+        ):
             return Series(query_compiler=self._query_compiler).squeeze()
         if axis == 1 and self._query_compiler.get_axis_len(1) == 1:
             self._query_compiler._shape_hint = "column"
@@ -2680,7 +2688,9 @@ class DataFrame(BasePandasDataset):
                 self.columns = prev_index.insert(0, key)
                 return
             # Do new column assignment after error checks and possible value modifications
-            self.insert(loc=self._query_compiler.get_axis_len(1), column=key, value=value)
+            self.insert(
+                loc=self._query_compiler.get_axis_len(1), column=key, value=value
+            )
             return
 
         if not hashable(key):

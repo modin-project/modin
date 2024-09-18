@@ -288,7 +288,9 @@ class BasePandasDataset(ClassLogger):
             A pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
-        if len(self) == 0 or (self._is_dataframe and self._query_compiler.get_axis_len(1) == 0):
+        if len(self) == 0 or (
+            self._is_dataframe and self._query_compiler.get_axis_len(1) == 0
+        ):
             return pandas.DataFrame(
                 index=self.index,
                 columns=self.columns if self._is_dataframe else None,
