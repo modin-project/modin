@@ -915,18 +915,22 @@ class PandasDataframePartitionManager(
         # step cannot be less than 1
         step = max(partitions.shape[0] // column_splits, 1)
         preprocessed_map_func = cls.preprocess_func(map_func)
-        kw = {
-            "num_splits": step,
-        }
         result = np.empty(partitions.shape, dtype=object)
         for i in range(
             0,
             partitions.shape[0],
             step,
         ):
-            joined_column_partitions = cls.column_partitions(partitions[i : i + step])
+            partitions_subset = partitions[i : i + step]
+            # This is necessary when ``partitions.shape[0]`` is not divisible
+            # by `column_splits` without a remainder.
+            actual_step = len(partitions_subset)
+            kw = {
+                "num_splits": actual_step,
+            }
+            joined_column_partitions = cls.column_partitions(partitions_subset)
             for j in range(partitions.shape[1]):
-                result[i : i + step, j] = joined_column_partitions[j].apply(
+                result[i : i + actual_step, j] = joined_column_partitions[j].apply(
                     preprocessed_map_func,
                     *map_func_args if map_func_args is not None else (),
                     **kw,
