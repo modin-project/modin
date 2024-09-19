@@ -1964,6 +1964,7 @@ class BaseQueryCompiler(
         ----------
         level : int or label
         dropna : bool
+        sort : bool
 
         Returns
         -------
