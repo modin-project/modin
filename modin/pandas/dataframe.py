@@ -2074,12 +2074,12 @@ class DataFrame(BasePandasDataset):
         Squeeze 1 dimensional axis objects into scalars.
         """
         axis = self._get_axis_number(axis) if axis is not None else None
-        if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
+        if axis is None and (len(self.columns) == 1 or len(self) == 1):
             return Series(query_compiler=self._query_compiler).squeeze()
         if axis == 1 and len(self.columns) == 1:
             self._query_compiler._shape_hint = "column"
             return Series(query_compiler=self._query_compiler)
-        if axis == 0 and len(self.index) == 1:
+        if axis == 0 and len(self) == 1:
             qc = self.T._query_compiler
             qc._shape_hint = "column"
             return Series(query_compiler=qc)
