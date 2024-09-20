@@ -782,7 +782,7 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, BasePandasDataset):
             common = self.columns.union(other.index)
             if len(common) > self._query_compiler.get_axis_len(1) or len(common) > len(
-                other.index
+                other
             ):
                 raise ValueError("Matrices are not aligned")
 
@@ -1121,13 +1121,10 @@ class DataFrame(BasePandasDataset):
                 )
             if allow_duplicates is not True and column in self.columns:
                 raise ValueError(f"cannot insert {column}, already exists")
-            if (
-                not -self._query_compiler.get_axis_len(1)
-                <= loc
-                <= self._query_compiler.get_axis_len(1)
-            ):
+            columns_len = self._query_compiler.get_axis_len(1)
+            if not -columns_len <= loc <= columns_len:
                 raise IndexError(
-                    f"index {loc} is out of bounds for axis 0 with size {self._query_compiler.get_axis_len(1)}"
+                    f"index {loc} is out of bounds for axis 0 with size {columns_len}"
                 )
             elif loc < 0:
                 raise ValueError("unbounded slice")

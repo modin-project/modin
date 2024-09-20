@@ -966,7 +966,7 @@ class Series(BasePandasDataset):
         """
         if isinstance(other, BasePandasDataset):
             common = self.index.union(other.index)
-            if len(common) > len(self) or len(common) > len(other.index):
+            if len(common) > len(self) or len(common) > len(other):
                 raise ValueError("Matrices are not aligned")
 
             qc = other.reindex(index=common)._query_compiler

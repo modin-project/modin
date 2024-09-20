@@ -399,9 +399,6 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         """
         Return the length of the specified axis.
 
-        A query compiler may choose to override this method if it has a more efficient way
-        of computing the length of an axis without materializing it.
-
         Parameters
         ----------
         axis : {0, 1}
