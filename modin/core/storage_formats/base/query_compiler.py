@@ -1956,7 +1956,7 @@ class BaseQueryCompiler(
     # END Abstract map partitions operations
 
     @doc_utils.add_refer_to("DataFrame.stack")
-    def stack(self, level, dropna):
+    def stack(self, level, dropna, sort):
         """
         Stack the prescribed level(s) from columns to index.
 
@@ -1964,13 +1964,17 @@ class BaseQueryCompiler(
         ----------
         level : int or label
         dropna : bool
+        sort : bool
 
         Returns
         -------
         BaseQueryCompiler
         """
         return DataFrameDefault.register(pandas.DataFrame.stack)(
-            self, level=level, dropna=dropna
+            self,
+            level=level,
+            dropna=dropna,
+            sort=sort,
         )
 
     # Abstract map partitions across select indices
