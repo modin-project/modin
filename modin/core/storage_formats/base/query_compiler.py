@@ -22,7 +22,7 @@ from __future__ import annotations
 import abc
 import warnings
 from functools import cached_property
-from typing import TYPE_CHECKING, Hashable, List, Optional
+from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
@@ -4269,6 +4269,24 @@ class BaseQueryCompiler(
         pandas.Index
         """
         return self.index if axis == 0 else self.columns
+
+    def get_axis_len(self, axis: Literal[0, 1]) -> int:
+        """
+        Return the length of the specified axis.
+
+        A query compiler may choose to override this method if it has a more efficient way
+        of computing the length of an axis without materializing it.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+
+        Returns
+        -------
+        int
+        """
+        return len(self.get_axis(axis))
 
     def take_2d_labels(
         self,

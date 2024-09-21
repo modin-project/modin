@@ -445,8 +445,8 @@ class Series(BasePandasDataset):
             name_str = "Name: {}, ".format(str(self.name))
         else:
             name_str = ""
-        if len(self.index) > num_rows:
-            len_str = "Length: {}, ".format(len(self.index))
+        if len(self) > num_rows:
+            len_str = "Length: {}, ".format(len(self))
         else:
             len_str = ""
         dtype_str = "dtype: {}".format(
@@ -966,7 +966,7 @@ class Series(BasePandasDataset):
         """
         if isinstance(other, BasePandasDataset):
             common = self.index.union(other.index)
-            if len(common) > len(self.index) or len(common) > len(other.index):
+            if len(common) > len(self) or len(common) > len(other):
                 raise ValueError("Matrices are not aligned")
 
             qc = other.reindex(index=common)._query_compiler
@@ -1761,7 +1761,7 @@ class Series(BasePandasDataset):
             name = 0 if self.name is None else self.name
 
         if drop and level is None:
-            new_idx = pandas.RangeIndex(len(self.index))
+            new_idx = pandas.RangeIndex(len(self))
             if inplace:
                 self.index = new_idx
             else:
@@ -1989,7 +1989,7 @@ class Series(BasePandasDataset):
         if axis is not None:
             # Validate `axis`
             pandas.Series._get_axis_number(axis)
-        if len(self.index) == 1:
+        if len(self) == 1:
             return self._reduce_dimension(self._query_compiler)
         else:
             return self.copy()
@@ -2307,7 +2307,7 @@ class Series(BasePandasDataset):
         """
         Indicate whether Series is empty.
         """
-        return len(self.index) == 0
+        return len(self) == 0
 
     @property
     def hasnans(self) -> bool:  # noqa: RT01, D200
@@ -2648,7 +2648,7 @@ class Series(BasePandasDataset):
         if is_bool_indexer(key):
             return self.__constructor__(
                 query_compiler=self._query_compiler.getitem_row_array(
-                    pandas.RangeIndex(len(self.index))[key]
+                    pandas.RangeIndex(len(self))[key]
                 )
             )
         # TODO: More efficiently handle `tuple` case for `Series.__getitem__`

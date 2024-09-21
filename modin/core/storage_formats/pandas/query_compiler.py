@@ -25,7 +25,7 @@ import hashlib
 import re
 import warnings
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Hashable, List, Optional
+from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
@@ -394,6 +394,24 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
 
     index: pandas.Index = property(_get_axis(0), _set_axis(0))
     columns: pandas.Index = property(_get_axis(1), _set_axis(1))
+
+    def get_axis_len(self, axis: Literal[0, 1]) -> int:
+        """
+        Return the length of the specified axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+
+        Returns
+        -------
+        int
+        """
+        if axis == 0:
+            return len(self._modin_frame)
+        else:
+            return sum(self._modin_frame.column_widths)
 
     @property
     def dtypes(self) -> pandas.Series:
