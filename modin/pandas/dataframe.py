@@ -151,8 +151,11 @@ class DataFrame(BasePandasDataset):
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
+        self._attrs = {}
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
+            if len(data._attrs):
+                self._attrs = copy.deepcopy(data._attrs)
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
@@ -2636,12 +2639,12 @@ class DataFrame(BasePandasDataset):
         # - anything in self.__dict__. This includes any attributes that the
         #   user has added to the dataframe with,  e.g., `df.c = 3`, and
         #   any attribute that Modin has added to the frame, e.g.
-        #   `_query_compiler` and `_siblings`
+        #   `_query_compiler`, `_siblings`, and "_attrs"
         # - `_query_compiler`, which Modin initializes before it appears in
         #   __dict__
         # - `_siblings`, which Modin initializes before it appears in __dict__
         #   before it appears in __dict__.
-        if key in ("_query_compiler", "_siblings") or key in self.__dict__:
+        if key in ("_attrs", "_query_compiler", "_siblings") or key in self.__dict__:
             pass
         # we have to check for the key in `dir(self)` first in order not to trigger columns computation
         elif key not in dir(self) and key in self:
@@ -2937,17 +2940,6 @@ class DataFrame(BasePandasDataset):
             dataframe_api_compat.modin_standard.convert_to_standard_compliant_dataframe
         )
         return convert_to_standard_compliant_dataframe(self, api_version=api_version)
-
-    @property
-    def attrs(self) -> dict:  # noqa: RT01, D200
-        """
-        Return dictionary of global attributes of this dataset.
-        """
-
-        def attrs(df):
-            return df.attrs
-
-        return self._default_to_pandas(attrs)
 
     @property
     def style(self):  # noqa: RT01, D200
