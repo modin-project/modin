@@ -1707,7 +1707,7 @@ class PandasDataframe(
                         new_dtypes = self_dtypes.copy()
                     # Update the new dtype series to the proper pandas dtype
                     new_dtype = pandas.api.types.pandas_dtype(dtype)
-                    if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
+                    if self._getEngineConfig().get() == "Dask" and hasattr(dtype, "_is_materialized"):
                         # FIXME: https://github.com/dask/distributed/issues/8585
                         _ = dtype._materialize_categories()
 

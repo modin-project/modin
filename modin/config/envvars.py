@@ -32,7 +32,6 @@ from modin.config.pubsub import (
     ValueSource,
 )
 
-
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
@@ -170,7 +169,12 @@ class IsDebug(EnvironmentVariable, type=bool):
     varname = "MODIN_DEBUG"
 
 
-class Engine(EnvironmentVariable, type=str):
+class DataFrameVariable(EnvironmentVariable, type=str):
+    @classmethod
+    def get(cls) -> Any:
+        return cls._value
+
+class Engine(DataFrameVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"

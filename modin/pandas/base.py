@@ -31,6 +31,7 @@ from typing import (
     Union,
 )
 
+from modin.config.envvars import Engine, StorageFormat
 import numpy as np
 import pandas
 import pandas.core.generic
@@ -208,6 +209,20 @@ class BasePandasDataset(ClassLogger):
     _pandas_class = pandas.core.generic.NDFrame
     _query_compiler: BaseQueryCompiler
     _siblings: list[BasePandasDataset]
+    _engine_override: Engine = None
+    _storage_override: StorageFormat = None
+    
+    def _getEngineConfig(self) -> Engine:
+        if self._engine_override is not None:
+            return self._engine_override
+        else: 
+            return Engine
+    
+    def _getStorageConfig(self) -> Engine:
+        if self._storage_override is not None:
+            return self._storage_override
+        else: 
+            return StorageFormat
 
     @cached_property
     def _is_dataframe(self) -> bool:

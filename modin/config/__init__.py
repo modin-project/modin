@@ -60,6 +60,7 @@ from modin.config.pubsub import Parameter, ValueSource, context
 
 __all__ = [
     "EnvironmentVariable",
+    "DataFrameVariable" # dataframe specific configuration
     "Parameter",
     "ValueSource",
     "context",
