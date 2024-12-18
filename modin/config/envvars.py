@@ -172,7 +172,7 @@ class IsDebug(EnvironmentVariable, type=bool):
 class DataFrameVariable(EnvironmentVariable, type=str):
     @classmethod
     def get(cls) -> Any:
-        return cls._value
+        return super().get()
 
 class Engine(DataFrameVariable, type=str):
     """Distribution engine to run queries by."""
@@ -196,7 +196,6 @@ class Engine(DataFrameVariable, type=str):
         str
         """
         from modin.utils import MIN_DASK_VERSION, MIN_RAY_VERSION, MIN_UNIDIST_VERSION
-
         # If there's a custom engine, we don't need to check for any engine
         # dependencies. Return the default "Python" engine.
         if IsDebug.get() or cls.has_custom_engine:

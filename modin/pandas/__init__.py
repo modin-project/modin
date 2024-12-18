@@ -115,7 +115,6 @@ def _update_engine(publisher: Parameter):
 
     # Set this so that Pandas doesn't try to multithread by itself
     os.environ["OMP_NUM_THREADS"] = "1"
-
     if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
             from modin.core.execution.ray.common import initialize_ray
