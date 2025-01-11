@@ -12,10 +12,7 @@
 # governing permissions and limitations under the License.
 
 import warnings
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Type, Union
-
-if TYPE_CHECKING:
-    from .config import Engine, StorageFormat
+from typing import Any, Optional, Tuple, Type, Union
 
 from . import _version
 
@@ -37,9 +34,7 @@ warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="Large object of size")
 
 
-def set_execution(
-    engine: Any = None, storage_format: Any = None
-) -> Tuple["Engine", "StorageFormat"]:
+def set_execution(engine: Any = None, storage_format: Any = None) -> Tuple[Any, Any]:
     """
     Method to set the _pair_ of execution engine and storage format format simultaneously.
     This is needed because there might be cases where switching one by one would be
