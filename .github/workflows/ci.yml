@@ -202,7 +202,7 @@ jobs:
         with:
           auto-activate-base: true
           activate-environment: ""
-          miniforge-variant: Mambaforge
+          miniforge-variant: Miniforge3
           miniforge-version: latest
           use-mamba: true
       - name: Running benchmarks
