@@ -493,11 +493,6 @@ jobs:
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.engine == 'ray'
-      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
-        run: |
-          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
-          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
-        if: matrix.os == 'windows'
 
   test-sanity:
     needs: [lint-flake8, execution-filter, python-filter]
@@ -625,11 +620,6 @@ jobs:
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
-      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
-        run: |
-          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
-          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
-        if: matrix.os == 'windows'
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
