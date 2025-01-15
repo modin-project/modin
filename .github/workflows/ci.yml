@@ -117,10 +117,10 @@ jobs:
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
       - name: Ensure MPI engine start up
         # Install a working MPI implementation beforehand so mpi4py can link to it.
-        # Cap libmpich-dev under version 4.2, which does not seem to work:
-        # https://github.com/modin-project/modin/issues/7419
+        # Pin libmpich-dev to version 4.0-3. Version 4.2.0-5build3 does not work.
+        # See https://github.com/modin-project/modin/issues/7419.
         run: |
-          sudo apt install libmpich-dev<4.2
+          sudo apt install libmpich-dev=4.0-3
           python -m pip install -e ".[mpi]"
           MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
         if: matrix.os == 'ubuntu'
