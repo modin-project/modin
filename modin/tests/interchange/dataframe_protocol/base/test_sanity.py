@@ -38,8 +38,8 @@ def test_basic_io(get_unique_base_execution):
         raise TestPassed
 
     query_compiler_cls = get_unique_base_execution
-    query_compiler_cls.from_dataframe = dummy_io_method
-    query_compiler_cls.to_dataframe = dummy_io_method
+    query_compiler_cls.from_interchange_dataframe = dummy_io_method
+    query_compiler_cls.to_interchange_dataframe = dummy_io_method
 
     from modin.pandas.io import from_dataframe
 

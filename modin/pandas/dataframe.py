@@ -2917,7 +2917,7 @@ class DataFrame(BasePandasDataset):
         ProtocolDataframe
             A dataframe object following the dataframe protocol specification.
         """
-        return self._query_compiler.to_dataframe(
+        return self._query_compiler.to_interchange_dataframe(
             nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 

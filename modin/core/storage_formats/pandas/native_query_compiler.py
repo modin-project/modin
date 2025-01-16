@@ -24,6 +24,9 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_list_like, is_scalar
 
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.utils import (
@@ -1236,13 +1239,15 @@ class NativeQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
 
     # Dataframe exchange protocol
 
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+    def to_interchange_dataframe(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ):
         return self._modin_frame.__dataframe__(
             nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 
     @classmethod
-    def from_dataframe(cls, df, data_cls):
+    def from_interchange_dataframe(cls, df: ProtocolDataframe, data_cls):
         return cls(pandas.api.interchange.from_dataframe(df))
 
     # END Dataframe exchange protocol

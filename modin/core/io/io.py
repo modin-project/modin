@@ -100,7 +100,7 @@ class BaseIO:
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
-    def from_dataframe(cls, df):
+    def from_interchange_dataframe(cls, df):
         """
         Create a Modin QueryCompiler from a DataFrame supporting the DataFrame exchange protocol `__dataframe__()`.
 
@@ -114,7 +114,7 @@ class BaseIO:
         BaseQueryCompiler
             QueryCompiler containing data from the DataFrame.
         """
-        return cls.query_compiler_cls.from_dataframe(df, cls.frame_cls)
+        return cls.query_compiler_cls.from_interchange_dataframe(df, cls.frame_cls)
 
     @classmethod
     def from_ray(cls, ray_obj):

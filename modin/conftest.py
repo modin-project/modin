@@ -183,13 +183,15 @@ class TestQC(BaseQueryCompiler):
     def free(self):
         pass
 
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+    def to_interchange_dataframe(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ):
         raise NotImplementedError(
             "The selected execution does not implement the DataFrame exchange protocol."
         )
 
     @classmethod
-    def from_dataframe(cls, df, data_cls):
+    def from_interchange_dataframe(cls, df, data_cls):
         raise NotImplementedError(
             "The selected execution does not implement the DataFrame exchange protocol."
         )

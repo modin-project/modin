@@ -65,6 +65,9 @@ from pandas.io.parsers import TextFileReader
 from pandas.io.parsers.readers import _c_parser_defaults
 
 from modin.config import ModinNumpy
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
@@ -1013,16 +1016,16 @@ def from_arrow(at) -> DataFrame:
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
 
 
-def from_dataframe(df) -> DataFrame:
+def from_dataframe(df: ProtocolDataframe) -> DataFrame:
     """
-    Convert a DataFrame implementing the dataframe exchange protocol to a Modin DataFrame.
+    Convert a DataFrame implementing the dataframe interchange protocol to a Modin DataFrame.
 
     See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
 
     Parameters
     ----------
-    df : DataFrame
-        The DataFrame object supporting the dataframe exchange protocol.
+    df : ProtocolDataframe
+        An object supporting the dataframe interchange protocol.
 
     Returns
     -------
@@ -1031,7 +1034,9 @@ def from_dataframe(df) -> DataFrame:
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.from_interchange_dataframe(df)
+    )
 
 
 def from_ray(ray_obj) -> DataFrame:
