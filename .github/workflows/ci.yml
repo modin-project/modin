@@ -115,13 +115,15 @@ jobs:
         run: |
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-      - name: Ensure MPI engine start up
-        # Install a working MPI implementation beforehand so mpi4py can link to it
-        run: |
-          sudo apt install libmpich-dev
-          python -m pip install -e ".[mpi]"
-          MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-        if: matrix.os == 'ubuntu'
+      # - name: Ensure MPI engine start up
+      # Install a working MPI implementation beforehand so mpi4py can link to it.
+      # TODO(https://github.com/modin-project/modin/issues/7421): Find a
+      # way to make MPI installed via APT work. Then uncomment this section.
+      #   run: |
+      #     sudo apt install libmpich-dev
+      #     python -m pip install -e ".[mpi]"
+      #     MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+      #   if: matrix.os == 'ubuntu'
 
   test-internals:
     needs: [lint-flake8, python-filter]
@@ -174,6 +176,10 @@ jobs:
         run: |
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
           # when we use collective instead of rabit.
+          # Per the thread https://github.com/conda-forge/miniforge/issues/513,
+          # remove unused conda packages and caches to avoid `Found incorrect
+          # download: joblib` error from mamba.
+          mamba clean --all
           mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
           python -m pytest modin/tests/experimental/xgboost/test_default.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/tests/core/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
@@ -202,7 +208,7 @@ jobs:
         with:
           auto-activate-base: true
           activate-environment: ""
-          miniforge-variant: Mambaforge
+          miniforge-variant: Miniforge3
           miniforge-version: latest
           use-mamba: true
       - name: Running benchmarks
@@ -493,11 +499,6 @@ jobs:
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.engine == 'ray'
-      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
-        run: |
-          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
-          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
-        if: matrix.os == 'windows'
 
   test-sanity:
     needs: [lint-flake8, execution-filter, python-filter]
@@ -625,11 +626,6 @@ jobs:
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
-      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
-        run: |
-          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
-          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
-        if: matrix.os == 'windows'
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
