@@ -191,7 +191,7 @@ class TestQC(BaseQueryCompiler):
         )
 
     @classmethod
-    def from_dataframe(cls, df, data_cls):
+    def from_interchange_dataframe(cls, df, data_cls):
         raise NotImplementedError(
             "The selected execution does not implement the DataFrame exchange protocol."
         )

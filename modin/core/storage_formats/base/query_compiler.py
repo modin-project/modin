@@ -506,13 +506,13 @@ class BaseQueryCompiler(
 
     @classmethod
     @abc.abstractmethod
-    def from_dataframe(cls, df, data_cls):
+    def from_interchange_dataframe(cls, df: ProtocolDataframe, data_cls):
         """
         Build QueryCompiler from a DataFrame object supporting the dataframe exchange protocol `__dataframe__()`.
 
         Parameters
         ----------
-        df : DataFrame
+        df : ProtocolDataframe
             The DataFrame object supporting the dataframe exchange protocol.
         data_cls : type
             :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` class

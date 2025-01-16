@@ -200,10 +200,10 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="a DataFrame object supporting exchange protocol `__dataframe__()`",
         params=_doc_io_method_all_params,
-        method="io.from_dataframe",
+        method="io.from_interchange_dataframe",
     )
-    def _from_dataframe(cls, *args, **kwargs):
-        return cls.io_cls.from_dataframe(*args, **kwargs)
+    def _from_interchange_dataframe(cls, *args, **kwargs):
+        return cls.io_cls.from_interchange_dataframe(*args, **kwargs)
 
     @classmethod
     @doc(

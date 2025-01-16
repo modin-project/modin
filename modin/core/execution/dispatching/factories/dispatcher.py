@@ -177,9 +177,9 @@ class FactoryDispatcher(object):
         return cls.get_factory()._from_non_pandas(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.BaseFactory._from_dataframe)
-    def from_dataframe(cls, *args, **kwargs):
-        return cls.get_factory()._from_dataframe(*args, **kwargs)
+    @_inherit_docstrings(factories.BaseFactory._from_interchange_dataframe)
+    def from_interchange_dataframe(cls, *args, **kwargs):
+        return cls.get_factory()._from_interchange_dataframe(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_ray)

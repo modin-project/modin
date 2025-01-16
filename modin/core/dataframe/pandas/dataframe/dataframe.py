@@ -4807,7 +4807,7 @@ class PandasDataframe(
         )
 
     @classmethod
-    def from_dataframe(cls, df: ProtocolDataframe) -> PandasDataframe:
+    def from_interchange_dataframe(cls, df: ProtocolDataframe) -> PandasDataframe:
         """
         Convert a DataFrame implementing the dataframe exchange protocol to a Core Modin Dataframe.
 

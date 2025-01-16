@@ -59,6 +59,9 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     GroupByDefault,
     SeriesGroupByDefault,
 )
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
     ModinDtypes,
@@ -389,8 +392,8 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         )
 
     @classmethod
-    def from_dataframe(cls, df, data_cls):
-        return cls(data_cls.from_dataframe(df))
+    def from_interchange_dataframe(cls, df: ProtocolDataframe, data_cls):
+        return cls(data_cls.from_interchange_dataframe(df))
 
     # END Dataframe exchange protocol
 

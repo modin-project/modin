@@ -29,7 +29,7 @@ def test_base_abstract_methods():
         "from_pandas",
         "from_arrow",
         "default_to_pandas",
-        "from_dataframe",
+        "from_interchange_dataframe",
         "to_interchange_dataframe",
     ]
 
