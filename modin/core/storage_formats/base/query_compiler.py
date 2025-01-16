@@ -45,6 +45,9 @@ from modin.core.dataframe.algebra.default2pandas import (
     StrDefault,
     StructDefault,
 )
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
@@ -472,7 +475,9 @@ class BaseQueryCompiler(
     # Dataframe exchange protocol
 
     @abc.abstractmethod
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+    def to_interchange_dataframe(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ) -> ProtocolDataframe:
         """
         Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
 
