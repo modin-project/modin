@@ -32,6 +32,7 @@ from modin.config.pubsub import (
     ValueSource,
 )
 
+
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
@@ -169,13 +170,10 @@ class IsDebug(EnvironmentVariable, type=bool):
     varname = "MODIN_DEBUG"
 
 
-class DataFrameVariable(EnvironmentVariable, type=str):
-    @classmethod
-    def get(cls) -> Any:
-        return super().get()
-
-class Engine(DataFrameVariable, type=str):
-    """Distribution engine to run queries by."""
+class Engine(EnvironmentVariable, type=str):
+    # TODO(hybrid-execution): We should probably rename this to DefaultEngine
+    # to prevent confusing it with the per-dataframe engine.
+    """The default engine for new dataframes."""
 
     varname = "MODIN_ENGINE"
     choices = ("Ray", "Dask", "Python", "Unidist")
@@ -196,6 +194,7 @@ class Engine(DataFrameVariable, type=str):
         str
         """
         from modin.utils import MIN_DASK_VERSION, MIN_RAY_VERSION, MIN_UNIDIST_VERSION
+
         # If there's a custom engine, we don't need to check for any engine
         # dependencies. Return the default "Python" engine.
         if IsDebug.get() or cls.has_custom_engine:

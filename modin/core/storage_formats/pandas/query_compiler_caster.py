@@ -21,6 +21,7 @@ This ensures compatibility between different query compiler classes.
 
 import functools
 import inspect
+from functools import cached_property
 from types import FunctionType, MethodType
 from typing import Any, Dict, Tuple, TypeVar
 
@@ -53,6 +54,20 @@ class QueryCompilerCaster:
         """
         super().__init_subclass__(**kwargs)
         apply_argument_cast(cls)
+
+        # TODO(hybrid-execution): This is a trick to propagate the storage
+        # format and engine through nearly all query compiler methods. Since
+        # the query compiler caster tries to convert other query compiler
+        # inputs to the type of this query compiler, we can assume that the
+        # output query compiler has the same type as the current query
+        # compiler. Caveat: the query compiler caster looks at type only, but
+        # doesn't differentiate between two query compilers with different
+        # storage formats / engines
+        cls.__constructor__ = cached_property(
+            lambda self: functools.partial(
+                type(self), engine=self.engine, storage_format=self.storage_format
+            )
+        )
 
 
 def cast_nested_args_to_current_qc_type(arguments, current_qc):

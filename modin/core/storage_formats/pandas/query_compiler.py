@@ -45,7 +45,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
-from modin.config import CpuCount, RangePartitioning
+from modin.config import CpuCount, Engine, RangePartitioning, StorageFormat
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -292,9 +292,20 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     _modin_frame: PandasDataframe
     _shape_hint: Optional[str]
 
-    def __init__(self, modin_frame: PandasDataframe, shape_hint: Optional[str] = None):
+    def __init__(
+        self,
+        modin_frame: PandasDataframe,
+        storage_format: str,
+        engine: str,
+        shape_hint: Optional[str] = None,
+    ):
         self._modin_frame = modin_frame
         self._shape_hint = shape_hint
+        self._storage_format = storage_format
+        self._engine = engine
+
+    storage_format = property(lambda self: self._storage_format)
+    engine = property(lambda self: self._engine)
 
     @property
     def lazy_row_labels(self):
@@ -373,7 +384,11 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
 
     @classmethod
     def from_pandas(cls, df, data_cls):
-        return cls(data_cls.from_pandas(df))
+        return cls(
+            data_cls.from_pandas(df),
+            engine=Engine.get(),
+            storage_format=StorageFormat.get(),
+        )
 
     @classmethod
     def from_arrow(cls, at, data_cls):
@@ -2315,7 +2330,12 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
         return self.__constructor__(
-            self._modin_frame.astype(col_dtypes, errors=errors),
+            self._modin_frame.astype(
+                col_dtypes,
+                errors=errors,
+                engine=self.engine,
+                storage_format=self.storage_format,
+            ),
             shape_hint=self._shape_hint,
         )
 

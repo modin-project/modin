@@ -33,7 +33,6 @@ from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_d
 from pandas.core.indexes.api import Index, RangeIndex
 
 from modin.config import (
-    Engine,
     IsRayCluster,
     MinColumnPartitionSize,
     MinRowPartitionSize,
@@ -1677,7 +1676,9 @@ class PandasDataframe(
         )
 
     @lazy_metadata_decorator(apply_axis="both")
-    def astype(self, col_dtypes, errors: str = "raise"):
+    def astype(
+        self, col_dtypes, engine: str, storage_format: str, errors: str = "raise"
+    ):
         """
         Convert the columns dtypes to given dtypes.
 
@@ -1707,7 +1708,7 @@ class PandasDataframe(
                         new_dtypes = self_dtypes.copy()
                     # Update the new dtype series to the proper pandas dtype
                     new_dtype = pandas.api.types.pandas_dtype(dtype)
-                    if self._getEngineConfig().get() == "Dask" and hasattr(dtype, "_is_materialized"):
+                    if engine == "Dask" and hasattr(dtype, "_is_materialized"):
                         # FIXME: https://github.com/dask/distributed/issues/8585
                         _ = dtype._materialize_categories()
 
@@ -1736,7 +1737,7 @@ class PandasDataframe(
             if not (col_dtypes == self_dtypes).all():
                 new_dtypes = self_dtypes.copy()
                 new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
-                if self._getEngineConfig().get() == "Dask" and hasattr(new_dtype, "_is_materialized"):
+                if engine == "Dask" and hasattr(new_dtype, "_is_materialized"):
                     # FIXME: https://github.com/dask/distributed/issues/8585
                     _ = new_dtype._materialize_categories()
                 if isinstance(new_dtype, pandas.CategoricalDtype):
