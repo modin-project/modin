@@ -174,7 +174,7 @@ class DataFrameVariable(EnvironmentVariable, type=str):
     def get(cls) -> Any:
         return super().get()
 
-class Engine(DataFrameVariable, type=str):
+class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"

@@ -64,7 +64,7 @@ from pandas._typing import (
 from pandas.io.parsers import TextFileReader
 from pandas.io.parsers.readers import _c_parser_defaults
 
-from modin.config import ModinNumpy
+from modin.config import ModinNumpy, StorageFormat, Engine
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
@@ -991,7 +991,7 @@ def from_pandas(df) -> DataFrame:
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df), engine=Engine.get(), storage_format=StorageFormat.get())
 
 
 def from_arrow(at) -> DataFrame:
