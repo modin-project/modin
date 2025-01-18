@@ -31,7 +31,6 @@ from typing import (
     Union,
 )
 
-from modin.config.envvars import Engine, StorageFormat
 import numpy as np
 import pandas
 import pandas.core.generic
@@ -75,6 +74,7 @@ from pandas.util._validators import (
 )
 
 from modin import pandas as pd
+from modin.config.envvars import Engine, StorageFormat
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
@@ -211,18 +211,22 @@ class BasePandasDataset(ClassLogger):
     _siblings: list[BasePandasDataset]
     _engine_override: Engine = None
     _storage_override: StorageFormat = None
-    
+
     def _getEngineConfig(self) -> Engine:
         if self._engine_override is not None:
             return self._engine_override
-        else: 
+        else:
             return Engine
-    
+
     def _getStorageConfig(self) -> Engine:
         if self._storage_override is not None:
             return self._storage_override
-        else: 
+        else:
             return StorageFormat
+
+    engine = property(lambda self: self._query_compiler.engine)
+
+    storage_format = property(lambda self: self._query_compiler.storage_format)
 
     @cached_property
     def _is_dataframe(self) -> bool:
