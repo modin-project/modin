@@ -151,6 +151,12 @@ class array(object):
     provide functionality.
     """
 
+    # TODO(hybrid-execution): save the possible engine / storage format values
+    # to a constant and restrict the types of _engine and _storage_format to
+    # those values
+    _engine: str
+    _storage_format: str
+
     def __init__(
         self,
         object=None,

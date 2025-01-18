@@ -19,7 +19,7 @@ import abc
 import pickle as pkl
 import re
 import warnings
-from functools import cached_property
+from functools import cached_property, wraps
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -193,6 +193,17 @@ def _get_repr_axis_label_indexer(labels, num_for_repr):
         [] if back_repr_num == 0 else list(all_positions[-back_repr_num:])
     )
 
+def _ensure_engine_and_storage_format_set_post_init(init):
+    @wraps(init)
+    def wrapped_init(self, *args, **kwargs):
+        init(self, *args, **kwargs)
+        assert self._engine  is not None, (
+            f"Internal error: must initialize {type(self)} with engine"
+        )
+        assert self._engine  is not None, (
+            f"Internal error: must initialize {type(self)} with storage format"
+        )
+    return wrapped_init
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
 class BasePandasDataset(ClassLogger):
@@ -209,20 +220,15 @@ class BasePandasDataset(ClassLogger):
     _pandas_class = pandas.core.generic.NDFrame
     _query_compiler: BaseQueryCompiler
     _siblings: list[BasePandasDataset]
-    _engine_override: Engine = None
-    _storage_override: StorageFormat = None
+    # TODO(hybrid-execution): save the possible engine / storage format values
+    # to a constant and restrict the types of _engine and _storage_format to
+    # those values
+    _engine: str = None
+    _storage_format: str = None
     
-    def _getEngineConfig(self) -> Engine:
-        if self._engine_override is not None:
-            return self._engine_override
-        else: 
-            return Engine
-    
-    def _getStorageConfig(self) -> Engine:
-        if self._storage_override is not None:
-            return self._storage_override
-        else: 
-            return StorageFormat
+    engine = property(lambda self: self._engine)
+
+    storage_format = property(lambda self: self._storage_format)
 
     @cached_property
     def _is_dataframe(self) -> bool:
@@ -242,7 +248,7 @@ class BasePandasDataset(ClassLogger):
 
     @abc.abstractmethod
     def _create_or_update_from_compiler(
-        self, new_query_compiler: BaseQueryCompiler, inplace: bool = False
+        self, new_query_compiler: BaseQueryCompiler, new_engine: str, new_storage_format: str, inplace: bool = False
     ) -> Self | None:
         """
         Return or update a ``DataFrame`` or ``Series`` with given `new_query_compiler`.
@@ -317,7 +323,7 @@ class BasePandasDataset(ClassLogger):
             indexer = row_indexer
         return self.iloc[indexer]._query_compiler.to_pandas()
 
-    def _update_inplace(self, new_query_compiler: BaseQueryCompiler) -> None:
+    def _update_inplace(self, new_query_compiler: BaseQueryCompiler, new_storage_format: str, new_engine: str) -> None:
         """
         Update the current DataFrame inplace.
 
@@ -331,6 +337,8 @@ class BasePandasDataset(ClassLogger):
         for sib in self._siblings:
             sib._query_compiler = new_query_compiler
         old_query_compiler.free()
+        self._storage_format = new_storage_format
+        self._new_engine = new_engine
 
     def _validate_other(
         self,
@@ -538,7 +546,7 @@ class BasePandasDataset(ClassLogger):
         if not self._is_dataframe and op in series_specialize_list:
             op = "series_" + op
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
-        return self._create_or_update_from_compiler(new_query_compiler)
+        return self._create_or_update_from_compiler(new_query_compiler, self.engine, self.storage_format)
 
     def _default_to_pandas(self, op, *args, reason: str = None, **kwargs):
         """

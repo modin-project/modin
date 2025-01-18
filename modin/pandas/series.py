@@ -31,7 +31,7 @@ from pandas.core.series import _coerce_method
 from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import PersistentPickle
+from modin.config import PersistentPickle, StorageFormat, Engine
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import (
@@ -41,7 +41,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseAccessor
-from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset, _ensure_engine_and_storage_format_set_post_init
 from .iterator import PartitionIterator
 from .series_utils import (
     CategoryMethods,
@@ -99,6 +99,7 @@ class Series(BasePandasDataset):
     _pandas_class = pandas.Series
     __array_priority__ = pandas.Series.__array_priority__
 
+    @_ensure_engine_and_storage_format_set_post_init
     def __init__(
         self,
         data=None,
@@ -108,6 +109,8 @@ class Series(BasePandasDataset):
         copy=None,
         fastpath=lib.no_default,
         query_compiler: BaseQueryCompiler = None,
+        engine: str = None,
+        storage_format: str = None        
     ) -> None:
         from modin.numpy import array
 
@@ -116,6 +119,8 @@ class Series(BasePandasDataset):
         self._siblings = []
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
+            self._engine = data.engine
+            self._storage_format = data.storage_format            
             if index is not None:
                 if any(i not in data.index for i in index):
                     raise NotImplementedError(
@@ -124,6 +129,8 @@ class Series(BasePandasDataset):
                     )
                 query_compiler = data.loc[index]._query_compiler
         if isinstance(data, array):
+            self._engine = data.engine
+            self._storage_format = data.storage_format                   
             if data._ndim == 2:
                 raise ValueError("Data must be 1-dimensional")
             query_compiler = data._query_compiler.copy()
@@ -159,6 +166,13 @@ class Series(BasePandasDataset):
                     )
                 )
             query_compiler = from_pandas(pandas_df)._query_compiler
+            self._engine = Engine.get()
+            self._storage_format = StorageFormat.get()
+        else:
+            assert storage_format is not None
+            assert engine is not None
+            self._engine = engine
+            self._storage_format = storage_format
         self._query_compiler = query_compiler.columnarize()
         if name is not None:
             self.name = name
@@ -2545,7 +2559,7 @@ class Series(BasePandasDataset):
         """
         return self
 
-    def _update_inplace(self, new_query_compiler) -> None:
+    def _update_inplace(self, new_query_compiler, engine: str, storage_format: str) -> None:
         """
         Update the current Series in-place using `new_query_compiler`.
 
@@ -2554,7 +2568,7 @@ class Series(BasePandasDataset):
         new_query_compiler : BaseQueryCompiler
             QueryCompiler to use to manage the data.
         """
-        super(Series, self)._update_inplace(new_query_compiler=new_query_compiler)
+        super(Series, self)._update_inplace(new_query_compiler=new_query_compiler, new_storage_format=storage_format, new_engine=engine)
         # Propagate changes back to parent so that column in dataframe had the same contents
         if self._parent is not None:
             if self._parent_axis == 0:
@@ -2563,7 +2577,7 @@ class Series(BasePandasDataset):
                 self._parent[self.name] = self
 
     def _create_or_update_from_compiler(
-        self, new_query_compiler, inplace=False
+        self, new_query_compiler: BaseQueryCompiler, new_engine: str, new_storage_format: str, inplace: bool = False
     ) -> Union[Series, None]:
         """
         Return or update a Series with given `new_query_compiler`.
@@ -2585,12 +2599,12 @@ class Series(BasePandasDataset):
             or type(new_query_compiler) in self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace and new_query_compiler.is_series_like():
-            return self.__constructor__(query_compiler=new_query_compiler)
+            return self.__constructor__(query_compiler=new_query_compiler, engine=new_engine, storage_format=new_storage_format)
         elif not inplace:
             # This can happen with things like `reset_index` where we can add columns.
             from .dataframe import DataFrame
 
-            return DataFrame(query_compiler=new_query_compiler)
+            return DataFrame(query_compiler=new_query_compiler, engine=new_engine, storage_format=new_storage_format)
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
 

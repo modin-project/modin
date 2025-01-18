@@ -57,7 +57,7 @@ from pandas.core.indexes.frozen import FrozenList
 from pandas.io.formats.info import DataFrameInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import PersistentPickle
+from modin.config import PersistentPickle, StorageFormat, Engine
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
@@ -72,7 +72,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseFrameAccessor
-from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset, _ensure_engine_and_storage_format_set_post_init
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
@@ -137,6 +137,7 @@ class DataFrame(BasePandasDataset):
 
     _pandas_class = pandas.DataFrame
 
+    @_ensure_engine_and_storage_format_set_post_init
     def __init__(
         self,
         data=None,
@@ -145,6 +146,8 @@ class DataFrame(BasePandasDataset):
         dtype=None,
         copy=None,
         query_compiler: BaseQueryCompiler = None,
+        engine: str = None,
+        storage_format: str = None
     ) -> None:
         from modin.numpy import array
 
@@ -153,6 +156,8 @@ class DataFrame(BasePandasDataset):
         self._siblings = []
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
+            self._engine = data.engine
+            self._storage_format = data.storage_format
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
@@ -185,22 +190,26 @@ class DataFrame(BasePandasDataset):
                 self._query_compiler = data.loc[index, columns]._query_compiler
         elif isinstance(data, array):
             self._query_compiler = data._query_compiler.copy()
+            self._engine = data.engine
+            self._storage_format = data.storage_format
             if copy is not None and not copy:
                 data._add_sibling(self)
             if columns is not None and not isinstance(columns, pandas.Index):
                 columns = pandas.Index(columns)
             if columns is not None:
                 obj_with_new_columns = self.set_axis(columns, axis=1, copy=False)
-                self._update_inplace(obj_with_new_columns._query_compiler)
+                self._update_inplace(obj_with_new_columns._query_compiler, obj_with_new_columns.engine, obj_with_new_columns.storage_format)
             if index is not None:
                 obj_with_new_index = self.set_axis(index, axis=0, copy=False)
-                self._update_inplace(obj_with_new_index._query_compiler)
+                self._update_inplace(obj_with_new_index._query_compiler, obj_with_new_index.engine, obj_with_new_index.storage_format)
             if dtype is not None:
                 casted_obj = self.astype(dtype, copy=False)
                 self._query_compiler = casted_obj._query_compiler
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
+            self._storage_format = StorageFormat.get()
+            self._engine = Engine.get()
             if distributed_frame is not None:
                 self._query_compiler = distributed_frame._query_compiler
                 return
@@ -227,6 +236,11 @@ class DataFrame(BasePandasDataset):
                     data = {key: value for key, value in data.items() if key in columns}
 
                 if len(data) and all(isinstance(v, Series) for v in data.values()):
+                    if (
+                        len(set(v.storage_format for v in data.values())) > 1 or 
+                        len(set(v.engine for v in data.values())) > 1
+                    ):
+                        raise NotImplementedError('multiple executions in input data')
                     from .general import concat
 
                     new_qc = concat(
@@ -258,7 +272,16 @@ class DataFrame(BasePandasDataset):
                 )
             self._query_compiler = from_pandas(pandas_df)._query_compiler
         else:
+            assert engine is not None, (
+                "When initializing dataframe with query compiler, must provide Engine"
+            )
+            assert storage_format is not None, (
+                "When initializing dataframe with query compiler, must provide Engine"
+            )            
             self._query_compiler = query_compiler
+            self._engine = engine
+            self._storage_format = storage_format
+
 
     def __repr__(self) -> str:
         """
@@ -2641,7 +2664,7 @@ class DataFrame(BasePandasDataset):
         #   __dict__
         # - `_siblings`, which Modin initializes before it appears in __dict__
         #   before it appears in __dict__.
-        if key in ("_query_compiler", "_siblings") or key in self.__dict__:
+        if key in ("_query_compiler", "_siblings", "_engine", "_storage_format") or key in self.__dict__:
             pass
         # we have to check for the key in `dir(self)` first in order not to trigger columns computation
         elif key not in dir(self) and key in self:
@@ -2983,7 +3006,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def _create_or_update_from_compiler(
-        self, new_query_compiler, inplace=False
+        self, new_query_compiler: BaseQueryCompiler, new_engine: str, new_storage_format: str, inplace: bool = False
     ) -> Union[DataFrame, None]:
         """
         Return or update a ``DataFrame`` with given `new_query_compiler`.
@@ -3004,9 +3027,9 @@ class DataFrame(BasePandasDataset):
             new_query_compiler, self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
-            return self.__constructor__(query_compiler=new_query_compiler)
+            return self.__constructor__(query_compiler=new_query_compiler, engine=new_engine, storage_format=new_storage_format)
         else:
-            self._update_inplace(new_query_compiler=new_query_compiler)
+            self._update_inplace(new_query_compiler=new_query_compiler, new_storage_format=new_storage_format, new_engine=new_engine)
 
     def _get_numeric_data(self, axis: int) -> DataFrame:
         """
