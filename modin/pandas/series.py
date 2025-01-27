@@ -114,8 +114,11 @@ class Series(BasePandasDataset):
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
+        self._attrs = {}
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
+            if len(data._attrs):
+                self._attrs = copy.deepcopy(data._attrs)
             if index is not None:
                 if any(i not in data.index for i in index):
                     raise NotImplementedError(
@@ -2263,17 +2266,6 @@ class Series(BasePandasDataset):
             axis=axis,
             level=level,
         )
-
-    @property
-    def attrs(self) -> dict:  # noqa: RT01, D200
-        """
-        Return dictionary of global attributes of this dataset.
-        """
-
-        def attrs(df):
-            return df.attrs
-
-        return self._default_to_pandas(attrs)
 
     @property
     def array(self) -> ExtensionArray:  # noqa: RT01, D200

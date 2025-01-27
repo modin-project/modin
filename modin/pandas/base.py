@@ -16,6 +16,8 @@
 from __future__ import annotations
 
 import abc
+import copy
+import functools
 import pickle as pkl
 import re
 import warnings
@@ -105,6 +107,7 @@ _ATTRS_NO_LOOKUP = {
     "_ipython_canary_method_should_not_exist_",
     "_ipython_display_",
     "_repr_mimebundle_",
+    "_attrs",
 }
 
 _DEFAULT_BEHAVIOUR = {
@@ -193,6 +196,26 @@ def _get_repr_axis_label_indexer(labels, num_for_repr):
     )
 
 
+def propagate_self_attrs(method):
+    """
+    Wrap a BasePandasDataset/DataFrame/Series method with a function that automatically deep-copies self.attrs if present.
+
+    This annotation should not be used on special methods like concat, str, and groupby, which may need to
+    examine multiple sources to reconcile `attrs`.
+    """
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        result = method(self, *args, **kwargs)
+        if isinstance(result, BasePandasDataset) and len(self._attrs):
+            # If the result of the method call is a modin.pandas object and `self.attrs` is
+            # not empty, perform a deep copy of `self.attrs`.
+            result._attrs = copy.deepcopy(self._attrs)
+        return result
+
+    return wrapper
+
+
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
 class BasePandasDataset(ClassLogger):
     """
@@ -208,6 +231,7 @@ class BasePandasDataset(ClassLogger):
     _pandas_class = pandas.core.generic.NDFrame
     _query_compiler: BaseQueryCompiler
     _siblings: list[BasePandasDataset]
+    _attrs: dict
 
     @cached_property
     def _is_dataframe(self) -> bool:
@@ -1124,6 +1148,20 @@ class BasePandasDataset(ClassLogger):
         from .indexing import _LocIndexer
 
         return _LocIndexer(self)
+
+    def _set_attrs(self, key: Any, value: Any) -> dict:  # noqa: PR01, RT01, D200
+        """
+        Set the dictionary of global attributes of this dataset.
+        """
+        self._attrs[key] = value
+
+    def _get_attrs(self) -> dict:  # noqa: PR01, RT01, D200
+        """
+        Get the dictionary of global attributes of this dataset.
+        """
+        return self._attrs
+
+    attrs: dict = property(_get_attrs, _set_attrs)
 
     def at_time(self, time, asof=False, axis=None) -> Self:  # noqa: PR01, RT01, D200
         """
@@ -3221,6 +3259,7 @@ class BasePandasDataset(ClassLogger):
             return self.iloc[-n:]
         return self.iloc[len(self) :]
 
+    @propagate_self_attrs
     def take(self, indices, axis=0, **kwargs) -> Self:  # noqa: PR01, RT01, D200
         """
         Return the elements in the given *positional* indices along an axis.
