@@ -31,6 +31,8 @@ def test_base_abstract_methods():
         "default_to_pandas",
         "from_interchange_dataframe",
         "to_interchange_dataframe",
+        "engine",
+        "storage_format",
     ]
 
     not_implemented_methods = BASE_EXECUTION.__abstractmethods__.difference(

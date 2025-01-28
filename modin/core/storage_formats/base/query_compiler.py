@@ -153,11 +153,27 @@ class BaseQueryCompiler(
     @property
     @abc.abstractmethod
     def storage_format(self) -> str:
+        """
+        The storage format for this query compiler.
+
+        Returns
+        -------
+        str
+            The storage format.
+        """
         pass
 
     @property
     @abc.abstractmethod
     def engine(self) -> str:
+        """
+        The engine.
+
+        Returns
+        -------
+        str
+            The engine.
+        """
         pass
 
     def __wrap_in_qc(self, obj):
@@ -7029,7 +7045,7 @@ class BaseQueryCompiler(
 
         new_query_compiler = self
         for _ax in axes:
-            new_query_compiler = new_query_compiler._constructor(
+            new_query_compiler = new_query_compiler.__constructor__(
                 new_query_compiler._modin_frame.apply_full_axis(
                     _ax,
                     lambda df: df,

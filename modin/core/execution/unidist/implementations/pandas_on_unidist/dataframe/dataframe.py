@@ -14,6 +14,7 @@
 """Module houses class that implements ``PandasDataframe`` using unidist."""
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.utils import _inherit_docstrings
 
 from ..partitioning.partition_manager import PandasOnUnidistDataframePartitionManager
 
@@ -47,3 +48,8 @@ class PandasOnUnidistDataframe(PandasDataframe):
     def support_materialization_in_worker_process(self) -> bool:
         # more details why this is not `True` in https://github.com/modin-project/modin/pull/6673
         return False
+
+    @property
+    @_inherit_docstrings(PandasDataframe.engine)
+    def engine(self) -> str:
+        return "Unidist"

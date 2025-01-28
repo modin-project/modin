@@ -97,7 +97,7 @@ class CorrCovBuilder:
                 new_columns=new_columns,
                 new_dtypes=new_dtypes,
             )
-            return qc._constructor(result)
+            return qc.__constructor__(result)
 
         return corr_method
 
