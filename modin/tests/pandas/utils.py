@@ -924,9 +924,18 @@ def eval_general(
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
+    check_for_engine_propagation=True,
+    no_check_for_engine_propagation_justification=None,
     **kwargs,
 ):
     md_kwargs, pd_kwargs = {}, {}
+
+    if isinstance(modin_df, (pd.DataFrame, pd.Series)):
+        original_engine = modin_df._query_compiler.engine
+        original_storage_format = modin_df._query_compiler.storage_format
+    else:
+        original_engine = None
+        original_storage_format = None
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
         try:
@@ -1000,7 +1009,35 @@ def eval_general(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
     if values is not None:
-        comparator(*values, **(comparator_kwargs or {}))
+        assert isinstance(values, tuple) and len(values) == 2
+        modin_result, pandas_result = values
+        if (
+            isinstance(modin_result, (pd.DataFrame, pd.Series))
+            and original_engine is not None
+            and original_storage_format is not None
+        ):
+            if check_for_engine_propagation:
+                assert modin_result._query_compiler.engine == original_engine, (
+                    f"Result engine {modin_result._query_compiler.engine} does "
+                    + f"not match expected engine {original_engine}"
+                )
+                assert (
+                    modin_result._query_compiler.storage_format
+                    == original_storage_format
+                ), (
+                    "Result storage format "
+                    + f"{modin_result._query_compiler.storage_format} does "
+                    + f"not match expected storage format {original_storage_format}"
+                )
+            else:
+                assert (
+                    isinstance(no_check_for_engine_propagation_justification, str)
+                    and len(no_check_for_engine_propagation_justification) > 0
+                ), (
+                    "Must provide a reason for not expecting the operation to "
+                    + "propagate dataframe/series engine."
+                )
+        comparator(modin_result, pandas_result, **(comparator_kwargs or {}))
 
 
 def eval_io(

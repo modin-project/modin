@@ -446,7 +446,7 @@ class GroupByReduce(TreeReduce):
             new_index=new_index,
         )
 
-        result = query_compiler.__constructor__(new_modin_frame)
+        result = query_compiler._constructor(new_modin_frame)
         return result
 
     @classmethod

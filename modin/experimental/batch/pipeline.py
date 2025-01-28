@@ -379,7 +379,9 @@ class PandasQueryPipeline(object):
                 row_lengths=list(map(len, internal_rows)),
                 column_widths=list(map(len, internal_cols)),
             )
-            query_compiler = PandasQueryCompiler(result_modin_frame)
+            query_compiler = PandasQueryCompiler(
+                result_modin_frame, storage_format="Pandas", engine="Ray"
+            )
             result_df = pd.DataFrame(query_compiler=query_compiler)
             final_results[id] = result_df
 

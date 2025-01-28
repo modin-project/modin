@@ -403,7 +403,7 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id, df_mode
                 pandas.Series(value)
                 if isinstance(df, pandas.DataFrame)
                 else create_test_series_in_defined_mode(value, df_mode=df_mode_pair[1])[
-                    1
+                    0
                 ]
             )
         else:
@@ -428,6 +428,10 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id, df_mode
             "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
         },
         expected_exception=expected_exception,
+        check_for_engine_propagation=False,
+        no_check_for_engine_propagation_justification=(
+            "https://github.com/modin-project/modin/issues/7428"
+        ),
     )
 
 

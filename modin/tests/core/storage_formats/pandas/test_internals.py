@@ -435,7 +435,7 @@ def test_rebalance_partitions(test_type, set_num_partitions):
         for ptn in large_apply_result_frame._partitions.flatten()
     ), "Partitions are not block partitioned after column-wise apply."
     large_df = pd.DataFrame(
-        query_compiler=large_df._query_compiler.__constructor__(large_modin_frame)
+        query_compiler=large_df._query_compiler._constructor(large_modin_frame)
     )
     # The following check tests that we can correctly form full-axis virtual partitions
     # over the same axis from non-full-axis virtual partitions.

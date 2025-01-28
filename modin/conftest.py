@@ -165,6 +165,9 @@ class TestQC(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
+    storage_format = property(lambda self: "Base")
+    engine = property(lambda self: "Python")
+
     def finalize(self):
         self._modin_frame.finalize()
 

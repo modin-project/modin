@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Optional, Union
 import numpy as np
 from pandas._typing import Axes
 
+from modin.config import Engine, StorageFormat
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame, Series
 
@@ -272,4 +273,10 @@ def from_partitions(
     if labels_axis_to_sync != -1:
         frame.synchronize_labels(axis=labels_axis_to_sync)
 
-    return DataFrame(query_compiler=PandasQueryCompiler(frame))
+    return DataFrame(
+        query_compiler=PandasQueryCompiler(
+            modin_frame=frame,
+            storage_format=StorageFormat.get(),
+            engine=Engine.get(),
+        )
+    )

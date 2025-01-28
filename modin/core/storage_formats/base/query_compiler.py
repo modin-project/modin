@@ -150,6 +150,16 @@ class BaseQueryCompiler(
     _modin_frame: PandasDataframe
     _shape_hint: Optional[str]
 
+    @property
+    @abc.abstractmethod
+    def storage_format(self) -> str:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def engine(self) -> str:
+        pass
+
     def __wrap_in_qc(self, obj):
         """
         Wrap `obj` in query compiler.
@@ -7019,7 +7029,7 @@ class BaseQueryCompiler(
 
         new_query_compiler = self
         for _ax in axes:
-            new_query_compiler = new_query_compiler.__constructor__(
+            new_query_compiler = new_query_compiler._constructor(
                 new_query_compiler._modin_frame.apply_full_axis(
                     _ax,
                     lambda df: df,

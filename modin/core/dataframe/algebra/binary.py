@@ -393,7 +393,7 @@ class Binary(Operator):
                             and query_compiler.columns.equals(other.columns)
                         ):
                             shape_hint = "column"
-                    return query_compiler.__constructor__(
+                    return query_compiler._constructor(
                         query_compiler._modin_frame.broadcast_apply(
                             axis,
                             lambda left, right: func(
@@ -417,7 +417,7 @@ class Binary(Operator):
                             and query_compiler.columns.equals(other.columns)
                         ):
                             shape_hint = "column"
-                    return query_compiler.__constructor__(
+                    return query_compiler._constructor(
                         query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
@@ -453,7 +453,7 @@ class Binary(Operator):
                         dtypes=dtypes,
                         lazy=True,
                     )
-                return query_compiler.__constructor__(
+                return query_compiler._constructor(
                     new_modin_frame, shape_hint=shape_hint
                 )
 

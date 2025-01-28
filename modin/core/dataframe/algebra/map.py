@@ -60,7 +60,7 @@ class Map(Operator):
         ) -> PandasQueryCompiler:
             """Execute Map function against passed query compiler."""
             shape_hint = call_kwds.pop("shape_hint", None) or query_compiler._shape_hint
-            return query_compiler.__constructor__(
+            return query_compiler._constructor(
                 query_compiler._modin_frame.map(
                     lambda x: function(x, *args, **kwargs), *call_args, **call_kwds
                 ),

@@ -366,7 +366,7 @@ class PivotTableImpl:
 
             return result
 
-        result = qc.__constructor__(
+        result = qc._constructor(
             to_group._modin_frame.broadcast_apply_full_axis(
                 axis=0, func=applyier, other=keys_columns._modin_frame
             )
@@ -438,7 +438,7 @@ class PivotTableImpl:
         if to_unstack is None:
             result = result.transpose()
 
-        return qc.__constructor__(result)
+        return qc._constructor(result)
 
     @staticmethod
     def _pivot_table_from_groupby(

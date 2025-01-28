@@ -70,7 +70,7 @@ class TreeReduce(Operator):
             if compute_dtypes and query_compiler.frame_has_materialized_dtypes:
                 new_dtypes = str(compute_dtypes(query_compiler.dtypes, *args, **kwargs))
 
-            return query_compiler.__constructor__(
+            return query_compiler._constructor(
                 query_compiler._modin_frame.tree_reduce(
                     cls.validate_axis(_axis),
                     lambda x: map_function(x, *args, **kwargs),

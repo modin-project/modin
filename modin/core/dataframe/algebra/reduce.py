@@ -60,7 +60,7 @@ class Reduce(Operator):
         ) -> PandasQueryCompiler:
             """Execute Reduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
-            return query_compiler.__constructor__(
+            return query_compiler._constructor(
                 query_compiler._modin_frame.reduce(
                     cls.validate_axis(_axis),
                     lambda x: reduce_function(x, *args, **kwargs),

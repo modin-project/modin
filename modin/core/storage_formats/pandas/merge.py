@@ -87,7 +87,7 @@ class MergeImpl:
             suffixes=kwargs.get("suffixes", ("_x", "_y")),
         )
 
-        return left.__constructor__(
+        return left._constructor(
             left._modin_frame._apply_func_to_range_partitioning_broadcast(
                 right._modin_frame,
                 func=func,
@@ -195,7 +195,7 @@ class MergeImpl:
             ):
                 left = left.repartition(axis=0)
 
-            new_left = left.__constructor__(
+            new_left = left._constructor(
                 left._modin_frame.broadcast_apply_full_axis(
                     axis=1,
                     func=map_func,
