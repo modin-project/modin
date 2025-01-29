@@ -295,11 +295,7 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     _modin_frame: PandasDataframe
     _shape_hint: Optional[str]
 
-    def __init__(
-        self,
-        modin_frame: PandasDataframe,
-        shape_hint: Optional[str] = None,
-    ):
+    def __init__(self, modin_frame: PandasDataframe, shape_hint: Optional[str] = None):
         self._modin_frame = modin_frame
         self._shape_hint = shape_hint
 

@@ -167,7 +167,7 @@ class BaseQueryCompiler(
     @abc.abstractmethod
     def engine(self) -> str:
         """
-        The engine.
+        The engine for this query compiler.
 
         Returns
         -------
