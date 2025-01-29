@@ -798,9 +798,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
         if sync_index:
             frame.synchronize_labels(axis=0)
-        return cls.query_compiler_cls(
-            frame,
-        )
+        return cls.query_compiler_cls(frame)
 
     @classmethod
     def _read(cls, path, engine, columns, use_nullable_dtypes, dtype_backend, **kwargs):

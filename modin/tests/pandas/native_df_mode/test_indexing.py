@@ -428,8 +428,8 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id, df_mode
             "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
         },
         expected_exception=expected_exception,
-        check_for_engine_propagation=False,
-        no_check_for_engine_propagation_justification=(
+        check_for_execution_propagation=False,
+        no_check_for_execution_propagation_reason=(
             "https://github.com/modin-project/modin/issues/7428"
         ),
     )

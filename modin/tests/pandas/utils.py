@@ -45,6 +45,7 @@ from modin.config import (
     MinRowPartitionSize,
     NPartitions,
     RangePartitioning,
+    StorageFormat,
     TestDatasetSize,
     TrackFileLeaks,
 )
@@ -924,8 +925,8 @@ def eval_general(
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
-    check_for_engine_propagation=True,
-    no_check_for_engine_propagation_justification=None,
+    check_for_execution_propagation=True,
+    no_check_for_execution_propagation_reason=None,
     **kwargs,
 ):
     md_kwargs, pd_kwargs = {}, {}
@@ -1016,7 +1017,7 @@ def eval_general(
             and original_engine is not None
             and original_storage_format is not None
         ):
-            if check_for_engine_propagation:
+            if check_for_execution_propagation:
                 assert modin_result._query_compiler.engine == original_engine, (
                     f"Result engine {modin_result._query_compiler.engine} does "
                     + f"not match expected engine {original_engine}"
@@ -1031,8 +1032,8 @@ def eval_general(
                 )
             else:
                 assert (
-                    isinstance(no_check_for_engine_propagation_justification, str)
-                    and len(no_check_for_engine_propagation_justification) > 0
+                    isinstance(no_check_for_execution_propagation_reason, str)
+                    and len(no_check_for_execution_propagation_reason) > 0
                 ), (
                     "Must provide a reason for not expecting the operation to "
                     + "propagate dataframe/series engine."
@@ -1079,6 +1080,12 @@ def eval_io(
         result = getattr(module, fn_name)(*args, **kwargs)
         if cast_to_str:
             result = result.astype(str)
+        if isinstance(result, (pd.DataFrame, pd.Series)):
+            # Input methods that return a dataframe, e.g. read_csv, should
+            # return a dataframe with engine and storage_format that match
+            # the default Engine and StorageFormat, respectively.
+            assert result._query_compiler.engine == Engine.get()
+            assert result._query_compiler.storage_format == StorageFormat.get()
         return result
 
     def call_eval_general():

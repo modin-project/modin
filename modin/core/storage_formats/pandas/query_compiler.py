@@ -383,15 +383,11 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
 
     @classmethod
     def from_pandas(cls, df, data_cls):
-        return cls(
-            data_cls.from_pandas(df),
-        )
+        return cls(data_cls.from_pandas(df))
 
     @classmethod
     def from_arrow(cls, at, data_cls):
-        return cls(
-            data_cls.from_arrow(at),
-        )
+        return cls(data_cls.from_arrow(at))
 
     # Dataframe exchange protocol
 
@@ -2331,10 +2327,7 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
         return self.__constructor__(
-            self._modin_frame.astype(
-                col_dtypes,
-                errors=errors,
-            ),
+            self._modin_frame.astype(col_dtypes, errors=errors),
             shape_hint=self._shape_hint,
         )
 
