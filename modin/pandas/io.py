@@ -1133,7 +1133,7 @@ def to_pandas(modin_obj: SupportsPublicToPandas) -> DataFrame | Series:
 
 
 def to_numpy(
-    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
+    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy],
 ) -> np.ndarray:
     """
     Convert a Modin object to a NumPy array.

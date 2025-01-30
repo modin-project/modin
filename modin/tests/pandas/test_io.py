@@ -69,7 +69,9 @@ from .utils import (
     parse_dates_values_by_id,
 )
 from .utils import test_data as utils_test_data
-from .utils import time_parsing_csv_path
+from .utils import (
+    time_parsing_csv_path,
+)
 
 if StorageFormat.get() == "Pandas":
     import modin.pandas as pd
