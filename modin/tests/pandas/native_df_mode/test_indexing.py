@@ -403,7 +403,7 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id, df_mode
                 pandas.Series(value)
                 if isinstance(df, pandas.DataFrame)
                 else create_test_series_in_defined_mode(value, df_mode=df_mode_pair[1])[
-                    0
+                    1
                 ]
             )
         else:
