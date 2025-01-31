@@ -45,6 +45,7 @@ from modin.config import (
     MinRowPartitionSize,
     NPartitions,
     RangePartitioning,
+    StorageFormat,
     TestDatasetSize,
     TrackFileLeaks,
 )
@@ -924,9 +925,18 @@ def eval_general(
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
+    check_for_execution_propagation=True,
+    no_check_for_execution_propagation_reason=None,
     **kwargs,
 ):
     md_kwargs, pd_kwargs = {}, {}
+
+    if isinstance(modin_df, (pd.DataFrame, pd.Series)):
+        original_engine = modin_df._query_compiler.engine
+        original_storage_format = modin_df._query_compiler.storage_format
+    else:
+        original_engine = None
+        original_storage_format = None
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
         try:
@@ -1000,7 +1010,35 @@ def eval_general(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
     if values is not None:
-        comparator(*values, **(comparator_kwargs or {}))
+        assert isinstance(values, tuple) and len(values) == 2
+        modin_result, pandas_result = values
+        if (
+            isinstance(modin_result, (pd.DataFrame, pd.Series))
+            and original_engine is not None
+            and original_storage_format is not None
+        ):
+            if check_for_execution_propagation:
+                assert modin_result._query_compiler.engine == original_engine, (
+                    f"Result engine {modin_result._query_compiler.engine} does "
+                    + f"not match expected engine {original_engine}"
+                )
+                assert (
+                    modin_result._query_compiler.storage_format
+                    == original_storage_format
+                ), (
+                    "Result storage format "
+                    + f"{modin_result._query_compiler.storage_format} does "
+                    + f"not match expected storage format {original_storage_format}"
+                )
+            else:
+                assert (
+                    isinstance(no_check_for_execution_propagation_reason, str)
+                    and len(no_check_for_execution_propagation_reason) > 0
+                ), (
+                    "Must provide a reason for not expecting the operation to "
+                    + "propagate dataframe/series engine."
+                )
+        comparator(modin_result, pandas_result, **(comparator_kwargs or {}))
 
 
 def eval_io(
@@ -1042,6 +1080,12 @@ def eval_io(
         result = getattr(module, fn_name)(*args, **kwargs)
         if cast_to_str:
             result = result.astype(str)
+        if isinstance(result, (pd.DataFrame, pd.Series)):
+            # Input methods that return a dataframe, e.g. read_csv, should
+            # return a dataframe with engine and storage_format that match
+            # the default Engine and StorageFormat, respectively.
+            assert result._query_compiler.engine == Engine.get()
+            assert result._query_compiler.storage_format == StorageFormat.get()
         return result
 
     def call_eval_general():

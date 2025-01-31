@@ -299,6 +299,9 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         self._modin_frame = modin_frame
         self._shape_hint = shape_hint
 
+    storage_format = property(lambda self: self._modin_frame.storage_format)
+    engine = property(lambda self: self._modin_frame.engine)
+
     @property
     def lazy_row_labels(self):
         """

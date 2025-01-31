@@ -150,6 +150,32 @@ class BaseQueryCompiler(
     _modin_frame: PandasDataframe
     _shape_hint: Optional[str]
 
+    @property
+    @abc.abstractmethod
+    def storage_format(self) -> str:
+        """
+        The storage format for this query compiler.
+
+        Returns
+        -------
+        str
+            The storage format.
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def engine(self) -> str:
+        """
+        The engine for this query compiler.
+
+        Returns
+        -------
+        str
+            The engine.
+        """
+        pass
+
     def __wrap_in_qc(self, obj):
         """
         Wrap `obj` in query compiler.

@@ -42,6 +42,9 @@ if "_MODIN_DOC_CHECKER_" in os.environ:
 
 # Check if the function already exists to avoid circular imports
 elif "remote_function" not in dir():
+    # TODO(https://github.com/modin-project/modin/issues/7429): Use
+    # frame-level engine config.
+
     from modin.config import Engine
 
     if Engine.get() == "Ray":

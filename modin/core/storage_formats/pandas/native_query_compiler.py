@@ -598,6 +598,11 @@ class NativeQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         self._modin_frame = pandas_frame
         self._shape_hint = shape_hint
 
+    storage_format = property(
+        lambda self: "Pandas", doc=BaseQueryCompiler.storage_format.__doc__
+    )
+    engine = property(lambda self: "Native", doc=BaseQueryCompiler.engine.__doc__)
+
     def execute(self):
         pass
 

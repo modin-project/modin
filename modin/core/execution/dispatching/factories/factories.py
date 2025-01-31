@@ -629,6 +629,8 @@ class BaseFactory(object):
         **kwargs : kwargs
             Arguments to the writer method.
         """
+        # TODO(https://github.com/modin-project/modin/issues/7429): Use
+        # frame-level execution instead of the global, default execution.
         current_execution = get_current_execution()
         if current_execution not in supported_executions:
             raise NotImplementedError(
