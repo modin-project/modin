@@ -764,7 +764,7 @@ jobs:
         run: python -m coverage combine
       - name: Generate coverage report in xml format
         run: python -m coverage xml
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: ${{ github.event_name == 'push' }}  # do not care about uploads in PR
           token: ${{ secrets.CODECOV_TOKEN }} # this token is available at https://app.codecov.io/account/github/modin-project/
