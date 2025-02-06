@@ -68,3 +68,18 @@ def test_interchange_with_pandas_string():
     modin_df = pd.DataFrame({"fips": ["01001"]})
     pandas_df = pandas.api.interchange.from_dataframe(modin_df.__dataframe__())
     df_equals(modin_df, pandas_df)
+
+
+def test_interchange_with_datetime():
+    date_range = pd.date_range(
+        start=pd.Timestamp("2024-01-01", unit="ns"),
+        end=pd.Timestamp("2024-03-01", unit="ns"),
+        freq="D",
+    )
+    modin_df = pd.DataFrame(
+        {
+            "datetime_s": date_range.astype("datetime64[s]"),
+            "datetime_ns": date_range.astype("datetime64[ns]"),
+        }
+    )
+    eval_df_protocol(modin_df)
