@@ -534,7 +534,7 @@ jobs:
       - run: |
           python -m pip install lazy_import
           python -m pytest modin/tests/pandas/integrations/
-        if: matrix.engine == 'python' matrix.engine == 'native' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
 
 
     # END tests that run on group 4, or in the single group for 'native' and
