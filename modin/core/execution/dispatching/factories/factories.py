@@ -796,6 +796,8 @@ class NativeIO(BaseIO):
 
 @doc(_doc_factory_class, execution_name="NativeOnNative")
 class NativeOnNativeFactory(BaseFactory):
+
     @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="`NativeIO`")
     def prepare(cls):
         cls.io_cls = NativeIO

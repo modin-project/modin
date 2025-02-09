@@ -157,9 +157,9 @@ class BaseQueryCompiler(
 
         Parameters
         ----------
-        method : str
+        message : str, default: ""
             Method that is defaulting to pandas.
-        reason : str
+        reason : str, default: ""
             Reason for default.
         """
         if self._should_warn_on_default_to_pandas:

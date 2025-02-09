@@ -59,9 +59,9 @@ class BaseIO:
 
         Parameters
         ----------
-        message : str
+        message : str, default: ""
             Method that is causing a default to pandas.
-        reason : str
+        reason : str, default: ""
             Reason for default.
         """
         if cls._should_warn_on_default_to_pandas:
