@@ -10,3 +10,12 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
+
+import itertools
+
+import pytest
+
+
+@pytest.fixture(params=list(itertools.product([True, False], repeat=2)))
+def df_mode_pair(request):
+    return request.param

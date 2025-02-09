@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NativeDataframeMode, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -32,7 +32,10 @@ from modin.tests.pandas.utils import (
     test_data_keys,
     test_data_values,
 )
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.tests.test_utils import (
+    df_or_series_using_native_execution,
+    warns_that_defaulting_to_pandas_if,
+)
 from modin.utils import get_current_execution
 
 NPartitions.put(4)
@@ -151,7 +154,9 @@ def test_math_functions_level(op):
     )
 
     # Defaults to pandas
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_df)
+    ):
         # Operation against self for sanity check
         getattr(modin_df, op)(modin_df, axis=0, level=1)
 
@@ -210,10 +215,6 @@ def test_comparison(data, op, other, request):
     StorageFormat.get() != "Pandas",
     reason="Modin on this engine doesn't create virtual partitions.",
 )
-@pytest.mark.skipif(
-    NativeDataframeMode.get() == "Pandas",
-    reason="NativeQueryCompiler does not contain partitions.",
-)
 @pytest.mark.parametrize(
     "left_virtual,right_virtual", [(True, False), (False, True), (True, True)]
 )
@@ -247,7 +248,9 @@ def test_multi_level_comparison(data, op):
     modin_df_multi_level.index = new_idx
 
     # Defaults to pandas
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_df_multi_level)
+    ):
         # Operation against self for sanity check
         getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 

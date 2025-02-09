@@ -251,7 +251,10 @@ jobs:
         if: failure()
 
   execution-filter:
-    # see if execution backend-specific changes were made
+    # Choose which executions we want to run all tests for on a pull request.
+    # We always test 'native' and 'python' executions completely because they
+    # are fast, but we only test ray, dask, and unidist, if we think this pull
+    # request is affecting how we execute with those engines specifically.
     runs-on: ubuntu-latest
     outputs:
       ray: ${{ steps.filter.outputs.ray }}
@@ -259,16 +262,12 @@ jobs:
       unidist: ${{ steps.filter.outputs.unidist }}
       engines: ${{ steps.engines.outputs.engines }}
       experimental: ${{ steps.experimental.outputs.experimental }}
-      test-native-dataframe-mode: ${{ steps.filter.outputs.test-native-dataframe-mode }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
       id: filter
       with:
         filters: |
-          test-native-dataframe-mode:
-            - 'modin/core/storage_formats/pandas/native_query_compiler.py'
-            - 'modin/core/storage_formats/base/query_compiler.py'
           shared: &shared
             - 'modin/core/execution/dispatching/**'
           ray:
@@ -285,7 +284,7 @@ jobs:
     - uses: actions/setup-python@v5
     - id: engines
       run: |
-        python -c "import sys, json; print('engines=' + json.dumps(['python'] + (sys.argv[1] == 'true' and ['ray'] or []) + (sys.argv[2] == 'true' and ['dask'] or []) ))" \
+        python -c "import sys, json; print('engines=' + json.dumps(['python', 'native'] + (sys.argv[1] == 'true' and ['ray'] or []) + (sys.argv[2] == 'true' and ['dask'] or []) ))" \
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
 
   test-all-unidist:
@@ -370,18 +369,26 @@ jobs:
           - ubuntu
           - windows
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
-        engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
+        # On push, run the tests for all engines. Otherwise, for pull requests,
+        # only run tests for engines that depend on files changed in this PR.
+        engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask", "native"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
           - group_2
           - group_3
           - group_4
-        exclude: # python engine only have one task group that contains all the tests
+        exclude: # python and native engines only have one task group that contains all the tests
           - engine: "python"
+            test_task: "group_2"
+          - engine: "native"
             test_task: "group_2"
           - engine: "python"
             test_task: "group_3"
+          - engine: "native"
+            test_task: "group_3"
           - engine: "python"
+            test_task: "group_4"
+          - engine: "native"
             test_task: "group_4"
     runs-on: ${{ matrix.os }}-latest
     defaults:
@@ -406,6 +413,9 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
+      - name: Set native storage format
+        run: echo "MODIN_STORAGE_FORMAT=Native" >> $GITHUB_ENV
+        if: matrix.engine == 'native'
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
         if: matrix.os == 'ubuntu' && matrix.engine == 'ray'
@@ -437,12 +447,18 @@ jobs:
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
         if: matrix.os == 'ubuntu'
 
+    # BEGIN partitioned execution tests. We run these tests along with group 1,
+    # or if we are on the "python" engine, which only has a single group. We
+    # skip these tests on the "native" engine, which does not use partitions.
+
       - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+        if: matrix.engine != 'native' && matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest modin/tests/pandas/internals/test_repartition.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+        if: matrix.engine != 'native' && matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest modin/tests/test_partition_api.py
-        if: matrix.engine != 'python' && matrix.test_task == 'group_1'
+        # Skip this test for python because we do not define unwrap_partitions()
+        # for python execution.
+        if: matrix.engine != 'native' && matrix.engine != 'python' && matrix.test_task == 'group_1'
       - name: xgboost tests
         run: |
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
@@ -452,54 +468,77 @@ jobs:
                   modin/tests/experimental/xgboost/test_default.py \
                   modin/tests/experimental/xgboost/test_xgboost.py \
                   modin/tests/experimental/xgboost/test_dmatrix.py
-        if: matrix.os != 'windows' && matrix.test_task == 'group_1'
+        if: matrix.engine != 'native' && matrix.os != 'windows' && matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+        if: matrix.engine != 'native'  && matrix.engine == 'python' || matrix.test_task == 'group_1'
+
+
+    # END partitioned execution tests.
+
+
+    # BEGIN test groups.
+    # Run all the tests in the corresponding group for this instance of the
+    # test matrix. For example, if we are in the matrix's 'group_4', run the
+    # tests for 'group_4'. For each of 'native' and 'python' engines,  we run
+    # all tests in a single job, so we ignore the grouping.
+
       - uses: ./.github/actions/run-core-tests/group_1
         with:
           # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
           # See https://github.com/modin-project/modin/issues/7387.
           parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_2
         with:
           # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
           # See https://github.com/modin-project/modin/issues/7387.
           parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_2'
       - uses: ./.github/actions/run-core-tests/group_3
         with:
           # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
           # See https://github.com/modin-project/modin/issues/7387.
           parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_3'
       - uses: ./.github/actions/run-core-tests/group_4
         with:
           # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
           # See https://github.com/modin-project/modin/issues/7387.
           parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/tests/numpy
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+
+    # END test groups.
+
+
+    # BEGIN some tests that we run along with group 4 for engines other than
+    # 'native' and 'python'. 'native' and 'python' jobs will run these tests
+    # along with all other tests in a single group.
+
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
-        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
+        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
+        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/tests/pandas/test_io.py --verbose
         timeout-minutes: 60
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/experimental/test_io_exp.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/tests/polars/test_dataframe.py
       - run: |
           python -m pip install lazy_import
           python -m pytest modin/tests/pandas/integrations/
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+        if: matrix.engine == 'python' matrix.engine == 'native' || matrix.test_task == 'group_4'
+
+
+    # END tests that run on group 4, or in the single group for 'native' and
+    # python' engines.
 
       - uses: ./.github/actions/upload-coverage
       - name: Stop local ray cluster
@@ -507,6 +546,8 @@ jobs:
         if: matrix.os == 'windows' && matrix.engine == 'ray'
 
   test-sanity:
+    # The "sanity" tests run on each pull request to test that a subset of the
+    # full tests work with the slower engines (ray, dask, and unidist-MPI).
     needs: [lint-flake8, execution-filter, python-filter]
     if: github.event_name == 'pull_request'
     strategy:
@@ -518,12 +559,21 @@ jobs:
         execution:
           - name: ray
             shell-ex: "python -m pytest"
+            # If we're going to run all ray tests because we've detected a
+            # change to the ray engine, we don't need to run these sanity tests
+            # on ray.
             if: needs.execution-filter.ray != 'true'
           - name: dask
             shell-ex: "python -m pytest"
+            # If we're going to run all dask tests because we've detected a
+            # change to the dask engine, we don't need to run these sanity tests
+            # on dask.
             if: needs.execution-filter.dask != 'true'
           - name: unidist
             shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
+            # If we're going to run all unidist tests because we've detected a
+            # change to the unidist engine, we don't need to run these sanity tests
+            # on unidist.
             if: needs.execution-filter.unidist != 'true'
     runs-on: ${{ matrix.os }}-latest
     defaults:
@@ -688,9 +738,9 @@ jobs:
           python-version: ${{matrix.python-version}}
       - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
 
-  test-native-dataframe-mode:
-    needs: [ lint-flake8, execution-filter]
-    if: ${{ needs.execution-filter.outputs.test-native-dataframe-mode == 'true' }}
+  test-native-dataframe-interoperability:
+    needs: [ lint-flake8]
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -699,36 +749,21 @@ jobs:
       matrix:
         python-version: ["3.9"]
     env:
-      MODIN_NATIVE_DATAFRAME_MODE: "Pandas"
-    name: test-native-dataframe-mode python ${{matrix.python-version}})
+      # Test interoperability between PandasOnPython dataframes/series and
+      # native dataframes/series.
+      MODIN_ENGINE: "Python"
+    name: test-native-dataframe-interoperability python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
-      - run: python -m pytest modin/tests/pandas/dataframe/test_binary.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_default.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_indexing.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_iter.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_pickle.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_udf.py
-      - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_binary.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_default.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_indexing.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_iter.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_join_sort.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_map_metadata.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_pickle.py
-      - run: python -m pytest modin/tests/pandas/native_df_mode/test_window.py
+      - run: python -m pytest modin/tests/pandas/native_df_interoperability/ -n 2
       - uses: ./.github/actions/upload-coverage
 
   merge-coverage-artifacts:
-    needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity]
+    needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity, test-native-dataframe-interoperability]
     if: always()  # we need to run it regardless of some job being skipped, like in PR
     runs-on: ubuntu-latest
     defaults:

@@ -11,14 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from itertools import product
 
 import numpy as np
 import pytest
 
 import modin.pandas as pd
-from modin.config import NativeDataframeMode, PersistentPickle
-from modin.tests.pandas.native_df_mode.utils import create_test_df_in_defined_mode
+from modin.config import PersistentPickle
+from modin.tests.pandas.native_df_interoperability.utils import (
+    create_test_df_in_defined_mode,
+)
 from modin.tests.pandas.utils import df_equals
 
 
@@ -40,15 +41,12 @@ def persistent(request):
     PersistentPickle.put(old)
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test__reduce__(df_mode_pair):
     # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
     dataframe_data = ["Major League Baseball", "National Basketball Association"]
     abbr_md, abbr_pd = create_test_df_in_defined_mode(
-        dataframe_data, index=["MLB", "NBA"], df_mode=df_mode_pair[0]
+        dataframe_data, index=["MLB", "NBA"], native=df_mode_pair[0]
     )
 
     dataframe_data = {
@@ -56,7 +54,7 @@ def test__reduce__(df_mode_pair):
         "league_abbreviation": ["MLB", "NBA"] * 500,
     }
     teams_md, teams_pd = create_test_df_in_defined_mode(
-        dataframe_data, df_mode=df_mode_pair[1]
+        dataframe_data, native=df_mode_pair[1]
     )
 
     result_md = (

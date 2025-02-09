@@ -77,8 +77,8 @@ def _get_axis(axis):
     callable(BaseQueryCompiler) -> pandas.Index
     """
 
-    def axis_getter(self):
-        ErrorMessage.default_to_pandas(f"DataFrame.get_axis({axis})")
+    def axis_getter(self: "BaseQueryCompiler") -> pandas.Index:
+        self._maybe_warn_on_default(message=f"DataFrame.get_axis({axis})")
         return self.to_pandas().axes[axis]
 
     return axis_getter
@@ -149,6 +149,21 @@ class BaseQueryCompiler(
 
     _modin_frame: PandasDataframe
     _shape_hint: Optional[str]
+    _should_warn_on_default_to_pandas: bool = True
+
+    def _maybe_warn_on_default(self, *, message: str = "", reason: str = "") -> None:
+        """
+        If this class is configured to warn on default to pandas, warn.
+
+        Parameters
+        ----------
+        method : str
+            Method that is defaulting to pandas.
+        reason : str
+            Reason for default.
+        """
+        if self._should_warn_on_default_to_pandas:
+            ErrorMessage.default_to_pandas(message=message, reason=reason)
 
     @property
     @abc.abstractmethod
@@ -218,7 +233,7 @@ class BaseQueryCompiler(
             The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
         op_name = getattr(pandas_op, "__name__", str(pandas_op))
-        ErrorMessage.default_to_pandas(op_name)
+        self._maybe_warn_on_default(message=op_name)
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
 
@@ -1254,6 +1269,7 @@ class BaseQueryCompiler(
         allow_exact_matches: bool = True,
         direction: str = "backward",
     ):  # noqa: GL08
+        self._maybe_warn_on_default(message="`merge_asof`")
         # Pandas fallbacks for tricky cases:
         if (
             # No idea how this works or why it does what it does; and in fact
