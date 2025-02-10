@@ -11,10 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import itertools
 from contextlib import contextmanager, nullcontext
-
-import pytest
 
 from modin import set_execution
 from modin.config import Engine, StorageFormat
@@ -158,8 +155,3 @@ def eval_general_interop(
     )
     if values is not None:
         comparator(*values, **(comparator_kwargs or {}))
-
-
-@pytest.fixture(params=list(itertools.product([True, False], repeat=2)))
-def df_mode_pair(request):
-    return request.param

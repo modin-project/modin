@@ -616,7 +616,7 @@ def test_pivot(data, index, columns, values, request):
         or "default-one_column-several_columns_index" in request.node.callspec.id
         or "default-one_column-one_column_index" in request.node.callspec.id
         or (
-            (current_execution == "BaseOnPython" or current_execution_is_native)
+            (current_execution == "BaseOnPython" or current_execution_is_native())
             and index is lib.no_default
         )
     ):
