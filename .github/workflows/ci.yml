@@ -507,7 +507,8 @@ jobs:
           parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
         if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/tests/numpy
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+        # Native execution does not support the modin Numpy API.
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
 
     # END test groups.
 
@@ -599,8 +600,6 @@ jobs:
           environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
           activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
           python-version: ${{matrix.python-version}}
-      - name: DO NOT MERGE DEBUG. print whether we should be running ray and dask
-        run: echo ${{ needs.execution-filter.outputs.ray }} "and dask " ${{needs.execution-filter.outputs.dask}} " and unidist" ${{needs.execution-filter.outputs.unidist}}
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
         if: matrix.os != 'windows'
