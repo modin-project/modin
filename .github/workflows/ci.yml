@@ -405,8 +405,8 @@ jobs:
     services:
       # Using workaround https://github.com/actions/runner/issues/822#issuecomment-1524826092
       moto:
-        # we only need moto service on Ubuntu and for group_4 task or python engine
-        image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')) && 'motoserver/moto:5.0.13' || '' }}
+        # we only need moto service on Ubuntu and for group_4 task, or for native or python engine.
+        image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')) && 'motoserver/moto:5.0.13' || '' }}
         ports:
           - 5000:5000
         env:
