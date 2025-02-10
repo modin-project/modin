@@ -518,13 +518,13 @@ jobs:
         execution:
           - name: ray
             shell-ex: "python -m pytest"
-            if: needs.execution-filter.ray != 'true'
+            if: needs.execution-filter.outputs.ray != 'true'
           - name: dask
             shell-ex: "python -m pytest"
-            if: needs.execution-filter.dask != 'true'
+            if: needs.execution-filter.outputs.dask != 'true'
           - name: unidist
             shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
-            if: needs.execution-filter.unidist != 'true'
+            if: needs.execution-filter.outputs.unidist != 'true'
     runs-on: ${{ matrix.os }}-latest
     defaults:
       run:
@@ -580,9 +580,9 @@ jobs:
                   modin/tests/experimental/xgboost/test_default.py \
                   modin/tests/experimental/xgboost/test_xgboost.py \
                   modin/tests/experimental/xgboost/test_dmatrix.py
-        if: matrix.os != 'windows' && needs.execution-filter.experimental == 'true'
+        if: matrix.os != 'windows' && needs.execution-filter.outputs.experimental == 'true'
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/experimental/test_pipeline.py
-        if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.experimental == 'true'
+        if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.outputs.experimental == 'true'
       - name: "test DF: binary, default, iter"
         run: |
           ${{ matrix.execution.shell-ex }} $PARALLEL \
