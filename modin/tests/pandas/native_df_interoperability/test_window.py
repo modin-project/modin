@@ -66,7 +66,6 @@ def test_fillna_dict_series(df_mode_pair):
         df.fillna({"a": 0, "b": 5, "d": 7}),
     )
 
-    breakpoint()
     # Series treated same as dict
     df_equals(
         modin_df_1.fillna(modin_df_2.max()), pandas_df_1.fillna(pandas_df_2.max())

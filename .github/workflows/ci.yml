@@ -371,7 +371,7 @@ jobs:
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
         # On push, run the tests for all engines. Otherwise, for pull requests,
         # only run tests for engines that depend on files changed in this PR.
-        engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask", "native"]' || needs.execution-filter.outputs.engines ) }}
+        engine: ${{ fromJSON( (github.event_name == 'push' && '["python", "ray", "dask", "native"]') || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
           - group_2
@@ -452,9 +452,9 @@ jobs:
     # skip these tests on the "native" engine, which does not use partitions.
 
       - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-        if: matrix.engine != 'native' && matrix.engine == 'python' || matrix.test_task == 'group_1'
+        if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
       - run: python -m pytest modin/tests/pandas/internals/test_repartition.py
-        if: matrix.engine != 'native' && matrix.engine == 'python' || matrix.test_task == 'group_1'
+        if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
       - run: python -m pytest modin/tests/test_partition_api.py
         # Skip this test for python because we do not define unwrap_partitions()
         # for python execution.
@@ -468,9 +468,9 @@ jobs:
                   modin/tests/experimental/xgboost/test_default.py \
                   modin/tests/experimental/xgboost/test_xgboost.py \
                   modin/tests/experimental/xgboost/test_dmatrix.py
-        if: matrix.engine != 'native' && matrix.os != 'windows' && matrix.test_task == 'group_1'
+        if: matrix.engine != 'native' && matrix.os != 'windows' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
       - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
-        if: matrix.engine != 'native'  && matrix.engine == 'python' || matrix.test_task == 'group_1'
+        if: matrix.engine != 'native'  && (matrix.engine == 'python' || matrix.test_task == 'group_1')
 
 
     # END partitioned execution tests.
@@ -599,6 +599,8 @@ jobs:
           environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
           activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
           python-version: ${{matrix.python-version}}
+      - name: DO NOT MERGE DEBUG. print whether we should be running ray and dask
+        run: echo ${{ needs.execution-filter.outputs.ray }} "and dask " ${{needs.execution-filter.outputs.dask}} " and unidist" ${{needs.execution-filter.outputs.unidist}}
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
         if: matrix.os != 'windows'
