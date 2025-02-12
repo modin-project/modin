@@ -331,7 +331,6 @@ jobs:
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: mpiexec -n 1 python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-      - run: mpiexec -n 1 python -m pytest modin/tests/pandas/internals/test_repartition.py
       - run: mpiexec -n 1 python -m pytest modin/tests/test_partition_api.py
       - uses: ./.github/actions/run-core-tests
         with:
@@ -452,8 +451,6 @@ jobs:
     # skip these tests on the "native" engine, which does not use partitions.
 
       - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-        if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
-      - run: python -m pytest modin/tests/pandas/internals/test_repartition.py
         if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
       - run: python -m pytest modin/tests/test_partition_api.py
         # Skip this test for python because we do not define unwrap_partitions()
@@ -619,7 +616,6 @@ jobs:
           command: ray start --head --port=6379 --object-store-memory=1000000000
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
       - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/tests/pandas/internals/test_benchmark_mode.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/pandas/internals/test_repartition.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/test_partition_api.py
       - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/extensions
       - name: xgboost tests

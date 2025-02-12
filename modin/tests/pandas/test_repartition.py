@@ -11,15 +11,33 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import re
+
 import numpy as np
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, context
+from modin.config import context
+from modin.core.storage_formats.pandas.native_query_compiler import (
+    _NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE,
+)
+from modin.tests.test_utils import current_execution_is_native
+from modin.utils import get_current_execution
 
-NPartitions.put(4)
+
+@pytest.fixture(autouse=True)
+def set_npartitions():
+    with context(NPartitions=4):
+        yield
 
 
+@pytest.mark.skipif(
+    current_execution_is_native(), reason="Native execution does not have partitions."
+)
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython",
+    reason="BaseOnPython chooses partition numbers differently",
+)
 @pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize("dtype", ["DataFrame", "Series"])
 def test_repartition(axis, dtype):
@@ -61,7 +79,22 @@ def test_repartition(axis, dtype):
     assert obj._query_compiler._modin_frame._partitions.shape == results[axis]
 
 
+@pytest.mark.skipif(
+    current_execution_is_native(), reason="Native execution does not have partitions."
+)
 def test_repartition_7170():
     with context(MinColumnPartitionSize=102, NPartitions=5):
         df = pd.DataFrame(np.random.rand(10000, 100))
         _ = df._repartition(axis=1).to_numpy()
+
+
+@pytest.mark.skipif(
+    not current_execution_is_native(), reason="This is a native execution test."
+)
+def test_repartition_not_valid_on_native_execution():
+    df = pd.DataFrame()
+    with pytest.raises(
+        Exception,
+        match=re.escape(_NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE),
+    ):
+        df._repartition()

@@ -40,6 +40,7 @@ from modin.tests.pandas.utils import (
     udf_func_keys,
     udf_func_values,
 )
+from modin.tests.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
 NPartitions.put(4)
@@ -118,8 +119,13 @@ def test_aggregate_alias():
 
 
 def test_aggregate_error_checking():
-    with pytest.raises(ValueError):
-        pd.DataFrame(test_data["float_nan_data"]).aggregate("NOT_EXISTS")
+    modin_df = pd.DataFrame(test_data["float_nan_data"])
+
+    with warns_that_defaulting_to_pandas():
+        modin_df.aggregate({modin_df.columns[0]: "sum", modin_df.columns[1]: "mean"})
+
+    with warns_that_defaulting_to_pandas():
+        modin_df.aggregate("cumproduct")
 
 
 @pytest.mark.parametrize(

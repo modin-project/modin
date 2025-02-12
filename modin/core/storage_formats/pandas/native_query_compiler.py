@@ -32,6 +32,10 @@ from modin.utils import (
     _inherit_docstrings,
 )
 
+_NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE = (
+    "Modin dataframes and series using native execution do not have partitions."
+)
+
 
 def _get_axis(axis):
     """
@@ -246,3 +250,7 @@ class NativeQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     # https://github.com/modin-project/modin/issues/1618
     index: pandas.Index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
+
+    @_inherit_docstrings(BaseQueryCompiler.repartition)
+    def repartition(self, axis=None):
+        raise Exception(_NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE)
