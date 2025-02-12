@@ -2693,3 +2693,44 @@ def test_index_of_empty_frame():
 
     assert md_res.empty and pd_res.empty
     df_equals(md_res.index, pd_res.index)
+
+
+# https://github.com/modin-project/modin/issues/7405
+@pytest.mark.parametrize("indexer", ["loc", "iloc"])
+def test_loc_and_iloc_set_order(indexer):
+    rng = np.random.default_rng(seed=0)
+    is_loc = indexer == "loc"
+    data = {"col": rng.integers(0, 100, size=100)}
+    set_count = 20
+    # Pick a bunch of unsorted row indices; may contain repeat values.
+    row_indexer = rng.integers(0, 100, size=set_count)
+    col_indexer = "col" if is_loc else 0
+    set_data = range(100, 100 + set_count)
+    print(row_indexer)
+    print(list(set_data))
+    md_df, pd_df = create_test_dfs(data)
+
+    def get_helper(df):
+        if is_loc:
+            return df.loc[row_indexer, col_indexer]
+        else:
+            return df.iloc[row_indexer, col_indexer]
+
+    # First, ensure loc/iloc read succeeds.
+    eval_general(md_df, pd_df, get_helper)
+
+    def set_helper(df):
+        if is_loc:
+            df.loc[row_indexer, col_indexer] = set_data
+        else:
+            df.iloc[row_indexer, col_indexer] = set_data
+
+    # Second, check results of loc/iloc write.
+    eval_general(
+        md_df,
+        pd_df,
+        set_helper,
+        __inplace__=True,
+    )
+    # Finally, check the result of a loc/iloc read again.
+    eval_general(md_df, pd_df, get_helper)

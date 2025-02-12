@@ -295,6 +295,11 @@ def broadcast_item(
         # Cast to numpy drop information about heterogeneous types (cast to common)
         # TODO: we shouldn't do that, maybe there should be the if branch
         item = np.array(item)
+        # Sort the array's rows to match partition order.
+        # The sort must be stable to ensure proper behavior for functions like iloc set, which
+        # will use the last item encountered if two items share an index.
+        # TODO: elide this sort or reuse argsort array if possible
+        item = item[np.argsort(row_lookup, kind="stable")]
         if dtypes is None:
             dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):

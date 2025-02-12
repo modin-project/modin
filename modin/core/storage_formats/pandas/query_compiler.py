@@ -4691,6 +4691,15 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
                 Partition data with updated values.
             """
             partition = partition.copy()
+            print(
+                "partition!!!",
+                "row_internal_indices:",
+                row_internal_indices,
+                "col_internal_indices:",
+                col_internal_indices,
+                "with item:",
+                item.ravel(),
+            )
             try:
                 partition.iloc[row_internal_indices, col_internal_indices] = item
             except ValueError:

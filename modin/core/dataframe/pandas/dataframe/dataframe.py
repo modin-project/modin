@@ -1931,9 +1931,13 @@ class PandasDataframe(
             )
             indices[negative_mask] = indices[negative_mask] % len(self.get_axis(axis))
         # If the `indices` array was modified because of the negative indices conversion
-        # then the original order was broken and so we have to sort anyway:
+        # then the original order was broken and so we have to sort anyway.
+        # To preserve ordering for loc/iloc set operations, in these cases we continue to track
+        # the original ordering of the indices.
+        argsort_indices = None
         if has_negative or not are_indices_sorted:
-            indices = np.sort(indices)
+            argsort_indices = np.argsort(indices)
+            indices = indices[argsort_indices]
         if axis == 0:
             bins = np.array(self.row_lengths)
         else:
@@ -1941,15 +1945,28 @@ class PandasDataframe(
         # INT_MAX to make sure we don't try to compute on partitions that don't exist.
         cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
 
-        def internal(block_idx: int, global_index):
+        def internal(block_idx: int, to_slice: slice):
             """Transform global index to internal one for given block (identified by its index)."""
-            return (
+            global_index = indices[to_slice]
+            adjusted_idx = (
                 global_index
                 if not block_idx
                 else np.subtract(
                     global_index, cumulative[min(block_idx, len(cumulative) - 1) - 1]
                 )
             )
+            # Do not return the indices to the original order. Instead, we will sort the items
+            # in broadcast_items to match the sorted partition index.
+            print(
+                "block",
+                block_idx,
+                "has indices",
+                indices[to_slice],
+                # "(adjusted to",
+                # adjusted_idx[argsort_indices[to_slice].argsort()],
+                # ")",
+            )
+            return adjusted_idx
 
         partition_ids = np.digitize(indices, cumulative)
         count_for_each_partition = np.array(
@@ -1961,7 +1978,7 @@ class PandasDataframe(
         # rest of the values to an empty list.
         if count_for_each_partition[0] > 0:
             first_partition_indices = [
-                (0, internal(0, indices[slice(count_for_each_partition[0])]))
+                (0, internal(0, slice(count_for_each_partition[0])))
             ]
         else:
             first_partition_indices = []
@@ -1970,12 +1987,10 @@ class PandasDataframe(
                 i,
                 internal(
                     i,
-                    indices[
-                        slice(
-                            count_for_each_partition[i - 1],
-                            count_for_each_partition[i],
-                        )
-                    ],
+                    slice(
+                        count_for_each_partition[i - 1],
+                        count_for_each_partition[i],
+                    ),
                 ),
             )
             for i in range(1, len(count_for_each_partition))
