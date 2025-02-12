@@ -1709,7 +1709,6 @@ class PandasDataframePartitionManager(
                     item = {"item": item}
                 else:
                     item = {}
-                # breakpoint()
                 block_result = remote_part.add_to_apply_calls(
                     func,
                     row_internal_indices=row_internal_idx,

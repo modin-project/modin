@@ -2706,8 +2706,6 @@ def test_loc_and_iloc_set_order(indexer):
     row_indexer = rng.integers(0, 100, size=set_count)
     col_indexer = "col" if is_loc else 0
     set_data = range(100, 100 + set_count)
-    print(row_indexer)
-    print(list(set_data))
     md_df, pd_df = create_test_dfs(data)
 
     def get_helper(df):

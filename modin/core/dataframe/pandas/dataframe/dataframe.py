@@ -1957,15 +1957,6 @@ class PandasDataframe(
             )
             # Do not return the indices to the original order. Instead, we will sort the items
             # in broadcast_items to match the sorted partition index.
-            print(
-                "block",
-                block_idx,
-                "has indices",
-                indices[to_slice],
-                # "(adjusted to",
-                # adjusted_idx[argsort_indices[to_slice].argsort()],
-                # ")",
-            )
             return adjusted_idx
 
         partition_ids = np.digitize(indices, cumulative)
