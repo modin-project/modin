@@ -127,6 +127,15 @@ jobs:
         running-all-dask-tests: [ "${{needs.execution-filter.outputs.dask}}" ]
         running-all-unidist-tests: [ "${{needs.execution-filter.outputs.unidist}}" ]   
         execution: [ray, dask, unidist]
+        include:
+          - execution: ray
+            shell-ex: "python -m pytest"
+          - execution: dask
+            shell-ex: "python -m pytest"
+          - execution: unidist
+            shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
+        # NOTE: include re-adds excluded jobs, so we have to put the include
+        # before the exclude.
         exclude:
           - running-all-ray-tests: 'true'
             execution: ray
@@ -134,14 +143,6 @@ jobs:
             execution: dask
           - running-all-unidist-tests: 'true'
             execution: unidist
-
-        # include:
-        #   - execution: ray
-        #     shell-ex: "python -m pytest"
-        #   - execution: dask
-        #     shell-ex: "python -m pytest"
-        #   - execution: unidist
-        #     shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
 
 #         execution:
 #           - name: ray
