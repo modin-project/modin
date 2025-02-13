@@ -288,7 +288,7 @@ jobs:
         python -c "import sys, json; print('engines=' + json.dumps(['python'] + (sys.argv[1] == 'true' and ['ray'] or []) + (sys.argv[2] == 'true' and ['dask'] or []) ))" \
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
     - id: show-variables
-      run: echo ${{ steps.filter.outputs.ray }} , {{ steps.filter.outputs.dask }} , {{ steps.filter.outputs.unidist }} {{ steps.filter.outputs.experimental }} {{ steps.filter.outputs.test-native-dataframe-mode }}
+      run: echo ${{ steps.filter.outputs.ray }} , ${{ steps.filter.outputs.dask }} , ${{ steps.filter.outputs.unidist }} , ${{ steps.filter.outputs.experimental }}, ${{ steps.filter.outputs.test-native-dataframe-mode }}
 
   test-all-unidist:
     needs: [lint-flake8, execution-filter, python-filter]
@@ -517,16 +517,25 @@ jobs:
           - ubuntu
           - windows
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
-        execution:
-          - name: ray
-            shell-ex: "python -m pytest"
-            if: needs.execution-filter.outputs.ray != 'true'
-          - name: dask
-            shell-ex: "python -m pytest"
-            if: needs.execution-filter.outputs.dask != 'true'
-          - name: unidist
-            shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
-            if: needs.execution-filter.outputs.unidist != 'true'
+        running-all-ray-tests:
+          - $${needs.execution-filter.outputs.ray}
+        # execution:
+        #   - name: ray
+        #     shell-ex: "python -m pytest"
+        #     if: needs.execution-filter.outputs.ray != 'true'
+        #   - name: dask
+        #     shell-ex: "python -m pytest"
+        #     if: needs.execution-filter.outputs.dask != 'true'
+        #   - name: unidist
+        #     shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
+        #     if: needs.execution-filter.outputs.unidist != 'true'
+
+        include:
+          - running-all-ray-tests: 'true'
+            execution:
+              - name: ray
+                shell-ex: "python -m pytest"
+
     runs-on: ${{ matrix.os }}-latest
     defaults:
       run:
