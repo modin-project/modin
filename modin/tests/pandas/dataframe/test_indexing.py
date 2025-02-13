@@ -2736,16 +2736,14 @@ def test_loc_and_iloc_set_order(indexer):
 
 def test_iloc_set_negative_index():
     rng = np.random.default_rng(seed=0)
-    row_count = 5
-    col_count = 8
+    row_count = 50
+    col_count = 80
     data = {f"col_{i}": rng.integers(0, 100, size=row_count) for i in range(col_count)}
-    row_set_count = 2
-    col_set_count = 3
+    row_set_count = 20
+    col_set_count = 30
     # Pick a bunch of unsorted row indices; may contain repeat values and negative numbers.
     row_indexer = rng.integers(-row_count, row_count, size=row_set_count)
     col_indexer = rng.integers(-col_count, col_count, size=col_set_count)
-    original_row_indexer = row_indexer.copy()
-    original_col_indexer = col_indexer.copy()
     set_data = np.reshape(
         range(100, 100 + row_set_count * col_set_count), (row_set_count, col_set_count)
     )

@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Optional, Tuple
+from typing import Iterator, Optional, Tuple, Any
 
 import numpy as np
 import pandas
@@ -261,7 +261,6 @@ def broadcast_item(
     """
     # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
     # the target the user is trying to overwrite.
-    from modin.core.storage_formats import BaseQueryCompiler
 
     from .dataframe import DataFrame
     from .series import Series
