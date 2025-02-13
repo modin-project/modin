@@ -2732,3 +2732,40 @@ def test_loc_and_iloc_set_order(indexer):
     )
     # Finally, check the result of a loc/iloc read again.
     eval_general(md_df, pd_df, get_helper)
+
+
+def test_iloc_set_negative_index():
+    rng = np.random.default_rng(seed=0)
+    row_count = 5
+    col_count = 8
+    data = {f"col_{i}": rng.integers(0, 100, size=row_count) for i in range(col_count)}
+    row_set_count = 2
+    col_set_count = 3
+    # Pick a bunch of unsorted row indices; may contain repeat values and negative numbers.
+    row_indexer = rng.integers(-row_count, row_count, size=row_set_count)
+    col_indexer = rng.integers(-col_count, col_count, size=col_set_count)
+    original_row_indexer = row_indexer.copy()
+    original_col_indexer = col_indexer.copy()
+    set_data = np.reshape(
+        range(100, 100 + row_set_count * col_set_count), (row_set_count, col_set_count)
+    )
+    md_df, pd_df = create_test_dfs(data)
+
+    def get_helper(df):
+        return df.iloc[row_indexer, col_indexer]
+
+    # First, ensure loc/iloc read succeeds.
+    eval_general(md_df, pd_df, get_helper)
+
+    def set_helper(df):
+        df.iloc[row_indexer, col_indexer] = set_data
+
+    # Second, check results of loc/iloc write.
+    eval_general(
+        md_df,
+        pd_df,
+        set_helper,
+        __inplace__=True,
+    )
+    # Finally, check the result of a loc/iloc read again.
+    eval_general(md_df, pd_df, get_helper)

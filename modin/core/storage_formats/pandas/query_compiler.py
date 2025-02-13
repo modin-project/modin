@@ -4691,15 +4691,6 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
                 Partition data with updated values.
             """
             partition = partition.copy()
-            print(
-                "partition!!!",
-                "row_internal_indices:",
-                row_internal_indices,
-                "col_internal_indices:",
-                col_internal_indices,
-                "with item:",
-                item.ravel(),
-            )
             try:
                 partition.iloc[row_internal_indices, col_internal_indices] = item
             except ValueError:
@@ -4713,7 +4704,12 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
             return partition
 
         if not is_scalar(item):
-            broadcasted_item, broadcasted_dtypes = broadcast_item(
+            (
+                broadcasted_item,
+                broadcasted_dtypes,
+                row_numeric_index,
+                col_numeric_index,
+            ) = broadcast_item(
                 self,
                 row_numeric_index,
                 col_numeric_index,

@@ -242,9 +242,11 @@ def broadcast_item(
 
     Returns
     -------
-    (np.ndarray, Optional[Series])
+    (np.ndarray, Optional[Series], array-like, array-like)
         * np.ndarray - `item` after it was broadcasted to `to_shape`.
         * Series - item's dtypes.
+        * array-like - sorted version of `row_lookup` (may or may not be the same reference)
+        * array-like - sorted version of `col_lookup` (may or may not be the same reference)
 
     Raises
     ------
@@ -259,6 +261,8 @@ def broadcast_item(
     """
     # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
     # the target the user is trying to overwrite.
+    from modin.core.storage_formats import BaseQueryCompiler
+
     from .dataframe import DataFrame
     from .series import Series
 
@@ -295,17 +299,55 @@ def broadcast_item(
         # Cast to numpy drop information about heterogeneous types (cast to common)
         # TODO: we shouldn't do that, maybe there should be the if branch
         item = np.array(item)
-        # Sort the array's rows to match partition order.
-        # The sort must be stable to ensure proper behavior for functions like iloc set, which
-        # will use the last item encountered if two items share an index.
-        # TODO: elide this sort or reuse argsort array if possible
-        item = item[np.argsort(row_lookup, kind="stable")]
+
+        def sort_index(lookup: Any) -> np.ndarray:
+            """
+            Return the argsort and sorted version of the lookup index.
+            Values in the lookup are guaranteed by the indexing frontend to be non-negative.
+
+            The sort operation must be stable to ensure proper behavior for iloc set, which
+            will use the last item encountered if two items share an index.
+            """
+            if isinstance(lookup, slice):
+                # Special case for if a descending slice is passed
+                # Directly calling np.array(slice(...)) does not work
+                lookup = range(lookup.start or 0, lookup.stop or 0, lookup.step or 0)
+            argsort_index = np.argsort(lookup, kind="stable")
+            return argsort_index, np.array(lookup)[argsort_index]
+
+        def should_take_fastpath(lookup: Any) -> bool:
+            return (
+                isinstance(lookup, (range, pandas.RangeIndex, slice))
+                and lookup.step is not None
+                and lookup.step > 0
+            ) or (isinstance(lookup, slice) and lookup == slice(None))
+
+        # Fast path to avoid sorting for range/RangeIndex, which are already sorted, or the empty slice
+        row_lookup_fastpath = should_take_fastpath(row_lookup)
+        col_lookup_fastpath = should_take_fastpath(col_lookup)
+        # Sort both the columns and rows if necessary
+        if item.ndim >= 2:
+            # Use np.ix_ to handle broadcasting errors
+            if not row_lookup_fastpath and not col_lookup_fastpath:
+                row_argsort, row_lookup = sort_index(row_lookup)
+                col_argsort, col_lookup = sort_index(col_lookup)
+                item = item[np.ix_(row_argsort, col_argsort)]
+            elif row_lookup_fastpath:
+                col_argsort, col_lookup = sort_index(col_lookup)
+                item = item[:, col_argsort]
+            elif col_lookup_fastpath:
+                row_argsort, row_lookup = sort_index(row_lookup)
+                item = item[row_argsort, :]
+        else:
+            if not row_lookup_fastpath:
+                row_argsort, row_lookup = sort_index(row_lookup)
+                item = item[row_argsort]
         if dtypes is None:
             dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape), dtypes
+            return item.reshape(to_shape), dtypes, row_lookup, col_lookup
         else:
-            return np.broadcast_to(item, to_shape), dtypes
+            return np.broadcast_to(item, to_shape), dtypes, row_lookup, col_lookup
     except ValueError:
         from_shape = np.array(item).shape
         raise ValueError(
