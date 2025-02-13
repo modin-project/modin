@@ -174,10 +174,11 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Unidist")
+    choices = ("Ray", "Dask", "Python", "Unidist", "Native")
 
     NOINIT_ENGINES = {
         "Python",
+        "Native",
     }  # engines that don't require initialization, useful for unit tests
 
     has_custom_engine = False
@@ -256,7 +257,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas",)
+    choices = ("Pandas", "Native")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -941,28 +942,6 @@ def _check_vars() -> None:
             deprecated[depr_var].deprecation_message(use_envvar_names=True),
             FutureWarning,
         )
-
-
-class NativeDataframeMode(EnvironmentVariable, type=str):
-    """
-    Configures the query compiler to process Modin data.
-
-    When this config is set to ``Default``, ``PandasQueryCompiler`` is used,
-    which leads to Modin executing dataframes in distributed fashion.
-    When set to a string (e.g., ``pandas``), ``NativeQueryCompiler`` is used,
-    which handles the dataframes without distributing,
-    falling back to native library functions (e.g., ``pandas``).
-
-    This could be beneficial for handling relatively small dataframes
-    without involving additional overhead of communication between processes.
-    """
-
-    varname = "MODIN_NATIVE_DATAFRAME_MODE"
-    choices = (
-        "Default",
-        "Pandas",
-    )
-    default = "Default"
 
 
 _check_vars()

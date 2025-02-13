@@ -17,6 +17,7 @@ runs:
                                                       modin/tests/pandas/dataframe/test_reduce.py \
                                                       modin/tests/pandas/dataframe/test_udf.py \
                                                       modin/tests/pandas/dataframe/test_window.py \
-                                                      modin/tests/pandas/dataframe/test_pickle.py
+                                                      modin/tests/pandas/dataframe/test_pickle.py \
+                                                      modin/tests/pandas/test_repartition.py
           echo "::endgroup::"
         shell: bash -l {0}

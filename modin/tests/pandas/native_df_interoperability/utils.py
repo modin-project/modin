@@ -11,28 +11,52 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.config import Engine
-from modin.config.pubsub import context
+from contextlib import contextmanager, nullcontext
+
+from modin import set_execution
+from modin.config import Engine, StorageFormat
 from modin.tests.pandas.utils import (
     NoModinException,
     create_test_dfs,
     create_test_series,
     df_equals,
 )
+from modin.tests.test_utils import current_execution_is_native
 from modin.utils import try_cast_to_pandas
 
 
+@contextmanager
+def switch_to_native_execution():
+    engine = Engine.get()
+    storage_format = StorageFormat.get()
+    try:
+        set_execution("Native", "Native")
+        yield
+    finally:
+        set_execution(engine=engine, storage_format=storage_format)
+
+
 def create_test_df_in_defined_mode(
-    *args, post_fn=None, backend=None, df_mode=None, **kwargs
+    *args, post_fn=None, backend=None, native=None, **kwargs
 ):
-    with context(NativeDataframeMode=df_mode):
+    assert not current_execution_is_native(), "already in native dataframe mode."
+
+    if not isinstance(native, bool):
+        raise ValueError("`native` should be True or False.")
+
+    with switch_to_native_execution() if native else nullcontext():
         return create_test_dfs(*args, post_fn=post_fn, backend=backend, **kwargs)
 
 
 def create_test_series_in_defined_mode(
-    vals, sort=False, backend=None, df_mode=None, **kwargs
+    vals, sort=False, backend=None, native=None, **kwargs
 ):
-    with context(NativeDataframeMode=df_mode):
+    assert not current_execution_is_native(), "already in native dataframe mode."
+
+    if not isinstance(native, bool):
+        raise ValueError("`native` should be True or False.")
+
+    with switch_to_native_execution() if native else nullcontext():
         return create_test_series(vals, sort=sort, backend=backend, **kwargs)
 
 
@@ -49,12 +73,12 @@ def eval_general_interop(
     comparator_kwargs=None,
     **kwargs,
 ):
-    df_mode1, df_mode2 = df_mode_pair
+    df1_native, df2_native = df_mode_pair
     modin_df1, pandas_df1 = create_test_df_in_defined_mode(
-        data, backend=backend, df_mode=df_mode1
+        data, backend=backend, native=df1_native
     )
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
-        data, backend=backend, df_mode=df_mode2
+        data, backend=backend, native=df2_native
     )
     md_kwargs, pd_kwargs = {}, {}
 

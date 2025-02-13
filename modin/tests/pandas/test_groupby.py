@@ -34,7 +34,11 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
 )
 from modin.pandas.io import from_pandas
 from modin.pandas.utils import is_scalar
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.tests.test_utils import (
+    current_execution_is_native,
+    df_or_series_using_native_execution,
+    warns_that_defaulting_to_pandas_if,
+)
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     get_current_execution,
@@ -766,7 +770,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
-    if get_current_execution() != "BaseOnPython":
+    if get_current_execution() != "BaseOnPython" and not current_execution_is_native():
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -1672,7 +1676,7 @@ def eval_shift(modin_groupby, pandas_groupby, comparator=None):
     # groupby.shift internally masks the source frame with a Series boolean mask,
     # doing so ends up in the `getitem_array` method, that is broken for `BaseOnPython`:
     # https://github.com/modin-project/modin/issues/3701
-    if get_current_execution() != "BaseOnPython":
+    if get_current_execution() != "BaseOnPython" and not current_execution_is_native():
         if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
             pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
             modin_res = modin_groupby.shift(axis=1, fill_value=777)
@@ -1838,8 +1842,10 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
     # https://github.com/modin-project/modin/issues/2912
     # "BaseOnPython" tests are disabled because of the bug:
     # https://github.com/modin-project/modin/issues/3827
-    if get_current_execution() != "BaseOnPython" and any(
-        col in modin_df.columns for col in by_kwarg
+    if (
+        get_current_execution() != "BaseOnPython"
+        and not current_execution_is_native()
+        and any(col in modin_df.columns for col in by_kwarg)
     ):
         df_equals(md_grp.quantile(), pd_grp.quantile())
     # Default-to-pandas tests are disabled for multi-column 'by' because of the bug:
@@ -1947,7 +1953,9 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         pytest.param(
             False,
             marks=pytest.mark.skipif(
-                get_current_execution() == "BaseOnPython" or RangePartitioning.get(),
+                get_current_execution() == "BaseOnPython"
+                or RangePartitioning.get()
+                or current_execution_is_native(),
                 reason="See Pandas issue #39103",
             ),
         ),
@@ -2657,7 +2665,7 @@ def test_validate_by():
 
 
 @pytest.mark.skipif(
-    get_current_execution() == "BaseOnPython",
+    get_current_execution() == "BaseOnPython" or current_execution_is_native(),
     reason="The test only make sense for partitioned executions",
 )
 def test_groupby_with_virtual_partitions():
@@ -2741,12 +2749,16 @@ def test_groupby_ohlc():
     eval_general(modin_df, pandas_df, lambda df: df.groupby("Date")["stock A"].ohlc())
     pandas_multiindex_result = pandas_df.groupby("Date")[["stock A"]].ohlc()
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_df)
+    ):
         modin_multiindex_result = modin_df.groupby("Date")[["stock A"]].ohlc()
     df_equals(modin_multiindex_result, pandas_multiindex_result)
 
     pandas_multiindex_result = pandas_df.groupby("Date")[["stock A", "stock B"]].ohlc()
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_df)
+    ):
         modin_multiindex_result = modin_df.groupby("Date")[
             ["stock A", "stock B"]
         ].ohlc()

@@ -18,14 +18,20 @@ import pandas
 import modin.pandas as pd
 from modin.pandas.io import from_dataframe
 from modin.tests.pandas.utils import df_equals, test_data
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.tests.test_utils import (
+    df_or_series_using_native_execution,
+    warns_that_defaulting_to_pandas,
+    warns_that_defaulting_to_pandas_if,
+)
 
 
 def eval_df_protocol(modin_df_producer):
     internal_modin_df_producer = modin_df_producer.__dataframe__()
     # Our configuration in pytest.ini requires that we explicitly catch all
     # instances of defaulting to pandas, this one raises a warning on `.from_dataframe`
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_df_producer)
+    ):
         modin_df_consumer = from_dataframe(modin_df_producer)
         internal_modin_df_consumer = from_dataframe(internal_modin_df_producer)
 

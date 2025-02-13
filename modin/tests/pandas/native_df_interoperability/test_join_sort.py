@@ -11,17 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from itertools import product
-
 import matplotlib
 import numpy as np
 import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NativeDataframeMode, NPartitions
+from modin.config import NPartitions
 from modin.pandas.io import to_pandas
-from modin.tests.pandas.native_df_mode.utils import (
+from modin.tests.pandas.native_df_interoperability.utils import (
     create_test_df_in_defined_mode,
     create_test_series_in_defined_mode,
     eval_general_interop,
@@ -57,15 +55,12 @@ def df_equals_and_sort(df1, df2):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_combine(data, df_mode_pair):
     modin_df_1, pandas_df_1 = create_test_df_in_defined_mode(
-        data, df_mode=df_mode_pair[0]
+        data, native=df_mode_pair[0]
     )
     modin_df_2, pandas_df_2 = create_test_df_in_defined_mode(
-        data, df_mode=df_mode_pair[1]
+        data, native=df_mode_pair[1]
     )
     modin_df_1.combine(
         modin_df_2 + 1, lambda s1, s2: s1 if s1.count() < s2.count() else s2
@@ -96,21 +91,18 @@ def test_combine(data, df_mode_pair):
         ),
     ],
 )
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_join(test_data, test_data2, df_mode_pair):
     modin_df, pandas_df = create_test_df_in_defined_mode(
         test_data,
         columns=["col{}".format(i) for i in range(test_data.shape[1])],
         index=pd.Index([i for i in range(1, test_data.shape[0] + 1)], name="key"),
-        df_mode=df_mode_pair[0],
+        native=df_mode_pair[0],
     )
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
         test_data2,
         columns=["col{}".format(i) for i in range(test_data2.shape[1])],
         index=pd.Index([i for i in range(1, test_data2.shape[0] + 1)], name="key"),
-        df_mode=df_mode_pair[1],
+        native=df_mode_pair[1],
     )
 
     hows = ["inner", "left", "right", "outer"]
@@ -175,16 +167,13 @@ def test_join(test_data, test_data2, df_mode_pair):
         df_equals(modin_join, pandas_join)
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_join_cross_6786(df_mode_pair):
     data = [[7, 8, 9], [10, 11, 12]]
     modin_df_1, pandas_df_1 = create_test_df_in_defined_mode(
-        data, columns=["x", "y", "z"], df_mode=df_mode_pair[0]
+        data, columns=["x", "y", "z"], native=df_mode_pair[0]
     )
     modin_df_2, pandas_df_2 = create_test_df_in_defined_mode(
-        data, columns=["x", "y", "z"], df_mode=df_mode_pair[1]
+        data, columns=["x", "y", "z"], native=df_mode_pair[1]
     )
     modin_join = modin_df_1.join(
         modin_df_2[["x"]].set_axis(["p", "q"], axis=0), how="cross", lsuffix="p"
@@ -216,21 +205,18 @@ def test_join_cross_6786(df_mode_pair):
         ),
     ],
 )
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_merge(test_data, test_data2, df_mode_pair):
     modin_df, pandas_df = create_test_df_in_defined_mode(
         test_data,
         columns=["col{}".format(i) for i in range(test_data.shape[1])],
         index=pd.Index([i for i in range(1, test_data.shape[0] + 1)], name="key"),
-        df_mode=df_mode_pair[0],
+        native=df_mode_pair[0],
     )
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
         test_data2,
         columns=["col{}".format(i) for i in range(test_data2.shape[1])],
         index=pd.Index([i for i in range(1, test_data2.shape[0] + 1)], name="key"),
-        df_mode=df_mode_pair[1],
+        native=df_mode_pair[1],
     )
     hows = ["left", "inner", "right"]
     ons = ["col33", ["col33", "col34"]]
@@ -266,9 +252,6 @@ def test_merge(test_data, test_data2, df_mode_pair):
 
 
 @pytest.mark.parametrize("how", ["left", "inner", "right"])
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_merge_empty(
     how,
     df_mode_pair,
@@ -282,9 +265,6 @@ def test_merge_empty(
     )
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_merge_with_mi_columns(df_mode_pair):
     modin_df1, pandas_df1 = create_test_df_in_defined_mode(
         {
@@ -292,7 +272,7 @@ def test_merge_with_mi_columns(df_mode_pair):
             ("col0", "b"): [2, 3, 4, 5],
             ("col1", "a"): [3, 4, 5, 6],
         },
-        df_mode=df_mode_pair[0],
+        native=df_mode_pair[0],
     )
 
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
@@ -301,7 +281,7 @@ def test_merge_with_mi_columns(df_mode_pair):
             ("col0", "c"): [2, 3, 4, 5],
             ("col1", "a"): [3, 4, 5, 6],
         },
-        df_mode=df_mode_pair[1],
+        native=df_mode_pair[1],
     )
 
     eval_general(
@@ -311,18 +291,15 @@ def test_merge_with_mi_columns(df_mode_pair):
     )
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_where(df_mode_pair):
     columns = list("abcdefghij")
 
     frame_data = random_state.randn(100, 10)
     modin_df_1, pandas_df_1 = create_test_df_in_defined_mode(
-        frame_data, columns=columns, df_mode=df_mode_pair[0]
+        frame_data, columns=columns, native=df_mode_pair[0]
     )
     modin_df_2, pandas_df_2 = create_test_df_in_defined_mode(
-        frame_data, columns=columns, df_mode=df_mode_pair[1]
+        frame_data, columns=columns, native=df_mode_pair[1]
     )
     pandas_cond_df = pandas_df_2 % 5 < 2
     modin_cond_df = modin_df_2 % 5 < 2
@@ -334,7 +311,7 @@ def test_where(df_mode_pair):
     # test case when other is Series
     other_data = random_state.randn(len(pandas_df_1))
     modin_other, pandas_other = create_test_series_in_defined_mode(
-        other_data, df_mode=df_mode_pair[0]
+        other_data, native=df_mode_pair[0]
     )
     pandas_result = pandas_df_1.where(pandas_cond_df, pandas_other, axis=0)
     modin_result = modin_df_1.where(modin_cond_df, modin_other, axis=0)
@@ -344,7 +321,7 @@ def test_where(df_mode_pair):
     # everywhere.
     other_data = np.full(shape=pandas_df_1.shape, fill_value=True)
     modin_other, pandas_other = create_test_df_in_defined_mode(
-        other_data, columns=columns, df_mode=df_mode_pair[0]
+        other_data, columns=columns, native=df_mode_pair[0]
     )
     pandas_result = pandas_df_1.where(pandas_cond_df, pandas_other)
     modin_result = modin_df_1.where(modin_cond_df, modin_other)
@@ -368,9 +345,6 @@ def test_where(df_mode_pair):
 @pytest.mark.parametrize("align_axis", ["index", "columns"])
 @pytest.mark.parametrize("keep_shape", [False, True])
 @pytest.mark.parametrize("keep_equal", [False, True])
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_compare(align_axis, keep_shape, keep_equal, df_mode_pair):
     kwargs = {
         "align_axis": align_axis,
@@ -380,10 +354,10 @@ def test_compare(align_axis, keep_shape, keep_equal, df_mode_pair):
     frame_data1 = random_state.randn(100, 10)
     frame_data2 = random_state.randn(100, 10)
     modin_df, pandas_df = create_test_df_in_defined_mode(
-        frame_data1, columns=list("abcdefghij"), df_mode=df_mode_pair[0]
+        frame_data1, columns=list("abcdefghij"), native=df_mode_pair[0]
     )
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
-        frame_data2, columns=list("abcdefghij"), df_mode=df_mode_pair[0]
+        frame_data2, columns=list("abcdefghij"), native=df_mode_pair[0]
     )
     modin_result = modin_df.compare(modin_df2, **kwargs)
     pandas_result = pandas_df.compare(pandas_df2, **kwargs)
@@ -396,10 +370,10 @@ def test_compare(align_axis, keep_shape, keep_equal, df_mode_pair):
     series_data1 = ["a", "b", "c", "d", "e"]
     series_data2 = ["a", "a", "c", "b", "e"]
     modin_series1, pandas_series1 = create_test_series_in_defined_mode(
-        series_data1, df_mode=df_mode_pair[0]
+        series_data1, native=df_mode_pair[0]
     )
     modin_series2, pandas_series2 = create_test_series_in_defined_mode(
-        series_data2, df_mode=df_mode_pair[1]
+        series_data2, native=df_mode_pair[1]
     )
 
     modin_result = modin_series1.compare(modin_series2, **kwargs)

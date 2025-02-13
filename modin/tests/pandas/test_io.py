@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import contextlib
 import csv
 import inspect
 import os
@@ -48,7 +47,10 @@ from modin.config import (
 )
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.pandas.io import from_arrow, from_dask, from_map, from_ray, to_pandas
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.tests.test_utils import (
+    current_execution_is_native,
+    warns_that_defaulting_to_pandas_if,
+)
 
 from .utils import (
     check_file_leaks,
@@ -1010,7 +1012,9 @@ class TestCsv:
             warning_suffix = "buffers"
         else:
             warning_suffix = ""
-        with warns_that_defaulting_to_pandas(suffix=warning_suffix):
+        with warns_that_defaulting_to_pandas_if(
+            not current_execution_is_native(), suffix=warning_suffix
+        ):
             # This tests that we default to pandas on a buffer
             with open(pytest.csvs_names["test_read_csv_regular"], "r") as _f:
                 pd.read_csv(StringIO(_f.read()))
@@ -1215,6 +1219,10 @@ class TestCsv:
             modin_df = pd.read_csv(buffer)
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.skipif(
+        current_execution_is_native(),
+        reason="no partitions",
+    )
     def test_unnamed_index(self):
         def get_internal_df(df):
             partition = read_df._query_compiler._modin_frame._partitions[0][0]
@@ -1318,11 +1326,7 @@ def _check_relative_io(fn_name, unique_filename, path_arg, storage_default=()):
     pinned_home = {envvar: dirname for envvar in ("HOME", "USERPROFILE", "HOMEPATH")}
     should_default = Engine.get() == "Python" or StorageFormat.get() in storage_default
     with mock.patch.dict(os.environ, pinned_home):
-        with (
-            warns_that_defaulting_to_pandas()
-            if should_default
-            else contextlib.nullcontext()
-        ):
+        with warns_that_defaulting_to_pandas_if(should_default):
             eval_io(
                 fn_name=fn_name,
                 **{path_arg: f"~/{basename}"},
@@ -2186,7 +2190,7 @@ class TestJson:
         )
 
     def test_read_json_different_columns(self):
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             eval_io(
                 fn_name="read_json",
                 # read_json kwargs
@@ -2199,7 +2203,7 @@ class TestJson:
         [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
     )
     def test_read_json_string_bytes(self, data):
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             modin_df = pd.read_json(data)
         # For I/O objects we need to rewind to reuse the same object.
         if hasattr(data, "seek"):
@@ -2230,6 +2234,10 @@ class TestJson:
             df_modin = pd.read_json(buf)
             df_equals(df_pandas, df_modin)
 
+    @pytest.mark.skipif(
+        current_execution_is_native(),
+        reason="no partitions",
+    )
     def test_read_json_metadata(self, make_json_file):
         # `lines=True` is for triggering Modin implementation,
         # `orient="records"` should be set if `lines=True`
@@ -2290,7 +2298,7 @@ class TestExcel:
     def test_read_excel_engine(self, make_excel_file):
         eval_io(
             fn_name="read_excel",
-            modin_warning=UserWarning,
+            modin_warning=(UserWarning if StorageFormat.get() == "Pandas" else None),
             # read_excel kwargs
             io=make_excel_file(),
             engine="openpyxl",
@@ -2300,7 +2308,7 @@ class TestExcel:
     def test_read_excel_index_col(self, make_excel_file):
         eval_io(
             fn_name="read_excel",
-            modin_warning=UserWarning,
+            modin_warning=(UserWarning if StorageFormat.get() == "Pandas" else None),
             # read_excel kwargs
             io=make_excel_file(),
             index_col=0,
@@ -2322,7 +2330,7 @@ class TestExcel:
 
     # TODO: Check pandas gh-#39250 as it was fixed
     @pytest.mark.xfail(
-        Engine.get() != "Python",
+        (StorageFormat.get() == "Pandas" and Engine.get() != "Python"),
         reason="pandas throws the exception. See pandas issue #39250 for more info",
     )
     @check_file_leaks
@@ -2478,7 +2486,7 @@ class TestExcel:
     def test_read_excel_empty_frame(self, make_excel_file):
         eval_io(
             fn_name="read_excel",
-            modin_warning=UserWarning,
+            modin_warning=(UserWarning if StorageFormat.get() == "Pandas" else None),
             # read_excel kwargs
             io=make_excel_file(),
             usecols=[0],
@@ -2565,10 +2573,10 @@ class TestSql:
             index_col="index",
         )
 
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             pd.read_sql_query(query, conn)
 
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             pd.read_sql_table(table, conn)
 
         # Test SQLAlchemy engine
