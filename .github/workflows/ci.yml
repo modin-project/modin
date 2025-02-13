@@ -316,9 +316,12 @@ jobs:
         running-all-unidist-tests: [ "$${needs.execution-filter.outputs.unidist}}" ]   
         execution: [ray, dask, unidist]
         exclude:
-          - execution: ray
-          - execution: dask
-          - execution: unidist
+          - running-all-ray-tests: 'true'
+            execution: ray
+          - running-all-dask-tests: 'true'
+            execution: dask
+          - running-all-unidist-tests: 'true'
+            execution: unidist
 
         # include:
         #   - execution: ray
