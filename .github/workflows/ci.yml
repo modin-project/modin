@@ -123,9 +123,9 @@ jobs:
           - windows
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
 
-        running-all-ray-tests: [ "$${needs.execution-filter.outputs.ray}}" ]
-        running-all-dask-tests: [ "$${needs.execution-filter.outputs.dask}}" ]
-        running-all-unidist-tests: [ "$${needs.execution-filter.outputs.unidist}}" ]   
+        running-all-ray-tests: [ "${{ needs.execution-filter.outputs.ray }}" ]
+        running-all-dask-tests: [ "${{needs.execution-filter.outputs.dask}}" ]
+        running-all-unidist-tests: [ "${{needs.execution-filter.outputs.unidist}}" ]   
         execution: [ray, dask, unidist]
         exclude:
           - running-all-ray-tests: 'true'
