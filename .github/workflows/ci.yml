@@ -287,7 +287,7 @@ jobs:
       run: |
         python -c "import sys, json; print('engines=' + json.dumps(['python'] + (sys.argv[1] == 'true' and ['ray'] or []) + (sys.argv[2] == 'true' and ['dask'] or []) ))" \
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
-    - id: show variables
+    - id: show-variables
       run: echo ${{ steps.filter.outputs.ray }} , {{ steps.filter.outputs.dask }} , {{ steps.filter.outputs.unidist }} {{ steps.filter.outputs.experimental }} {{ steps.filter.outputs.test-native-dataframe-mode }}
 
   test-all-unidist:
@@ -545,7 +545,7 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - id: show variables
+      - id: show-variables
         run: echo ${{ needs.execution-filter.outputs.ray }} , ${{ needs.execution-filter.outputs.dask}}, ${{needs.execution-filter.outputs.unidist}}
       - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
