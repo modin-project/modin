@@ -566,9 +566,18 @@ jobs:
           - ubuntu
           - windows
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
+
         running-all-ray-tests: [ "$${needs.execution-filter.outputs.ray}}" ]
         running-all-dask-tests: [ "$${needs.execution-filter.outputs.dask}}" ]
         running-all-unidist-tests: [ "$${needs.execution-filter.outputs.unidist}}" ]   
+        execution: ['ray', 'dask', 'unidist']
+        exclude:
+          - running-all-ray-tests: 'true'
+            execution: ray
+          - running-all-dask-tests: 'true'
+            execution: dask
+          - running-all-unidist-tests: 'true'
+            execution: unidist
 
         include:
           - execution: ray
@@ -577,14 +586,6 @@ jobs:
             shell-ex: "python -m pytest"
           - execution: unidist
             shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
-
-        exclude:
-          - running-all-ray-tests: 'true'
-            execution: ray
-          - running-all-dask-tests: 'true'
-            execution: dask
-          - running-all-unidist-tests: 'true'
-            execution: unidist
 
 #         execution:
 #           - name: ray
