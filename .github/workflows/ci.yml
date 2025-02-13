@@ -558,13 +558,15 @@ jobs:
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
         running-all-ray-tests: [ "$${needs.execution-filter.outputs.ray}}" ]
         execution:
-          - name: ray
+          - ray
+        
+        include:
+          - execution: ray
             shell-ex: "python -m pytest"
 
         exclude:
           - running-all-ray-tests: 'true'
-          - execution:
-            - name: ray
+          - execution: ray
         
 #         execution:
 #           - name: ray
