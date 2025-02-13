@@ -12,15 +12,14 @@
 # governing permissions and limitations under the License.
 
 import warnings
-from itertools import product
 
 import matplotlib
 import pytest
 
 import modin.pandas as pd
-from modin.config import NativeDataframeMode, NPartitions
+from modin.config import NPartitions
 from modin.pandas.utils import SET_DATAFRAME_ATTRIBUTE_WARNING
-from modin.tests.pandas.native_df_mode.utils import (
+from modin.tests.pandas.native_df_interoperability.utils import (
     create_test_df_in_defined_mode,
     create_test_series_in_defined_mode,
 )
@@ -32,19 +31,16 @@ NPartitions.put(4)
 matplotlib.use("Agg")
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test___setattr__mutating_column(df_mode_pair):
     # Use case from issue #4577
     modin_df, pandas_df = create_test_df_in_defined_mode(
-        [[1]], columns=["col0"], df_mode=df_mode_pair[0]
+        [[1]], columns=["col0"], native=df_mode_pair[0]
     )
     # Replacing a column with a list should mutate the column in place.
     pandas_df.col0 = [3]
     modin_df.col0 = [3]
     modin_ser, pandas_ser = create_test_series_in_defined_mode(
-        [3], df_mode=df_mode_pair[1]
+        [3], native=df_mode_pair[1]
     )
     df_equals(modin_df, pandas_df)
     # Check that the col0 attribute reflects the value update.
@@ -92,15 +88,12 @@ def test___setattr__mutating_column(df_mode_pair):
     ), "Scalar was not broadcasted properly to an existing column."
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_isin_with_modin_objects(df_mode_pair):
     modin_df1, pandas_df1 = create_test_df_in_defined_mode(
-        {"a": [1, 2], "b": [3, 4]}, df_mode=df_mode_pair[0]
+        {"a": [1, 2], "b": [3, 4]}, native=df_mode_pair[0]
     )
     modin_series, pandas_series = create_test_series_in_defined_mode(
-        [1, 4, 5, 6], df_mode=df_mode_pair[1]
+        [1, 4, 5, 6], native=df_mode_pair[1]
     )
 
     eval_general(
@@ -122,7 +115,7 @@ def test_isin_with_modin_objects(df_mode_pair):
     modin_df1, pandas_df1 = create_test_df_in_defined_mode(
         {"a": [1, 2], "b": [3, 4]},
         index=[10, 11],
-        df_mode=df_mode_pair[0],
+        native=df_mode_pair[0],
     )
 
     eval_general(

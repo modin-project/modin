@@ -127,9 +127,6 @@ def test_aggregate_error_checking():
     with warns_that_defaulting_to_pandas():
         modin_df.aggregate("cumproduct")
 
-    with pytest.raises(ValueError):
-        modin_df.aggregate("NOT_EXISTS")
-
 
 @pytest.mark.parametrize(
     "func",

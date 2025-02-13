@@ -12,16 +12,14 @@
 # governing permissions and limitations under the License.
 
 
-from itertools import product
-
 import matplotlib
 import numpy as np
 import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NativeDataframeMode, NPartitions, StorageFormat
-from modin.tests.pandas.native_df_mode.utils import (
+from modin.config import NPartitions
+from modin.tests.pandas.native_df_interoperability.utils import (
     create_test_df_in_defined_mode,
     create_test_series_in_defined_mode,
 )
@@ -67,34 +65,28 @@ def eval_insert(modin_df, pandas_df, **kwargs):
     )
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_empty_df(df_mode_pair):
-    modin_df, pd_df = create_test_df_in_defined_mode(None, df_mode=df_mode_pair[0])
+    modin_df, pd_df = create_test_df_in_defined_mode(None, native=df_mode_pair[0])
     md_series, pd_series = create_test_series_in_defined_mode(
-        [1, 2, 3, 4, 5], df_mode=df_mode_pair[1]
+        [1, 2, 3, 4, 5], native=df_mode_pair[1]
     )
     modin_df["a"] = md_series
     pd_df["a"] = pd_series
     df_equals(modin_df, pd_df)
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_astype(df_mode_pair):
     td = pandas.DataFrame(test_data["int_data"])[["col1", "index", "col3", "col4"]]
     modin_df, pandas_df = create_test_df_in_defined_mode(
         td.values,
         index=td.index,
         columns=td.columns,
-        df_mode=df_mode_pair[0],
+        native=df_mode_pair[0],
     )
 
     def astype_func(df):
         md_ser, pd_ser = create_test_series_in_defined_mode(
-            [str, str], index=["col1", "col1"], df_mode=df_mode_pair[1]
+            [str, str], index=["col1", "col1"], native=df_mode_pair[1]
         )
         if isinstance(df, pd.DataFrame):
             return df.astype(md_ser)
@@ -115,18 +107,15 @@ def test_astype(df_mode_pair):
 ###########################################################################
 
 
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_convert_dtypes_5653(df_mode_pair):
     modin_part1, _ = create_test_df_in_defined_mode(
-        {"col1": ["a", "b", "c", "d"]}, df_mode=df_mode_pair[0]
+        {"col1": ["a", "b", "c", "d"]}, native=df_mode_pair[0]
     )
     modin_part2, _ = create_test_df_in_defined_mode(
-        {"col1": [None, None, None, None]}, df_mode=df_mode_pair[1]
+        {"col1": [None, None, None, None]}, native=df_mode_pair[1]
     )
     modin_df = pd.concat([modin_part1, modin_part2])
-    if StorageFormat.get() == "Pandas" and NativeDataframeMode.get() == "Default":
+    if modin_df._query_compiler.storage_format == "Pandas":
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     modin_df = modin_df.convert_dtypes()
     assert len(modin_df.dtypes) == 1
@@ -137,11 +126,8 @@ def test_convert_dtypes_5653(df_mode_pair):
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
 @pytest.mark.exclude_in_sanity
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_clip(request, data, axis, bound_type, df_mode_pair):
-    modin_df, pandas_df = create_test_df_in_defined_mode(data, df_mode=df_mode_pair[0])
+    modin_df, pandas_df = create_test_df_in_defined_mode(data, native=df_mode_pair[0])
 
     if name_contains(request.node.name, numeric_dfs):
         ind_len = (
@@ -155,10 +141,10 @@ def test_clip(request, data, axis, bound_type, df_mode_pair):
 
         if bound_type == "series":
             modin_lower, pandas_lower = create_test_series_in_defined_mode(
-                lower, df_mode=df_mode_pair[1]
+                lower, native=df_mode_pair[1]
             )
             modin_upper, pandas_upper = create_test_series_in_defined_mode(
-                upper, df_mode=df_mode_pair[0]
+                upper, native=df_mode_pair[0]
             )
         else:
             modin_lower = pandas_lower = lower
@@ -191,13 +177,10 @@ def test_clip(request, data, axis, bound_type, df_mode_pair):
     ],
 )
 @pytest.mark.parametrize("errors", ["raise", "ignore"])
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_update(data, other_data, errors, df_mode_pair):
-    modin_df, pandas_df = create_test_df_in_defined_mode(data, df_mode=df_mode_pair[0])
+    modin_df, pandas_df = create_test_df_in_defined_mode(data, native=df_mode_pair[0])
     other_modin_df, other_pandas_df = create_test_df_in_defined_mode(
-        other_data, df_mode=df_mode_pair[1]
+        other_data, native=df_mode_pair[1]
     )
     expected_exception = None
     if errors == "raise":
@@ -235,12 +218,9 @@ def test_update(data, other_data, errors, df_mode_pair):
 )
 @pytest.mark.parametrize("dtype", [None, "str"])
 @pytest.mark.exclude_in_sanity
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_constructor_from_modin_series(get_index, get_columns, dtype, df_mode_pair):
     modin_df, pandas_df = create_test_df_in_defined_mode(
-        test_data_values[0], df_mode=df_mode_pair[0]
+        test_data_values[0], native=df_mode_pair[0]
     )
 
     modin_data = {f"new_col{i}": modin_df.iloc[:, i] for i in range(modin_df.shape[1])}

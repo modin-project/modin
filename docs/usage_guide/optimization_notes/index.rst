@@ -314,36 +314,48 @@ Copy-pastable example, showing how mixing pandas and Modin DataFrames in a singl
   # Possible output: TypeError
 
 
-Execute DataFrame operations using NativeQueryCompiler
-""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Using pandas to execute queries in Modin's ``"native"`` execution mode
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-By default, Modin distributes data across partitions and performs operations
-using the ``PandasQueryCompiler``. However, for certain scenarios such as handling small or empty DataFrames,
-distributing them may introduce unnecessary overhead. In such cases, it's more efficient to default
-to pandas at the query compiler layer. This can be achieved by setting the ``cfg.NativeDataframeMode``
-:doc:`configuration variable: </flow/modin/config>` to ``Pandas``. When set to ``Pandas``, all operations in Modin default to pandas, and the DataFrames are not distributed,
-avoiding additional overhead. This configuration can be toggled on or off depending on whether
-DataFrame distribution is required.
+By default, Modin distributes the data in a dataframe (or series) and attempts
+to process data for different partitions in parallel.
 
-DataFrames created while the ``NativeDataframeMode`` is active will continue to use the ``NativeQueryCompiler``
-even after the config is disabled. Modin supports interoperability between distributed Modin DataFrames and
-those using the ``NativeQueryCompiler``.
+However, for certain scenarios, such as handling small datasets, Modin's
+parallel execution may introduce unnecessary overhead. In such cases, it's more
+efficient to use serial execution with a single, unpartitioned pandas dataframe.
+You can enable this kind of "native" execution by setting Modin's
+``StorageFormat`` and ``Engine``
+:doc:`configuration variables </flow/modin/config>` to ``"Native"``.
+
+DataFrames created while Modin's global execution mode is set to ``"Native"``
+will continue to use native execution even if you switch the execution mode
+later. Modin supports interoperability between distributed Modin DataFrames
+and those using native execution.
+
+Here is an example of using native execution:
 
 .. code-block:: python
 
   import modin.pandas as pd
-  import modin.config as cfg
+  from modin import set_execution
+  from modin.config import StorageFormat, Engine
 
-  # This dataframe will be distributed and use `PandasQueryCompiler` by default
-  df_distributed = pd.DataFrame(...)
+  # This dataframe will use Modin's default, distributed execution.
+  df_distributed_1 = pd.DataFrame([0])
+  assert df_distributed_1._query_compiler.engine != "Native"
 
-  # Set mode to "Pandas" to avoid distribution and use `NativeQueryCompiler`
-  cfg.NativeDataframeMode.put("Pandas")
-  df_native_qc = pd.DataFrame(...)
+  # Set execution to "Native" for native execution.
+  original_engine, original_storage_format = set_execution(
+    engine="Native",
+    storage_format="Native"
+  )
+  native_df = pd.DataFrame([1])
+  assert native_df._query_compiler.engine == "Native"
 
-  # Revert to default settings for distributed dataframes
-  cfg.NativeDataframeMode.put("Default")
-  df_distributed = pd.DataFrame(...)
+  # Revert to default settings for distributed execution
+  set_execution(engine=original_engine, storage_format=original_storage_format)
+  df_distributed_2 = pd.DataFrame([2])
+  assert df_distributed_2._query_compiler.engine == original_engine
 
 Operation-specific optimizations
 """"""""""""""""""""""""""""""""

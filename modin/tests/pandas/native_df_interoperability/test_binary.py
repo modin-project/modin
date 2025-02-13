@@ -11,13 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from itertools import product
-
 import matplotlib
 import pytest
 
-from modin.config import NativeDataframeMode, NPartitions
-from modin.tests.pandas.native_df_mode.utils import (
+from modin.config import NPartitions
+from modin.tests.pandas.native_df_interoperability.utils import (
     create_test_df_in_defined_mode,
     eval_general_interop,
 )
@@ -69,9 +67,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
     ],
 )
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 @pytest.mark.parametrize("backend", [None, "pyarrow"])
 def test_math_functions(other, axis, op, backend, df_mode_pair):
     data = test_data["float_nan_data"]
@@ -95,9 +90,6 @@ def test_math_functions(other, axis, op, backend, df_mode_pair):
 
 
 @pytest.mark.parametrize("other", [lambda df: 2, lambda df: df])
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test___divmod__(other, df_mode_pair):
     data = test_data["float_nan_data"]
     eval_general_interop(
@@ -108,9 +100,6 @@ def test___divmod__(other, df_mode_pair):
 @pytest.mark.parametrize("other", ["as_left", 4])
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_comparison(data, op, other, request, df_mode_pair):
     def operation(df1, df2):
         return getattr(df1, op)(df2 if other == "as_left" else other)
@@ -151,15 +140,12 @@ def test_comparison(data, op, other, request, df_mode_pair):
         ),
     ],
 )
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_equals(frame1_data, frame2_data, expected_pandas_equals, df_mode_pair):
     modin_df1, pandas_df1 = create_test_df_in_defined_mode(
-        frame1_data, df_mode=df_mode_pair[0]
+        frame1_data, native=df_mode_pair[0]
     )
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
-        frame2_data, df_mode=df_mode_pair[1]
+        frame2_data, native=df_mode_pair[1]
     )
 
     pandas_equals = pandas_df1.equals(pandas_df2)
@@ -174,15 +160,12 @@ def test_equals(frame1_data, frame2_data, expected_pandas_equals, df_mode_pair):
 
 
 @pytest.mark.parametrize("empty_operand", ["right", "left", "both"])
-@pytest.mark.parametrize(
-    "df_mode_pair", list(product(NativeDataframeMode.choices, repeat=2))
-)
 def test_empty_df(empty_operand, df_mode_pair):
     modin_df, pandas_df = create_test_df_in_defined_mode(
-        [0, 1, 2, 0, 1, 2], df_mode=df_mode_pair[0]
+        [0, 1, 2, 0, 1, 2], native=df_mode_pair[0]
     )
     modin_df_empty, pandas_df_empty = create_test_df_in_defined_mode(
-        df_mode=df_mode_pair[1]
+        native=df_mode_pair[1]
     )
 
     if empty_operand == "right":
