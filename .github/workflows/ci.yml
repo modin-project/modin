@@ -163,7 +163,7 @@ jobs:
 #             # change to the unidist engine, we don't need to run these sanity tests
 #             # on unidist.
 #             if: needs.execution-filter.outputs.unidist != 'true'
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
@@ -182,4 +182,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - id: show-variables
-        run: echo ${{ needs.execution-filter.outputs.ray }} , ${{ needs.execution-filter.outputs.dask}}, ${{needs.execution-filter.outputs.unidist}}, ${{matrix.running-all-ray-tests}}, ${{matrix.running-all-dask-tests}}    
+        run: echo ${{ needs.execution-filter.outputs.ray }} , ${{ needs.execution-filter.outputs.dask}}, ${{needs.execution-filter.outputs.unidist}}, ${{matrix.running-all-ray-tests}}, ${{matrix.running-all-dask-tests}}    , ${{matrix.os}}  , ${{matrix.python-version}}  , ${{matrix.execution}}  , ${{matrix.shell-ex}} 
