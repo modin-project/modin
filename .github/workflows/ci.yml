@@ -288,7 +288,7 @@ jobs:
         python -c "import sys, json; print('engines=' + json.dumps(['python'] + (sys.argv[1] == 'true' and ['ray'] or []) + (sys.argv[2] == 'true' and ['dask'] or []) ))" \
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
     - id: show variables
-      run: echo ${{ steps.filter.outputs.ray }} , {{ steps.filter.outputs.dask }} , {{ steps.filter.outputs.unidist }} {{ steps.filter.outputs.engines }} {{ steps.filter.outputs.experimental }} {{ steps.filter.outputs.test-native-dataframe-mode }}
+      run: echo ${{ steps.filter.outputs.ray }} , {{ steps.filter.outputs.dask }} , {{ steps.filter.outputs.unidist }} {{ steps.filter.outputs.experimental }} {{ steps.filter.outputs.test-native-dataframe-mode }}
 
   test-all-unidist:
     needs: [lint-flake8, execution-filter, python-filter]
