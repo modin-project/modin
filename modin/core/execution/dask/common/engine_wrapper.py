@@ -20,6 +20,8 @@ from dask.distributed import wait
 from distributed import Future
 from distributed.client import default_client
 
+x = 3
+
 
 def _deploy_dask_func(func, *args, return_pandas_df=None, **kwargs):  # pragma: no cover
     """
