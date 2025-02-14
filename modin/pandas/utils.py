@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Optional, Tuple, Any
+from typing import Any, Iterator, Optional, Tuple
 
 import numpy as np
 import pandas
@@ -306,6 +306,7 @@ def broadcast_item(
         def sort_index(lookup: Any) -> np.ndarray:
             """
             Return the argsort and sorted version of the lookup index.
+
             Values in the lookup are guaranteed by the indexing frontend to be non-negative.
 
             The sort operation must be stable to ensure proper behavior for iloc set, which
