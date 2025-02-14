@@ -22,6 +22,8 @@ import asyncio
 import pandas
 import unidist
 
+x = 3
+
 
 @unidist.remote
 def _deploy_unidist_func(
