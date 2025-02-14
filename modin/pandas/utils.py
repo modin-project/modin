@@ -221,7 +221,8 @@ def broadcast_item(
     row_lookup,
     col_lookup,
     item,
-    need_columns_reindex=True,
+    need_columns_reindex: bool = True,
+    sort_lookups_and_item: bool = True,
 ):
     """
     Use NumPy to broadcast or reshape item with reindexing.
@@ -239,6 +240,9 @@ def broadcast_item(
     need_columns_reindex : bool, default: True
         In the case of assigning columns to a dataframe (broadcasting is
         part of the flow), reindexing is not needed.
+    sort_lookups_and_item : bool, default: True
+        If set, sort the lookups in ascending order and the item to match. This is necessary to
+        ensure writes across multiple partitions are ordered correctly when the lookups are unsorted.
 
     Returns
     -------
@@ -314,33 +318,38 @@ def broadcast_item(
             argsort_index = np.argsort(lookup, kind="stable")
             return argsort_index, np.array(lookup)[argsort_index]
 
-        def should_take_fastpath(lookup: Any) -> bool:
+        def should_avoid_sort(lookup: Any) -> bool:
             return (
-                isinstance(lookup, (range, pandas.RangeIndex, slice))
-                and lookup.step is not None
-                and lookup.step > 0
-            ) or (isinstance(lookup, slice) and lookup == slice(None))
+                not sort_lookups_and_item
+                or (
+                    isinstance(lookup, (range, pandas.RangeIndex, slice))
+                    and lookup.step is not None
+                    and lookup.step > 0
+                )
+                or (isinstance(lookup, slice) and lookup == slice(None))
+            )
 
         # Fast path to avoid sorting for range/RangeIndex, which are already sorted, or the empty slice
-        row_lookup_fastpath = should_take_fastpath(row_lookup)
-        col_lookup_fastpath = should_take_fastpath(col_lookup)
+        avoid_row_lookup_sort = should_avoid_sort(row_lookup)
+        avoid_col_lookup_sort = should_avoid_sort(col_lookup)
         # Sort both the columns and rows if necessary
         if item.ndim >= 2:
-            # Use np.ix_ to handle broadcasting errors
-            if not row_lookup_fastpath and not col_lookup_fastpath:
-                row_argsort, row_lookup = sort_index(row_lookup)
-                col_argsort, col_lookup = sort_index(col_lookup)
-                item = item[np.ix_(row_argsort, col_argsort)]
-            elif row_lookup_fastpath:
-                col_argsort, col_lookup = sort_index(col_lookup)
-                item = item[:, col_argsort]
-            elif col_lookup_fastpath:
+            if avoid_row_lookup_sort:
+                if not avoid_col_lookup_sort:
+                    col_argsort, col_lookup = sort_index(col_lookup)
+                    item = item[:, col_argsort]
+            elif avoid_col_lookup_sort:
                 row_argsort, row_lookup = sort_index(row_lookup)
                 item = item[row_argsort, :]
-        else:
-            if not row_lookup_fastpath:
+            else:
                 row_argsort, row_lookup = sort_index(row_lookup)
-                item = item[row_argsort]
+                col_argsort, col_lookup = sort_index(col_lookup)
+                # Use np.ix_ to handle broadcasting errors
+                item = item[np.ix_(row_argsort, col_argsort)]
+        elif not avoid_row_lookup_sort:
+            # Item is 1D, so only sort row indexer
+            row_argsort, row_lookup = sort_index(row_lookup)
+            item = item[row_argsort]
         if dtypes is None:
             dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):
