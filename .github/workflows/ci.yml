@@ -160,7 +160,18 @@ jobs:
       MODIN_ENGINE: ${{ matrix.execution.name }}
       UNIDIST_BACKEND: "mpi"
       PARALLEL: ${{ matrix.execution.name != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
-      PYTEST_COMMAND: ${{((matrix.execution.name == 'ray' || matrix.execution.name == 'dask') && 'python -m pytest') || (matrix.execution.name == 'unidist' && 'mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest') || 'UNKNOWN_PYTEST_COMMAND'}}
+      PYTEST_COMMAND: >-
+        ${{
+          (
+            (matrix.execution.name == 'ray' || matrix.execution.name == 'dask') &&
+            'python -m pytest'
+          ) ||
+          (
+            matrix.execution.name == 'unidist' &&
+            'mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest'
+          ) ||
+          'UNKNOWN_PYTEST_COMMAND'
+        }}
     name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
