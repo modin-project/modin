@@ -237,9 +237,6 @@ class RayWrapper:
             ray.wait(list(ids), num_returns=num_returns or num_ids)
 
 
-x = 3
-
-
 @ray.remote
 class SignalActor:  # pragma: no cover
     """
