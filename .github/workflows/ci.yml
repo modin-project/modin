@@ -125,16 +125,14 @@ jobs:
         running-all-ray-tests: [ "${{ needs.execution-filter.outputs.ray }}" ]
         running-all-dask-tests: [ "${{needs.execution-filter.outputs.dask}}" ]
         running-all-unidist-tests: [ "${{needs.execution-filter.outputs.unidist}}" ]        
-        include:
+        execution: [ray, dask, unidist]
+        exclude:
           - running-all-ray-tests: 'true'
             execution: ray
-            shell-ex: "python -m pytest"
           - running-all-dask-tests: 'true'
             execution: dask
-            shell-ex: "python -m pytest"
           - running-all-unidist-tests: 'true'
-            execution: dask
-            shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
+            execution: unidist
         # execution:
         #   - name: ray
         #     shell-ex: "python -m pytest"
@@ -162,6 +160,7 @@ jobs:
       MODIN_ENGINE: ${{ matrix.execution.name }}
       UNIDIST_BACKEND: "mpi"
       PARALLEL: ${{ matrix.execution.name != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
+      PYTEST_COMMAND: ${{((matrix.execution.name == 'ray' || matrix.execution.name == 'dask') && 'python -m pytest') || (matrix.execution.name == 'unidist' && 'mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest') || 'UNKNOWN_PYTEST_COMMAND'}}
     name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
@@ -196,55 +195,55 @@ jobs:
           max_attempts: 5
           command: ray start --head --port=6379 --object-store-memory=1000000000
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
-      - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/tests/pandas/internals/test_benchmark_mode.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/test_partition_api.py
-      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/extensions
+      - run: MODIN_BENCHMARK_MODE=True $PYTEST_COMMAND modin/tests/pandas/internals/test_benchmark_mode.py
+      - run: $PYTEST_COMMAND $PARALLEL modin/tests/test_partition_api.py
+      - run: $PYTEST_COMMAND modin/tests/pandas/extensions
       - name: xgboost tests
         run: |
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
           # when we use collective instead of rabit.
           mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
-          ${{ matrix.execution.shell-ex }} $PARALLEL \
+          $PYTEST_COMMAND $PARALLEL \
                   modin/tests/experimental/xgboost/test_default.py \
                   modin/tests/experimental/xgboost/test_xgboost.py \
                   modin/tests/experimental/xgboost/test_dmatrix.py
         if: matrix.os != 'windows' && needs.execution-filter.outputs.experimental == 'true'
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/experimental/test_pipeline.py
+      - run: $PYTEST_COMMAND $PARALLEL modin/tests/experimental/test_pipeline.py
         if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.outputs.experimental == 'true'
       - name: "test DF: binary, default, iter"
         run: |
-          ${{ matrix.execution.shell-ex }} $PARALLEL \
+          $PYTEST_COMMAND $PARALLEL \
                   modin/tests/pandas/dataframe/test_binary.py \
                   modin/tests/pandas/dataframe/test_default.py \
                   modin/tests/pandas/dataframe/test_iter.py
         if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
-          ${{ matrix.execution.shell-ex }} $PARALLEL \
+          $PYTEST_COMMAND $PARALLEL \
                   modin/tests/pandas/dataframe/test_reduce.py \
                   modin/tests/pandas/dataframe/test_udf.py \
                   modin/tests/pandas/dataframe/test_window.py \
                   modin/tests/pandas/dataframe/test_pickle.py
         if: matrix.os != 'windows'
-      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/test_series.py
+      - run: $PYTEST_COMMAND modin/tests/pandas/test_series.py
         if: matrix.execution.name == 'ray'
-      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_series.py
+      - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_series.py
         if: matrix.execution.name != 'ray'
-      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/dataframe/test_map_metadata.py
+      - run: $PYTEST_COMMAND modin/tests/pandas/dataframe/test_map_metadata.py
         if: matrix.execution.name == 'ray'
-      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/dataframe/test_map_metadata.py
+      - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/dataframe/test_map_metadata.py
         if: matrix.execution.name != 'ray'
       - name: "test rolling, expanding, reshape, general, concat"
         run: |
-          ${{ matrix.execution.shell-ex }} $PARALLEL \
+          $PYTEST_COMMAND $PARALLEL \
                   modin/tests/pandas/test_rolling.py \
                   modin/tests/pandas/test_expanding.py \
                   modin/tests/pandas/test_reshape.py \
                   modin/tests/pandas/test_general.py \
                   modin/tests/pandas/test_concat.py
         if: matrix.os != 'windows'
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/numpy
-      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
+      - run: $PYTEST_COMMAND $PARALLEL modin/tests/numpy
+      - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
         if: matrix.execution.name != 'unidist'
       - uses: nick-fields/retry@v3
         # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
@@ -252,11 +251,11 @@ jobs:
         with:
           timeout_minutes: 15
           max_attempts: 3
-          command: conda run --no-capture-output -n modin_on_unidist ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
+          command: conda run --no-capture-output -n modin_on_unidist $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
         if: matrix.execution.name == 'unidist'
-      - run: ${{ matrix.execution.shell-ex }} modin/tests/experimental/test_io_exp.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/interchange/dataframe_protocol/test_general.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: $PYTEST_COMMAND modin/tests/experimental/test_io_exp.py
+      - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/test_general.py
+      - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
