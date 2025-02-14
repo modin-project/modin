@@ -20,4 +20,7 @@ __all__ = [
     "get_logger",
     "enable_logging",
     "disable_logging",
+    "emit_telemetry_event",
+    "add_telemetry_handler",
+    "clear_telemetry_handler"
 ]
