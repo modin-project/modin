@@ -157,22 +157,22 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      MODIN_ENGINE: ${{ matrix.execution.name }}
+      MODIN_ENGINE: ${{ matrix.execution }}
       UNIDIST_BACKEND: "mpi"
-      PARALLEL: ${{ matrix.execution.name != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
+      PARALLEL: ${{ matrix.execution != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
       PYTEST_COMMAND: >-
         ${{
           (
-            (matrix.execution.name == 'ray' || matrix.execution.name == 'dask') &&
+            (matrix.execution == 'ray' || matrix.execution == 'dask') &&
             'python -m pytest'
           ) ||
           (
-            matrix.execution.name == 'unidist' &&
+            matrix.execution == 'unidist' &&
             'mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest'
           ) ||
           'UNKNOWN_PYTEST_COMMAND'
         }}
-    name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
+    name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution }}, python ${{matrix.python-version}})
     services:
       moto:
         image: ${{ matrix.os != 'windows' && 'motoserver/moto:5.0.13' || '' }}
@@ -185,18 +185,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
-          environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
-          activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
+          environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
+          activate-environment: ${{ matrix.execution == 'unidist' && 'modin_on_unidist' || 'modin' }}
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
         if: matrix.os != 'windows'
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-        if: matrix.os != 'windows' && matrix.execution.name == 'ray'
+        if: matrix.os != 'windows' && matrix.execution == 'ray'
       - name: Tell Modin to use existing ray cluster
         run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
-        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+        if: matrix.os == 'windows' && matrix.execution == 'ray'
       - name: Start local ray cluster
         # Try a few times to start ray to work around
         # https://github.com/modin-project/modin/issues/4562
@@ -205,7 +205,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           command: ray start --head --port=6379 --object-store-memory=1000000000
-        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+        if: matrix.os == 'windows' && matrix.execution == 'ray'
       - run: MODIN_BENCHMARK_MODE=True $PYTEST_COMMAND modin/tests/pandas/internals/test_benchmark_mode.py
       - run: $PYTEST_COMMAND $PARALLEL modin/tests/test_partition_api.py
       - run: $PYTEST_COMMAND modin/tests/pandas/extensions
@@ -220,7 +220,7 @@ jobs:
                   modin/tests/experimental/xgboost/test_dmatrix.py
         if: matrix.os != 'windows' && needs.execution-filter.outputs.experimental == 'true'
       - run: $PYTEST_COMMAND $PARALLEL modin/tests/experimental/test_pipeline.py
-        if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.outputs.experimental == 'true'
+        if: matrix.os != 'windows' && matrix.execution != 'unidist' && needs.execution-filter.outputs.experimental == 'true'
       - name: "test DF: binary, default, iter"
         run: |
           $PYTEST_COMMAND $PARALLEL \
@@ -237,13 +237,13 @@ jobs:
                   modin/tests/pandas/dataframe/test_pickle.py
         if: matrix.os != 'windows'
       - run: $PYTEST_COMMAND modin/tests/pandas/test_series.py
-        if: matrix.execution.name == 'ray'
+        if: matrix.execution == 'ray'
       - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_series.py
-        if: matrix.execution.name != 'ray'
+        if: matrix.execution != 'ray'
       - run: $PYTEST_COMMAND modin/tests/pandas/dataframe/test_map_metadata.py
-        if: matrix.execution.name == 'ray'
+        if: matrix.execution == 'ray'
       - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/dataframe/test_map_metadata.py
-        if: matrix.execution.name != 'ray'
+        if: matrix.execution != 'ray'
       - name: "test rolling, expanding, reshape, general, concat"
         run: |
           $PYTEST_COMMAND $PARALLEL \
@@ -255,7 +255,7 @@ jobs:
         if: matrix.os != 'windows'
       - run: $PYTEST_COMMAND $PARALLEL modin/tests/numpy
       - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
-        if: matrix.execution.name != 'unidist'
+        if: matrix.execution != 'unidist'
       - uses: nick-fields/retry@v3
         # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
         # for details see: https://github.com/modin-project/modin/pull/6776
@@ -263,11 +263,11 @@ jobs:
           timeout_minutes: 15
           max_attempts: 3
           command: conda run --no-capture-output -n modin_on_unidist $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
-        if: matrix.execution.name == 'unidist'
+        if: matrix.execution == 'unidist'
       - run: $PYTEST_COMMAND modin/tests/experimental/test_io_exp.py
       - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/test_general.py
       - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
       - name: Stop local ray cluster
         run: ray stop
-        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+        if: matrix.os == 'windows' && matrix.execution == 'ray'
       - uses: ./.github/actions/upload-coverage
