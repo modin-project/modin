@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Optional, Tuple
+from typing import Any, Iterator, Optional, Tuple
 
 import numpy as np
 import pandas
@@ -221,7 +221,8 @@ def broadcast_item(
     row_lookup,
     col_lookup,
     item,
-    need_columns_reindex=True,
+    need_columns_reindex: bool = True,
+    sort_lookups_and_item: bool = True,
 ):
     """
     Use NumPy to broadcast or reshape item with reindexing.
@@ -239,12 +240,17 @@ def broadcast_item(
     need_columns_reindex : bool, default: True
         In the case of assigning columns to a dataframe (broadcasting is
         part of the flow), reindexing is not needed.
+    sort_lookups_and_item : bool, default: True
+        If set, sort the lookups in ascending order and the item to match. This is necessary to
+        ensure writes across multiple partitions are ordered correctly when the lookups are unsorted.
 
     Returns
     -------
-    (np.ndarray, Optional[Series])
+    (np.ndarray, Optional[Series], array-like, array-like)
         * np.ndarray - `item` after it was broadcasted to `to_shape`.
         * Series - item's dtypes.
+        * array-like - sorted version of `row_lookup` (may or may not be the same reference)
+        * array-like - sorted version of `col_lookup` (may or may not be the same reference)
 
     Raises
     ------
@@ -259,6 +265,7 @@ def broadcast_item(
     """
     # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
     # the target the user is trying to overwrite.
+
     from .dataframe import DataFrame
     from .series import Series
 
@@ -295,12 +302,61 @@ def broadcast_item(
         # Cast to numpy drop information about heterogeneous types (cast to common)
         # TODO: we shouldn't do that, maybe there should be the if branch
         item = np.array(item)
+
+        def sort_index(lookup: Any) -> np.ndarray:
+            """
+            Return the argsort and sorted version of the lookup index.
+
+            Values in the lookup are guaranteed by the indexing frontend to be non-negative.
+
+            The sort operation must be stable to ensure proper behavior for iloc set, which
+            will use the last item encountered if two items share an index.
+            """
+            if isinstance(lookup, slice):
+                # Special case for if a descending slice is passed
+                # Directly calling np.array(slice(...)) does not work
+                lookup = range(lookup.start or 0, lookup.stop or 0, lookup.step or 0)
+            argsort_index = np.argsort(lookup, kind="stable")
+            return argsort_index, np.array(lookup)[argsort_index]
+
+        def should_avoid_sort(lookup: Any) -> bool:
+            return (
+                not sort_lookups_and_item
+                or (
+                    isinstance(lookup, (range, pandas.RangeIndex, slice))
+                    and lookup.step is not None
+                    and lookup.step > 0
+                )
+                or (isinstance(lookup, slice) and lookup == slice(None))
+            )
+
+        # Fast path to avoid sorting for range/RangeIndex, which are already sorted, or the empty slice
+        avoid_row_lookup_sort = should_avoid_sort(row_lookup)
+        avoid_col_lookup_sort = should_avoid_sort(col_lookup)
+        # Sort both the columns and rows if necessary
+        if item.ndim >= 2:
+            if avoid_row_lookup_sort:
+                if not avoid_col_lookup_sort:
+                    col_argsort, col_lookup = sort_index(col_lookup)
+                    item = item[:, col_argsort]
+            elif avoid_col_lookup_sort:
+                row_argsort, row_lookup = sort_index(row_lookup)
+                item = item[row_argsort, :]
+            else:
+                row_argsort, row_lookup = sort_index(row_lookup)
+                col_argsort, col_lookup = sort_index(col_lookup)
+                # Use np.ix_ to handle broadcasting errors
+                item = item[np.ix_(row_argsort, col_argsort)]
+        elif not avoid_row_lookup_sort:
+            # Item is 1D, so only sort row indexer
+            row_argsort, row_lookup = sort_index(row_lookup)
+            item = item[row_argsort]
         if dtypes is None:
             dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape), dtypes
+            return item.reshape(to_shape), dtypes, row_lookup, col_lookup
         else:
-            return np.broadcast_to(item, to_shape), dtypes
+            return np.broadcast_to(item, to_shape), dtypes, row_lookup, col_lookup
     except ValueError:
         from_shape = np.array(item).shape
         raise ValueError(

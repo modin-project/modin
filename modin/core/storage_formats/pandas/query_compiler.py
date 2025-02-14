@@ -4704,7 +4704,12 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
             return partition
 
         if not is_scalar(item):
-            broadcasted_item, broadcasted_dtypes = broadcast_item(
+            (
+                broadcasted_item,
+                broadcasted_dtypes,
+                row_numeric_index,
+                col_numeric_index,
+            ) = broadcast_item(
                 self,
                 row_numeric_index,
                 col_numeric_index,

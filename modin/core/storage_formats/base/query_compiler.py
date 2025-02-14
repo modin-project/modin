@@ -4627,12 +4627,13 @@ class BaseQueryCompiler(
             return df
 
         if not is_scalar(item):
-            broadcasted_item, _ = broadcast_item(
+            broadcasted_item, _, _, _ = broadcast_item(
                 self,
                 row_numeric_index,
                 col_numeric_index,
                 item,
                 need_columns_reindex=need_columns_reindex,
+                sort_lookups_and_item=False,
             )
         else:
             broadcasted_item = item
