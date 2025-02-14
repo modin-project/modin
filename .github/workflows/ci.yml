@@ -117,61 +117,52 @@ jobs:
         needs.execution-filter.outputs.unidist != 'true'
       )
     strategy:
-      matrix:      
+      matrix:
         os:
           - ubuntu
           - windows
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
-
         running-all-ray-tests: [ "${{ needs.execution-filter.outputs.ray }}" ]
         running-all-dask-tests: [ "${{needs.execution-filter.outputs.dask}}" ]
-        running-all-unidist-tests: [ "${{needs.execution-filter.outputs.unidist}}" ]   
-        execution: [ray, dask, unidist]
+        running-all-unidist-tests: [ "${{needs.execution-filter.outputs.unidist}}" ]        
         include:
-          - execution: ray
-            shell-ex: "python -m pytest"
-          - execution: dask
-            shell-ex: "python -m pytest"
-          - execution: unidist
-            shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
-        # NOTE: include re-adds excluded jobs, so we have to put the include
-        # before the exclude.
-        exclude:
           - running-all-ray-tests: 'true'
             execution: ray
+            shell-ex: "python -m pytest"
           - running-all-dask-tests: 'true'
             execution: dask
+            shell-ex: "python -m pytest"
           - running-all-unidist-tests: 'true'
-            execution: unidist
-
-#         execution:
-#           - name: ray
-#             shell-ex: "python -m pytest"
-#             # If we're going to run all ray tests because we've detected a
-#             # change to the ray engine, we don't need to run these sanity tests
-#             # on ray.
-#             if: needs.execution-filter.outputs.ray != 'true'
-#           - name: dask
-#             shell-ex: "python -m pytest"
-#             # If we're going to run all dask tests because we've detected a
-#             # change to the dask engine, we don't need to run these sanity tests
-#             # on dask.
-#             if: needs.execution-filter.outputs.dask != 'true'
-#           - name: unidist
-#             shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
-#             # If we're going to run all unidist tests because we've detected a
-#             # change to the unidist engine, we don't need to run these sanity tests
-#             # on unidist.
-#             if: needs.execution-filter.outputs.unidist != 'true'
-    runs-on: ubuntu-latest
+            execution: dask
+            shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
+        # execution:
+        #   - name: ray
+        #     shell-ex: "python -m pytest"
+        #     # If we're going to run all ray tests because we've detected a
+        #     # change to the ray engine, we don't need to run these sanity tests
+        #     # on ray.
+        #     if: needs.execution-filter.outputs.ray != 'true'
+        #   - name: dask
+        #     shell-ex: "python -m pytest"
+        #     # If we're going to run all dask tests because we've detected a
+        #     # change to the dask engine, we don't need to run these sanity tests
+        #     # on dask.
+        #     if: needs.execution-filter.outputs.dask != 'true'
+        #   - name: unidist
+        #     shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
+        #     # If we're going to run all unidist tests because we've detected a
+        #     # change to the unidist engine, we don't need to run these sanity tests
+        #     # on unidist.
+        #     if: needs.execution-filter.outputs.unidist != 'true'
+    runs-on: ${{ matrix.os }}-latest
     defaults:
       run:
         shell: bash -l {0}
     env:
-      MODIN_ENGINE: ${{ matrix.execution }}
+      MODIN_ENGINE: ${{ matrix.execution.name }}
       UNIDIST_BACKEND: "mpi"
-      PARALLEL: ${{ matrix.execution != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
-    name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution }}, python ${{matrix.python-version}})
+      PARALLEL: ${{ matrix.execution.name != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
+    name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
         image: ${{ matrix.os != 'windows' && 'motoserver/moto:5.0.13' || '' }}
@@ -181,5 +172,92 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - id: show-variables
-        run: echo ${{ needs.execution-filter.outputs.ray }} , ${{ needs.execution-filter.outputs.dask}}, ${{needs.execution-filter.outputs.unidist}}, ${{matrix.running-all-ray-tests}}, ${{matrix.running-all-dask-tests}}    , ${{matrix.os}}  , ${{matrix.python-version}}  , ${{matrix.execution}}  , ${{matrix.shell-ex}} 
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/mamba-env
+        with:
+          environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
+          activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
+          python-version: ${{matrix.python-version}}
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+        if: matrix.os != 'windows'
+      - name: Limit ray memory
+        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+        if: matrix.os != 'windows' && matrix.execution.name == 'ray'
+      - name: Tell Modin to use existing ray cluster
+        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - name: Start local ray cluster
+        # Try a few times to start ray to work around
+        # https://github.com/modin-project/modin/issues/4562
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: ray start --head --port=6379 --object-store-memory=1000000000
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/tests/pandas/internals/test_benchmark_mode.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/test_partition_api.py
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/extensions
+      - name: xgboost tests
+        run: |
+          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+          # when we use collective instead of rabit.
+          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/tests/experimental/xgboost/test_default.py \
+                  modin/tests/experimental/xgboost/test_xgboost.py \
+                  modin/tests/experimental/xgboost/test_dmatrix.py
+        if: matrix.os != 'windows' && needs.execution-filter.outputs.experimental == 'true'
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/experimental/test_pipeline.py
+        if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.outputs.experimental == 'true'
+      - name: "test DF: binary, default, iter"
+        run: |
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/tests/pandas/dataframe/test_binary.py \
+                  modin/tests/pandas/dataframe/test_default.py \
+                  modin/tests/pandas/dataframe/test_iter.py
+        if: matrix.os != 'windows'
+      - name: "test DF: reduce, udf, window, pickle"
+        run: |
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/tests/pandas/dataframe/test_reduce.py \
+                  modin/tests/pandas/dataframe/test_udf.py \
+                  modin/tests/pandas/dataframe/test_window.py \
+                  modin/tests/pandas/dataframe/test_pickle.py
+        if: matrix.os != 'windows'
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/test_series.py
+        if: matrix.execution.name == 'ray'
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_series.py
+        if: matrix.execution.name != 'ray'
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/dataframe/test_map_metadata.py
+        if: matrix.execution.name == 'ray'
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/dataframe/test_map_metadata.py
+        if: matrix.execution.name != 'ray'
+      - name: "test rolling, expanding, reshape, general, concat"
+        run: |
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/tests/pandas/test_rolling.py \
+                  modin/tests/pandas/test_expanding.py \
+                  modin/tests/pandas/test_reshape.py \
+                  modin/tests/pandas/test_general.py \
+                  modin/tests/pandas/test_concat.py
+        if: matrix.os != 'windows'
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/numpy
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
+        if: matrix.execution.name != 'unidist'
+      - uses: nick-fields/retry@v3
+        # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
+        # for details see: https://github.com/modin-project/modin/pull/6776
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: conda run --no-capture-output -n modin_on_unidist ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
+        if: matrix.execution.name == 'unidist'
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/experimental/test_io_exp.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/interchange/dataframe_protocol/test_general.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
+      - name: Stop local ray cluster
+        run: ray stop
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - uses: ./.github/actions/upload-coverage
