@@ -547,19 +547,20 @@ jobs:
     # The "sanity" tests run on each pull request to test that a subset of the
     # full tests work with the slower engines (ray, dask, and unidist-MPI).
     needs: [lint-flake8, execution-filter, python-filter]
-    # DO NOT MERGE -- see if this is necessary.
     # If we don't need to run any sanity tests, the job matrix that we generate
-    # here gives a single job with an empty matrix (that is, os, execution, etc.
-    # are not set, so we treat them as "").
-    # so, if the matrix is going to be empty, we need to skip this job completely:
+    # here gives a single job with all the matrix fields empty (that is, os,
+    # execution, etc. are not set, so we treat them as "").
+    # so, if the matrix is going to be empty, we need to skip this job
+    # completely. This bizarre behavior is not in the official documentation,
+    # of GitHub actions matrices, but someone does mention it here:
     # https://stackoverflow.com/a/77118991
-    # if: |
-    #   github.event_name == 'pull_request' &&
-    #   (
-    #     needs.execution-filter.outputs.ray != 'true' ||
-    #     needs.execution-filter.outputs.dask != 'true' ||
-    #     needs.execution-filter.outputs.unidist != 'true'
-    #   )
+    if: |
+      github.event_name == 'pull_request' &&
+      (
+        needs.execution-filter.outputs.ray != 'true' ||
+        needs.execution-filter.outputs.dask != 'true' ||
+        needs.execution-filter.outputs.unidist != 'true'
+      )
     strategy:
       matrix:
         os:
