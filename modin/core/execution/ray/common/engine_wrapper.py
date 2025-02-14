@@ -28,8 +28,6 @@ import ray
 from modin.config import RayTaskCustomResources
 from modin.error_message import ErrorMessage
 
-X = 3
-
 
 @ray.remote
 def _deploy_ray_func(func, *args, return_pandas_df=None, **kwargs):  # pragma: no cover
