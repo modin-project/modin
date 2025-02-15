@@ -19,6 +19,25 @@ import pandas
 from dask.distributed import wait
 from distributed import Future
 from distributed.client import default_client
+from distributed.worker import get_worker
+
+
+def get_dask_client():
+    """
+    Get the Dask client, reusing the worker's client if execution is on a Dask worker.
+
+    Returns
+    -------
+    distributed.Client
+        The Dask client.
+    """
+    try:
+        client = default_client()
+    except ValueError:
+        # We ought to be in a worker process
+        worker = get_worker()
+        client = worker.client
+    return client
 
 
 def _deploy_dask_func(func, *args, return_pandas_df=None, **kwargs):  # pragma: no cover
@@ -83,7 +102,7 @@ class DaskWrapper:
         list
             The result of ``func`` split into parts in accordance with ``num_returns``.
         """
-        client = default_client()
+        client = get_dask_client()
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
         if callable(func):
@@ -137,7 +156,7 @@ class DaskWrapper:
         Any
             An object(s) from the distributed memory.
         """
-        client = default_client()
+        client = get_dask_client()
         return client.gather(future)
 
     @classmethod
@@ -164,7 +183,7 @@ class DaskWrapper:
             # {'sep': <Future: finished, type: pandas._libs.lib._NoDefault, key: sep>, \
             #  'delimiter': <Future: finished, type: NoneType, key: delimiter> ...
             data = UserDict(data)
-        client = default_client()
+        client = get_dask_client()
         return client.scatter(data, **kwargs)
 
     @classmethod
