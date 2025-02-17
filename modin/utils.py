@@ -981,16 +981,20 @@ def reload_modin() -> None:
     for name, module in modules.items():
         if name.startswith("modin"):
             importlib.reload(module)
-            
+
+
 # context manager for timing out functions
 class timeout:
-    def __init__(self, seconds=1, error_message='Timeout'):
+    def __init__(self, seconds=1, error_message="Timeout"):
         self.seconds = seconds
         self.error_message = error_message
+
     def handle_timeout(self, signum, frame):
         raise TimeoutError(self.error_message)
+
     def __enter__(self):
         signal.signal(signal.SIGALRM, self.handle_timeout)
         signal.setitimer(signal.ITIMER_REAL, self.seconds, 0.0)
+
     def __exit__(self, type, value, traceback):
         signal.alarm(0)

@@ -623,6 +623,7 @@ class LogFileSize(EnvironmentVariable, type=int):
             )
         return log_file_size
 
+
 class MetricsMode(EnvironmentVariable, type=ExactStr):
     """Set ``MetricsMode`` value to disable/enable metrics collection
     Metric handlers are registered through `add_metric_handler` and can
@@ -644,6 +645,7 @@ class MetricsMode(EnvironmentVariable, type=ExactStr):
     def disable(cls) -> None:
         """Disable all metric collection."""
         cls.put("disable")
+
 
 class PersistentPickle(EnvironmentVariable, type=bool):
     """Whether serialization should be persistent."""
