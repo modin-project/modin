@@ -32,7 +32,6 @@ def emit_metric(name: str, value: int | float):
                 fn(f"modin.{name}", value)
         except Exception:
             clear_metric_handler(fn)
-    pass
 
 
 def add_metric_handler(handler: Callable[[str, int | float], None]):
