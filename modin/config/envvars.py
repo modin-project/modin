@@ -623,6 +623,27 @@ class LogFileSize(EnvironmentVariable, type=int):
             )
         return log_file_size
 
+class MetricsMode(EnvironmentVariable, type=ExactStr):
+    """Set ``MetricsMode`` value to disable/enable metrics collection
+    Metric handlers are registered through `add_metric_handler` and can
+    be used to record graphite-style timings or values. It is the
+    responcibility of the handler to define how those emitted metrics
+    are handled.
+    """
+
+    varname = "MODIN_METRICS_MODE"
+    choices = ("enable", "disable")
+    default = "enable"
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable all metric collection."""
+        cls.put("enable")
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable all metric collection."""
+        cls.put("disable")
 
 class PersistentPickle(EnvironmentVariable, type=bool):
     """Whether serialization should be persistent."""

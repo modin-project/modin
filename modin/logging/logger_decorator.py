@@ -16,7 +16,6 @@ Module contains the functions designed for the enable/disable of logging.
 
 ``enable_logging`` is used for decorating individual Modin functions or classes.
 """
-import time
 from __future__ import annotations
 
 from functools import wraps
@@ -24,9 +23,11 @@ from types import FunctionType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, overload
 
 from modin.config import LogMode
-from modin.logging.telemetry import emit_telemetry_event
+from modin.config.envvars import MetricsMode
+from modin.logging.metrics import emit_metric
 
 from .config import LogLevel, get_logger
+import time
 
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
 
@@ -142,15 +143,19 @@ def enable_logging(
             -------
             Any
             """
+            start_time = time.time()
             if LogMode.get() == "disable":
-                return obj(*args, **kwargs)
+                result = obj(*args, **kwargs)
+                if MetricsMode.get() == "enable":
+                    emit_metric(api_call_name, time.time() - start_time)
+                return result
 
             logger = get_logger()
             logger.log(log_level, start_line)
-            start_time = time.time()
             try:
                 result = obj(*args, **kwargs)
-                emit_telemetry_event('', api_call_name, time.time() - start_time)
+                if MetricsMode.get() == "enable":
+                    emit_metric(api_call_name, time.time() - start_time)
             except BaseException as e:
                 # Only log the exception if a deeper layer of the modin stack has not
                 # already logged it.
