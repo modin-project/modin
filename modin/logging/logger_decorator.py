@@ -123,9 +123,11 @@ def enable_logging(
 
         assert isinstance(modin_layer, str), "modin_layer is somehow not a string!"
 
-        api_call_name = f"{modin_layer.upper()}::{name or obj.__name__}"
-        start_line = f"START::{api_call_name}"
-        stop_line = f"STOP::{api_call_name}"
+        api_call_name = f"{name or obj.__name__}"
+        log_line = f"{modin_layer.upper()}::{api_call_name}"
+        metric_name = f"{modin_layer.lower()}.{api_call_name.lower()}"
+        start_line = f"START::{log_line}"
+        stop_line = f"STOP::{log_line}"
 
         @wraps(obj)
         def run_and_log(*args: Tuple, **kwargs: Dict) -> Any:
@@ -147,7 +149,7 @@ def enable_logging(
             if LogMode.get() == "disable":
                 result = obj(*args, **kwargs)
                 if MetricsMode.get() == "enable":
-                    emit_metric(api_call_name, time.time() - start_time)
+                    emit_metric(metric_name, time.time() - start_time)
                 return result
 
             logger = get_logger()
@@ -155,7 +157,7 @@ def enable_logging(
             try:
                 result = obj(*args, **kwargs)
                 if MetricsMode.get() == "enable":
-                    emit_metric(api_call_name, time.time() - start_time)
+                    emit_metric(metric_name, time.time() - start_time)
             except BaseException as e:
                 # Only log the exception if a deeper layer of the modin stack has not
                 # already logged it.

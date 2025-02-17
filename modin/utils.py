@@ -991,6 +991,6 @@ class timeout:
         raise TimeoutError(self.error_message)
     def __enter__(self):
         signal.signal(signal.SIGALRM, self.handle_timeout)
-        signal.alarm(self.seconds)
+        signal.setitimer(signal.ITIMER_REAL, self.seconds, 0.0)
     def __exit__(self, type, value, traceback):
         signal.alarm(0)
