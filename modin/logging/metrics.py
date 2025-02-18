@@ -1,5 +1,5 @@
 import re
-from typing import Callable
+from typing import Callable, Union
 
 from modin.config.envvars import MetricsMode
 from modin.utils import timeout
@@ -12,7 +12,7 @@ _metric_handlers = []
 # Metric/Telemetry hooks can be implemented by plugin engines
 # to collect discrete data on how modin is performing at the
 # high level modin layer.
-def emit_metric(name: str, value: int | float):
+def emit_metric(name: str, value: Union[int, float]):
     """
     emit a metric using the set of registered handlers
     """
@@ -34,7 +34,7 @@ def emit_metric(name: str, value: int | float):
             clear_metric_handler(fn)
 
 
-def add_metric_handler(handler: Callable[[str, int | float], None]):
+def add_metric_handler(handler: Callable[[str, Union[int, float]], None]):
     if MetricsMode.get() == "disable":
         return
     _metric_handlers.append(handler)

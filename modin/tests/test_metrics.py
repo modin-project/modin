@@ -1,4 +1,5 @@
 from time import sleep
+from typing import Union
 import pytest
 
 import modin.logging
@@ -16,14 +17,14 @@ class FakeTelemetryClient:
         self._metrics = {}
         self._metric_handler = None
 
-    def metric_handler_fail(self, name: str, value: int | float):
+    def metric_handler_fail(self, name: str, value: Union[int, float]):
         raise KeyError("Poorly implemented metric handler")
 
-    def metric_handler_timeout(self, name: str, value: int | float):
+    def metric_handler_timeout(self, name: str, value: Union[int, float]):
         sleep(0.500)
         self.metric_handler_pass(name, value)
 
-    def metric_handler_pass(self, name: str, value: int | float):
+    def metric_handler_pass(self, name: str, value: Union[int, float]):
         self._metrics[name] = value
 
 
