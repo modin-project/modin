@@ -18,6 +18,7 @@ Module contains the functions designed for the enable/disable of logging.
 """
 from __future__ import annotations
 
+import time
 from functools import wraps
 from types import FunctionType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, overload
@@ -27,7 +28,6 @@ from modin.config.envvars import MetricsMode
 from modin.logging.metrics import emit_metric
 
 from .config import LogLevel, get_logger
-import time
 
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
 

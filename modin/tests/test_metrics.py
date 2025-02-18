@@ -1,12 +1,13 @@
 from time import sleep
 from typing import Union
+
 import pytest
 
 import modin.logging
 from modin.config import MetricsMode
 from modin.logging.metrics import (
-    add_metric_handler,
     _metric_handlers,
+    add_metric_handler,
     clear_metric_handler,
 )
 

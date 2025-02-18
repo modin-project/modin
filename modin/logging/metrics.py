@@ -4,7 +4,6 @@ from typing import Callable, Union
 from modin.config.envvars import MetricsMode
 from modin.utils import timeout
 
-
 metric_name_pattern = r"[a-zA-Z\._\-0-9]+$"
 _metric_handlers: list[Callable[[str, Union[int, float]], None]] = []
 
