@@ -987,7 +987,12 @@ def reload_modin() -> None:
 # context manager for timing out functions
 class timeout:
     """
-    Provide a context manager style timeout tool with sub-second precision
+    Provide a context manager style timeout tool with sub-second precision.
+
+    Parameters
+    ----------
+    seconds : float, default 1
+    error_message : str, default "Timeout"
     """
 
     def __init__(self, seconds: float = 1, error_message: str = "Timeout") -> None:
@@ -995,11 +1000,11 @@ class timeout:
         self.error_message = error_message
 
     def handle_timeout(self, signum: int, frame: Optional[types.FrameType]) -> Any:
-        """Handle the sig alarm and throw a TimeoutError"""
+        """Handle the sig alarm and throw a TimeoutError."""
         raise TimeoutError(self.error_message)
 
     def __enter__(self) -> None:
-        """Enter the context manager for the timeout"""
+        """Enter the context manager for the timeout."""
         signal.signal(signal.SIGALRM, self.handle_timeout)
         signal.setitimer(signal.ITIMER_REAL, self.seconds, 0.0)
 
@@ -1009,6 +1014,6 @@ class timeout:
         value: Optional[BaseException],
         traceback: Optional[types.TracebackType],
     ) -> None:
-        """Exit the context manager for the timeout and clear the alarm"""
+        """Exit the context manager for the timeout and clear the alarm."""
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
