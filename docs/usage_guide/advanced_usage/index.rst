@@ -10,6 +10,7 @@ Advanced Usage
    progress_bar
    modin_xgboost
    modin_logging
+   modin_metrics
    batch
    modin_engines
 
