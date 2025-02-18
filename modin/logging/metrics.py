@@ -15,7 +15,6 @@ import re
 from typing import Callable, Union
 
 from modin.config.envvars import MetricsMode
-from modin.utils import timeout
 
 metric_name_pattern = r"[a-zA-Z\._\-0-9]+$"
 _metric_handlers: list[Callable[[str, Union[int, float]], None]] = []
@@ -38,10 +37,7 @@ def emit_metric(name: str, value: Union[int, float]) -> None:
     handlers = _metric_handlers.copy()
     for fn in handlers:
         try:
-            # metrics must be dispatched or offloaded within 100ms
-            # or the metrics handler will be deregistered
-            with timeout(seconds=0.100):
-                fn(f"modin.{name}", value)
+            fn(f"modin.{name}", value)
         except Exception:
             clear_metric_handler(fn)
 

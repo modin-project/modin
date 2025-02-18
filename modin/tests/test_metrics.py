@@ -34,10 +34,6 @@ class FakeTelemetryClient:
     def metric_handler_fail(self, name: str, value: Union[int, float]):
         raise KeyError("Poorly implemented metric handler")
 
-    def metric_handler_timeout(self, name: str, value: Union[int, float]):
-        sleep(0.500)
-        self.metric_handler_pass(name, value)
-
     def metric_handler_pass(self, name: str, value: Union[int, float]):
         self._metrics[name] = value
 
@@ -71,16 +67,6 @@ def test_metrics_api_timings(metric_client):
 def test_metrics_handler_fails(metric_client):
     assert len(metric_client._metrics) == 0
     metric_client._metric_handler = metric_client.metric_handler_fail
-    add_metric_handler(metric_client._metric_handler)
-    assert len(_metric_handlers) == 1
-    func(do_raise=False)
-    assert len(_metric_handlers) == 0
-    assert len(metric_client._metrics) == 0
-
-
-def test_metrics_handler_timeout(metric_client):
-    assert len(metric_client._metrics) == 0
-    metric_client._metric_handler = metric_client.metric_handler_timeout
     add_metric_handler(metric_client._metric_handler)
     assert len(_metric_handlers) == 1
     func(do_raise=False)

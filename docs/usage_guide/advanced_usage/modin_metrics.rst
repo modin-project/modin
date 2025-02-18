@@ -19,7 +19,7 @@ Handlers are functions of the form: `fn(str, int|float)` and can be registered w
   add_metric_handler(func)
 
 .. warning:: 
-  A metric handler must return within 100ms or it will be disabled and deregistered. It must not throw exceptions or it will
+  A metric handler should be non-blocking, returning within 100ms, although this is not enforced. It must not throw exceptions or it will
   be deregistered. These restrictions are to help guard against the implementation of a metrics collector which would impact
   interactice performance significantly. The data from metrics should generally be offloaded to another system for processing
   and not involve any direct network calls.
