@@ -625,7 +625,8 @@ class LogFileSize(EnvironmentVariable, type=int):
 
 
 class MetricsMode(EnvironmentVariable, type=ExactStr):
-    """Set ``MetricsMode`` value to disable/enable metrics collection.
+    """
+    Set ``MetricsMode`` value to disable/enable metrics collection.
 
     Metric handlers are registered through `add_metric_handler` and can
     be used to record graphite-style timings or values. It is the
