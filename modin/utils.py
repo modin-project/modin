@@ -997,6 +997,11 @@ class timeout:
         signal.signal(signal.SIGALRM, self.handle_timeout)
         signal.setitimer(signal.ITIMER_REAL, self.seconds, 0.0)
 
-    def __exit__(self, type: Optional[Type[BaseException]], value: Optional[BaseException], traceback: Optional[types.TracebackType]) -> None:
+    def __exit__(
+        self,
+        type: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> None:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
