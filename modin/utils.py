@@ -1000,7 +1000,14 @@ class timeout:
         self.error_message = error_message
 
     def handle_timeout(self, signum: int, frame: Optional[types.FrameType]) -> Any:
-        """Handle the sig alarm and throw a TimeoutError."""
+        """
+        Handle the sig alarm and throw a TimeoutError.
+
+        Parameters
+        ----------
+        signum : int, signal number
+        frame : FrameType, stack frame when error occurred
+        """
         raise TimeoutError(self.error_message)
 
     def __enter__(self) -> None:
@@ -1014,6 +1021,14 @@ class timeout:
         value: Optional[BaseException],
         traceback: Optional[types.TracebackType],
     ) -> None:
-        """Exit the context manager for the timeout and clear the alarm."""
+        """
+        Exit the context manager for the timeout and clear the alarm.
+
+        Parameters
+        ----------
+        type : BaseException, ignored
+        value : BaseException, ignored
+        traceback : TracebackType, ignored
+        """
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
