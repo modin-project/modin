@@ -39,6 +39,6 @@ def add_metric_handler(handler: Callable[[str, Union[int, float]], None]) -> Non
     _metric_handlers.append(handler)
 
 
-def clear_metric_handler(handler) -> None:
+def clear_metric_handler(handler: Callable[[str, Union[int, float]], None]) -> None:
     if handler in _metric_handlers:
         _metric_handlers.remove(handler)

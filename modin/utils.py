@@ -34,6 +34,7 @@ from typing import (
     Mapping,
     Optional,
     Protocol,
+    Type,
     TypeVar,
     Union,
     runtime_checkable,
@@ -989,12 +990,13 @@ class timeout:
         self.seconds = seconds
         self.error_message = error_message
 
-    def handle_timeout(self, signum: int, frame: types.FrameType) -> None:
+    def handle_timeout(self, signum: int, frame: Optional[types.FrameType]) -> Any:
         raise TimeoutError(self.error_message)
 
     def __enter__(self) -> None:
         signal.signal(signal.SIGALRM, self.handle_timeout)
         signal.setitimer(signal.ITIMER_REAL, self.seconds, 0.0)
 
-    def __exit__(self, type, value, traceback) -> None:
-        signal.alarm(0)
+    def __exit__(self, type: Optional[Type[BaseException]], value: Optional[BaseException], traceback: Optional[types.TracebackType]) -> None:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, signal.SIG_DFL)
