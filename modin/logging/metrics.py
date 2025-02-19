@@ -11,6 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains metrics handler functions.
+
+Allows for the registration of functions to collect
+API metrics.
+"""
+
 import re
 from typing import Callable, Union
 
@@ -25,7 +32,14 @@ _metric_handlers: list[Callable[[str, Union[int, float]], None]] = []
 # high level modin layer.
 def emit_metric(name: str, value: Union[int, float]) -> None:
     """
-    emit a metric using the set of registered handlers
+    Emit a metric using the set of registered handlers.
+
+    Parameters
+    ----------
+    name : str, required
+            Name of the metric, in dot-format.
+    value : int or float required
+            Value of the metric.
     """
     if MetricsMode.get() == "disable":
         return
@@ -43,11 +57,25 @@ def emit_metric(name: str, value: Union[int, float]) -> None:
 
 
 def add_metric_handler(handler: Callable[[str, Union[int, float]], None]) -> None:
+    """
+    Add a metric handler to Modin which can collect metrics.
+
+    Parameters
+    ----------
+    handler : Callable, required
+    """
     if MetricsMode.get() == "disable":
         return
     _metric_handlers.append(handler)
 
 
 def clear_metric_handler(handler: Callable[[str, Union[int, float]], None]) -> None:
+    """
+    Remove a metric handler from Modin.
+
+    Parameters
+    ----------
+    handler : Callable, required
+    """
     if handler in _metric_handlers:
         _metric_handlers.remove(handler)

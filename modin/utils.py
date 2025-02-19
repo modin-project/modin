@@ -33,7 +33,6 @@ from typing import (
     Mapping,
     Optional,
     Protocol,
-    Type,
     TypeVar,
     Union,
     runtime_checkable,
