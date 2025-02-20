@@ -13,7 +13,7 @@ Handlers are functions of the form: `fn(str, int|float)` and can be registered w
   import modin.pandas as pd
   from modin.logging.metrics import add_metric_handler
 
-  def func(name:str, value:int:float):
+  def func(name: str, value: int | float):
     print(f"Got metric {name} value {value}")
 
   add_metric_handler(func)
