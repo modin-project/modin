@@ -49,6 +49,7 @@ def metric_client():
     client = FakeTelemetryClient()
     yield client
     clear_metric_handler(client._metric_handler)
+    MetricsMode.disable()
 
 
 def test_metrics_api_timings(metric_client):

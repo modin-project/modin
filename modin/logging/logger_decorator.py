@@ -18,8 +18,8 @@ Module contains the functions designed for the enable/disable of logging.
 """
 from __future__ import annotations
 
-import time
 from functools import wraps
+from time import perf_counter
 from types import FunctionType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, overload
 
@@ -145,11 +145,10 @@ def enable_logging(
             -------
             Any
             """
-            start_time = time.time()
+            start_time = perf_counter()
             if LogMode.get() == "disable":
                 result = obj(*args, **kwargs)
-                if MetricsMode.get() == "enable":
-                    emit_metric(metric_name, time.time() - start_time)
+                emit_metric(metric_name, perf_counter() - start_time)
                 return result
 
             logger = get_logger()
@@ -157,7 +156,7 @@ def enable_logging(
             try:
                 result = obj(*args, **kwargs)
                 if MetricsMode.get() == "enable":
-                    emit_metric(metric_name, time.time() - start_time)
+                    emit_metric(metric_name, perf_counter() - start_time)
             except BaseException as e:
                 # Only log the exception if a deeper layer of the modin stack has not
                 # already logged it.

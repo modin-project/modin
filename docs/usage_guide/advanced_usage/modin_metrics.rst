@@ -2,9 +2,14 @@ Modin Metrics
 =============
 
 Modin allows for third-party systems to register a metrics handler to collect specific API statistics.
-it is the responsibility of the handler to process or forward these metrics. Each metric is collected
-with a name and value. The name of the metric must be in "dot format" and all lowercase. The value is
-an integer or float.
+Metrics have a name and a value, can be aggregated, discarded, or emitted without impact to the program.
+
+CPU load, memory usage, and disk usage are all typical metrics; but for modin metrics are current 
+collected on API timings which can be used to optimize end-user interactive performance. New metrics may 
+be added in the future.
+
+It is the responsibility of the handler to process or forward these metrics. The name of the metric must 
+be in "dot format" and all lowercase, similar to graphite or rrd. The value is an integer or float.
 
 Handlers are functions of the form: `fn(str, int|float)` and can be registered with:
 
