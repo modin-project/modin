@@ -156,6 +156,7 @@ jobs:
       - run: python -m pytest modin/tests/interchange/dataframe_protocol/base
       - run: python -m pytest modin/tests/test_dataframe_api_standard.py
       - run: python -m pytest modin/tests/test_logging.py
+      - run: python -m pytest modin/tests/test_metrics.py
       - uses: ./.github/actions/upload-coverage
 
   test-defaults:
