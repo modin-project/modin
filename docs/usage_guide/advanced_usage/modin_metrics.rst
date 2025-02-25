@@ -7,8 +7,19 @@ Metrics have a name and a value, can be aggregated, discarded, or emitted withou
 CPU load, memory usage, and disk usage are all typical metrics; but modin currently only emits metrics on API timings which can be used to optimize end-user interactive performance. New metrics may 
 be added in the future.
 
-It is the responsibility of the handler to process or forward these metrics. The name of the metric must 
+It is the responsibility of the handler to process or forward these metrics. The name of the metric will 
 be in "dot format" and all lowercase, similar to graphite or rrd. The value is an integer or float.
+
+Example metric names include:
+
+.. code-block::
+ 'modin.core-dataframe.pandasdataframe.copy_index_cache'
+ 'modin.core-dataframe.pandasdataframe.transpose'
+ 'modin.query-compiler.pandasquerycompiler.transpose'
+ 'modin.query-compiler.basequerycompiler.columnarize'
+ 'modin.pandas-api.series.__init__'
+ 'modin.pandas-api.dataframe._reduce_dimension'
+ 'modin.pandas-api.dataframe.sum'
 
 Handlers are functions of the form: `fn(str, int|float)` and can be registered with:
 
