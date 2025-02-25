@@ -630,7 +630,7 @@ class MetricsMode(EnvironmentVariable, type=ExactStr):
 
     Metric handlers are registered through `add_metric_handler` and can
     be used to record graphite-style timings or values. It is the
-    responcibility of the handler to define how those emitted metrics
+    responsibility of the handler to define how those emitted metrics
     are handled.
     """
 
