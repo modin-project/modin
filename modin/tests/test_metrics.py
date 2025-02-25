@@ -22,6 +22,7 @@ from modin.logging.metrics import (
     _metric_handlers,
     add_metric_handler,
     clear_metric_handler,
+    emit_metric,
 )
 
 
@@ -83,6 +84,13 @@ def test_metrics_handler_fails(metric_client):
     func(do_raise=False)
     assert len(_metric_handlers) == 0
     assert len(metric_client._metrics) == 0
+
+
+def test_emit_name_enforced():
+    try:
+        emit_metric("Not::A::Valid::Metric::Name", 1.0)
+    except KeyError:
+        pass
 
 
 def test_metrics_can_be_opt_out(metric_client):
