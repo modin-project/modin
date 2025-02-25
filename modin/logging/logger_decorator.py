@@ -155,8 +155,7 @@ def enable_logging(
             logger.log(log_level, start_line)
             try:
                 result = obj(*args, **kwargs)
-                if MetricsMode.get() == "enable":
-                    emit_metric(metric_name, perf_counter() - start_time)
+                emit_metric(metric_name, perf_counter() - start_time)
             except BaseException as e:
                 # Only log the exception if a deeper layer of the modin stack has not
                 # already logged it.
