@@ -64,8 +64,6 @@ def add_metric_handler(handler: Callable[[str, Union[int, float]], None]) -> Non
     ----------
     handler : Callable, required
     """
-    if MetricsMode.get() == "disable":
-        return
     _metric_handlers.append(handler)
 
 

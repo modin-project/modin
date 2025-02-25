@@ -75,13 +75,12 @@ def test_metrics_handler_fails(metric_client):
 
 
 def test_metrics_can_be_opt_out(metric_client):
-    # Cannot register a metrics handler if metrics are
+    # Can register a metrics handler if metrics are
     # disabled
     MetricsMode.disable()
     assert len(metric_client._metrics) == 0
     metric_client._metric_handler = metric_client.metric_handler_pass
     add_metric_handler(metric_client._metric_handler)
-    assert len(_metric_handlers) == 0
     # If Metrics are disabled after the addition of a handler
     # no metrics are emitted
     MetricsMode.enable()
