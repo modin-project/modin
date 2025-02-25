@@ -37,7 +37,7 @@ Handlers are functions of the form: `fn(str, int|float)` and can be registered w
   A metric handler should be non-blocking, returning within 100ms, although this is not enforced. It must not throw exceptions or it will
   be deregistered. These restrictions are to help guard against the implementation of a metrics collector which would impact
   interactice performance significantly. The data from metrics should generally be offloaded to another system for processing
-  and not involve any direct network calls.
+  and not involve any blocking network calls.
 
 Disable Modin metrics like so:
 .. code-block:: python
