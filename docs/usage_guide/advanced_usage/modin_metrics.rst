@@ -12,14 +12,13 @@ be in "dot format" and all lowercase, similar to graphite or rrd. The value is a
 
 Example metric names include:
 
-.. code-block::
- 'modin.core-dataframe.pandasdataframe.copy_index_cache'
- 'modin.core-dataframe.pandasdataframe.transpose'
- 'modin.query-compiler.pandasquerycompiler.transpose'
- 'modin.query-compiler.basequerycompiler.columnarize'
- 'modin.pandas-api.series.__init__'
- 'modin.pandas-api.dataframe._reduce_dimension'
- 'modin.pandas-api.dataframe.sum'
+* 'modin.core-dataframe.pandasdataframe.copy_index_cache'
+* 'modin.core-dataframe.pandasdataframe.transpose'
+* 'modin.query-compiler.pandasquerycompiler.transpose'
+* 'modin.query-compiler.basequerycompiler.columnarize'
+* 'modin.pandas-api.series.__init__'
+* 'modin.pandas-api.dataframe._reduce_dimension'
+* 'modin.pandas-api.dataframe.sum'
 
 Handlers are functions of the form: `fn(str, int|float)` and can be registered with:
 

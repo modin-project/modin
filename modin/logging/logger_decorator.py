@@ -24,7 +24,6 @@ from types import FunctionType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, overload
 
 from modin.config import LogMode
-from modin.config.envvars import MetricsMode
 from modin.logging.metrics import emit_metric
 
 from .config import LogLevel, get_logger
