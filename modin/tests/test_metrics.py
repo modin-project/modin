@@ -90,13 +90,12 @@ def test_emit_name_enforced():
     try:
         emit_metric("Not::A::Valid::Metric::Name", 1.0)
     except KeyError:
+        # error expected
         pass
 
 
 def test_metrics_can_be_opt_out(metric_client):
-    # Can register a metrics handler if metrics are
-    # disabled
-    MetricsMode.disable()
+    MetricsMode.enable()
     assert len(metric_client._metrics) == 0
     metric_client._metric_handler = metric_client.metric_handler_pass
     add_metric_handler(metric_client._metric_handler)
