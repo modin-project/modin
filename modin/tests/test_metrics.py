@@ -87,13 +87,9 @@ def test_metrics_handler_fails(metric_client):
 
 
 def test_emit_name_enforced():
-    try:
-        MetricsMode.enable()
+    MetricsMode.enable()
+    with pytest.raises(KeyError):
         emit_metric("Not::A::Valid::Metric::Name", 1.0)
-    except KeyError:
-        # error expected
-        return
-    assert False
 
 
 def test_metrics_can_be_opt_out(metric_client):
