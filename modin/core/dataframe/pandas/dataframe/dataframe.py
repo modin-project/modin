@@ -4718,7 +4718,6 @@ class PandasDataframe(
         # Hacky way to coerce the output to the correct type for booleans which might
         # contain NA
         if len(df.columns) and self.has_materialized_dtypes:
-            #df = df.astype(self.dtypes)
             for col in self.dtypes.index:
                 if df.dtypes[col] != self.dtypes[col] and self.dtypes[col] == np.dtype('bool'):
                     df[col] = df[col].replace(1.0, True).replace(0.0, False)   
