@@ -4698,8 +4698,6 @@ class PandasDataframe(
         df = self._partition_mgr_cls.to_pandas(self._partitions)
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
-            if len(df.columns) and self.has_materialized_dtypes:
-                df = df.astype(self.dtypes)
         else:
             for axis, has_external_index in enumerate(
                 ["has_materialized_index", "has_materialized_columns"]
@@ -4717,6 +4715,13 @@ class PandasDataframe(
                     # into the internal ones
                     df = df.set_axis(axis=axis, labels=external_index, copy=False)
 
+        # Hacky way to coerce the output to the correct type for booleans which might
+        # contain NA
+        if len(df.columns) and self.has_materialized_dtypes:
+            #df = df.astype(self.dtypes)
+            for col in self.dtypes.index:
+                if df.dtypes[col] != self.dtypes[col] and self.dtypes[col] == np.dtype('bool'):
+                    df[col] = df[col].replace(1.0, True).replace(0.0, False)   
         return df
 
     def to_numpy(self, **kwargs):
