@@ -39,6 +39,7 @@ Handlers are functions of the form: `fn(str, int|float)` and can be registered w
   and not involve any blocking network calls.
 
 Disable Modin metrics like so:
+
 .. code-block:: python
 
   import modin.pandas as pd
