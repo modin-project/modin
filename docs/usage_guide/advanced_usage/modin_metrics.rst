@@ -38,7 +38,7 @@ Handlers are functions of the form: `fn(str, int|float)` and can be registered w
   interactice performance significantly. The data from metrics should generally be offloaded to another system for processing
   and not involve any blocking network calls.
 
-Disable Modin metrics like so:
+Metrics are enabled by default. Modin metrics can be disabled like so:
 
 .. code-block:: python
 
