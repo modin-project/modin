@@ -36,6 +36,7 @@ from modin.config.envvars import (
     LogMemoryInterval,
     LogMode,
     Memory,
+    MetricsMode,
     MinColumnPartitionSize,
     MinPartitionSize,
     MinRowPartitionSize,
@@ -108,6 +109,7 @@ __all__ = [
     "LogMode",
     "LogMemoryInterval",
     "LogFileSize",
+    "MetricsMode",
     # Plugin settings
     "DocModule",
 ]
