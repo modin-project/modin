@@ -527,7 +527,7 @@ class DtypesDescriptor:
         def combine_dtypes(row):
             if (row == "unknown").any():
                 return "unknown"
-            row = row.fillna(pandas.api.types.pandas_dtype("float"))
+            row = row.ffill()
             return find_common_type(list(row.values))
 
         dtypes = dtypes_matrix.apply(combine_dtypes, axis=1)
@@ -537,7 +537,6 @@ class DtypesDescriptor:
                 cols_with_unknown_dtypes.append(col)
             else:
                 known_dtypes[col] = dtype
-
         return DtypesDescriptor(
             known_dtypes,
             cols_with_unknown_dtypes,
