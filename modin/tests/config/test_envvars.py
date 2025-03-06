@@ -12,16 +12,40 @@
 # governing permissions and limitations under the License.
 
 import os
+import re
 import sys
+from unittest.mock import Mock, patch
 
 import pandas
 import pytest
+from pytest import param
 
 import modin.config as cfg
 import modin.pandas as pd
 from modin.config.envvars import _check_vars
 from modin.config.pubsub import _UNSET, ExactStr
 from modin.pandas.base import BasePandasDataset
+from modin.tests.pandas.utils import switch_execution
+
+################# WARNING #####################################################
+# Test cases in this file affect global state, e.g. by setting environment
+# variables. The test cases may produce unexpected results when repeated on run
+# out of the order they are defined in. Be careful when running the test
+# locally or when adding new test cases. In particular, note:
+#   - test_ray_cluster_resources() causes us to permanently attach the
+#     `_update_engine` subscriber to Engine: https://github.com/modin-project/modin/blob/6252ebde19935bd1f6a6850209bf8a1f5e5ecfb7/modin/core/execution/dispatching/factories/dispatcher.py#L115
+#     Changing to any engine after that test runs will cause Modin to try to
+#     initialize the engine.
+#   - In CI, we only run these tests with Ray execution, in the
+#     `test-internal` job.
+#   - test_wrong_values() permanently messes up some config variables. For more
+#     details see https://github.com/modin-project/modin/issues/7454
+################# WARNING ######################
+
+UNIDIST_SKIP_REASON = (
+    "Switching to unidist causes an error since we have to execute unidist "
+    + "tests differently, with `mpiexec` instead of just `pytest`"
+)
 
 
 def reset_vars(*vars: tuple[cfg.Parameter]):
@@ -217,6 +241,260 @@ def test_context_manager_update_config(modify_config):
     assert cfg.LazyExecution.get() == "Auto"
 
 
+class TestBackend:
+    @pytest.mark.parametrize(
+        "engine, storage_format, expected_backend",
+        [
+            ("Python", "Pandas", "Python"),
+            ("Ray", "Pandas", "Ray"),
+            param(
+                "Unidist",
+                "Pandas",
+                "Unidist",
+                marks=pytest.mark.skip(reason=UNIDIST_SKIP_REASON),
+            ),
+            ("Dask", "Pandas", "Dask"),
+            ("Native", "Native", "Pandas"),
+        ],
+    )
+    def test_setting_execution_changes_backend(
+        self, engine, storage_format, expected_backend
+    ):
+        previous_backend = cfg.Backend.get()
+        with switch_execution(engine, storage_format):
+            assert cfg.Backend.get() == expected_backend
+        assert cfg.Backend.get() == previous_backend
+
+    def test_subscribing_to_backend_triggers_callback(self):
+        backend_subscriber = Mock()
+        cfg.Backend.subscribe(backend_subscriber)
+        backend_subscriber.assert_called_once_with(cfg.Backend)
+
+    def test_setting_backend_triggers_all_callbacks(self):
+        # Start with a known backend (rather than the one that we start the
+        # test with).
+        with cfg.context(Backend="Pandas"):
+            backend_subscriber = Mock()
+            cfg.Backend.subscribe(backend_subscriber)
+            backend_subscriber.reset_mock()
+
+            storage_format_subscriber = Mock()
+            cfg.StorageFormat.subscribe(storage_format_subscriber)
+            storage_format_subscriber.reset_mock()
+
+            engine_subscriber = Mock()
+            cfg.Engine.subscribe(engine_subscriber)
+            engine_subscriber.reset_mock()
+
+            with cfg.context(Backend="Python"):
+                backend_subscriber.assert_called_once_with(cfg.Backend)
+                storage_format_subscriber.assert_called_once_with(cfg.StorageFormat)
+                engine_subscriber.assert_called_once_with(cfg.Engine)
+
+    @pytest.mark.parametrize(
+        "backend, expected_engine, expected_storage_format",
+        [
+            ("Python", "Python", "Pandas"),
+            ("PYTHON", "Python", "Pandas"),
+            ("python", "Python", "Pandas"),
+            ("Ray", "Ray", "Pandas"),
+            param(
+                "Unidist",
+                "Unidist",
+                "Pandas",
+                marks=pytest.mark.skip(reason=UNIDIST_SKIP_REASON),
+            ),
+            ("Dask", "Dask", "Pandas"),
+            ("Pandas", "Native", "Native"),
+        ],
+    )
+    def test_setting_backend_changes_execution(
+        self, backend, expected_engine, expected_storage_format
+    ):
+        previous_engine = cfg.Engine.get()
+        previous_storage_format = cfg.StorageFormat.get()
+        with cfg.context(Backend=backend):
+            assert cfg.Engine.get() == expected_engine
+            assert cfg.StorageFormat.get() == expected_storage_format
+        assert cfg.Engine.get() == previous_engine
+        assert cfg.StorageFormat.get() == previous_storage_format
+
+    def test_setting_engine_alone_changes_backend(self):
+        # Start with a known backend (rather than the one that we start the
+        # test with).
+        with switch_execution(storage_format="Pandas", engine="Ray"):
+            current_backend = cfg.Backend.get()
+            assert current_backend == "Ray"
+            with cfg.context(Engine="Python"):
+                assert cfg.Backend.get() == "Python"
+            assert cfg.Backend.get() == current_backend
+
+    def test_setting_engine_triggers_callbacks(self):
+        # Start with a known backend (rather than the one that we start the
+        # test with).
+        with switch_execution(storage_format="Pandas", engine="Ray"):
+            engine_subscriber = Mock()
+            cfg.Engine.subscribe(engine_subscriber)
+            engine_subscriber.reset_mock()
+
+            backend_subscriber = Mock()
+            cfg.Backend.subscribe(backend_subscriber)
+            backend_subscriber.reset_mock()
+
+            storage_format_subscriber = Mock()
+            cfg.StorageFormat.subscribe(storage_format_subscriber)
+            storage_format_subscriber.reset_mock()
+
+            with cfg.context(Engine="Dask"):
+                engine_subscriber.assert_called_once_with(cfg.Engine)
+                backend_subscriber.assert_called_once_with(cfg.Backend)
+                # StorageFormat stayed the same, so we don't call its callback.
+                storage_format_subscriber.assert_not_called()
+
+    def test_setting_storage_format_triggers_callbacks(self):
+        # There's only one built-in storage format, pandas, so we add a new one
+        # here.
+        cfg.StorageFormat.add_option("Pandasduplicate")
+        from modin.core.execution.dispatching.factories import factories
+
+        factories.PandasduplicateOnRayFactory = factories.PandasOnRayFactory
+        cfg.Backend.register_backend(
+            "NewBackend",
+            cfg.Execution(
+                storage_format="Pandasduplicate",
+                engine="Ray",
+            ),
+        )
+
+        with switch_execution(storage_format="Pandas", engine="Ray"):
+            engine_subscriber = Mock()
+            cfg.Engine.subscribe(engine_subscriber)
+            engine_subscriber.reset_mock()
+            backend_subscriber = Mock()
+            cfg.Backend.subscribe(backend_subscriber)
+            backend_subscriber.reset_mock()
+            storage_format_subscriber = Mock()
+            cfg.StorageFormat.subscribe(storage_format_subscriber)
+            storage_format_subscriber.reset_mock()
+            with cfg.context(StorageFormat="PANDASDUPLICATE"):
+                storage_format_subscriber.assert_called_once_with(cfg.StorageFormat)
+                backend_subscriber.assert_called_once_with(cfg.Backend)
+                # Engine stayed the same, so we don't call its callback.
+                engine_subscriber.assert_not_called()
+
+    @pytest.mark.parametrize("name", ["Python", "python"])
+    def test_register_existing_backend(self, name):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Backend 'Python' is already registered with the execution "
+                + "Execution(storage_format='Pandas', engine='Python')"
+            ),
+        ):
+            cfg.Backend.register_backend(
+                name,
+                cfg.Execution(
+                    storage_format="Pandas",
+                    engine="Python",
+                ),
+            )
+
+    def test_register_existing_execution(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Execution(storage_format='Pandas', engine='Python') is already registered with the backend Python."
+            ),
+        ):
+            cfg.Backend.register_backend(
+                "NewBackend2",
+                cfg.Execution(
+                    storage_format="Pandas",
+                    engine="Python",
+                ),
+            )
+
+    def test_set_invalid_backend(self):
+        with pytest.raises(ValueError, match=re.escape("Unknown backend 'Unknown'")):
+            cfg.Backend.put("Unknown")
+
+    def test_switch_to_unregistered_backend_with_switch_execution(self):
+        cfg.StorageFormat.add_option("Pandas2")
+        from modin.core.execution.dispatching.factories import factories
+
+        factories.Pandas2OnRayFactory = factories.PandasOnRayFactory
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Execution(storage_format='Pandas2', engine='Ray') "
+                + "has no known backend. Please register a backend for it with "
+                + "Backend.register_backend()"
+            ),
+        ), switch_execution(engine="Ray", storage_format="Pandas2"):
+            pass
+
+    def test_switch_to_unregistered_backend_with_switch_storage_format(self):
+        cfg.StorageFormat.add_option("Pandas3")
+        from modin.core.execution.dispatching.factories import factories
+
+        factories.Pandas2OnRayFactory = factories.PandasOnPythonFactory
+        with cfg.context(StorageFormat="Pandas", Engine="Python"):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "Execution(storage_format='Pandas3', engine='Python') "
+                    + "has no known backend. Please register a backend for it with "
+                    + "Backend.register_backend()"
+                ),
+            ):
+                cfg.StorageFormat.put("Pandas3")
+
+    def test_switch_to_unregistered_backend_with_switch_engine(self):
+        cfg.Engine.add_option("Python2")
+        from modin.core.execution.dispatching.factories import factories
+
+        factories.PandasOnPython2Factory = factories.PandasOnPythonFactory
+        with cfg.context(StorageFormat="Pandas", Engine="Python"):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "Execution(storage_format='Pandas', engine='Python2') "
+                    + "has no known backend. Please register a backend for it with "
+                    + "Backend.register_backend()"
+                ),
+            ):
+                cfg.Engine.put("Python2")
+
+    # The default engine and storage format, and hence the default backend,
+    # will depend on which engines are available in the current environment.
+    # For simplicity, patch the defaults.
+    @patch(
+        target="modin.config.StorageFormat._get_default",
+    )
+    @patch(
+        target="modin.config.Engine._get_default",
+    )
+    def test_backend_default(
+        self,
+        mocked_get_default,
+        mocked_get_default2,
+    ):
+        mocked_get_default.return_value = "Native"
+        mocked_get_default2.return_value = "Native"
+        assert cfg.Backend._get_default() == "Pandas"
+
+    def test_add_backend_option(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Cannot add an option to Backend directly. Use Backend.register_backend instead."
+            ),
+        ):
+            cfg.Backend.add_option("NewBackend")
+
+
+# DO NOT MERGE this is messed up. put(-1) for variables like NPartitions puts them in a state from which they
+# can never recover.
 @pytest.mark.parametrize(
     "config_name",
     [

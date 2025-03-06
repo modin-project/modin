@@ -30,6 +30,8 @@ import requests
 import s3fs
 from pandas.util._decorators import doc
 
+from modin.config import Backend, Execution
+
 assert (
     "modin.utils" not in sys.modules
 ), "Do not import modin.utils before patching, or tests could fail"
@@ -217,6 +219,13 @@ class BaseOnPythonFactory(factories.BaseFactory):
 
 def set_base_execution(name=BASE_EXECUTION_NAME):
     setattr(factories, f"{name}Factory", BaseOnPythonFactory)
+    Backend.register_backend(
+        "BaseOnPython",
+        Execution(
+            engine="Python",
+            storage_format="Base",
+        ),
+    )
     modin.set_execution(engine="python", storage_format=name.split("On")[0])
 
 
@@ -242,6 +251,9 @@ def get_unique_base_execution():
 
     # Setting up the new execution
     setattr(factories, f"{execution_name}Factory", base_factory)
+    Backend.register_backend(
+        "execution_name", Execution(engine=engine_name, storage_format=format_name)
+    )
     old_engine, old_format = modin.set_execution(
         engine=engine_name, storage_format=format_name
     )
