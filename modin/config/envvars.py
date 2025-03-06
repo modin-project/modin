@@ -255,6 +255,14 @@ class Engine(EnvironmentVariable, type=str):
 
     @classmethod
     def put(cls, value: str) -> None:
+        """
+        Set the engine value.
+
+        Parameters
+        ----------
+        value : str
+            Engine value to set.
+        """
         value = cls.normalize(value)
         # Backend.put() will set Engine.
         Backend.put(
@@ -269,6 +277,14 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     @classmethod
     def put(cls, value: str) -> None:
+        """
+        Set the storage format value.
+
+        Parameters
+        ----------
+        value : str
+            Storage format value to set.
+        """
         value = cls.normalize(value)
         # Backend.put() will set StorageFormat.
         Backend.put(
@@ -291,6 +307,13 @@ class Backend(EnvironmentVariable, type=str):
 
     Setting backend may change StorageFormat and/or Engine to the corresponding
     respective values, and setting Engine or StorageFormat may change Backend.
+
+    Modin's built-in backends include:
+        - "Ray" <-> (StorageFormat="Pandas", Engine="Ray")
+        - "Dask" <-> (StorageFormat="Pandas", Engine="Dask")
+        - "Python" <-> (StorageFormat="Pandas", Engine="Python")
+        - "Unidist" <-> (StorageFormat="Pandas", Engine="Unidist")
+        - "Pandas" <-> (StorageFormat="Native", Engine="Native")
     """
 
     _BACKEND_TO_EXECUTION: dict[str, Execution] = {}
@@ -307,7 +330,6 @@ class Backend(EnvironmentVariable, type=str):
         ----------
         value : str
             Backend value to set.
-
         """
         value = cls.normalize(value)
         if value not in cls.choices:
@@ -342,7 +364,6 @@ class Backend(EnvironmentVariable, type=str):
             Backend name.
         execution : Execution
             Execution that corresponds to the backend.
-
         """
         name = cls.normalize(name)
         super().add_option(name)
@@ -361,6 +382,16 @@ class Backend(EnvironmentVariable, type=str):
     def add_option(cls, choice: str) -> NoReturn:
         """
         Raise an exception for trying to add an option to Backend directly.
+
+        Parameters
+        ----------
+        choice : str
+            Choice to add. Unused.
+
+        Raises
+        ------
+        ValueError
+            Always.
         """
         raise ValueError(
             "Cannot add an option to Backend directly. Use Backend.register_backend instead."
@@ -368,6 +399,19 @@ class Backend(EnvironmentVariable, type=str):
 
     @classmethod
     def get_backend_for_execution(cls, execution: Execution) -> str:
+        """
+        Get the backend for the execution.
+
+        Parameters
+        ----------
+        execution : Execution
+            Execution to get the backend for.
+
+        Returns
+        -------
+        str
+            Backend for the execution.
+        """
         if execution not in cls._EXECUTION_TO_BACKEND:
             raise ValueError(
                 f"{execution} has no known backend. Please register a "
