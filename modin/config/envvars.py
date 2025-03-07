@@ -17,12 +17,14 @@ import os
 import secrets
 import sys
 import warnings
+from collections import namedtuple
 from textwrap import dedent
-from typing import Any, Optional
+from typing import Any, NoReturn, Optional
 
 from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
+from modin import set_execution
 from modin.config.pubsub import (
     _TYPE_PARAMS,
     _UNSET,
@@ -251,13 +253,179 @@ class Engine(EnvironmentVariable, type=str):
         cls.has_custom_engine = True
         return choice
 
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Set the engine value.
+
+        Parameters
+        ----------
+        value : str
+            Engine value to set.
+        """
+        value = cls.normalize(value)
+        # Backend.put() will set Engine.
+        Backend.put(
+            Backend.get_backend_for_execution(
+                Execution(engine=value, storage_format=StorageFormat.get())
+            )
+        )
+
 
 class StorageFormat(EnvironmentVariable, type=str):
     """Engine to run on a single node of distribution."""
 
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Set the storage format value.
+
+        Parameters
+        ----------
+        value : str
+            Storage format value to set.
+        """
+        value = cls.normalize(value)
+        # Backend.put() will set StorageFormat.
+        Backend.put(
+            Backend.get_backend_for_execution(
+                Execution(engine=Engine.get(), storage_format=value)
+            )
+        )
+
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
     choices = ("Pandas", "Native")
+
+
+Execution = namedtuple("Execution", ["storage_format", "engine"])
+
+
+class Backend(EnvironmentVariable, type=str):
+    """
+    An alias for execution, i.e. the combination of StorageFormat and Engine.
+
+    Setting backend may change StorageFormat and/or Engine to the corresponding
+    respective values, and setting Engine or StorageFormat may change Backend.
+
+    Modin's built-in backends include:
+        - "Ray" <-> (StorageFormat="Pandas", Engine="Ray")
+        - "Dask" <-> (StorageFormat="Pandas", Engine="Dask")
+        - "Python_Test" <-> (StorageFormat="Pandas", Engine="Python")
+            - This execution mode is meant for testing only.
+        - "Unidist" <-> (StorageFormat="Pandas", Engine="Unidist")
+        - "Pandas" <-> (StorageFormat="Native", Engine="Native")
+    """
+
+    _BACKEND_TO_EXECUTION: dict[str, Execution] = {}
+    _EXECUTION_TO_BACKEND: dict[Execution, str] = {}
+    varname: str = "MODIN_BACKEND"
+    choices: tuple[str, ...] = ("Ray", "Dask", "Python_Test", "Unidist", "Pandas")
+
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Set the backend value.
+
+        Parameters
+        ----------
+        value : str
+            Backend value to set.
+        """
+        value = cls.normalize(value)
+        if value not in cls.choices:
+            raise ValueError(
+                f"Unknown backend '{value}'. Please register the backend with Backend.register_backend()"
+            )
+        execution = cls._BACKEND_TO_EXECUTION[value]
+        set_execution(execution.engine, execution.storage_format)
+
+    @classmethod
+    def _get_default(cls) -> str:
+        """
+        Get the default backend value.
+
+        Returns
+        -------
+        str
+            Default backend value.
+        """
+        return cls._EXECUTION_TO_BACKEND[
+            Execution(StorageFormat._get_default(), Engine._get_default())
+        ]
+
+    @classmethod
+    def register_backend(cls: type["Backend"], name: str, execution: Execution) -> None:
+        """
+        Register a new backend.
+
+        Parameters
+        ----------
+        name : str
+            Backend name.
+        execution : Execution
+            Execution that corresponds to the backend.
+        """
+        name = cls.normalize(name)
+        super().add_option(name)
+        if name in cls._BACKEND_TO_EXECUTION:
+            raise ValueError(
+                f"Backend '{name}' is already registered with the execution {cls._BACKEND_TO_EXECUTION[name]}."
+            )
+        if execution in cls._EXECUTION_TO_BACKEND:
+            raise ValueError(
+                f"{execution} is already registered with the backend {cls._EXECUTION_TO_BACKEND[execution]}."
+            )
+        cls._BACKEND_TO_EXECUTION[name] = execution
+        cls._EXECUTION_TO_BACKEND[execution] = name
+
+    @classmethod
+    def add_option(cls, choice: str) -> NoReturn:
+        """
+        Raise an exception for trying to add an option to Backend directly.
+
+        Parameters
+        ----------
+        choice : str
+            Choice to add. Unused.
+
+        Raises
+        ------
+        ValueError
+            Always.
+        """
+        raise ValueError(
+            "Cannot add an option to Backend directly. Use Backend.register_backend instead."
+        )
+
+    @classmethod
+    def get_backend_for_execution(cls, execution: Execution) -> str:
+        """
+        Get the backend for the execution.
+
+        Parameters
+        ----------
+        execution : Execution
+            Execution to get the backend for.
+
+        Returns
+        -------
+        str
+            Backend for the execution.
+        """
+        if execution not in cls._EXECUTION_TO_BACKEND:
+            raise ValueError(
+                f"{execution} has no known backend. Please register a "
+                + "backend for it with Backend.register_backend()"
+            )
+        return cls._EXECUTION_TO_BACKEND[execution]
+
+
+Backend.register_backend("Ray", Execution("Pandas", "Ray"))
+Backend.register_backend("Dask", Execution("Pandas", "Dask"))
+Backend.register_backend("Python_Test", Execution("Pandas", "Python"))
+Backend.register_backend("Unidist", Execution("Pandas", "Unidist"))
+Backend.register_backend("Pandas", Execution("Native", "Native"))
 
 
 class IsExperimental(EnvironmentVariable, type=bool):

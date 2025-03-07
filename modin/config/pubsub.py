@@ -368,6 +368,23 @@ class Parameter(object):
         cls._value_source = ValueSource.SET_BY_USER
 
     @classmethod
+    def normalize(cls, value: Any) -> Any:
+        """
+        Normalize config value.
+
+        Parameters
+        ----------
+        value : Any
+            Config value to normalize.
+
+        Returns
+        -------
+        Any
+            Normalized config value.
+        """
+        return _TYPE_PARAMS[cls.type].normalize(value)
+
+    @classmethod
     def once(cls, onvalue: Any, callback: Callable) -> None:
         """
         Execute `callback` if config value matches `onvalue` value.
@@ -382,7 +399,7 @@ class Parameter(object):
         callback : callable
             Callable that should be executed if config value matches `onvalue`.
         """
-        onvalue = _TYPE_PARAMS[cls.type].normalize(onvalue)
+        onvalue = cls.normalize(onvalue)
         if onvalue == cls.get():
             callback(cls)
         else:
@@ -405,7 +422,7 @@ class Parameter(object):
         """
         if not _TYPE_PARAMS[cls.type].verify(value):
             raise ValueError(f"Unsupported value: {value}")
-        value = _TYPE_PARAMS[cls.type].normalize(value)
+        value = cls.normalize(value)
         oldvalue, cls._value = cls.get(), value
         return oldvalue
 
@@ -444,7 +461,7 @@ class Parameter(object):
         if cls.choices is not None:
             if not _TYPE_PARAMS[cls.type].verify(choice):
                 raise ValueError(f"Unsupported choice value: {choice}")
-            choice = _TYPE_PARAMS[cls.type].normalize(choice)
+            choice = cls.normalize(choice)
             if choice not in cls.choices:
                 cls.choices += (choice,)
             return choice

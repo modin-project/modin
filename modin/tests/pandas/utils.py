@@ -19,6 +19,7 @@ import itertools
 import math
 import os
 import re
+from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
 from string import ascii_letters
@@ -39,6 +40,7 @@ from pandas.core.dtypes.common import (
 )
 
 import modin.pandas as pd
+from modin import set_execution
 from modin.config import (
     Engine,
     MinColumnPartitionSize,
@@ -1681,3 +1683,14 @@ def dict_equals(dict1, dict2):
     for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
         value_equals(key1, key2)
         value_equals(dict1[key1], dict2[key2])
+
+
+@contextmanager
+def switch_execution(engine: str, storage_format: str):
+    old_engine = Engine.get()
+    old_storage = StorageFormat.get()
+    try:
+        set_execution(engine, storage_format)
+        yield
+    finally:
+        set_execution(old_engine, old_storage)
