@@ -242,10 +242,11 @@ def test_context_manager_update_config(modify_config):
 
 
 class TestBackend:
+
     @pytest.mark.parametrize(
         "engine, storage_format, expected_backend",
         [
-            ("Python", "Pandas", "Python"),
+            ("Python", "Pandas", "Python_Test"),
             ("Ray", "Pandas", "Ray"),
             param(
                 "Unidist",
@@ -286,7 +287,7 @@ class TestBackend:
             cfg.Engine.subscribe(engine_subscriber)
             engine_subscriber.reset_mock()
 
-            with cfg.context(Backend="Python"):
+            with cfg.context(Backend="Python_Test"):
                 backend_subscriber.assert_called_once_with(cfg.Backend)
                 storage_format_subscriber.assert_called_once_with(cfg.StorageFormat)
                 engine_subscriber.assert_called_once_with(cfg.Engine)
@@ -294,9 +295,9 @@ class TestBackend:
     @pytest.mark.parametrize(
         "backend, expected_engine, expected_storage_format",
         [
-            ("Python", "Python", "Pandas"),
-            ("PYTHON", "Python", "Pandas"),
-            ("python", "Python", "Pandas"),
+            ("Python_test", "Python", "Pandas"),
+            ("PYTHON_test", "Python", "Pandas"),
+            ("python_TEST", "Python", "Pandas"),
             ("Ray", "Ray", "Pandas"),
             param(
                 "Unidist",
@@ -326,7 +327,7 @@ class TestBackend:
             current_backend = cfg.Backend.get()
             assert current_backend == "Ray"
             with cfg.context(Engine="Python"):
-                assert cfg.Backend.get() == "Python"
+                assert cfg.Backend.get() == "Python_Test"
             assert cfg.Backend.get() == current_backend
 
     def test_setting_engine_triggers_callbacks(self):
@@ -382,12 +383,12 @@ class TestBackend:
                 # Engine stayed the same, so we don't call its callback.
                 engine_subscriber.assert_not_called()
 
-    @pytest.mark.parametrize("name", ["Python", "python"])
+    @pytest.mark.parametrize("name", ["Python_Test", "python_Test"])
     def test_register_existing_backend(self, name):
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Backend 'Python' is already registered with the execution "
+                "Backend 'Python_Test' is already registered with the execution "
                 + "Execution(storage_format='Pandas', engine='Python')"
             ),
         ):
@@ -403,7 +404,7 @@ class TestBackend:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Execution(storage_format='Pandas', engine='Python') is already registered with the backend Python."
+                "Execution(storage_format='Pandas', engine='Python') is already registered with the backend Python_Test."
             ),
         ):
             cfg.Backend.register_backend(
@@ -493,8 +494,6 @@ class TestBackend:
             cfg.Backend.add_option("NewBackend")
 
 
-# DO NOT MERGE this is messed up. put(-1) for variables like NPartitions puts them in a state from which they
-# can never recover.
 @pytest.mark.parametrize(
     "config_name",
     [

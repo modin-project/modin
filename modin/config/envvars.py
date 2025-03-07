@@ -311,7 +311,8 @@ class Backend(EnvironmentVariable, type=str):
     Modin's built-in backends include:
         - "Ray" <-> (StorageFormat="Pandas", Engine="Ray")
         - "Dask" <-> (StorageFormat="Pandas", Engine="Dask")
-        - "Python" <-> (StorageFormat="Pandas", Engine="Python")
+        - "Python_Test" <-> (StorageFormat="Pandas", Engine="Python")
+            - This execution mode is meant for testing only.
         - "Unidist" <-> (StorageFormat="Pandas", Engine="Unidist")
         - "Pandas" <-> (StorageFormat="Native", Engine="Native")
     """
@@ -319,7 +320,7 @@ class Backend(EnvironmentVariable, type=str):
     _BACKEND_TO_EXECUTION: dict[str, Execution] = {}
     _EXECUTION_TO_BACKEND: dict[Execution, str] = {}
     varname: str = "MODIN_BACKEND"
-    choices: tuple[str, ...] = ("Ray", "Dask", "Python", "Unidist", "Pandas")
+    choices: tuple[str, ...] = ("Ray", "Dask", "Python_Test", "Unidist", "Pandas")
 
     @classmethod
     def put(cls, value: str) -> None:
@@ -422,7 +423,7 @@ class Backend(EnvironmentVariable, type=str):
 
 Backend.register_backend("Ray", Execution("Pandas", "Ray"))
 Backend.register_backend("Dask", Execution("Pandas", "Dask"))
-Backend.register_backend("Python", Execution("Pandas", "Python"))
+Backend.register_backend("Python_Test", Execution("Pandas", "Python"))
 Backend.register_backend("Unidist", Execution("Pandas", "Unidist"))
 Backend.register_backend("Pandas", Execution("Native", "Native"))
 
