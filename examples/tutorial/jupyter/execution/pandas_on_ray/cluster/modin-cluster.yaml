@@ -169,7 +169,9 @@ setup_commands:
     - conda create -n "modin" -c conda-forge modin "ray-default">=2.1.0,!=2.5.0 -y
     - conda activate modin && pip install -U fsspec>=2022.11.0 boto3
     - echo "conda activate modin" >> ~/.bashrc
-    - wget https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
+    # TODO(https://github.com/modin-project/modin/issues/7451): Use https once
+    # we fix the certificate for modin-datasets.intel.com
+    - wget http://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
     - printf "VendorID,tpep_pickup_datetime,tpep_dropoff_datetime,passenger_count,trip_distance,pickup_longitude,pickup_latitude,RateCodeID,store_and_fwd_flag,dropoff_longitude,dropoff_latitude,payment_type,fare_amount,extra,mta_tax,tip_amount,tolls_amount,improvement_surcharge,total_amount,congestion_surcharge,airport_fee\n" > big_yellow.csv
     - tail -n +2 yellow_tripdata_2015-01.csv{,}{,}{,}{,}{,}{,} >> big_yellow.csv
     - echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
