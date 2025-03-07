@@ -15,10 +15,12 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
 test_dataset_path = "taxi.csv"
+# TODO(https://github.com/modin-project/modin/issues/7451): Use https once we
+# fix the certificate for modin-datasets.intel.com
 download_taxi_dataset = f"""import os
 import urllib.request
 if not os.path.exists("{test_dataset_path}"):
-    url_path = "https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv"
+    url_path = "http://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
 
