@@ -29,6 +29,7 @@ from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import is_dict_like, is_list_like
 from pandas.core.series import _coerce_method
 from pandas.io.formats.info import SeriesInfo
+from pandas.util._decorators import doc
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
@@ -41,7 +42,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseAccessor
-from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, GET_BACKEND_DOC, SET_BACKEND_DOC, BasePandasDataset
 from .iterator import PartitionIterator
 from .series_utils import (
     CategoryMethods,
@@ -54,6 +55,7 @@ from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
     import numpy.typing as npt
+    from typing_extensions import Self
 
     from modin.core.storage_formats import BaseQueryCompiler
 
@@ -2760,3 +2762,11 @@ class Series(BasePandasDataset):
         return self._inflate_light, (self._query_compiler, self.name, pid)
 
     # Persistance support methods - END
+
+    @doc(SET_BACKEND_DOC, class_name=__qualname__)
+    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
+        return super().set_backend(backend=backend, inplace=inplace)
+
+    @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    def get_backend(self) -> str:
+        return super().get_backend()
