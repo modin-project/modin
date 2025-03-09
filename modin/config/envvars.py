@@ -357,9 +357,7 @@ class Backend(EnvironmentVariable, type=str):
         str
             Default backend value.
         """
-        return cls._EXECUTION_TO_BACKEND[
-            Execution(StorageFormat._get_default(), Engine._get_default())
-        ]
+        return cls._EXECUTION_TO_BACKEND[Execution(StorageFormat.get(), Engine.get())]
 
     @classmethod
     def register_backend(cls: type["Backend"], name: str, execution: Execution) -> None:
