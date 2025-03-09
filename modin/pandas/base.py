@@ -4435,19 +4435,14 @@ class BasePandasDataset(ClassLogger):
 
     @doc(SET_BACKEND_DOC, class_name=__qualname__)
     def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
-
-        from modin.core.execution.dispatching.factories.dispatcher import (
-            FactoryDispatcher,
-        )
-
-        FactoryDispatcher.get_factory()._read_gbq
-        pandas_self = self._query_compiler.to_pandas()
+        pandas_self = self.modin.to_pandas()
         with config_context(Backend=backend):
-            query_compiler = FactoryDispatcher.from_pandas(pandas_self)
+            new_dataset = self.__constructor__(pandas_self)
         if inplace:
-            self._update_inplace(query_compiler)
+            self._update_inplace(new_dataset._query_compiler)
+            return None
         else:
-            return self.__constructor__(query_compiler=query_compiler)
+            return new_dataset
 
     move_to = set_backend
 
