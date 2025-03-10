@@ -64,7 +64,9 @@ class QueryCompilerCasterCalculator:
             costs_2 = qc_2.qc_engine_switch_cost(qc_1)
             self._add_cost_data(costs_1)
             self._add_cost_data(costs_2)
-        
+        if len(self._caster_costing_map) <= 0 and len(self._qc_cls_list) > 0:
+            self._result_type = self._qc_cls_list[0]
+            return self._result_type
         min_value = min(self._caster_costing_map.values())
         for key, value in self._caster_costing_map.items():
             if min_value == value:
@@ -163,16 +165,16 @@ def apply_argument_cast(obj: Fn) -> Fn:
     """
     if isinstance(obj, type):
         all_attrs = dict(inspect.getmembers(obj))
-        all_attrs.pop("__abstractmethods__")
-        all_attrs.pop("__init__")
-        all_attrs.pop("qc_engine_switch_cost")
-        all_attrs.pop("from_pandas")
+
 
         # This is required because inspect converts class methods to member functions
         current_class_attrs = vars(obj)
         for key in current_class_attrs:
             all_attrs[key] = current_class_attrs[key]
-
+        all_attrs.pop("__abstractmethods__")
+        all_attrs.pop("__init__")
+        all_attrs.pop("qc_engine_switch_cost")
+        all_attrs.pop("from_pandas")
         for attr_name, attr_value in all_attrs.items():
             if isinstance(
                 attr_value, (FunctionType, MethodType, classmethod, staticmethod)
@@ -203,7 +205,6 @@ def apply_argument_cast(obj: Fn) -> Fn:
         """
         if len(args) == 0 and len(kwargs) == 0:
             return
-        print(f"Adding wrapper {obj}\n")
         current_qc = args[0]
         calculator = QueryCompilerCasterCalculator()
         calculator.add_query_compiler(current_qc)
