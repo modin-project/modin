@@ -74,10 +74,18 @@ def test_two_two_qc_types_lhs():
     assert(type(df3) == type(df2)) # should move to cluster
 
 def test_three_two_qc_types_rhs():
-    pass
+    df = CloudQC(pandas.DataFrame([0, 1, 2]))
+    df2 = CloudQC(pandas.DataFrame([0, 1, 2]))
+    df3 = PicoQC(pandas.DataFrame([0, 1, 2]))
+    df4 = df3.concat(axis=1, other=[df, df2])
+    assert(type(df) == type(df4)) # should move to cloud
 
 def test_three_two_qc_types_lhs():
-    pass
+    df = CloudQC(pandas.DataFrame([0, 1, 2]))
+    df2 = CloudQC(pandas.DataFrame([0, 1, 2]))
+    df3 = PicoQC(pandas.DataFrame([0, 1, 2]))
+    df4 = df.concat(axis=1, other=[df2, df3])
+    assert(type(df) == type(df4)) # should move to cloud 
 
 def test_three_two_qc_types_middle():
     pass
