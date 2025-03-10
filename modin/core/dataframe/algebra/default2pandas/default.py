@@ -202,9 +202,9 @@ class DefaultMethod(Operator):
 
             Cast all Modin objects that function arguments contain to its pandas representation.
             """
-            args = try_cast_to_pandas(args)
-            kwargs = try_cast_to_pandas(kwargs)
-            return wrapper(self, *args, **kwargs)
+            args1 = try_cast_to_pandas(args)
+            kwargs1 = try_cast_to_pandas(kwargs)
+            return wrapper(self, *args1, **kwargs1)
 
         return args_cast
 

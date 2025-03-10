@@ -20,6 +20,7 @@ Module contains class ``BaseQueryCompiler``.
 from __future__ import annotations
 
 import abc
+from enum import Enum
 import warnings
 from functools import cached_property
 from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
@@ -106,6 +107,43 @@ def _set_axis(axis):
 
     return axis_setter
 
+
+class QCCoercionCost(Enum):
+    '''
+    Coercion costs between query compilers can be expressed
+    as integers in the range -1 to 1000, where 1000 is
+    considered impossible. Since coercsion costs can be a
+    function of many variables ( dataset size, partitioning, 
+    network throughput, and query time ) we define a set range
+    of cost values to simplify comparisons between two query
+    compilers / engines in a unified way.
+    
+    COST_UNKNOWN means we do not know the cost associated with changing
+    query compilers.
+    
+    COST_ZERO means there is no cost associated, or that the query compilers
+    are the same.
+    
+    COST_IMPOSSIBLE means the coercion is effectively impossible, which can
+    occur if the target system is unable to store the data as a result
+    of the coercion.
+    '''
+    COST_UNKNOWN = -1
+    COST_ZERO = 0
+    COST_LOW = 250
+    COST_MEDIUM = 500
+    COST_HIGH = 750
+    COST_IMPOSSIBLE = 1000
+
+    def validate_coercsion_cost(cost:QCCoercionCost):
+        if int(cost) < int(QCCoercionCost.COST_UNKNOWN) or int(cost) > int(QCCoercionCost.COST_IMPOSSIBLE):
+            raise ValueError("Query compiler coercsion cost out of range") 
+        
+    def __int__(self):
+        return self.value
+    
+    def __add__(self, other) -> int:
+        return int(self) + int(other)
 
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
 # by using *args and **kwargs. They should be spread into actual parameters.
@@ -247,6 +285,18 @@ class BaseQueryCompiler(
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)
 
+    def qc_engine_switch_cost(self, other_qc) -> dict[type, int]:
+        '''
+        Coercion costs to and from other_qc
+        
+        Returns a map of type to QCCoercionCost, where type is the type we are casting to.
+        This provides a mechanism for the query compilers to provide information to
+        modin on the cost of moving data to another query compiler ( or the other way ).
+        '''
+        if isinstance(type(self), type(other_qc)):
+            return  {type(self): QCCoercionCost.COST_ZERO}
+        return {}
+        
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are
