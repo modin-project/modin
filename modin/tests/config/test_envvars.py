@@ -750,12 +750,17 @@ class TestBackend:
         "execution_variable, value",
         [(cfg.Engine, "Python"), (cfg.StorageFormat, "Pandas")],
     )
+    @pytest.mark.parametrize(
+        "variable_to_get",
+        [cfg.Backend, cfg.Engine, cfg.StorageFormat],
+    )
     def test_conflicting_execution_and_backend_in_environment(
         self,
         monkeypatch,
         clear_backend_execution_and_storage_format,
         execution_variable,
         value,
+        variable_to_get,
     ):
         monkeypatch.setitem(os.environ, cfg.Backend.varname, "Ray")
         monkeypatch.setitem(os.environ, execution_variable.varname, value)
@@ -763,7 +768,7 @@ class TestBackend:
             Exception,
             match=re.escape("Can't specify both execution and backend in environment"),
         ):
-            _check_vars()
+            variable_to_get.get()
 
     def test_get_execution_for_unknown_backend(self):
         with pytest.raises(

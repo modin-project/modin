@@ -35,6 +35,22 @@ from modin.config.pubsub import (
 )
 
 
+class DisallowExecutionAndBackendInEnvironmentMixin:
+    """Mixin to disallow setting both execution and backend in environment."""
+
+    @classmethod
+    @doc(Parameter._get_value_from_config.__doc__)
+    def _get_value_from_config(cls) -> str:
+        if Backend.varname in os.environ and (
+            Engine.varname in os.environ or StorageFormat.varname in os.environ
+        ):
+            # Handling this case is tricky, in part because the combination of
+            # Backend and Engine/StorageFormat may be invalid. For now just
+            # disallow it.
+            raise Exception("Can't specify both execution and backend in environment")
+        return Parameter._get_value_from_config()
+
+
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
@@ -56,6 +72,8 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
             return _UNSET
         raw = os.environ[cls.varname]
         if not _TYPE_PARAMS[cls.type].verify(raw):
+            # TODO: use and test a better error message, like "Invalid value
+            # for {cls.varname}: {raw}"
             raise ValueError(f"Unsupported raw value: {raw}")
         return _TYPE_PARAMS[cls.type].decode(raw)
 
@@ -170,7 +188,9 @@ class IsDebug(EnvironmentVariable, type=bool):
     varname = "MODIN_DEBUG"
 
 
-class Engine(EnvironmentVariable, type=str):
+class Engine(
+    DisallowExecutionAndBackendInEnvironmentMixin, EnvironmentVariable, type=str
+):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
@@ -307,7 +327,9 @@ class Engine(EnvironmentVariable, type=str):
         return cls._value
 
 
-class StorageFormat(EnvironmentVariable, type=str):
+class StorageFormat(
+    DisallowExecutionAndBackendInEnvironmentMixin, EnvironmentVariable, type=str
+):
     """Engine to run on a single node of distribution."""
 
     @classmethod
@@ -373,7 +395,9 @@ class StorageFormat(EnvironmentVariable, type=str):
 Execution = namedtuple("Execution", ["storage_format", "engine"])
 
 
-class Backend(EnvironmentVariable, type=str):
+class Backend(
+    DisallowExecutionAndBackendInEnvironmentMixin, EnvironmentVariable, type=str
+):
     """
     An alias for execution, i.e. the combination of StorageFormat and Engine.
 
@@ -1263,14 +1287,6 @@ def _check_vars() -> None:
             deprecated[depr_var].deprecation_message(use_envvar_names=True),
             FutureWarning,
         )
-
-    if Backend.varname in os.environ and (
-        Engine.varname in os.environ or StorageFormat.varname in os.environ
-    ):
-        # Handling this case is tricky, in part because the combination of
-        # Backend and Engine/StorageFormat may be invalid. For now just
-        # disallow it.
-        raise Exception("Can't specify both execution and backend in environment")
 
 
 _check_vars()
