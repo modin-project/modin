@@ -765,7 +765,7 @@ class TestBackend:
         monkeypatch.setitem(os.environ, cfg.Backend.varname, "Ray")
         monkeypatch.setitem(os.environ, execution_variable.varname, value)
         with pytest.raises(
-            Exception,
+            ValueError,
             match=re.escape("Can't specify both execution and backend in environment"),
         ):
             variable_to_get.get()

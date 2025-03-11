@@ -182,7 +182,7 @@ class EnvironmentVariableDisallowingExecutionAndBackendBothSet(
             # Handling this case is tricky, in part because the combination of
             # Backend and Engine/StorageFormat may be invalid. For now just
             # disallow it.
-            raise Exception("Can't specify both execution and backend in environment")
+            raise ValueError("Can't specify both execution and backend in environment")
         return super()._get_value_from_config()
 
 
