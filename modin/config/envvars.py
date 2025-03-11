@@ -35,22 +35,6 @@ from modin.config.pubsub import (
 )
 
 
-class DisallowExecutionAndBackendInEnvironmentMixin:
-    """Mixin to disallow setting both execution and backend in environment."""
-
-    @classmethod
-    @doc(Parameter._get_value_from_config.__doc__)
-    def _get_value_from_config(cls) -> str:
-        if Backend.varname in os.environ and (
-            Engine.varname in os.environ or StorageFormat.varname in os.environ
-        ):
-            # Handling this case is tricky, in part because the combination of
-            # Backend and Engine/StorageFormat may be invalid. For now just
-            # disallow it.
-            raise Exception("Can't specify both execution and backend in environment")
-        return Parameter._get_value_from_config()
-
-
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
@@ -182,6 +166,26 @@ class EnvWithSibilings(
                 cls._update_sibling = True
 
 
+class EnvironmentVariableDisallowingExecutionAndBackendBothSet(
+    EnvironmentVariable,
+    type=EnvironmentVariable.type,
+    abstract=True,
+):
+    """Subclass to disallow getting this variable from the environment when both execution and backend are set in the environment."""
+
+    @classmethod
+    @doc(EnvironmentVariable._get_value_from_config.__doc__)
+    def _get_value_from_config(cls) -> str:
+        if Backend.varname in os.environ and (
+            Engine.varname in os.environ or StorageFormat.varname in os.environ
+        ):
+            # Handling this case is tricky, in part because the combination of
+            # Backend and Engine/StorageFormat may be invalid. For now just
+            # disallow it.
+            raise Exception("Can't specify both execution and backend in environment")
+        return super()._get_value_from_config()
+
+
 class IsDebug(EnvironmentVariable, type=bool):
     """Force Modin engine to be "Python" unless specified by $MODIN_ENGINE."""
 
@@ -189,7 +193,8 @@ class IsDebug(EnvironmentVariable, type=bool):
 
 
 class Engine(
-    DisallowExecutionAndBackendInEnvironmentMixin, EnvironmentVariable, type=str
+    EnvironmentVariableDisallowingExecutionAndBackendBothSet,
+    type=str,
 ):
     """Distribution engine to run queries by."""
 
@@ -327,9 +332,7 @@ class Engine(
         return cls._value
 
 
-class StorageFormat(
-    DisallowExecutionAndBackendInEnvironmentMixin, EnvironmentVariable, type=str
-):
+class StorageFormat(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str):
     """Engine to run on a single node of distribution."""
 
     @classmethod
@@ -395,9 +398,7 @@ class StorageFormat(
 Execution = namedtuple("Execution", ["storage_format", "engine"])
 
 
-class Backend(
-    DisallowExecutionAndBackendInEnvironmentMixin, EnvironmentVariable, type=str
-):
+class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str):
     """
     An alias for execution, i.e. the combination of StorageFormat and Engine.
 
