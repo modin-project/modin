@@ -5197,3 +5197,20 @@ def test_argmax_argmin_7413(op):
     result_md = getattr(series_md, op)()
     result_pd = getattr(series_pd, op)()
     assert result_md == result_pd
+
+
+def test_rename_axis():
+    series_md, series_pd = create_test_series([0, 1, 2])
+    renamed_md = series_md.rename_axis("name")
+    renamed_pd = series_pd.rename_axis("name")
+    assert series_md.index.name is None
+    df_equals(renamed_md, renamed_pd)
+    series_md.rename_axis("name", inplace=True)
+    series_pd.rename_axis("name", inplace=True)
+    df_equals(series_md, series_pd)
+    # axis=1 is invalid for series
+    try:
+        series_pd.rename_axis("name", 1)
+    except Exception as err:
+        with pytest.raises(type(err)):
+            series_md.rename_axis("name", 1)

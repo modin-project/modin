@@ -1714,6 +1714,30 @@ class Series(BasePandasDataset):
             mapper=mapper, index=index, axis=axis, copy=copy, inplace=inplace
         )
 
+    def _set_axis_name(self, name, axis=0, inplace=False) -> Union[Series, None]:
+        """
+        Alter the name of the axis.
+
+        Parameters
+        ----------
+        name : str
+            Name for the Series.
+        axis : str or int, default: 0
+            The axis to set the label.
+            Only 0 is valid for Series.
+        inplace : bool, default: False
+            Whether to modify `self` directly or return a copy.
+
+        Returns
+        -------
+        Series or None
+        """
+        axis = self._get_axis_number(axis)  # raises ValueError if not 0
+        renamed = self if inplace else self.copy()
+        renamed.index = renamed.index.set_names(name)
+        if not inplace:
+            return renamed
+
     def rename(
         self,
         index=None,
