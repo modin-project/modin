@@ -27,19 +27,23 @@ from typing import Any, Dict, Tuple, TypeVar
 
 from pandas.core.indexes.frozen import FrozenList
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler, QCCoercionCost
+from modin.core.storage_formats.base.query_compiler import (
+    BaseQueryCompiler,
+    QCCoercionCost,
+)
 
 Fn = TypeVar("Fn", bound=Any)
 
+
 class QueryCompilerCasterCalculator:
-    
+
     def __init__(self):
         self._caster_costing_map = {}
         self._data_cls_map = {}
         self._qc_list = []
         self._qc_cls_list = []
         self._result_type = None
-    
+
     def add_query_compiler(self, query_compiler):
         if isinstance(query_compiler, type):
             # class
@@ -50,7 +54,7 @@ class QueryCompilerCasterCalculator:
             self._qc_list.append(query_compiler)
             self._data_cls_map[qc_type] = query_compiler._modin_frame
         self._qc_cls_list.append(qc_type)
-    
+
     def calculate(self):
         if self._result_type is not None:
             return self._result_type
@@ -58,8 +62,8 @@ class QueryCompilerCasterCalculator:
             return self._qc_cls_list[0]
         if len(self._qc_cls_list) == 0:
             raise ValueError("No query compilers registered")
-        
-        for (qc_1, qc_2) in combinations(self._qc_list, 2):
+
+        for qc_1, qc_2 in combinations(self._qc_list, 2):
             costs_1 = qc_1.qc_engine_switch_cost(qc_2)
             costs_2 = qc_2.qc_engine_switch_cost(qc_1)
             self._add_cost_data(costs_1)
@@ -73,20 +77,24 @@ class QueryCompilerCasterCalculator:
                 self._result_type = key
                 break
         return self._result_type
-            
-    def _add_cost_data(self, costs:dict):
+
+    def _add_cost_data(self, costs: dict):
         for k, v in costs.items():
             # filter out any extranious query compilers not in this operation
             if k in self._qc_cls_list:
                 QCCoercionCost.validate_coercsion_cost(v)
                 # Adds the costs associated with all coercions to a type, k
-                self._caster_costing_map[k] = v + self._caster_costing_map[k] if k in self._caster_costing_map else v
-    
+                self._caster_costing_map[k] = (
+                    v + self._caster_costing_map[k]
+                    if k in self._caster_costing_map
+                    else v
+                )
+
     def result_data_frame(self):
         qc_type = self.calculate()
         return self._data_cls_map[qc_type]
-        
-    
+
+
 class QueryCompilerCaster:
     """Cast all query compiler arguments of the member function to current query compiler."""
 
@@ -111,9 +119,7 @@ class QueryCompilerCaster:
         apply_argument_cast(cls)
 
 
-def visit_nested_args(arguments, 
-                      current_qc:BaseQueryCompiler, 
-                      fn:callable):
+def visit_nested_args(arguments, current_qc: BaseQueryCompiler, fn: callable):
     """
     Cast all arguments in nested fashion to current query compiler.
 
@@ -166,7 +172,6 @@ def apply_argument_cast(obj: Fn) -> Fn:
     if isinstance(obj, type):
         all_attrs = dict(inspect.getmembers(obj))
 
-
         # This is required because inspect converts class methods to member functions
         current_class_attrs = vars(obj)
         for key in current_class_attrs:
@@ -216,38 +221,36 @@ def apply_argument_cast(obj: Fn) -> Fn:
             if isinstance(arg, current_qc_type):
                 return False
             return True
-        
+
         def register_query_compilers(arg):
             if not arg_needs_casting(arg):
                 return arg
             calculator.add_query_compiler(arg)
             return arg
-        
+
         def cast_to_qc(arg):
             if not arg_needs_casting(arg):
                 return arg
             qc_type = calculator.calculate()
-            if qc_type == None or qc_type == type(arg):
+            if qc_type is None or qc_type is type(arg):
                 return arg
             frame_data = calculator.result_data_frame()
             result = qc_type.from_pandas(arg.to_pandas(), frame_data)
             return result
-        
-            
+
         if isinstance(current_qc, BaseQueryCompiler):
             visit_nested_args(kwargs, current_qc, register_query_compilers)
             visit_nested_args(args, current_qc, register_query_compilers)
-            
+
             args = visit_nested_args(args, current_qc, cast_to_qc)
             kwargs = visit_nested_args(kwargs, current_qc, cast_to_qc)
 
-        
         qc = calculator.calculate()
 
-        if qc == None or qc == type(current_qc):
+        if qc is None or qc is type(current_qc):
             return obj(*args, **kwargs)
 
-        #breakpoint()
+        # breakpoint()
         # we need to cast current_qc to a new query compiler
         if qc != current_qc:
             data_cls = current_qc._modin_frame
