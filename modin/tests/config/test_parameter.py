@@ -16,13 +16,16 @@ from collections import defaultdict
 import pytest
 
 from modin.config import Parameter
+from modin.config.pubsub import _TYPE_PARAMS
 
 
 def make_prefilled(vartype, varinit):
     class Prefilled(Parameter, type=vartype):
         @classmethod
         def _get_value_from_config(cls):
-            return varinit
+            if not _TYPE_PARAMS[cls.type].verify(varinit):
+                raise ValueError(f"Unsupported raw value: {varinit}")
+            return _TYPE_PARAMS[cls.type].decode(varinit)
 
     return Prefilled
 
