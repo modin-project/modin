@@ -31,7 +31,7 @@ def test_new_dataframe_uses_default_backend():
     assert pd.DataFrame([1]).get_backend() == Backend.get()
 
 
-@pytest.mark.parametrize("method", ["set_backend", "move_to"])
+@pytest.mark.parametrize("setter_method", ["set_backend", "move_to"])
 @pytest.mark.parametrize(
     "inplace_kwargs",
     [
@@ -76,7 +76,7 @@ def test_new_dataframe_uses_default_backend():
     ],
 )
 def test_set_valid_backend(
-    method,
+    setter_method,
     inplace_kwargs,
     starting_backend,
     new_backend,
@@ -87,7 +87,9 @@ def test_set_valid_backend(
         original_df = data_class([1])
         # convert to pandas for comparison while still on the `starting_backend`.
         original_df_as_pandas = original_df.modin.to_pandas()
-        method_result = getattr(original_df, method)(new_backend, **inplace_kwargs)
+        method_result = getattr(original_df, setter_method)(
+            new_backend, **inplace_kwargs
+        )
         if inplace_kwargs.get("inplace", False):
             assert method_result is None
             result_df = original_df
@@ -126,7 +128,19 @@ def test_wrong_backend_type(backend):
 
 
 def test_get_backend_docstrings():
-    assert pd.DataFrame.get_backend.__doc__ != pd.Series.get_backend.__doc__
-    assert pd.DataFrame.get_backend.__doc__ == pd.Series.get_backend.__doc__.replace(
+    dataframe_method = pd.DataFrame.get_backend
+    series_method = pd.Series.get_backend
+    assert dataframe_method.__doc__ != series_method.__doc__
+    assert dataframe_method.__doc__ == series_method.__doc__.replace(
+        "Series", "DataFrame"
+    )
+
+
+@pytest.mark.parametrize("setter_method", ["set_backend", "move_to"])
+def test_set_backend_docstrings(setter_method):
+    dataframe_method = getattr(pd.DataFrame, setter_method)
+    series_method = getattr(pd.Series, setter_method)
+    assert dataframe_method.__doc__ != series_method.__doc__
+    assert dataframe_method.__doc__ == series_method.__doc__.replace(
         "Series", "DataFrame"
     )

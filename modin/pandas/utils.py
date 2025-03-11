@@ -44,7 +44,7 @@ SET_DATAFRAME_ATTRIBUTE_WARNING = (
 
 
 GET_BACKEND_DOC = """
-Get the backend for this ``{class_name}`.
+Get the backend for this ``{class_name}``.
 
 Returns
 -------

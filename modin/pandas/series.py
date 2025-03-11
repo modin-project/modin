@@ -2773,6 +2773,8 @@ class Series(BasePandasDataset):
     def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
         return super().set_backend(backend=backend, inplace=inplace)
 
+    move_to = set_backend
+
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
     def get_backend(self) -> str:
         return super().get_backend()
