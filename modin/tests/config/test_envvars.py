@@ -11,9 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import itertools
 import os
 import re
 import sys
+import unittest.mock as mock
 from unittest.mock import Mock, patch
 
 import pandas
@@ -23,7 +25,7 @@ from pytest import param
 import modin.config as cfg
 import modin.pandas as pd
 from modin.config.envvars import _check_vars
-from modin.config.pubsub import _UNSET, ExactStr
+from modin.config.pubsub import _UNSET, ExactStr, ValueSource
 from modin.pandas.base import BasePandasDataset
 from modin.tests.pandas.utils import switch_execution
 
@@ -48,17 +50,19 @@ UNIDIST_SKIP_REASON = (
 )
 
 
-def reset_vars(*vars: tuple[cfg.Parameter]):
+@pytest.fixture
+def clear_backend_execution_and_storage_format(monkeypatch):
     """
-    Reset value for the passed parameters.
+    Reset environment variables and config classes for backend, execution, and storage format.
 
     Parameters
     ----------
     *vars : tuple[Parameter]
     """
-    for var in vars:
-        var._value = _UNSET
-        _ = os.environ.pop(var.varname, None)
+    for variable in (cfg.Backend, cfg.StorageFormat, cfg.Engine):
+        monkeypatch.setattr(variable, "_value", _UNSET)
+        monkeypatch.setattr(variable, "_value_source", ValueSource.DEFAULT)
+        monkeypatch.delitem(os.environ, variable.varname, raising=False)
 
 
 @pytest.fixture
@@ -79,6 +83,26 @@ def make_custom_envvar(request):
         choices = (1, 5, 10)
 
     return CustomVar
+
+
+@pytest.fixture(scope="session")
+def add_pandas_duplicate_on_ray_execution():
+    """
+    Add an execution mode with the storage format Test_Pandasduplicate and engine Ray.
+
+    This mode's execution is equivalent to PandasOnRay execution.
+    """
+    cfg.StorageFormat.add_option("Test_Pandasduplicate")
+    from modin.core.execution.dispatching.factories import factories
+
+    factories.Test_PandasduplicateOnRayFactory = factories.PandasOnRayFactory
+    cfg.Backend.register_backend(
+        "Test_Backend_1",
+        cfg.Execution(
+            storage_format="Test_Pandasduplicate",
+            engine="Ray",
+        ),
+    )
 
 
 @pytest.fixture
@@ -492,6 +516,269 @@ class TestBackend:
             ),
         ):
             cfg.Backend.add_option("NewBackend")
+
+    @pytest.mark.parametrize(
+        "order_to_get_in",
+        itertools.permutations(
+            [
+                cfg.Backend,
+                cfg.Engine,
+                cfg.StorageFormat,
+            ]
+        ),
+        ids=lambda permutation: "_".join(x.__name__ for x in permutation),
+    )
+    @pytest.mark.parametrize(
+        "storage_environment_variable, engine_environment_variable, variable_to_expected_value",
+        [
+            (
+                "Native",
+                "Native",
+                {
+                    cfg.Backend: "Pandas",
+                    cfg.Engine: "Native",
+                    cfg.StorageFormat: "Native",
+                },
+            ),
+            (
+                "NATIVE",
+                "NATIVE",
+                {
+                    cfg.Backend: "Pandas",
+                    cfg.Engine: "Native",
+                    cfg.StorageFormat: "Native",
+                },
+            ),
+            (
+                "Pandas",
+                "Dask",
+                {
+                    cfg.Backend: "Dask",
+                    cfg.Engine: "Dask",
+                    cfg.StorageFormat: "Pandas",
+                },
+            ),
+        ],
+    )
+    def test_storage_format_and_engine_come_from_environment(
+        self,
+        monkeypatch,
+        clear_backend_execution_and_storage_format,
+        order_to_get_in,
+        storage_environment_variable,
+        engine_environment_variable,
+        variable_to_expected_value,
+    ):
+        with mock.patch.dict(
+            os.environ,
+            {
+                cfg.StorageFormat.varname: storage_environment_variable,
+                cfg.Engine.varname: engine_environment_variable,
+            },
+        ):
+            for variable in order_to_get_in:
+                expected_value = variable_to_expected_value[variable]
+                assert (
+                    variable.get() == expected_value
+                ), f"{variable.__name__} was {variable.get()} instead of {expected_value}"
+
+    @pytest.mark.parametrize(
+        "order_to_get_in",
+        itertools.permutations(
+            [
+                cfg.Backend,
+                cfg.Engine,
+                cfg.StorageFormat,
+            ]
+        ),
+        ids=lambda permutation: "_".join(x.__name__ for x in permutation),
+    )
+    @pytest.mark.parametrize(
+        "engine_environment_variable, variable_to_expected_value",
+        [
+            (
+                "Dask",
+                {cfg.Backend: "Dask", cfg.StorageFormat: "Pandas", cfg.Engine: "Dask"},
+            ),
+            (
+                "DASK",
+                {cfg.Backend: "Dask", cfg.StorageFormat: "Pandas", cfg.Engine: "Dask"},
+            ),
+            (
+                "python",
+                {
+                    cfg.Backend: "Python_Test",
+                    cfg.StorageFormat: "Pandas",
+                    cfg.Engine: "Python",
+                },
+            ),
+            (
+                "ray",
+                {cfg.Backend: "Ray", cfg.StorageFormat: "Pandas", cfg.Engine: "Ray"},
+            ),
+            # note that we can't test Native here because it's not valid to use
+            # "Native" engine with the default storage format of "Pandas."
+        ],
+    )
+    def test_only_engine_comes_from_environment(
+        self,
+        clear_backend_execution_and_storage_format,
+        order_to_get_in,
+        engine_environment_variable,
+        variable_to_expected_value,
+    ):
+        with mock.patch.dict(
+            os.environ,
+            {cfg.Engine.varname: engine_environment_variable},
+        ):
+            for var in order_to_get_in:
+                expected_value = variable_to_expected_value[var]
+                assert (
+                    var.get() == expected_value
+                ), f"{var.__name__} was {var.get()} instead of {expected_value}"
+
+    @pytest.mark.parametrize(
+        "order_to_get_in",
+        itertools.permutations(
+            [
+                cfg.Backend,
+                cfg.Engine,
+                cfg.StorageFormat,
+            ]
+        ),
+        ids=lambda permutation: "_".join(x.__name__ for x in permutation),
+    )
+    def test_only_storage_format_comes_from_environment(
+        self,
+        clear_backend_execution_and_storage_format,
+        order_to_get_in,
+        add_pandas_duplicate_on_ray_execution,
+    ):
+        # To test switching StorageFormat alone, we have to add a new backend
+        # that works with the default "Pandas" execution.
+        with mock.patch.dict(
+            os.environ,
+            {
+                cfg.StorageFormat.varname: "Test_Pandasduplicate",
+            },
+        ):
+            cfg.Engine.put("Ray")
+            for variable in order_to_get_in:
+                expected_value = {
+                    cfg.Backend: "Test_Backend_1",
+                    cfg.Engine: "Ray",
+                    cfg.StorageFormat: "Test_Pandasduplicate",
+                }[variable]
+                assert (
+                    variable.get() == expected_value
+                ), f"{variable.__name__} was {variable.get()} instead of {expected_value}"
+
+    @pytest.mark.parametrize(
+        "order_to_get_in",
+        itertools.permutations(
+            [
+                cfg.Backend,
+                cfg.Engine,
+                cfg.StorageFormat,
+            ]
+        ),
+        ids=lambda permutation: "_".join(x.__name__ for x in permutation),
+    )
+    @pytest.mark.parametrize(
+        "backend_environment_variable, variable_to_expected_value",
+        [
+            (
+                "Pandas",
+                {
+                    cfg.Backend: "Pandas",
+                    cfg.Engine: "Native",
+                    cfg.StorageFormat: "Native",
+                },
+            ),
+            (
+                "Ray",
+                {cfg.Backend: "Ray", cfg.Engine: "Ray", cfg.StorageFormat: "Pandas"},
+            ),
+            (
+                "Dask",
+                {cfg.Backend: "Dask", cfg.Engine: "Dask", cfg.StorageFormat: "Pandas"},
+            ),
+            (
+                "python_test",
+                {
+                    cfg.Backend: "Python_Test",
+                    cfg.Engine: "Python",
+                    cfg.StorageFormat: "Pandas",
+                },
+            ),
+        ],
+    )
+    def test_backend_comes_from_environment(
+        self,
+        monkeypatch,
+        clear_backend_execution_and_storage_format,
+        order_to_get_in,
+        backend_environment_variable,
+        variable_to_expected_value,
+    ):
+        with mock.patch.dict(
+            os.environ,
+            {
+                cfg.Backend.varname: backend_environment_variable,
+            },
+        ):
+            for variable in order_to_get_in:
+                expected_value = variable_to_expected_value[variable]
+                assert (
+                    variable.get() == expected_value
+                ), f"{variable.__name__} was {variable.get()} instead of {expected_value}"
+
+    @pytest.mark.parametrize(
+        "order_to_get_in",
+        itertools.permutations(
+            [cfg.Backend, cfg.Engine, cfg.StorageFormat],
+        ),
+        ids=lambda permutation: "_".join(x.__name__ for x in permutation),
+    )
+    def test_environment_not_set_and_pick_up_default_engine(
+        self, clear_backend_execution_and_storage_format, order_to_get_in
+    ):
+        for variable in order_to_get_in:
+            assert variable.get() == variable._get_default()
+
+    @pytest.mark.parametrize(
+        "execution_variable, value",
+        [(cfg.Engine, "Python"), (cfg.StorageFormat, "Pandas")],
+    )
+    @pytest.mark.parametrize(
+        "variable_to_get",
+        [cfg.Backend, cfg.Engine, cfg.StorageFormat],
+    )
+    def test_conflicting_execution_and_backend_in_environment(
+        self,
+        monkeypatch,
+        clear_backend_execution_and_storage_format,
+        execution_variable,
+        value,
+        variable_to_get,
+    ):
+        monkeypatch.setitem(os.environ, cfg.Backend.varname, "Ray")
+        monkeypatch.setitem(os.environ, execution_variable.varname, value)
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Can't specify both execution and backend in environment"),
+        ):
+            variable_to_get.get()
+
+    def test_get_execution_for_unknown_backend(self):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Backend 'Unknown' has no known execution. Please register "
+                + "an execution for it with Backend.register_backend()."
+            ),
+        ):
+            cfg.Backend.get_execution_for_backend("Unknown")
 
 
 @pytest.mark.parametrize(
