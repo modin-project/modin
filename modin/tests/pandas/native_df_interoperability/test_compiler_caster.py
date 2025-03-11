@@ -1,10 +1,9 @@
 
 
 import pandas
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler, QCCoercionCost
+import pytest
+from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.utils import _inherit_docstrings
 
 
 class CloudQC(NativeQueryCompiler):
@@ -55,46 +54,61 @@ class PicoQC(NativeQueryCompiler):
                 LocalMachineQC: QCCoercionCost.COST_LOW,
                 PicoQC: QCCoercionCost.COST_ZERO}
 
-def test_two_same_qc_types_noop():
-    df = PicoQC(pandas.DataFrame([0, 1, 2]))
-    df2 = PicoQC(pandas.DataFrame([0, 1, 2]))
-    df3 = df.concat(axis=1, other=df2)
-    assert(type(df3) == type(df2))
+@pytest.fixture()
+def cloud_df():
+    return CloudQC(pandas.DataFrame([0, 1, 2]))
 
-def test_two_two_qc_types_rhs():
-    df = PicoQC(pandas.DataFrame([0, 1, 2]))
-    df2 = ClusterQC(pandas.DataFrame([0, 1, 2]))
-    df3 = df.concat(axis=1, other=df2)
-    assert(type(df3) == type(df2))
+@pytest.fixture()
+def cluster_df():
+    return ClusterQC(pandas.DataFrame([0, 1, 2]))
 
-def test_two_two_qc_types_lhs():
-    df = PicoQC(pandas.DataFrame([0, 1, 2]))
-    df2 = ClusterQC(pandas.DataFrame([0, 1, 2]))
-    df3 = df2.concat(axis=1, other=df)
-    assert(type(df3) == type(df2)) # should move to cluster
+@pytest.fixture()
+def local_df():
+    return LocalMachineQC(pandas.DataFrame([0, 1, 2]))
 
-def test_three_two_qc_types_rhs():
-    df = CloudQC(pandas.DataFrame([0, 1, 2]))
-    df2 = CloudQC(pandas.DataFrame([0, 1, 2]))
-    df3 = PicoQC(pandas.DataFrame([0, 1, 2]))
-    df4 = df3.concat(axis=1, other=[df, df2])
-    assert(type(df) == type(df4)) # should move to cloud
+@pytest.fixture()
+def pico_df():
+    return PicoQC(pandas.DataFrame([0, 1, 2]))
 
-def test_three_two_qc_types_lhs():
-    df = CloudQC(pandas.DataFrame([0, 1, 2]))
-    df2 = CloudQC(pandas.DataFrame([0, 1, 2]))
-    df3 = PicoQC(pandas.DataFrame([0, 1, 2]))
-    df4 = df.concat(axis=1, other=[df2, df3])
-    assert(type(df) == type(df4)) # should move to cloud 
+def test_two_same_qc_types_noop(pico_df):
+    df3 = pico_df.concat(axis=1, other=pico_df)
+    assert(type(df3) == type(pico_df))
 
-def test_three_two_qc_types_middle():
-    pass
+def test_two_two_qc_types_rhs(pico_df, cluster_df):
+    df3 = pico_df.concat(axis=1, other=cluster_df)
+    assert(type(df3) == type(cluster_df)) # should move to cluster
 
-def test_three_three_qc_types_rhs():
-    pass
+def test_two_two_qc_types_lhs(pico_df, cluster_df):
+    df3 = cluster_df.concat(axis=1, other=pico_df)
+    assert(type(df3) == type(cluster_df)) # should move to cluster
 
-def test_three_three_qc_types_lhs():
-    pass
+@pytest.mark.parametrize(
+    "df1, df2, df3, df4, result_type",
+    [
+        # no-op
+        ("cloud_df", "cloud_df", "cloud_df", "cloud_df", CloudQC),
+        # moving all dfs to cloud is 1250, moving to cluster is 1000
+        # regardless of how they are ordered
+        ("pico_df", "local_df", "cluster_df", "cloud_df", ClusterQC),
+        ("cloud_df", "local_df", "cluster_df", "pico_df", ClusterQC),
+        ("cloud_df", "cluster_df", "local_df", "pico_df", ClusterQC),
+        ("cloud_df", "cloud_df", "local_df", "pico_df", CloudQC),
+        # Still move everything to cloud
+        ("pico_df", "pico_df", "pico_df", "cloud_df", CloudQC),
+    ],
+)
+def test_mixed_dfs(df1, df2, df3, df4, result_type, request):
+    df1 = request.getfixturevalue(df1)
+    df2 = request.getfixturevalue(df2)
+    df3 = request.getfixturevalue(df3)
+    df4 = request.getfixturevalue(df4)
+    result = df1.concat(axis=1, other=[df2, df3, df4])
+    assert(type(result) == result_type)
 
-def test_three_three_qc_types_middle():
-    pass
+# This currently passes because we have no "max cost" associated
+# with a particular QC, so we would move all data to the PicoQC
+# As soon as we can represent "max-cost" the result of this operation
+# should be to move all dfs to the CloudQC
+def test_extreme_pico(pico_df, cloud_df):
+    result = cloud_df.concat(axis=1, other=[pico_df, pico_df, pico_df, pico_df, pico_df, pico_df, pico_df])
+    assert(type(result) == PicoQC)
