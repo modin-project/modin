@@ -39,6 +39,9 @@ Additional APIs
 Modin also supports these additional APIs on top of pandas to improve user experience.
 
 - :py:meth:`~modin.pandas.DataFrame.modin.to_pandas` -- convert a Modin DataFrame/Series to a pandas DataFrame/Series.
+- :py:meth:`~modin.pandas.DataFrame.get_backend` -- Get the ``Backend`` :doc:`configuration variable </flow/modin/config>` of this ``DataFrame``.
+- :py:meth:`~modin.pandas.DataFrame.move_to` -- Move data and execution for this ``DataFrame`` to the given ``Backend`` :doc:`configuration variable </flow/modin/config>`. This method is an alias for ``DataFrame.set_backend``.
+- :py:meth:`~modin.pandas.DataFrame.set_backend` -- Move data and execution for this ``DataFrame`` to the given ``Backend`` :doc:`configuration variable </flow/modin/config>`. This method is an alias for ``DatFrame.move_to``.
 - :py:func:`~modin.pandas.io.from_pandas` -- convert a pandas DataFrame to a Modin DataFrame.
 - :py:meth:`~modin.pandas.DataFrame.modin.to_ray` -- convert a Modin DataFrame/Series to a Ray Dataset.
 - :py:func:`~modin.pandas.io.from_ray` -- convert a Ray Dataset to a Modin DataFrame.

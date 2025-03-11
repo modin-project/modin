@@ -314,7 +314,7 @@ Copy-pastable example, showing how mixing pandas and Modin DataFrames in a singl
   # Possible output: TypeError
 
 
-Using pandas to execute queries in Modin's ``"native"`` execution mode
+Using pandas to execute queries with Modin's ``"Pandas"`` backend
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 By default, Modin distributes the data in a dataframe (or series) and attempts
@@ -323,39 +323,62 @@ to process data for different partitions in parallel.
 However, for certain scenarios, such as handling small datasets, Modin's
 parallel execution may introduce unnecessary overhead. In such cases, it's more
 efficient to use serial execution with a single, unpartitioned pandas dataframe.
-You can enable this kind of "native" execution by setting Modin's
-``StorageFormat`` and ``Engine``
-:doc:`configuration variables </flow/modin/config>` to ``"Native"``.
+You can enable this kind of local pandas execution by setting Modin's
+``Backend``
+:doc:`configuration variable </flow/modin/config>` to ``"Pandas"``.
 
-DataFrames created while Modin's global execution mode is set to ``"Native"``
-will continue to use native execution even if you switch the execution mode
+DataFrames created while Modin's global backend is set to ``"Pandas"``
+will continue to use native execution even if you switch the global backend
 later. Modin supports interoperability between distributed Modin DataFrames
-and those using native execution.
+and those using the pandas backend.
 
-Here is an example of using native execution:
+Here is an example of using the pandas backend.
 
 .. code-block:: python
 
   import modin.pandas as pd
   from modin import set_execution
-  from modin.config import StorageFormat, Engine
+  from modin.config import Backend
 
   # This dataframe will use Modin's default, distributed execution.
-  df_distributed_1 = pd.DataFrame([0])
-  assert df_distributed_1._query_compiler.engine != "Native"
+  original_backend = Backend.get()
+  assert original_backend != "Pandas"
+  distributed_df_1 = pd.DataFrame([0])
 
-  # Set execution to "Native" for native execution.
-  original_engine, original_storage_format = set_execution(
-    engine="Native",
-    storage_format="Native"
-  )
-  native_df = pd.DataFrame([1])
-  assert native_df._query_compiler.engine == "Native"
+  # Set backend to "Pandas" for local pandas execution.
+  Backend.put("Pandas")
+  modin_on_pandas_df = pd.DataFrame([1])
+  assert modin_on_pandas_df.get_backend() == "Pandas"
 
   # Revert to default settings for distributed execution
-  set_execution(engine=original_engine, storage_format=original_storage_format)
-  df_distributed_2 = pd.DataFrame([2])
-  assert df_distributed_2._query_compiler.engine == original_engine
+  Backend.put(original_backend)
+  distributed_df_2 = pd.DataFrame([2])
+  assert distributed_df_2.get_backend() == original_backend
+
+You can also use the pandas backend for some dataframes while using different
+backends for other dataframes. You can switch the backend of an individual
+dataframe or series with ``set_backend()`` or its synonym ``move_to()``.
+Here's an example of switching the backend for an individual dataframe.
+
+.. code-block:: python
+
+  import modin.pandas as pd
+
+  # This dataframe will use Modin's default, distributed execution.
+  original_backend = Backend.get()
+  assert original_backend != "Pandas"
+  distributed_df_1 = pd.DataFrame([0])
+
+  pandas_df_1 = distributed_df_1.move_to("Pandas")
+  assert pandas_df_1.get_backend() == "Pandas"
+  pandas_df_1 = pandas_df_1.sort_values(0)
+  assert pandas_df_1.get_backend() == "Pandas"
+
+  new_df = pandas_df_1.move_to(original_backend)
+  assert new_df.get_backend() == original_backend
+
+  new_df.set_backend("Pandas", inplace=True)
+  assert new_df.get_backend() == "Pandas"
 
 Operation-specific optimizations
 """"""""""""""""""""""""""""""""
