@@ -73,11 +73,13 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseFrameAccessor
-from .base import _ATTRS_NO_LOOKUP, GET_BACKEND_DOC, SET_BACKEND_DOC, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
 from .utils import (
+    GET_BACKEND_DOC,
+    SET_BACKEND_DOC,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
     _doc_binary_op,
     cast_function_modin2pandas,

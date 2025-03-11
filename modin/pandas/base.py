@@ -80,7 +80,7 @@ from modin.config import context as config_context
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
-from modin.pandas.utils import is_scalar
+from modin.pandas.utils import GET_BACKEND_DOC, SET_BACKEND_DOC, is_scalar
 from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
 
 from .utils import _doc_binary_op, is_full_grab_slice
@@ -147,47 +147,6 @@ _DEFAULT_BEHAVIOUR = {
 } | _ATTRS_NO_LOOKUP
 
 _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasDataset"}
-
-
-GET_BACKEND_DOC = """
-Get the backend for this ``{class_name}`.
-
-Returns
--------
-str
-    The name of the backend.
-"""
-
-SET_BACKEND_DOC = """
-Move the data in this ``{class_name}`` from its current backend to the given one.
-
-Further operations on this ``{class_name}`` will use the new backend instead of
-the current one.
-
-Parameters
-----------
-backend : str
-    The name of the backend to set.
-inplace : bool, default: False
-    Whether to modify this ``{class_name}`` in place.
-
-Returns
--------
-``{class_name}`` or None
-    If ``inplace`` is False, returns a new instance of the ``{class_name}``
-    with the given backend. If ``inplace`` is ``True``, returns None.
-
-Notes
------
-This method will
-    1) convert the data in this ``{class_name}`` to a pandas DataFrame in this
-       Python process
-    2) load the data from pandas to the new backend.
-
-Either step may be slow and/or memory-intensive, especially if this
-``{class_name}``'s data is large and one or both of the backends do not store
-their data locally.
-"""
 
 
 def _get_repr_axis_label_indexer(labels, num_for_repr):

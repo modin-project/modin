@@ -42,7 +42,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseAccessor
-from .base import _ATTRS_NO_LOOKUP, GET_BACKEND_DOC, SET_BACKEND_DOC, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .iterator import PartitionIterator
 from .series_utils import (
     CategoryMethods,
@@ -51,7 +51,13 @@ from .series_utils import (
     StringMethods,
     StructAccessor,
 )
-from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
+from .utils import (
+    GET_BACKEND_DOC,
+    SET_BACKEND_DOC,
+    _doc_binary_op,
+    cast_function_modin2pandas,
+    is_scalar,
+)
 
 if TYPE_CHECKING:
     import numpy.typing as npt
