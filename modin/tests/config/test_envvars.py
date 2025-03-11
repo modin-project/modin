@@ -86,20 +86,20 @@ def make_custom_envvar(request):
 
 
 @pytest.fixture(scope="session")
-def add_pandas_duplicate_4_on_ray_execution():
+def add_pandas_duplicate_on_ray_execution():
     """
-    Add an execution mode with the storage format Pandasduplicate4 and engine Ray.
+    Add an execution mode with the storage format Test_Pandasduplicate and engine Ray.
 
     This mode's execution is equivalent to PandasOnRay execution.
     """
-    cfg.StorageFormat.add_option("Pandasduplicate4")
+    cfg.StorageFormat.add_option("Test_Pandasduplicate")
     from modin.core.execution.dispatching.factories import factories
 
-    factories.Pandasduplicate4OnRayFactory = factories.PandasOnRayFactory
+    factories.Test_PandasduplicateOnRayFactory = factories.PandasOnRayFactory
     cfg.Backend.register_backend(
-        "NewBackend4",
+        "Test_Backend_1",
         cfg.Execution(
-            storage_format="Pandasduplicate4",
+            storage_format="Test_Pandasduplicate",
             engine="Ray",
         ),
     )
@@ -652,22 +652,22 @@ class TestBackend:
         self,
         clear_backend_execution_and_storage_format,
         order_to_get_in,
-        add_pandas_duplicate_4_on_ray_execution,
+        add_pandas_duplicate_on_ray_execution,
     ):
         # To test switching StorageFormat alone, we have to add a new backend
         # that works with the default "Pandas" execution.
         with mock.patch.dict(
             os.environ,
             {
-                cfg.StorageFormat.varname: "Pandasduplicate4",
+                cfg.StorageFormat.varname: "Test_Pandasduplicate",
             },
         ):
             cfg.Engine.put("Ray")
             for variable in order_to_get_in:
                 expected_value = {
-                    cfg.Backend: "Newbackend4",
+                    cfg.Backend: "Test_Backend_1",
                     cfg.Engine: "Ray",
-                    cfg.StorageFormat: "Pandasduplicate4",
+                    cfg.StorageFormat: "Test_Pandasduplicate",
                 }[variable]
                 assert (
                     variable.get() == expected_value
