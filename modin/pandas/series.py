@@ -746,7 +746,9 @@ class Series(BasePandasDataset):
         """
         Return int position of the largest value in the Series.
         """
-        result = self.reset_index(drop=True).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
+        result = self.reset_index(drop=True).idxmax(
+            axis=axis, skipna=skipna, *args, **kwargs
+        )
         if np.isnan(result) or result is pandas.NA:
             result = -1
         return result
@@ -757,7 +759,9 @@ class Series(BasePandasDataset):
         """
         Return int position of the smallest value in the Series.
         """
-        result = self.reset_index(drop=True).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
+        result = self.reset_index(drop=True).idxmin(
+            axis=axis, skipna=skipna, *args, **kwargs
+        )
         if np.isnan(result) or result is pandas.NA:
             result = -1
         return result
