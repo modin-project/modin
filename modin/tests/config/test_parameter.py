@@ -21,7 +21,7 @@ from modin.config import Parameter
 def make_prefilled(vartype, varinit):
     class Prefilled(Parameter, type=vartype):
         @classmethod
-        def _get_raw_from_config(cls):
+        def _get_value_from_config(cls):
             return varinit
 
     return Prefilled

@@ -41,25 +41,23 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
     varname: Optional[str] = None
 
     @classmethod
-    def _get_raw_from_config(cls) -> str:
+    def _get_value_from_config(cls) -> Any:
         """
         Read the value from environment variable.
 
         Returns
         -------
-        str
-            Config raw value.
-
-        Raises
-        ------
-        TypeError
-            If `varname` is None.
-        KeyError
-            If value is absent.
+        Any
+            Config raw value if it's set, otherwise `_UNSET`.
         """
         if cls.varname is None:
             raise TypeError("varname should not be None")
-        return os.environ[cls.varname]
+        if cls.varname not in os.environ:
+            return _UNSET
+        raw = os.environ[cls.varname]
+        if not _TYPE_PARAMS[cls.type].verify(raw):
+            raise ValueError(f"Unsupported raw value: {raw}")
+        return _TYPE_PARAMS[cls.type].decode(raw)
 
     @classmethod
     def get_help(cls) -> str:
@@ -271,6 +269,43 @@ class Engine(EnvironmentVariable, type=str):
             )
         )
 
+    @classmethod
+    def get(cls) -> str:
+        """
+        Get the engine value.
+
+        Returns
+        -------
+        str
+            Engine value.
+        """
+        # We have to override get() because Engine may need to get its value
+        # from the OS's environment variables for Backend or Engine.
+
+        cls._warn_if_deprecated()
+
+        # First, check if we've already set the engine value.
+        if cls._value is not _UNSET:
+            return cls._value
+
+        engine_config_value = cls._get_value_from_config()
+        backend_config_value = Backend._get_value_from_config()
+
+        # If Engine is in the OS's configuration, use the configured Engine value.
+        # Otherwise, use the Backend config value if that exists. If it doesn't,
+        # fall back to the default Engine value.
+        cls._value = (
+            engine_config_value
+            if engine_config_value is not _UNSET
+            else (
+                Backend.get_execution_for_backend(backend_config_value).engine
+                if backend_config_value is not _UNSET
+                else cls._get_default()
+            )
+        )
+
+        return cls._value
+
 
 class StorageFormat(EnvironmentVariable, type=str):
     """Engine to run on a single node of distribution."""
@@ -292,6 +327,43 @@ class StorageFormat(EnvironmentVariable, type=str):
                 Execution(engine=Engine.get(), storage_format=value)
             )
         )
+
+    @classmethod
+    def get(cls) -> str:
+        """
+        Get the storage format value.
+
+        Returns
+        -------
+        str
+            Storage format value.
+        """
+        # We have to override get() because StorageFormat may need to get its
+        # value from the OS's environment variables for Backend or StorageFormat.
+
+        cls._warn_if_deprecated()
+
+        # First, check if we've already set the engine value.
+        if cls._value is not _UNSET:
+            return cls._value
+
+        storage_format_config_value = cls._get_value_from_config()
+        backend_config_value = Backend._get_value_from_config()
+
+        # If StorageFormat is in the OS's configuration, use the configured
+        # StorageFormat value. Otherwise, use the Backend config value if that
+        # exists. If it doesn't, fall back to the default StorageFormat value.
+        cls._value = (
+            storage_format_config_value
+            if storage_format_config_value is not _UNSET
+            else (
+                Backend.get_execution_for_backend(backend_config_value).storage_format
+                if backend_config_value is not _UNSET
+                else cls._get_default()
+            )
+        )
+
+        return cls._value
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
@@ -419,6 +491,62 @@ class Backend(EnvironmentVariable, type=str):
                 + "backend for it with Backend.register_backend()"
             )
         return cls._EXECUTION_TO_BACKEND[execution]
+
+    @classmethod
+    def get_execution_for_backend(cls, backend: str) -> Execution:
+        """
+        Get the execution for the given backend.
+
+        Parameters
+        ----------
+        backend : str
+            Backend to get the execution for.
+
+        Returns
+        -------
+        execution : Execution
+            The execution for the given backend
+        """
+        if backend not in cls._BACKEND_TO_EXECUTION:
+            raise ValueError(
+                f"Backend '{backend}' has no known execution. Please "
+                + "register an execution for it with Backend.register_backend()."
+            )
+        return cls._BACKEND_TO_EXECUTION[backend]
+
+    @classmethod
+    def get(cls) -> str:
+        """
+        Get the backend.
+
+        Returns
+        -------
+        str
+            Backend.
+        """
+        # We have to override get() because Backend may need to get its value
+        # from the OS's environment variables for Backend or Engine.
+
+        cls._warn_if_deprecated()
+
+        # First, check if we've already set the Backend value.
+        if cls._value is not _UNSET:
+            return cls._value
+
+        backend_config_value = Backend._get_value_from_config()
+
+        # If Backend is in the OS's configuration, use the configured Backend
+        # value. Otherwise, we need to figure out the Backend value based on
+        # the Engine and StorageFormat values.
+        cls._value = (
+            backend_config_value
+            if backend_config_value is not _UNSET
+            else cls.get_backend_for_execution(
+                Execution(storage_format=StorageFormat.get(), engine=Engine.get())
+            )
+        )
+
+        return cls._value
 
 
 Backend.register_backend("Ray", Execution("Pandas", "Ray"))
@@ -1135,6 +1263,14 @@ def _check_vars() -> None:
             deprecated[depr_var].deprecation_message(use_envvar_names=True),
             FutureWarning,
         )
+
+    if Backend.varname in os.environ and (
+        Engine.varname in os.environ or StorageFormat.varname in os.environ
+    ):
+        # Handling this case is tricky, in part because the combination of
+        # Backend and Engine/StorageFormat may be invalid. For now just
+        # disallow it.
+        raise Exception("Can't specify both execution and backend in environment")
 
 
 _check_vars()
