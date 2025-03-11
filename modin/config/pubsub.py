@@ -224,19 +224,22 @@ class Parameter(object):
     _deprecation_descriptor: Optional[DeprecationDescriptor] = None
 
     @classmethod
-    def _get_raw_from_config(cls) -> str:
+    def _warn_if_deprecated(cls) -> None:
+        """Warn that the variable is deprecated if it has a deprecation descriptor."""
+        if cls._deprecation_descriptor is not None:
+            warnings.warn(
+                cls._deprecation_descriptor.deprecation_message(), FutureWarning
+            )
+
+    @classmethod
+    def _get_value_from_config(cls) -> Any:
         """
         Read the value from config storage.
 
         Returns
         -------
-        str
-            Config raw value.
-
-        Raises
-        ------
-        KeyError
-            If value is absent.
+        Any
+            Config raw value if it's set, otherwise `_UNSET`.
 
         Notes
         -----
@@ -332,21 +335,15 @@ class Parameter(object):
         Any
             Decoded and verified config value.
         """
-        if cls._deprecation_descriptor is not None:
-            warnings.warn(
-                cls._deprecation_descriptor.deprecation_message(), FutureWarning
-            )
+        cls._warn_if_deprecated()
         if cls._value is _UNSET:
             # get the value from env
-            try:
-                raw = cls._get_raw_from_config()
-            except KeyError:
+            config_value = cls._get_value_from_config()
+            if config_value is _UNSET:
                 cls._value = cls._get_default()
                 cls._value_source = ValueSource.DEFAULT
             else:
-                if not _TYPE_PARAMS[cls.type].verify(raw):
-                    raise ValueError(f"Unsupported raw value: {raw}")
-                cls._value = _TYPE_PARAMS[cls.type].decode(raw)
+                cls._value = config_value
                 cls._value_source = ValueSource.GOT_FROM_CFG_SOURCE
         return cls._value
 
@@ -360,10 +357,7 @@ class Parameter(object):
         value : Any
             Config value to set.
         """
-        if cls._deprecation_descriptor is not None:
-            warnings.warn(
-                cls._deprecation_descriptor.deprecation_message(), FutureWarning
-            )
+        cls._warn_if_deprecated()
         cls._check_callbacks(cls._put_nocallback(value))
         cls._value_source = ValueSource.SET_BY_USER
 
