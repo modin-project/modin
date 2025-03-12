@@ -4404,6 +4404,7 @@ class BasePandasDataset(ClassLogger):
         query_compiler = FactoryDispatcher.from_pandas(df=pandas_self, backend=backend)
         if inplace:
             self._update_inplace(query_compiler)
+            return None
         else:
             return self.__constructor__(query_compiler=query_compiler)
 
