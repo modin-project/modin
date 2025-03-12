@@ -5210,7 +5210,7 @@ def test_rename_axis():
     df_equals(series_md, series_pd)
     # axis=1 is invalid for series
     try:
-        series_pd.rename_axis("name", 1)
+        series_pd.rename_axis("name", axis=1)
     except Exception as err:
         with pytest.raises(type(err)):
-            series_md.rename_axis("name", 1)
+            series_md.rename_axis("name", axis=1)

@@ -1732,7 +1732,7 @@ class Series(BasePandasDataset):
         -------
         Series or None
         """
-        axis = self._get_axis_number(axis)  # raises ValueError if not 0
+        self._get_axis_number(axis)  # raises ValueError if not 0
         renamed = self if inplace else self.copy()
         renamed.index = renamed.index.set_names(name)
         if not inplace:
