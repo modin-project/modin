@@ -82,7 +82,7 @@ class QueryCompilerCasterCalculator:
         for k, v in costs.items():
             # filter out any extranious query compilers not in this operation
             if k in self._qc_cls_list:
-                QCCoercionCost.validate_coercsion_cost(v)
+                QCCoercionCost.validate_coersion_cost(v)
                 # Adds the costs associated with all coercions to a type, k
                 self._caster_costing_map[k] = (
                     v + self._caster_costing_map[k]
