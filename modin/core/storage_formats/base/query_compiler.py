@@ -108,10 +108,10 @@ def _set_axis(axis):
     return axis_setter
 
 
-class QCCoercionCost(IntEnum): # noqa: PR01
+class QCCoercionCost(IntEnum):  # noqa: PR01
     """
     Coercion costs between Query Compilers.
-    
+
     Coercion costs between query compilers can be expressed
     as integers in the range 0 to 1000, where 1000 is
     considered impossible. Since coercsion costs can be a
@@ -138,11 +138,11 @@ class QCCoercionCost(IntEnum): # noqa: PR01
     def validate_coersion_cost(cls, cost: QCCoercionCost):
         """
         Validate that the coercion cost is within range.
-        
+
         Parameters
         ----------
         cost : QCCoercionCost
-        
+
         Returns
         -------
         callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
@@ -152,6 +152,7 @@ class QCCoercionCost(IntEnum): # noqa: PR01
             QCCoercionCost.COST_IMPOSSIBLE
         ):
             raise ValueError("Query compiler coercsion cost out of range")
+
 
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
 # by using *args and **kwargs. They should be spread into actual parameters.
@@ -300,12 +301,12 @@ class BaseQueryCompiler(
         Returns a map of type to QCCoercionCost, where type is the type we are casting to.
         This provides a mechanism for the query compilers to provide information to
         Modin on the cost of moving data to another query compiler ( or the other way ).
-        
+
         Parameters
         ----------
         other_qc : QueryCompiler
             The query compiler to which we should return the cost of switching.
-            
+
         Returns
         -------
         dict[type, int]
