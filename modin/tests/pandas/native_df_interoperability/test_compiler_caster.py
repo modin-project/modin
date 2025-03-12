@@ -16,6 +16,7 @@ import pytest
 
 from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
+import modin.pandas as pd
 
 
 class CloudQC(NativeQueryCompiler):
@@ -150,3 +151,11 @@ def test_extreme_pico(pico_df, cloud_df):
         axis=1, other=[pico_df, pico_df, pico_df, pico_df, pico_df, pico_df, pico_df]
     )
     assert type(result) is PicoQC
+
+
+def test_call_on_non_qc(pico_df, cloud_df):
+    pico_df1 = pd.DataFrame(query_compiler=pico_df)
+    cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
+
+    df1 = pd.concat([pico_df1, cloud_df1])
+    assert type(df1._query_compiler) == CloudQC
