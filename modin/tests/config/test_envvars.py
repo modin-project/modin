@@ -35,7 +35,7 @@ from modin.tests.pandas.utils import switch_execution
 # out of the order they are defined in. Be careful when running the test
 # locally or when adding new test cases. In particular, note:
 #   - test_ray_cluster_resources() causes us to permanently attach the
-#     `_update_engine` subscriber to Engine: https://github.com/modin-project/modin/blob/6252ebde19935bd1f6a6850209bf8a1f5e5ecfb7/modin/core/execution/dispatching/factories/dispatcher.py#L115
+#     `_initialize_engine` subscriber to Engine: https://github.com/modin-project/modin/blob/6252ebde19935bd1f6a6850209bf8a1f5e5ecfb7/modin/core/execution/dispatching/factories/dispatcher.py#L115
 #     Changing to any engine after that test runs will cause Modin to try to
 #     initialize the engine.
 #   - In CI, we only run these tests with Ray execution, in the
@@ -771,11 +771,13 @@ class TestBackend:
             variable_to_get.get()
 
     def test_get_execution_for_unknown_backend(self):
+        backend_choice_string = ", ".join(
+            f"'{choice}'" for choice in cfg.Backend.choices
+        )
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Backend 'Unknown' has no known execution. Please register "
-                + "an execution for it with Backend.register_backend()."
+                f"Unknown backend 'Unknown'. Available backends are: {backend_choice_string}"
             ),
         ):
             cfg.Backend.get_execution_for_backend("Unknown")

@@ -101,10 +101,10 @@ import os
 
 from modin.config import Parameter
 
-_is_first_update = {}
+_engine_initialized = {}
 
 
-def _update_engine(publisher: Parameter):
+def _initialize_engine(engine_string: str):
     from modin.config import (
         CpuCount,
         Engine,
@@ -116,25 +116,25 @@ def _update_engine(publisher: Parameter):
     # Set this so that Pandas doesn't try to multithread by itself
     os.environ["OMP_NUM_THREADS"] = "1"
 
-    if publisher.get() == "Ray":
-        if _is_first_update.get("Ray", True):
+    if engine_string == "Ray":
+        if not _engine_initialized.get("Ray", False):
             from modin.core.execution.ray.common import initialize_ray
 
             initialize_ray()
-    elif publisher.get() == "Dask":
-        if _is_first_update.get("Dask", True):
+    elif engine_string == "Dask":
+        if not _engine_initialized.get("Dask", False):
             from modin.core.execution.dask.common import initialize_dask
 
             initialize_dask()
-    elif publisher.get() == "Unidist":
-        if _is_first_update.get("Unidist", True):
+    elif engine_string == "Unidist":
+        if not _engine_initialized.get("Unidist", False):
             from modin.core.execution.unidist.common import initialize_unidist
 
             initialize_unidist()
-    elif publisher.get() not in Engine.NOINIT_ENGINES:
-        raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
+    elif engine_string not in Engine.NOINIT_ENGINES:
+        raise ImportError("Unrecognized execution engine: {}.".format(engine_string))
 
-    _is_first_update[publisher.get()] = False
+    _engine_initialized[engine_string] = True
 
 
 from modin.pandas import arrays, errors

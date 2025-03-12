@@ -429,19 +429,7 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         value : str
             Backend value to set.
         """
-        if not isinstance(value, str):
-            raise TypeError(
-                "Backend value should be a string, but instead it is "
-                + f"{repr(value)} of type {type(value)}."
-            )
-        normalized_value = cls.normalize(value)
-        if normalized_value not in cls.choices:
-            backend_choice_string = ", ".join(f"'{choice}'" for choice in cls.choices)
-            raise ValueError(
-                f"Unknown backend '{value}'. Available backends are: "
-                + backend_choice_string
-            )
-        execution = cls._BACKEND_TO_EXECUTION[normalized_value]
+        execution = cls.get_execution_for_backend(value)
         set_execution(execution.engine, execution.storage_format)
 
     @classmethod
@@ -539,12 +527,24 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         execution : Execution
             The execution for the given backend
         """
-        if backend not in cls._BACKEND_TO_EXECUTION:
+        if not isinstance(backend, str):
+            raise TypeError(
+                "Backend value should be a string, but instead it is "
+                + f"{repr(backend)} of type {type(backend)}."
+            )
+        normalized_value = cls.normalize(backend)
+        if normalized_value not in cls.choices:
+            backend_choice_string = ", ".join(f"'{choice}'" for choice in cls.choices)
+            raise ValueError(
+                f"Unknown backend '{backend}'. Available backends are: "
+                + backend_choice_string
+            )
+        if normalized_value not in cls._BACKEND_TO_EXECUTION:
             raise ValueError(
                 f"Backend '{backend}' has no known execution. Please "
                 + "register an execution for it with Backend.register_backend()."
             )
-        return cls._BACKEND_TO_EXECUTION[backend]
+        return cls._BACKEND_TO_EXECUTION[normalized_value]
 
     @classmethod
     def get(cls) -> str:

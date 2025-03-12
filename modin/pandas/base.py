@@ -76,7 +76,6 @@ from pandas.util._validators import (
 
 from modin import pandas as pd
 from modin.config import Backend, Execution
-from modin.config import context as config_context
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
@@ -4394,14 +4393,19 @@ class BasePandasDataset(ClassLogger):
 
     @doc(SET_BACKEND_DOC, class_name=__qualname__)
     def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
-        pandas_self = self.modin.to_pandas()
-        with config_context(Backend=backend):
-            new_dataset = self.__constructor__(pandas_self)
+        # TODO(https://github.com/modin-project/modin/issues/7467): refactor
+        # to avoid this cyclic import in most places we do I/O, e.g. in
+        # modin/pandas/io.py
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        pandas_self = self._query_compiler.to_pandas()
+        query_compiler = FactoryDispatcher.from_pandas(df=pandas_self, backend=backend)
         if inplace:
-            self._update_inplace(new_dataset._query_compiler)
-            return None
+            self._update_inplace(query_compiler)
         else:
-            return new_dataset
+            return self.__constructor__(query_compiler=query_compiler)
 
     move_to = set_backend
 

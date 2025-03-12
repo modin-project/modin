@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import platform
 import re
 
 import pytest
@@ -20,14 +21,23 @@ from modin.config import Backend
 from modin.config import context as config_context
 from modin.tests.pandas.utils import df_equals
 
+WINDOWS_RAY_SKIP_MARK = pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason=(
+        "Some windows tests with engine != ray use 2 cores, but that "
+        + "doesn't work with ray due to "
+        + "https://github.com/modin-project/modin/issues/7387"
+    ),
+)
+
 
 def test_new_dataframe_uses_default_backend():
     # We run this test with `Backend` set to just one value (instead of
     # trying to look for every possible `Backend` value in the same pytest
     # process) because switching to the MPI backend within a test process
-    # that's not set up to run MPI (i.e. by running `mpiexec` instead of just
-    # `pytest`) would cause errors. We assume that CI runs this test file once
-    # with every possible `Backend`.
+    # that's not set up to run MPI (i.e. because the test process has been
+    # started `mpiexec` instead of just `pytest`) would cause errors. We assume
+    # that CI runs this test file once with every possible `Backend`.
     assert pd.DataFrame([1]).get_backend() == Backend.get()
 
 
@@ -58,13 +68,37 @@ def test_new_dataframe_uses_default_backend():
         pytest.param(
             "python_test", "python_test", "Python_Test", id="python_to_python"
         ),
-        pytest.param("ray", "dask", "Dask", id="ray_to_dask"),
-        pytest.param("dask", "ray", "Ray", id="dask_to_ray"),
-        pytest.param("ray", "python_test", "Python_Test", id="ray_to_python"),
+        pytest.param(
+            "ray",
+            "dask",
+            "Dask",
+            id="ray_to_dask",
+            marks=WINDOWS_RAY_SKIP_MARK,
+        ),
+        pytest.param(
+            "dask",
+            "ray",
+            "Ray",
+            id="dask_to_ray",
+            marks=WINDOWS_RAY_SKIP_MARK,
+        ),
+        pytest.param(
+            "ray",
+            "python_test",
+            "Python_Test",
+            id="ray_to_python",
+            marks=WINDOWS_RAY_SKIP_MARK,
+        ),
         pytest.param("dask", "python_test", "Python_Test", id="dask_to_python"),
-        pytest.param("python_test", "ray", "Ray", id="python_to_ray"),
+        pytest.param(
+            "python_test",
+            "ray",
+            "Ray",
+            id="python_to_ray",
+            marks=WINDOWS_RAY_SKIP_MARK,
+        ),
         pytest.param("python_test", "dask", "Dask", id="python_to_dask"),
-        pytest.param("ray", "ray", "Ray", id="ray_to_ray"),
+        pytest.param("ray", "ray", "Ray", id="ray_to_ray", marks=WINDOWS_RAY_SKIP_MARK),
         pytest.param("dask", "dask", "Dask", id="dask_to_dask"),
     ],
 )
