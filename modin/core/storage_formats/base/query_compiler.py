@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import abc
 import warnings
-from enum import Enum
+from enum import IntEnum
 from functools import cached_property
 from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
@@ -108,7 +108,7 @@ def _set_axis(axis):
     return axis_setter
 
 
-class QCCoercionCost(Enum):
+class QCCoercionCost(IntEnum): # noqa: PR01
     """
     Coercion costs between Query Compilers.
     
@@ -152,31 +152,6 @@ class QCCoercionCost(Enum):
             QCCoercionCost.COST_IMPOSSIBLE
         ):
             raise ValueError("Query compiler coercsion cost out of range")
-
-    def __int__(self):
-        """
-        Convert a QCCoercionCost to an integer.
-
-        Returns
-        -------
-        The integer value of the QCCoercionCost
-        """
-        return self.value
-
-    def __add__(self, other) -> int:
-        """
-        Add a QCCoercionCost to this QCCoercionCost.
-        
-        Parameters
-        ----------
-        other : QCCoercionCost
-
-        Returns
-        -------
-        The integer result of the addition
-        """
-        return int(self) + int(other)
-
 
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
 # by using *args and **kwargs. They should be spread into actual parameters.
