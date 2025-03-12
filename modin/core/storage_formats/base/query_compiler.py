@@ -20,8 +20,8 @@ Module contains class ``BaseQueryCompiler``.
 from __future__ import annotations
 
 import abc
-from enum import Enum
 import warnings
+from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
@@ -110,16 +110,15 @@ def _set_axis(axis):
 
 class QCCoercionCost(Enum):
     """
+    Coercion costs between Query Compilers.
+    
     Coercion costs between query compilers can be expressed
-    as integers in the range -1 to 1000, where 1000 is
+    as integers in the range 0 to 1000, where 1000 is
     considered impossible. Since coercsion costs can be a
     function of many variables ( dataset size, partitioning,
     network throughput, and query time ) we define a set range
     of cost values to simplify comparisons between two query
     compilers / engines in a unified way.
-
-    COST_UNKNOWN means we do not know the cost associated with changing
-    query compilers.
 
     COST_ZERO means there is no cost associated, or that the query compilers
     are the same.
@@ -129,7 +128,6 @@ class QCCoercionCost(Enum):
     of the coercion.
     """
 
-    COST_UNKNOWN = -1
     COST_ZERO = 0
     COST_LOW = 250
     COST_MEDIUM = 500
@@ -137,16 +135,46 @@ class QCCoercionCost(Enum):
     COST_IMPOSSIBLE = 1000
 
     @classmethod
-    def validate_coercsion_cost(cls, cost: QCCoercionCost):
-        if int(cost) < int(QCCoercionCost.COST_UNKNOWN) or int(cost) > int(
+    def validate_coersion_cost(cls, cost: QCCoercionCost):
+        """
+        Validate that the coercion cost is within range.
+        
+        Parameters
+        ----------
+        cost : QCCoercionCost
+        
+        Returns
+        -------
+        callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+            Function to be applied in the partitions.
+        """
+        if int(cost) < int(QCCoercionCost.COST_ZERO) or int(cost) > int(
             QCCoercionCost.COST_IMPOSSIBLE
         ):
             raise ValueError("Query compiler coercsion cost out of range")
 
     def __int__(self):
+        """
+        Convert a QCCoercionCost to an integer.
+
+        Returns
+        -------
+        The integer value of the QCCoercionCost
+        """
         return self.value
 
     def __add__(self, other) -> int:
+        """
+        Add a QCCoercionCost to this QCCoercionCost.
+        
+        Parameters
+        ----------
+        other : QCCoercionCost
+
+        Returns
+        -------
+        The integer result of the addition
+        """
         return int(self) + int(other)
 
 
@@ -292,11 +320,21 @@ class BaseQueryCompiler(
 
     def qc_engine_switch_cost(self, other_qc) -> dict[type, int]:
         """
-        Coercion costs to and from other_qc
+        Coercion costs to and from other_qc.
 
         Returns a map of type to QCCoercionCost, where type is the type we are casting to.
         This provides a mechanism for the query compilers to provide information to
-        modin on the cost of moving data to another query compiler ( or the other way ).
+        Modin on the cost of moving data to another query compiler ( or the other way ).
+        
+        Parameters
+        ----------
+        other_qc : QueryCompiler
+            The query compiler to which we should return the cost of switching.
+            
+        Returns
+        -------
+        dict[type, int]
+            Dictionary of QueryCompilerClass type to QCCoercionCost.
         """
         if isinstance(type(self), type(other_qc)):
             return {type(self): QCCoercionCost.COST_ZERO}
