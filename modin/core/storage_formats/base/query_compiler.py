@@ -136,7 +136,8 @@ class QCCoercionCost(Enum):
     COST_HIGH = 750
     COST_IMPOSSIBLE = 1000
 
-    def validate_coercsion_cost(cost: QCCoercionCost):
+    @classmethod
+    def validate_coercsion_cost(cls, cost: QCCoercionCost):
         if int(cost) < int(QCCoercionCost.COST_UNKNOWN) or int(cost) > int(
             QCCoercionCost.COST_IMPOSSIBLE
         ):
