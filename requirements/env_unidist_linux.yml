@@ -14,6 +14,16 @@ dependencies:
   - psutil>=5.8.0
 
   # optional dependencies
+  # NOTE Keep the ray and dask dependencies in sync with the Windows Unidist
+  # environment and the general environment-dev.yml.
+  # We include the ray and dask dependencies here because we want to test
+  # switching dataframe backends to ray or dask.
+  # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
+  - ray-core>=2.1.0,!=2.5.0
+  # workaround for https://github.com/conda/conda/issues/11744
+  - grpcio!=1.45.*
+  - grpcio!=1.46.*
+  - dask>=2.22.0
   - pyarrow>=10.0.1
   - xarray>=2022.12.0
   - jinja2>=3.1.2
