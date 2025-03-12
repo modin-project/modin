@@ -36,7 +36,15 @@ Fn = TypeVar("Fn", bound=Any)
 
 
 class QueryCompilerCasterCalculator:
-
+    """
+    Calculate which QueryCompiler should be used for an operation.
+    
+    Given a set of QueryCompilers; containing various data, determine
+    which query compiler everything should be cast to which minimizes
+    the cost of casting, or coercion. Use the aggregate sum of coercion
+    to determine overall cost.
+    """
+    
     def __init__(self):
         self._caster_costing_map = {}
         self._data_cls_map = {}
@@ -45,6 +53,13 @@ class QueryCompilerCasterCalculator:
         self._result_type = None
 
     def add_query_compiler(self, query_compiler):
+        """
+        Add a query compiler to be considered for casting.
+        
+        Parameters
+        ----------
+        query_compiler : QueryCompiler
+        """
         if isinstance(query_compiler, type):
             # class
             qc_type = query_compiler
@@ -56,6 +71,14 @@ class QueryCompilerCasterCalculator:
         self._qc_cls_list.append(qc_type)
 
     def calculate(self):
+        """
+        Calculate which query compiler we should cast to.
+
+        Returns
+        -------
+        type
+            QueryCompiler class which should be used for the operation.
+        """
         if self._result_type is not None:
             return self._result_type
         if len(self._qc_cls_list) == 1:
@@ -79,6 +102,14 @@ class QueryCompilerCasterCalculator:
         return self._result_type
 
     def _add_cost_data(self, costs: dict):
+        """
+        Add the cost data to the calculator.
+        
+        Parameters
+        ----------
+        costs : dict
+            Dictionary of query compiler classes to costs.
+        """
         for k, v in costs.items():
             # filter out any extranious query compilers not in this operation
             if k in self._qc_cls_list:
@@ -91,6 +122,14 @@ class QueryCompilerCasterCalculator:
                 )
 
     def result_data_frame(self):
+        """
+        Return the data frame associated with the calculated query compiler.
+        
+        Returns
+        -------
+        DataFrame object
+            DataFrame object associated with the preferred query compiler.
+        """
         qc_type = self.calculate()
         return self._data_cls_map[qc_type]
 
@@ -119,38 +158,37 @@ class QueryCompilerCaster:
         apply_argument_cast(cls)
 
 
-def visit_nested_args(arguments, current_qc: BaseQueryCompiler, fn: callable):
+def visit_nested_args(arguments, fn: callable):
     """
-    Cast all arguments in nested fashion to current query compiler.
-
+    Visit each argument recursively, calling fn on each one.
+    
     Parameters
     ----------
     arguments : tuple or dict
-    current_qc : BaseQueryCompiler
+    fn : Callable to apply to matching arguments
 
     Returns
     -------
     tuple or dict
         Returns args and kwargs with all query compilers casted to current_qc.
     """
-
     imutable_types = (FrozenList, tuple)
     if isinstance(arguments, imutable_types):
         args_type = type(arguments)
         arguments = list(arguments)
-        arguments = visit_nested_args(arguments, current_qc, fn)
+        arguments = visit_nested_args(arguments, fn)
 
         return args_type(arguments)
     if isinstance(arguments, list):
         for i in range(len(arguments)):
             if isinstance(arguments[i], (list, dict)):
-                visit_nested_args(arguments[i], current_qc, fn)
+                visit_nested_args(arguments[i], fn)
             else:
                 arguments[i] = fn(arguments[i])
     elif isinstance(arguments, dict):
         for key in arguments:
             if isinstance(arguments[key], (list, dict)):
-                visit_nested_args(arguments[key], current_qc, fn)
+                visit_nested_args(arguments[key], fn)
             else:
                 arguments[key] = fn(arguments[key])
     return arguments
@@ -239,11 +277,11 @@ def apply_argument_cast(obj: Fn) -> Fn:
             return result
 
         if isinstance(current_qc, BaseQueryCompiler):
-            visit_nested_args(kwargs, current_qc, register_query_compilers)
-            visit_nested_args(args, current_qc, register_query_compilers)
+            visit_nested_args(kwargs, register_query_compilers)
+            visit_nested_args(args, register_query_compilers)
 
-            args = visit_nested_args(args, current_qc, cast_to_qc)
-            kwargs = visit_nested_args(kwargs, current_qc, cast_to_qc)
+            args = visit_nested_args(args, cast_to_qc)
+            kwargs = visit_nested_args(kwargs, cast_to_qc)
 
         qc = calculator.calculate()
 
