@@ -294,27 +294,27 @@ class BaseQueryCompiler(
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)
 
-    def qc_engine_switch_cost(self, other_qc) -> dict[type, int]:
+    def qc_engine_switch_cost(self, other_qc_type: type) -> int:
         """
-        Coercion costs to and from other_qc.
+        Return the coercion costs of this qc to other_qc type.
 
-        Returns a map of type to QCCoercionCost, where type is the type we are casting to.
-        This provides a mechanism for the query compilers to provide information to
-        Modin on the cost of moving data to another query compiler ( or the other way ).
+        Values returned must be within the acceptable range of
+        QCCoercionCost
 
         Parameters
         ----------
-        other_qc : QueryCompiler
-            The query compiler to which we should return the cost of switching.
+        other_qc : QueryCompiler Class
+            The query compiler class to which we should return the cost of switching.
 
         Returns
         -------
-        dict[type, int]
-            Dictionary of QueryCompilerClass type to QCCoercionCost.
+        int
+            Cost of migrating the data from this qc to the other_qc or
+            None if the cost cannot be determined
         """
-        if isinstance(type(self), type(other_qc)):
-            return {type(self): QCCoercionCost.COST_ZERO}
-        return {}
+        if isinstance(type(self), other_qc_type):
+            return QCCoercionCost.COST_ZERO
+        return None
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
