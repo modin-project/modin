@@ -55,6 +55,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.indexes.frozen import FrozenList
 from pandas.io.formats.info import DataFrameInfo
+from pandas.util._decorators import doc
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
@@ -77,12 +78,16 @@ from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
 from .utils import (
+    GET_BACKEND_DOC,
+    SET_BACKEND_DOC,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
     _doc_binary_op,
     cast_function_modin2pandas,
 )
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from modin.core.storage_formats import BaseQueryCompiler
 
 # Dictionary of extensions assigned to this class
@@ -3314,3 +3319,13 @@ class DataFrame(BasePandasDataset):
         return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END
+
+    @doc(SET_BACKEND_DOC, class_name=__qualname__)
+    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
+        return super().set_backend(backend=backend, inplace=inplace)
+
+    move_to = set_backend
+
+    @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    def get_backend(self) -> str:
+        return super().get_backend()

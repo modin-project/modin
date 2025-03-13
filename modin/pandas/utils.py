@@ -43,6 +43,47 @@ SET_DATAFRAME_ATTRIBUTE_WARNING = (
 )
 
 
+GET_BACKEND_DOC = """
+Get the backend for this ``{class_name}``.
+
+Returns
+-------
+str
+    The name of the backend.
+"""
+
+SET_BACKEND_DOC = """
+Move the data in this ``{class_name}`` from its current backend to the given one.
+
+Further operations on this ``{class_name}`` will use the new backend instead of
+the current one.
+
+Parameters
+----------
+backend : str
+    The name of the backend to set.
+inplace : bool, default: False
+    Whether to modify this ``{class_name}`` in place.
+
+Returns
+-------
+``{class_name}`` or None
+    If ``inplace`` is False, returns a new instance of the ``{class_name}``
+    with the given backend. If ``inplace`` is ``True``, returns None.
+
+Notes
+-----
+This method will
+    1) convert the data in this ``{class_name}`` to a pandas DataFrame in this
+       Python process
+    2) load the data from pandas to the new backend.
+
+Either step may be slow and/or memory-intensive, especially if this
+``{class_name}``'s data is large, or one or both of the backends do not store
+their data locally.
+"""
+
+
 def cast_function_modin2pandas(func):
     """
     Replace Modin functions with pandas functions if `func` is callable.

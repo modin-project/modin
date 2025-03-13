@@ -67,6 +67,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.indexes.api import ensure_index
 from pandas.core.methods.describe import _refine_percentiles
+from pandas.util._decorators import doc
 from pandas.util._validators import (
     validate_ascending,
     validate_bool_kwarg,
@@ -74,10 +75,11 @@ from pandas.util._validators import (
 )
 
 from modin import pandas as pd
+from modin.config import Backend, Execution
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
-from modin.pandas.utils import is_scalar
+from modin.pandas.utils import GET_BACKEND_DOC, SET_BACKEND_DOC, is_scalar
 from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
 
 from .utils import _doc_binary_op, is_full_grab_slice
@@ -4388,3 +4390,31 @@ class BasePandasDataset(ClassLogger):
 
     # namespace for additional Modin functions that are not available in Pandas
     modin: ModinAPI = CachedAccessor("modin", ModinAPI)
+
+    @doc(SET_BACKEND_DOC, class_name=__qualname__)
+    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
+        # TODO(https://github.com/modin-project/modin/issues/7467): refactor
+        # to avoid this cyclic import in most places we do I/O, e.g. in
+        # modin/pandas/io.py
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        pandas_self = self._query_compiler.to_pandas()
+        query_compiler = FactoryDispatcher.from_pandas(df=pandas_self, backend=backend)
+        if inplace:
+            self._update_inplace(query_compiler)
+            return None
+        else:
+            return self.__constructor__(query_compiler=query_compiler)
+
+    move_to = set_backend
+
+    @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    def get_backend(self) -> str:
+        return Backend.get_backend_for_execution(
+            Execution(
+                engine=self._query_compiler.engine,
+                storage_format=self._query_compiler.storage_format,
+            )
+        )
