@@ -26,13 +26,13 @@ class CloudQC(NativeQueryCompiler):
         self._modin_frame = pandas_frame
         super().__init__(pandas_frame)
 
-    def qc_engine_switch_cost(self, other_qc):
+    def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
             LocalMachineQC: QCCoercionCost.COST_HIGH,
             PicoQC: QCCoercionCost.COST_IMPOSSIBLE,
-        }
+        }[other_qc_cls]
 
 
 class ClusterQC(NativeQueryCompiler):
@@ -42,13 +42,13 @@ class ClusterQC(NativeQueryCompiler):
         self._modin_frame = pandas_frame
         super().__init__(pandas_frame)
 
-    def qc_engine_switch_cost(self, other_qc):
+    def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
             LocalMachineQC: QCCoercionCost.COST_MEDIUM,
             PicoQC: QCCoercionCost.COST_HIGH,
-        }
+        }[other_qc_cls]
 
 
 class LocalMachineQC(NativeQueryCompiler):
@@ -58,13 +58,13 @@ class LocalMachineQC(NativeQueryCompiler):
         self._modin_frame = pandas_frame
         super().__init__(pandas_frame)
 
-    def qc_engine_switch_cost(self, other_qc):
+    def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_ZERO,
             PicoQC: QCCoercionCost.COST_MEDIUM,
-        }
+        }[other_qc_cls]
 
 
 class PicoQC(NativeQueryCompiler):
@@ -74,13 +74,13 @@ class PicoQC(NativeQueryCompiler):
         self._modin_frame = pandas_frame
         super().__init__(pandas_frame)
 
-    def qc_engine_switch_cost(self, other_qc):
+    def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_LOW,
             PicoQC: QCCoercionCost.COST_ZERO,
-        }
+        }[other_qc_cls]
 
 
 @pytest.fixture()
@@ -158,4 +158,4 @@ def test_call_on_non_qc(pico_df, cloud_df):
     cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
 
     df1 = pd.concat([pico_df1, cloud_df1])
-    assert type(df1._query_compiler) == CloudQC
+    assert type(df1._query_compiler) is CloudQC

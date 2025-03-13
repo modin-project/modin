@@ -49,7 +49,7 @@ class QueryCompilerCasterCalculator:
         self._caster_costing_map = {}
         self._data_cls_map = {}
         self._qc_list = []
-        self._qc_cls_list = []
+        self._qc_cls_set = set()
         self._result_type = None
 
     def add_query_compiler(self, query_compiler):
@@ -68,7 +68,7 @@ class QueryCompilerCasterCalculator:
             qc_type = type(query_compiler)
             self._qc_list.append(query_compiler)
             self._data_cls_map[qc_type] = query_compiler._modin_frame
-        self._qc_cls_list.append(qc_type)
+        self._qc_cls_set.add(qc_type)
 
     def calculate(self):
         """
@@ -81,16 +81,17 @@ class QueryCompilerCasterCalculator:
         """
         if self._result_type is not None:
             return self._result_type
-        if len(self._qc_cls_list) == 1:
-            return self._qc_cls_list[0]
-        if len(self._qc_cls_list) == 0:
+        if len(self._qc_cls_set) == 1:
+            return self._qc_cls_set.pop()
+        if len(self._qc_cls_set) == 0:
             raise ValueError("No query compilers registered")
 
-        for qc_1, qc_2 in combinations(self._qc_list, 2):
-            costs_1 = qc_1.qc_engine_switch_cost(qc_2)
-            costs_2 = qc_2.qc_engine_switch_cost(qc_1)
-            self._add_cost_data(costs_1)
-            self._add_cost_data(costs_2)
+        for qc_from in self._qc_list:
+            for qc_cls_to in self._qc_cls_set:
+                cost = qc_from.qc_engine_switch_cost(qc_cls_to)
+                if cost is not None:
+                    self._add_cost_data({qc_cls_to: cost})
+            self._add_cost_data({type(qc_from): QCCoercionCost.COST_ZERO})
         if len(self._caster_costing_map) <= 0 and len(self._qc_cls_list) > 0:
             self._result_type = self._qc_cls_list[0]
             return self._result_type
@@ -112,7 +113,7 @@ class QueryCompilerCasterCalculator:
         """
         for k, v in costs.items():
             # filter out any extranious query compilers not in this operation
-            if k in self._qc_cls_list:
+            if k in self._qc_cls_set:
                 QCCoercionCost.validate_coersion_cost(v)
                 # Adds the costs associated with all coercions to a type, k
                 self._caster_costing_map[k] = (
