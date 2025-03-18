@@ -38,10 +38,10 @@ class QueryCompilerCasterCalculator:
     """
     Calculate which QueryCompiler should be used for an operation.
 
-    Given a set of QueryCompilers; containing various data, determine
-    which query compiler everything should be cast to which minimizes
-    the cost of casting, or coercion. Use the aggregate sum of coercion
-    to determine overall cost.
+    Given a set of QueryCompilers containing various data, determine
+    which query compiler's backend would minimize the cost of casting
+    or coercion. Use the aggregate sum of coercion to determine overall
+    cost.
     """
 
     def __init__(self):
