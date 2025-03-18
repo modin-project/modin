@@ -4422,7 +4422,6 @@ class BasePandasDataset(ClassLogger):
             except ImportError:
                 # Iterate over blank range(2) if tqdm or IPython is not installed
                 pass
-        query_compiler = self._query_compiler
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
         next(progress_iter)
         pandas_self = self._query_compiler.to_pandas()
