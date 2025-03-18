@@ -5188,3 +5188,12 @@ def test_logical_binary_with_list(op):
     result_md = getattr(series_md, op)(rhs)
     result_pd = getattr(series_pd, op)(rhs)
     df_equals(result_md, result_pd)
+
+
+@pytest.mark.parametrize("op", ["argmax", "argmin"])
+def test_argmax_argmin_7413(op):
+    # Ensures that argmin/argmax use positional index, not the actual index value
+    series_md, series_pd = create_test_series([1, 2, 3], index=["b", "a", "c"])
+    result_md = getattr(series_md, op)()
+    result_pd = getattr(series_pd, op)()
+    assert result_md == result_pd
