@@ -16,7 +16,7 @@ import re
 from unittest.mock import patch
 
 import pytest
-import tqdm.notebook
+import tqdm
 
 import modin.pandas as pd
 from modin.config import Backend
@@ -119,7 +119,7 @@ def test_set_valid_backend(
     data_class,
     expected_result_backend,
 ):
-    with patch.object(tqdm.notebook, "trange", return_value=range(1)) as mock_trange:
+    with patch.object(tqdm, "trange", return_value=range(1)) as mock_trange:
         with config_context(Backend=starting_backend):
             original_df = data_class([1])
             # convert to pandas for comparison while still on the `starting_backend`.
