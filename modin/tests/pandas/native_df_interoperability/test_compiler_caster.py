@@ -220,26 +220,33 @@ def test_adversarial_low(adversarial_df, cloud_df):
 
 
 def test_two_two_qc_types_default_rhs(default_df, cluster_df):
+    # none of the query compilers know about each other here
+    # so we default to the caller
     df3 = default_df.concat(axis=1, other=cluster_df)
-    assert type(df3) is type(cluster_df)  # should move to cluster
+    assert type(df3) is type(default_df)  # should move to default
 
 
 def test_two_two_qc_types_default_lhs(default_df, cluster_df):
+    # none of the query compilers know about each other here
+    # so we default to the caller
     df3 = cluster_df.concat(axis=1, other=default_df)
     assert type(df3) is type(cluster_df)  # should move to cluster
 
 
-def test_two_two_qc_types_default_rhs(default_df, cloud_df):
+def test_two_two_qc_types_default_2_rhs(default_df, cloud_df):
+    # cloud knows a bit about costing; so we prefer moving to there
     df3 = default_df.concat(axis=1, other=cloud_df)
-    assert type(df3) is type(cloud_df)  # should move to cluster
+    assert type(df3) is type(cloud_df)  # should move to cloud
 
 
-def test_two_two_qc_types_default_lhs(default_df, cloud_df):
+def test_two_two_qc_types_default_2_lhs(default_df, cloud_df):
+    # cloud knows a bit about costing; so we prefer moving to there
     df3 = cloud_df.concat(axis=1, other=default_df)
-    assert type(df3) is type(cloud_df)  # should move to cluster
+    assert type(df3) is type(cloud_df)  # should move to cloud
 
 
 def test_default_to_caller(default_df, default2_df):
+    # No qc knows anything; default to caller
     df3 = default_df.concat(axis=1, other=default2_df)
     assert type(df3) is type(default_df)  # should stay on caller
     df3 = default2_df.concat(axis=1, other=default_df)
