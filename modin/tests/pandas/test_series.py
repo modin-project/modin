@@ -5205,8 +5205,8 @@ def test_rename_axis():
     renamed_pd = series_pd.rename_axis("name")
     assert series_md.index.name is None
     df_equals(renamed_md, renamed_pd)
-    series_md.rename_axis("name", inplace=True)
-    series_pd.rename_axis("name", inplace=True)
+    series_md.rename_axis("new_name", inplace=True)
+    series_pd.rename_axis("new_name", inplace=True)
     df_equals(series_md, series_pd)
     # axis=1 is invalid for series
     try:

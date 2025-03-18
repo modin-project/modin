@@ -1735,8 +1735,7 @@ class Series(BasePandasDataset):
         self._get_axis_number(axis)  # raises ValueError if not 0
         renamed = self if inplace else self.copy()
         renamed.index = renamed.index.set_names(name)
-        if not inplace:
-            return renamed
+        return None if inplace else renamed
 
     def rename(
         self,
