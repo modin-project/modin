@@ -303,14 +303,14 @@ class BaseQueryCompiler(
 
         Parameters
         ----------
-        other_qc : QueryCompiler Class
+        other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
 
         Returns
         -------
         int
             Cost of migrating the data from this qc to the other_qc or
-            None if the cost cannot be determined
+            None if the cost cannot be determined.
         """
         if isinstance(type(self), other_qc_type):
             return QCCoercionCost.COST_ZERO
