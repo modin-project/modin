@@ -4400,27 +4400,39 @@ class BasePandasDataset(ClassLogger):
             FactoryDispatcher,
         )
 
-        tqdm_range = range(1)
+        progress_split_count = 2
+        progress_iter = iter(range(progress_split_count))
         if backend != self.get_backend:
             # TODO declare TQDM as an optional setup.py dependency; it's used elsewhere in the codebase as well
             try:
-                from tqdm.notebook import trange
+                # Check if we're in a notebook
+                from IPython import get_ipython
 
-                tqdm_range = trange(
-                    1,
-                    desc=f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} ...",
+                if get_ipython().__class__.__name__ == "ZMQInteractiveShell":
+                    from tqdm.notebook import trange  # pragma: no cover
+                else:
+                    from tqdm import trange
+
+                progress_iter = iter(
+                    trange(
+                        progress_split_count,
+                        desc=f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} ...",
+                    )
                 )
             except ImportError:
-                # Iterate over blank range(1) if tqdm is not installed
+                # Iterate over blank range(2) if tqdm or IPython is not installed
                 pass
         query_compiler = self._query_compiler
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
-        # Otherwise this assigns query_compiler exactly once.
-        for _ in tqdm_range:
-            pandas_self = self._query_compiler.to_pandas()
-            query_compiler = FactoryDispatcher.from_pandas(
-                df=pandas_self, backend=backend
-            )
+        next(progress_iter)
+        pandas_self = self._query_compiler.to_pandas()
+        next(progress_iter)
+        query_compiler = FactoryDispatcher.from_pandas(df=pandas_self, backend=backend)
+        try:
+            next(progress_iter)
+        except StopIteration:
+            # Last call to next informs tqdm that the operation is done
+            pass
         if inplace:
             self._update_inplace(query_compiler)
             return None
