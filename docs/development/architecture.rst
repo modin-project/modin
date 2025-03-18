@@ -90,7 +90,7 @@ In the interest of reducing the pandas API, the Query Compiler layer closely fol
 pandas API, but cuts out a large majority of the repetition.
 
 QueryCompilers which are derived from QueryCompilerCaster can participate in automatic casting when
-different querycompilers, representing different underlying engines, are used together in a
+different query compilers, representing different underlying engines, are used together in a
 function. A relative "cost" of casting is used to determine which query compiler everything should
 be moved to. Each query compiler must implement the function, 'qc_engine_switch_cost' to provides
 information and query costs.
