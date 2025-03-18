@@ -67,7 +67,7 @@ class QueryCompilerCasterCalculator:
             # instance
             qc_type = type(query_compiler)
             self._qc_list.append(query_compiler)
-            self._data_cls_map[qc_type] = query_compiler._modin_frame
+            self._data_cls_map[qc_type] = type(query_compiler._modin_frame)
         self._qc_cls_set.add(qc_type)
 
     def calculate(self):
@@ -122,7 +122,7 @@ class QueryCompilerCasterCalculator:
                     else v
                 )
 
-    def result_data_frame(self):
+    def result_data_cls(self):
         """
         Return the data frame associated with the calculated query compiler.
 
@@ -273,7 +273,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
             qc_type = calculator.calculate()
             if qc_type is None or qc_type is type(arg):
                 return arg
-            frame_data = calculator.result_data_frame()
+            frame_data = calculator.result_data_cls()
             result = qc_type.from_pandas(arg.to_pandas(), frame_data)
             return result
 
