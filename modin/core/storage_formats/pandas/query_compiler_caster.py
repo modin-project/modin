@@ -21,7 +21,6 @@ This ensures compatibility between different query compiler classes.
 
 import functools
 import inspect
-from itertools import combinations
 from types import FunctionType, MethodType
 from typing import Any, Dict, Tuple, TypeVar
 
