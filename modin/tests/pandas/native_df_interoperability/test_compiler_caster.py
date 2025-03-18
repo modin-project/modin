@@ -30,6 +30,7 @@ class CloudQC(NativeQueryCompiler):
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
+            DefaultQC: QCCoercionCost.COST_MEDIUM,
             LocalMachineQC: QCCoercionCost.COST_HIGH,
             PicoQC: QCCoercionCost.COST_IMPOSSIBLE,
         }[other_qc_cls]
@@ -46,6 +47,7 @@ class ClusterQC(NativeQueryCompiler):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
+            DefaultQC: None,  # cluster qc knows nothing about default qc
             LocalMachineQC: QCCoercionCost.COST_MEDIUM,
             PicoQC: QCCoercionCost.COST_HIGH,
         }[other_qc_cls]
@@ -83,6 +85,37 @@ class PicoQC(NativeQueryCompiler):
         }[other_qc_cls]
 
 
+class AdversarialQC(NativeQueryCompiler):
+    "Represents a query compiler which returns non-sensiscal costs"
+
+    def __init__(self, pandas_frame):
+        self._modin_frame = pandas_frame
+        super().__init__(pandas_frame)
+
+    def qc_engine_switch_cost(self, other_qc_cls):
+        return {
+            CloudQC: -1000,
+            ClusterQC: 10000,
+            AdversarialQC: QCCoercionCost.COST_ZERO,
+        }[other_qc_cls]
+
+
+class DefaultQC(NativeQueryCompiler):
+    "Represents a query compiler with no costing information"
+
+    def __init__(self, pandas_frame):
+        self._modin_frame = pandas_frame
+        super().__init__(pandas_frame)
+
+
+class DefaultQC2(NativeQueryCompiler):
+    "Represents a query compiler with no costing information, but different."
+
+    def __init__(self, pandas_frame):
+        self._modin_frame = pandas_frame
+        super().__init__(pandas_frame)
+
+
 @pytest.fixture()
 def cloud_df():
     return CloudQC(pandas.DataFrame([0, 1, 2]))
@@ -101,6 +134,21 @@ def local_df():
 @pytest.fixture()
 def pico_df():
     return PicoQC(pandas.DataFrame([0, 1, 2]))
+
+
+@pytest.fixture()
+def adversarial_df():
+    return AdversarialQC(pandas.DataFrame([0, 1, 2]))
+
+
+@pytest.fixture()
+def default_df():
+    return DefaultQC(pandas.DataFrame([0, 1, 2]))
+
+
+@pytest.fixture()
+def default2_df():
+    return DefaultQC(pandas.DataFrame([0, 1, 2]))
 
 
 def test_two_same_qc_types_noop(pico_df):
@@ -159,3 +207,40 @@ def test_call_on_non_qc(pico_df, cloud_df):
 
     df1 = pd.concat([pico_df1, cloud_df1])
     assert type(df1._query_compiler) is CloudQC
+
+
+def test_adversarial_high(adversarial_df, cluster_df):
+    with pytest.raises(ValueError):
+        adversarial_df.concat(axis=1, other=cluster_df)
+
+
+def test_adversarial_low(adversarial_df, cloud_df):
+    with pytest.raises(ValueError):
+        adversarial_df.concat(axis=1, other=cloud_df)
+
+
+def test_two_two_qc_types_default_rhs(default_df, cluster_df):
+    df3 = default_df.concat(axis=1, other=cluster_df)
+    assert type(df3) is type(cluster_df)  # should move to cluster
+
+
+def test_two_two_qc_types_default_lhs(default_df, cluster_df):
+    df3 = cluster_df.concat(axis=1, other=default_df)
+    assert type(df3) is type(cluster_df)  # should move to cluster
+
+
+def test_two_two_qc_types_default_rhs(default_df, cloud_df):
+    df3 = default_df.concat(axis=1, other=cloud_df)
+    assert type(df3) is type(cloud_df)  # should move to cluster
+
+
+def test_two_two_qc_types_default_lhs(default_df, cloud_df):
+    df3 = cloud_df.concat(axis=1, other=default_df)
+    assert type(df3) is type(cloud_df)  # should move to cluster
+
+
+def test_default_to_caller(default_df, default2_df):
+    df3 = default_df.concat(axis=1, other=default2_df)
+    assert type(df3) is type(default_df)  # should stay on caller
+    df3 = default2_df.concat(axis=1, other=default_df)
+    assert type(df3) is type(default2_df)  # should stay on caller
