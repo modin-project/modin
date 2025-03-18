@@ -4400,8 +4400,26 @@ class BasePandasDataset(ClassLogger):
             FactoryDispatcher,
         )
 
-        pandas_self = self._query_compiler.to_pandas()
-        query_compiler = FactoryDispatcher.from_pandas(df=pandas_self, backend=backend)
+        tqdm_range = range(1)
+        if backend != self.get_backend:
+            # TODO declare TQDM as an optional setup.py dependency; it's used elsewhere in the codebase as well
+            try:
+                from tqdm.notebook import trange
+
+                tqdm_range = trange(
+                    1,
+                    desc=f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} ...",
+                )
+            except ImportError:
+                pass
+        query_compiler = self._query_compiler
+        # If tqdm is imported and a conversion is necessary, then display a progress bar.
+        # Otherwise this assigns query_compiler exactly once.
+        for i in tqdm_range:
+            pandas_self = self._query_compiler.to_pandas()
+            query_compiler = FactoryDispatcher.from_pandas(
+                df=pandas_self, backend=backend
+            )
         if inplace:
             self._update_inplace(query_compiler)
             return None

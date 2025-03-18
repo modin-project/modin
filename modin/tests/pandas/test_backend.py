@@ -13,8 +13,10 @@
 
 import platform
 import re
+from unittest.mock import patch
 
 import pytest
+import tqdm.notebook
 
 import modin.pandas as pd
 from modin.config import Backend
@@ -117,24 +119,29 @@ def test_set_valid_backend(
     data_class,
     expected_result_backend,
 ):
-    with config_context(Backend=starting_backend):
-        original_df = data_class([1])
-        # convert to pandas for comparison while still on the `starting_backend`.
-        original_df_as_pandas = original_df.modin.to_pandas()
-        method_result = getattr(original_df, setter_method)(
-            new_backend, **inplace_kwargs
-        )
-        if inplace_kwargs.get("inplace", False):
-            assert method_result is None
-            result_df = original_df
-        else:
-            assert method_result is not None
-            result_df = method_result
-        assert result_df.get_backend() == expected_result_backend
-        df_equals(result_df, original_df_as_pandas)
-        # The global Backend should remain the same even if we change the
-        # backend for a single dataframe.
-        assert Backend.get() == Backend.normalize(starting_backend)
+    with patch.object(tqdm.notebook, "trange", return_value=range(1)) as mock_trange:
+        with config_context(Backend=starting_backend):
+            original_df = data_class([1])
+            # convert to pandas for comparison while still on the `starting_backend`.
+            original_df_as_pandas = original_df.modin.to_pandas()
+            method_result = getattr(original_df, setter_method)(
+                new_backend, **inplace_kwargs
+            )
+            if inplace_kwargs.get("inplace", False):
+                assert method_result is None
+                result_df = original_df
+            else:
+                assert method_result is not None
+                result_df = method_result
+            assert result_df.get_backend() == expected_result_backend
+            df_equals(result_df, original_df_as_pandas)
+            # The global Backend should remain the same even if we change the
+            # backend for a single dataframe.
+            assert Backend.get() == Backend.normalize(starting_backend)
+            if starting_backend == expected_result_backend:
+                mock_trange.assert_not_called()
+            else:
+                mock_trange.assert_called_once()
 
 
 def test_set_nonexistent_backend():
