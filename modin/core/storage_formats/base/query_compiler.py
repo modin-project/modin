@@ -114,7 +114,7 @@ class QCCoercionCost(IntEnum):  # noqa: PR01
 
     Coercion costs between query compilers can be expressed
     as integers in the range 0 to 1000, where 1000 is
-    considered impossible. Since coercsion costs can be a
+    considered impossible. Since coercion costs can be a
     function of many variables ( dataset size, partitioning,
     network throughput, and query time ) we define a set range
     of cost values to simplify comparisons between two query
