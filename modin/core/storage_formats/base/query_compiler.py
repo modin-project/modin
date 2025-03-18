@@ -142,11 +142,6 @@ class QCCoercionCost(IntEnum):  # noqa: PR01
         Parameters
         ----------
         cost : QCCoercionCost
-
-        Returns
-        -------
-        callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
-            Function to be applied in the partitions.
         """
         if int(cost) < int(QCCoercionCost.COST_ZERO) or int(cost) > int(
             QCCoercionCost.COST_IMPOSSIBLE
