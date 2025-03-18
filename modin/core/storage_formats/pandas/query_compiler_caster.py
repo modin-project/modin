@@ -288,7 +288,6 @@ def apply_argument_cast(obj: Fn) -> Fn:
         if qc is None or qc is type(current_qc):
             return obj(*args, **kwargs)
 
-        # breakpoint()
         # we need to cast current_qc to a new query compiler
         if qc != current_qc:
             data_cls = current_qc._modin_frame
