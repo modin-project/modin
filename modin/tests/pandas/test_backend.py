@@ -119,7 +119,8 @@ def test_set_valid_backend(
     data_class,
     expected_result_backend,
 ):
-    with patch.object(tqdm, "trange", return_value=range(1)) as mock_trange:
+    progress_iter_count = 2
+    with patch.object(tqdm, "trange", return_value=range(progress_iter_count)) as mock_trange:
         with config_context(Backend=starting_backend):
             original_df = data_class([1])
             # convert to pandas for comparison while still on the `starting_backend`.
@@ -141,6 +142,8 @@ def test_set_valid_backend(
             if starting_backend == expected_result_backend:
                 mock_trange.assert_not_called()
             else:
+                # trange constructor is only called once and the iterator is consumed
+                # progress_iter_count times, but we can't easily assert on the number of iterations
                 mock_trange.assert_called_once()
 
 
