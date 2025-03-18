@@ -4411,11 +4411,12 @@ class BasePandasDataset(ClassLogger):
                     desc=f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} ...",
                 )
             except ImportError:
+                # Iterate over blank range(1) if tqdm is not installed
                 pass
         query_compiler = self._query_compiler
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
         # Otherwise this assigns query_compiler exactly once.
-        for i in tqdm_range:
+        for _ in tqdm_range:
             pandas_self = self._query_compiler.to_pandas()
             query_compiler = FactoryDispatcher.from_pandas(
                 df=pandas_self, backend=backend
