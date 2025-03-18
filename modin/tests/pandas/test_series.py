@@ -5201,16 +5201,17 @@ def test_argmax_argmin_7413(op):
 
 def test_rename_axis():
     series_md, series_pd = create_test_series([0, 1, 2])
-    renamed_md = series_md.rename_axis("name")
-    renamed_pd = series_pd.rename_axis("name")
-    assert series_md.index.name is None
-    df_equals(renamed_md, renamed_pd)
-    series_md.rename_axis("new_name", inplace=True)
-    series_pd.rename_axis("new_name", inplace=True)
-    df_equals(series_md, series_pd)
+    eval_general(series_md, series_pd, lambda ser: ser.rename_axis("name"))
+    eval_general(
+        series_md,
+        series_pd,
+        lambda ser: ser.rename_axis("new_name", inplace=True),
+        __inplace__=True,
+    )
     # axis=1 is invalid for series
-    try:
-        series_pd.rename_axis("name", axis=1)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            series_md.rename_axis("name", axis=1)
+    eval_general(
+        series_md,
+        series_pd,
+        lambda ser: ser.rename_axis("newer_name", axis=1),
+        expected_exception=ValueError("No axis named 1 for object type Series"),
+    )
