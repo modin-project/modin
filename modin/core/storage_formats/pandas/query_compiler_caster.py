@@ -51,7 +51,7 @@ class QueryCompilerCasterCalculator:
         self._qc_cls_set = set()
         self._result_type = None
 
-    def add_query_compiler(self, query_compiler: BaseQueryCompiler):
+    def add_query_compiler(self, query_compiler):
         """
         Add a query compiler to be considered for casting.
 
@@ -83,7 +83,7 @@ class QueryCompilerCasterCalculator:
         if self._result_type is not None:
             return self._result_type
         if len(self._qc_cls_set) == 1:
-            return self._qc_cls_set.pop()
+            return list(self._qc_cls_set)[0]
         if len(self._qc_cls_set) == 0:
             raise ValueError("No query compilers registered")
 
@@ -133,7 +133,10 @@ class QueryCompilerCasterCalculator:
             DataFrame object associated with the preferred query compiler.
         """
         qc_type = self.calculate()
-        return self._compiler_class_to_data_class[qc_type]
+        if qc_type in self._compiler_class_to_data_class:
+            return self._compiler_class_to_data_class[qc_type]
+        else:
+            return None
 
 
 class QueryCompilerCaster:

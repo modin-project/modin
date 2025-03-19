@@ -14,6 +14,9 @@
 import pandas
 import pytest
 
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    QueryCompilerCasterCalculator,
+)
 import modin.pandas as pd
 from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
@@ -249,3 +252,17 @@ def test_default_to_caller(default_df, default2_df):
     assert type(df3) is type(default_df)  # should stay on caller
     df3 = default2_df.concat(axis=1, other=default_df)
     assert type(df3) is type(default2_df)  # should stay on caller
+
+
+def test_no_qc_data_to_calculate():
+    calculator = QueryCompilerCasterCalculator()
+    calculator.add_query_compiler(ClusterQC)
+    result = calculator.calculate()
+    assert result is ClusterQC
+    assert calculator.result_data_cls() is None
+
+
+def test_no_qc_to_calculate():
+    calculator = QueryCompilerCasterCalculator()
+    with pytest.raises(ValueError):
+        calculator.calculate()
