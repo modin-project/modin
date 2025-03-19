@@ -196,7 +196,7 @@ def test_mixed_dfs(df1, df2, df3, df4, result_type, request):
 # should be to move all dfs to the CloudQC
 def test_extreme_pico(pico_df, cloud_df):
     result = cloud_df.concat(
-        axis=1, other=[pico_df, pico_df, pico_df, pico_df, pico_df, pico_df, pico_df]
+        axis=1, other=[pico_df] * 7
     )
     assert type(result) is PicoQC
 
