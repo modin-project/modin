@@ -45,8 +45,8 @@ class QueryCompilerCasterCalculator:
     """
 
     def __init__(self):
-        self._caster_costing_map = {}
-        self._data_cls_map = {}
+        self._compiler_class_to_cost = {}
+        self._compiler_class_to_data_class = {}
         self._qc_list = []
         self._qc_cls_set = set()
         self._result_type = None
@@ -66,7 +66,9 @@ class QueryCompilerCasterCalculator:
             # instance
             qc_type = type(query_compiler)
             self._qc_list.append(query_compiler)
-            self._data_cls_map[qc_type] = type(query_compiler._modin_frame)
+            self._compiler_class_to_data_class[qc_type] = type(
+                query_compiler._modin_frame
+            )
         self._qc_cls_set.add(qc_type)
 
     def calculate(self):
@@ -91,11 +93,11 @@ class QueryCompilerCasterCalculator:
                 if cost is not None:
                     self._add_cost_data({qc_cls_to: cost})
             self._add_cost_data({type(qc_from): QCCoercionCost.COST_ZERO})
-        if len(self._caster_costing_map) <= 0 and len(self._qc_cls_list) > 0:
+        if len(self._compiler_class_to_cost) <= 0 and len(self._qc_cls_list) > 0:
             self._result_type = self._qc_cls_list[0]
             return self._result_type
-        min_value = min(self._caster_costing_map.values())
-        for key, value in self._caster_costing_map.items():
+        min_value = min(self._compiler_class_to_cost.values())
+        for key, value in self._compiler_class_to_cost.items():
             if min_value == value:
                 self._result_type = key
                 break
@@ -115,9 +117,9 @@ class QueryCompilerCasterCalculator:
             if k in self._qc_cls_set:
                 QCCoercionCost.validate_coersion_cost(v)
                 # Adds the costs associated with all coercions to a type, k
-                self._caster_costing_map[k] = (
-                    v + self._caster_costing_map[k]
-                    if k in self._caster_costing_map
+                self._compiler_class_to_cost[k] = (
+                    v + self._compiler_class_to_cost[k]
+                    if k in self._compiler_class_to_cost
                     else v
                 )
 
@@ -131,7 +133,7 @@ class QueryCompilerCasterCalculator:
             DataFrame object associated with the preferred query compiler.
         """
         qc_type = self.calculate()
-        return self._data_cls_map[qc_type]
+        return self._compiler_class_to_data_class[qc_type]
 
 
 class QueryCompilerCaster:
