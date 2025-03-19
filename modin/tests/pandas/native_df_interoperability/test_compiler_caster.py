@@ -14,12 +14,12 @@
 import pandas
 import pytest
 
-from modin.core.storage_formats.pandas.query_compiler_caster import (
-    QueryCompilerCasterCalculator,
-)
 import modin.pandas as pd
 from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    QueryCompilerCasterCalculator,
+)
 
 
 class CloudQC(NativeQueryCompiler):
