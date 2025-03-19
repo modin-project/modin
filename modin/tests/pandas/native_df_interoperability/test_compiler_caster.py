@@ -255,6 +255,7 @@ def test_default_to_caller(default_df, default2_df):
     df3 = default_df.concat(axis=1, other=default_df)
     assert type(df3) is type(default_df)  # no change
 
+
 def test_no_qc_data_to_calculate():
     calculator = QueryCompilerCasterCalculator()
     calculator.add_query_compiler(ClusterQC)
