@@ -156,7 +156,7 @@ def test_two_same_qc_types_noop(pico_df):
     assert type(df3) is type(pico_df)
 
 
-def test_two_two_qc_types_rhs(pico_df, cluster_df):
+def test_two_qc_types_rhs(pico_df, cluster_df):
     df3 = pico_df.concat(axis=1, other=cluster_df)
     assert type(df3) is type(cluster_df)  # should move to cluster
 
