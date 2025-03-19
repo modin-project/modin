@@ -161,7 +161,7 @@ def test_two_qc_types_rhs(pico_df, cluster_df):
     assert type(df3) is type(cluster_df)  # should move to cluster
 
 
-def test_two_two_qc_types_lhs(pico_df, cluster_df):
+def test_two_qc_types_lhs(pico_df, cluster_df):
     df3 = cluster_df.concat(axis=1, other=pico_df)
     assert type(df3) is type(cluster_df)  # should move to cluster
 
