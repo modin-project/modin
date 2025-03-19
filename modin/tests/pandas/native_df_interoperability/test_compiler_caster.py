@@ -86,7 +86,7 @@ class PicoQC(NativeQueryCompiler):
 
 
 class AdversarialQC(NativeQueryCompiler):
-    "Represents a query compiler which returns non-sensiscal costs"
+    "Represents a query compiler which returns non-sensical costs"
 
     def __init__(self, pandas_frame):
         self._modin_frame = pandas_frame
