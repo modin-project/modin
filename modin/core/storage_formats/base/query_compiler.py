@@ -110,7 +110,7 @@ def _set_axis(axis):
 
 class QCCoercionCost(IntEnum):  # noqa: PR01
     """
-    Coercion costs between Query Compilers.
+    Coercion costs between different Query Compiler backends.
 
     Coercion costs between query compilers can be expressed
     as integers in the range 0 to 1000, where 1000 is
@@ -125,7 +125,7 @@ class QCCoercionCost(IntEnum):  # noqa: PR01
 
     COST_IMPOSSIBLE means the coercion is effectively impossible, which can
     occur if the target system is unable to store the data as a result
-    of the coercion.
+    of the coercion. Currently this does not prevent coercion.
     """
 
     COST_ZERO = 0

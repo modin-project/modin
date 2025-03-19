@@ -51,7 +51,7 @@ class QueryCompilerCasterCalculator:
         self._qc_cls_set = set()
         self._result_type = None
 
-    def add_query_compiler(self, query_compiler):
+    def add_query_compiler(self, query_compiler: BaseQueryCompiler):
         """
         Add a query compiler to be considered for casting.
 
