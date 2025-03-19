@@ -4402,7 +4402,7 @@ class BasePandasDataset(ClassLogger):
 
         progress_split_count = 2
         progress_iter = iter(range(progress_split_count))
-        if backend != self.get_backend:
+        if backend != self.get_backend():
             # TODO declare TQDM as an optional setup.py dependency; it's used elsewhere in the codebase as well
             try:
                 # Check if we're in a notebook
