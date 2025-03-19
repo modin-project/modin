@@ -252,7 +252,8 @@ def test_default_to_caller(default_df, default2_df):
     assert type(df3) is type(default_df)  # should stay on caller
     df3 = default2_df.concat(axis=1, other=default_df)
     assert type(df3) is type(default2_df)  # should stay on caller
-
+    df3 = default_df.concat(axis=1, other=default_df)
+    assert type(df3) is type(default_df)  # no change
 
 def test_no_qc_data_to_calculate():
     calculator = QueryCompilerCasterCalculator()
