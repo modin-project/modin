@@ -256,7 +256,9 @@ def apply_argument_cast(obj: Fn) -> Fn:
 
         def arg_needs_casting(arg):
             current_qc_type = type(current_qc)
-            return isinstance(arg, BaseQueryCompiler) and not isinstance(arg, current_qc_type)
+            return isinstance(arg, BaseQueryCompiler) and not isinstance(
+                arg, current_qc_type
+            )
 
         def register_query_compilers(arg):
             if not arg_needs_casting(arg):
@@ -270,7 +272,9 @@ def apply_argument_cast(obj: Fn) -> Fn:
             qc_type = calculator.calculate()
             if qc_type is None or qc_type is type(arg):
                 return arg
-            return qc_type.from_pandas(arg.to_pandas(), data_cls=calculator.result_data_cls())
+            return qc_type.from_pandas(
+                arg.to_pandas(), data_cls=calculator.result_data_cls()
+            )
 
         if isinstance(current_qc, BaseQueryCompiler):
             visit_nested_args(kwargs, register_query_compilers)
@@ -279,9 +283,9 @@ def apply_argument_cast(obj: Fn) -> Fn:
             args = visit_nested_args(args, cast_to_qc)
             kwargs = visit_nested_args(kwargs, cast_to_qc)
 
-        qc = calculator.calculate()
+        result_qc_type = calculator.calculate()
 
-        if qc is None or qc is type(current_qc):
+        if result_qc_type is None or result_qc_type is type(current_qc):
             return obj(*args, **kwargs)
 
         # we need to cast current_qc to a new query compiler,
@@ -289,9 +293,9 @@ def apply_argument_cast(obj: Fn) -> Fn:
         # we need to also drop the first argument to the original
         # args since it references self on the original argument
         # call
-        if qc != current_qc:
+        if result_qc_type != current_qc:
             data_cls = current_qc._modin_frame
-            new_qc = qc.from_pandas(current_qc.to_pandas(), data_cls)
+            new_qc = result_qc_type.from_pandas(current_qc.to_pandas(), data_cls)
             obj_new = getattr(new_qc, obj.__name__)
             return obj_new(*args[1:], **kwargs)
 

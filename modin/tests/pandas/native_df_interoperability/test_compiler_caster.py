@@ -25,10 +25,6 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
 class CloudQC(NativeQueryCompiler):
     "Represents a cloud-hosted query compiler"
 
-    def __init__(self, pandas_frame):
-        self._modin_frame = pandas_frame
-        super().__init__(pandas_frame)
-
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
@@ -41,10 +37,6 @@ class CloudQC(NativeQueryCompiler):
 
 class ClusterQC(NativeQueryCompiler):
     "Represents a local network cluster query compiler"
-
-    def __init__(self, pandas_frame):
-        self._modin_frame = pandas_frame
-        super().__init__(pandas_frame)
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -59,10 +51,6 @@ class ClusterQC(NativeQueryCompiler):
 class LocalMachineQC(NativeQueryCompiler):
     "Represents a local machine query compiler"
 
-    def __init__(self, pandas_frame):
-        self._modin_frame = pandas_frame
-        super().__init__(pandas_frame)
-
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
@@ -74,10 +62,6 @@ class LocalMachineQC(NativeQueryCompiler):
 
 class PicoQC(NativeQueryCompiler):
     "Represents a query compiler with very few resources"
-
-    def __init__(self, pandas_frame):
-        self._modin_frame = pandas_frame
-        super().__init__(pandas_frame)
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -91,10 +75,6 @@ class PicoQC(NativeQueryCompiler):
 class AdversarialQC(NativeQueryCompiler):
     "Represents a query compiler which returns non-sensical costs"
 
-    def __init__(self, pandas_frame):
-        self._modin_frame = pandas_frame
-        super().__init__(pandas_frame)
-
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: -1000,
@@ -106,17 +86,9 @@ class AdversarialQC(NativeQueryCompiler):
 class DefaultQC(NativeQueryCompiler):
     "Represents a query compiler with no costing information"
 
-    def __init__(self, pandas_frame):
-        self._modin_frame = pandas_frame
-        super().__init__(pandas_frame)
-
 
 class DefaultQC2(NativeQueryCompiler):
     "Represents a query compiler with no costing information, but different."
-
-    def __init__(self, pandas_frame):
-        self._modin_frame = pandas_frame
-        super().__init__(pandas_frame)
 
 
 @pytest.fixture()
