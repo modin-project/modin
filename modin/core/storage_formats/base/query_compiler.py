@@ -30,6 +30,7 @@ import pandas.core.resample
 from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
 
+from modin.config import Backend, Execution
 from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     CatDefault,
@@ -164,6 +165,22 @@ class BaseQueryCompiler(
         """
         if self._should_warn_on_default_to_pandas:
             ErrorMessage.default_to_pandas(message=message, reason=reason)
+
+    def get_backend(self) -> str:
+        """
+        Get the backend for this query compiler.
+
+        Returns
+        -------
+        str
+            The backend for this query compiler.
+        """
+        return Backend.get_backend_for_execution(
+            Execution(
+                engine=self.engine,
+                storage_format=self.storage_format,
+            )
+        )
 
     @property
     @abc.abstractmethod

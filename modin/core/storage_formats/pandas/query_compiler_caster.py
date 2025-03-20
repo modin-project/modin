@@ -150,6 +150,10 @@ def apply_argument_cast(obj: Fn) -> Fn:
         -------
         Any
         """
+        if len(args) == 0:
+            # this is a hack to handle methods like __new__() which don't have
+            # any arguments
+            return obj(*args, **kwargs)
         current_qc = args[0]
         if isinstance(current_qc, BaseQueryCompiler):
             kwargs = cast_nested_args_to_current_qc_type(kwargs, current_qc)

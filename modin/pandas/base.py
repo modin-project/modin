@@ -19,6 +19,7 @@ import abc
 import pickle as pkl
 import re
 import warnings
+from collections import defaultdict
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -75,10 +76,12 @@ from pandas.util._validators import (
 )
 
 from modin import pandas as pd
-from modin.config import Backend, Execution
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
+from modin.pandas.api.extensions.extensions import (
+    wrap_class_methods_in_backend_dispatcher,
+)
 from modin.pandas.utils import GET_BACKEND_DOC, SET_BACKEND_DOC, is_scalar
 from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
 
@@ -136,6 +139,7 @@ _DEFAULT_BEHAVIOUR = {
     "__constructor__",
     "_create_or_update_from_compiler",
     "_update_inplace",
+    "get_backend",
     # for persistance support;
     # see DataFrame methods docstrings for more
     "_inflate_light",
@@ -195,7 +199,11 @@ def _get_repr_axis_label_indexer(labels, num_for_repr):
     )
 
 
+_BASE_EXTENSIONS = defaultdict(dict)
+
+
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
+@wrap_class_methods_in_backend_dispatcher(extensions_dict=_BASE_EXTENSIONS)
 class BasePandasDataset(ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
@@ -4326,6 +4334,19 @@ class BasePandasDataset(ClassLogger):
         -------
         Any
         """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+
+        # An extension property is only accessible if the backend supports it.
+        if (
+            item not in ("_query_compiler", "get_backend")
+            and hasattr(self, "_query_compiler")
+            and self.get_backend() in _BASE_EXTENSIONS
+            and item in _BASE_EXTENSIONS[self.get_backend()]
+            and isinstance(_BASE_EXTENSIONS[self.get_backend()][item], property)
+        ):
+            return _BASE_EXTENSIONS[self.get_backend()][item].fget(self)
+
         attr = super().__getattribute__(item)
         if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_shape:
             # We default to pandas on empty DataFrames. This avoids a large amount of
@@ -4338,6 +4359,37 @@ class BasePandasDataset(ClassLogger):
 
                 return default_handler
         return attr
+
+    @disable_logging
+    def __getattr__(self, item) -> Any:
+        """
+        Return attribute from this `BasePandasDataset`.
+
+        Parameters
+        ----------
+        item : str
+            Item to get.
+
+        Returns
+        -------
+        Any
+            The attribute from this `BasePandasDataset`.
+        """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+        if (
+            item not in ("_query_compiler", "get_backend")
+            and hasattr(self, "_query_compiler")
+            and self.get_backend() in _BASE_EXTENSIONS
+            and item in _BASE_EXTENSIONS[self.get_backend()]
+        ):
+            extension_item = _BASE_EXTENSIONS[self.get_backend()][item]
+            # We need to handle callable extensions separately because they
+            # need to dispatch to the appropriate backend.
+            assert not callable(extension_item)
+            return _BASE_EXTENSIONS[self.get_backend()][item]
+
+        return object.__getattribute__(self, item)
 
     def __array_ufunc__(
         self, ufunc: np.ufunc, method: str, *inputs: Any, **kwargs: Any
@@ -4412,9 +4464,55 @@ class BasePandasDataset(ClassLogger):
 
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
     def get_backend(self) -> str:
-        return Backend.get_backend_for_execution(
-            Execution(
-                engine=self._query_compiler.engine,
-                storage_format=self._query_compiler.storage_format,
-            )
-        )
+        return self._query_compiler.get_backend()
+
+    @disable_logging
+    def __setattr__(self, key: str, value: Any) -> None:
+        """
+        Set attribute on this `BasePandasDataset`.
+
+        Parameters
+        ----------
+        key : str
+            The attribute name.
+        value : Any
+            The attribute value.
+
+        Returns
+        -------
+        None
+        """
+        # An extension property is only accessible if the backend supports it.
+        if (
+            hasattr(self, "_query_compiler")
+            and self.get_backend() in _BASE_EXTENSIONS
+            and key in _BASE_EXTENSIONS[self.get_backend()]
+            and hasattr(_BASE_EXTENSIONS[self.get_backend()][key], "__set__")
+        ):
+            _BASE_EXTENSIONS[self.get_backend()][key].__set__(self, value)
+        else:
+            super().__setattr__(key, value)
+
+    @disable_logging
+    def __delattr__(self, name) -> None:
+        """
+        Delete attribute on this `BasePandasDataset`.
+
+        Parameters
+        ----------
+        name : str
+            The attribute name.
+
+        Returns
+        -------
+        None
+        """
+        # An extension property is only accessible if the backend supports it.
+        if (
+            hasattr(self, "_query_compiler")
+            and self.get_backend() in _BASE_EXTENSIONS
+            and name in _BASE_EXTENSIONS[self.get_backend()]
+            and hasattr(_BASE_EXTENSIONS[self.get_backend()][name], "__delete__")
+        ):
+            return _BASE_EXTENSIONS[self.get_backend()][name].__delete__(self)
+        return super().__delattr__(name)

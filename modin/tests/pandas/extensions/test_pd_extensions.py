@@ -32,6 +32,5 @@ def test_dataframe_extension_non_method():
     expected_val = 4
     attribute_name = "four"
     register_pd_accessor(attribute_name)(expected_val)
-    assert attribute_name in pd.dataframe._DATAFRAME_EXTENSIONS_.keys()
     assert pd._PD_EXTENSIONS_[attribute_name] == 4
     assert pd.four == expected_val

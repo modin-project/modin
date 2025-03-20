@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import warnings
+from collections import defaultdict
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -62,6 +63,9 @@ from modin.config import PersistentPickle
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
+from modin.pandas.api.extensions.extensions import (
+    wrap_class_methods_in_backend_dispatcher,
+)
 from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
@@ -90,13 +94,15 @@ if TYPE_CHECKING:
 
     from modin.core.storage_formats import BaseQueryCompiler
 
+
 # Dictionary of extensions assigned to this class
-_DATAFRAME_EXTENSIONS_ = {}
+_DATAFRAME_EXTENSIONS_ = defaultdict(dict)
 
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
+@wrap_class_methods_in_backend_dispatcher(extensions_dict=_DATAFRAME_EXTENSIONS_)
 class DataFrame(BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
@@ -865,8 +871,9 @@ class DataFrame(BasePandasDataset):
             return
         frame = sys._getframe()
         try:
-            f_locals = frame.f_back.f_back.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_back.f_back.f_globals
+            # TODO(https://github.com/modin-project/modin/issues/4478): fix this
+            f_locals = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_globals
         finally:
             del frame
         local_names = set(re.findall(r"@([\w]+)", expr))
@@ -2597,6 +2604,33 @@ class DataFrame(BasePandasDataset):
             s._parent_axis = 1
         return s
 
+    def __getattribute__(self, item: str) -> Any:
+        """
+        Return attribute from the `BasePandasDataset`.
+
+        Parameters
+        ----------
+        item : str
+            Item to get.
+
+        Returns
+        -------
+        Any
+        """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+
+        # An extension property is only accessible if the backend supports it.
+        if (
+            item not in ("_query_compiler", "get_backend")
+            and hasattr(self, "_query_compiler")
+            and self.get_backend() in _DATAFRAME_EXTENSIONS_
+            and item in _DATAFRAME_EXTENSIONS_[self.get_backend()]
+            and isinstance(_DATAFRAME_EXTENSIONS_[self.get_backend()][item], property)
+        ):
+            return _DATAFRAME_EXTENSIONS_[self.get_backend()][item].fget(self)
+        return super().__getattribute__(item)
+
     @disable_logging
     def __getattr__(self, key) -> Any:
         """
@@ -2616,10 +2650,30 @@ class DataFrame(BasePandasDataset):
         First try to use `__getattribute__` method. If it fails
         try to get `key` from ``DataFrame`` fields.
         """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+
+        if (
+            key not in ("_query_compiler", "get_backend")
+            and hasattr(self, "_query_compiler")
+            and self.get_backend() in _DATAFRAME_EXTENSIONS_
+            and key in _DATAFRAME_EXTENSIONS_[self.get_backend()]
+        ):
+            extension_item = _DATAFRAME_EXTENSIONS_[self.get_backend()][key]
+            assert not callable(extension_item)
+            return _DATAFRAME_EXTENSIONS_[self.get_backend()][key]
         try:
-            return _DATAFRAME_EXTENSIONS_.get(key, object.__getattribute__(self, key))
+            return super().__getattr__(key)
         except AttributeError as err:
-            if key not in _ATTRS_NO_LOOKUP and key in self.columns:
+            if (
+                key
+                not in (
+                    "_query_compiler",
+                    "get_backend",
+                )
+                and key not in _ATTRS_NO_LOOKUP
+                and key in self._query_compiler.columns
+            ):
                 return self[key]
             raise err
 
@@ -2648,6 +2702,14 @@ class DataFrame(BasePandasDataset):
         #   before it appears in __dict__.
         if key in ("_query_compiler", "_siblings") or key in self.__dict__:
             pass
+        elif (
+            hasattr(self, "_query_compiler")
+            and self.get_backend() in _DATAFRAME_EXTENSIONS_
+            and key in _DATAFRAME_EXTENSIONS_[self.get_backend()]
+        ):
+            extension = _DATAFRAME_EXTENSIONS_[self.get_backend()][key]
+            extension.__set__(self, value)
+            return
         # we have to check for the key in `dir(self)` first in order not to trigger columns computation
         elif key not in dir(self) and key in self:
             self.__setitem__(key, value)
@@ -2660,7 +2722,7 @@ class DataFrame(BasePandasDataset):
                 SET_DATAFRAME_ATTRIBUTE_WARNING,
                 UserWarning,
             )
-        object.__setattr__(self, key, value)
+        super().__setattr__(key, value)
 
     def __setitem__(self, key, value) -> None:
         """
@@ -3329,3 +3391,26 @@ class DataFrame(BasePandasDataset):
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
     def get_backend(self) -> str:
         return super().get_backend()
+
+    @disable_logging
+    def __delattr__(self, name: str) -> None:
+        """
+        Delete attribute `name`.
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute to delete.
+
+        Returns
+        -------
+        None
+        """
+        if (
+            hasattr(self, "_query_compiler")
+            and self.get_backend() in _DATAFRAME_EXTENSIONS_
+            and name in _DATAFRAME_EXTENSIONS_[self.get_backend()]
+            and hasattr(_DATAFRAME_EXTENSIONS_[self.get_backend()][name], "__delete__")
+        ):
+            return _DATAFRAME_EXTENSIONS_[self.get_backend()][name].__delete__(self)
+        return super().__delattr__(name)
