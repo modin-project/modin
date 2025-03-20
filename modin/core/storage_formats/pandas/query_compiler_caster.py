@@ -256,11 +256,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
 
         def arg_needs_casting(arg):
             current_qc_type = type(current_qc)
-            if not isinstance(arg, BaseQueryCompiler):
-                return False
-            if isinstance(arg, current_qc_type):
-                return False
-            return True
+            return isinstance(arg, BaseQueryCompiler) and not isinstance(arg, current_qc_type)
 
         def register_query_compilers(arg):
             if not arg_needs_casting(arg):
