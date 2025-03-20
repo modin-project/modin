@@ -275,3 +275,15 @@ def test_qc_default_self_cost(default_df, default2_df):
     assert (
         default_df.qc_engine_switch_cost(type(default_df)) is QCCoercionCost.COST_ZERO
     )
+
+
+def test_qc_casting_moved_data(pico_df, cloud_df):
+    pico_df1 = pd.DataFrame(query_compiler=pico_df)
+    cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
+    native_cdf2 = cloud_df1._to_pandas()
+    native_pdf2 = pico_df1._to_pandas()
+    expected = native_cdf2 + native_pdf2
+    df1 = pico_df1 + cloud_df1
+    df2 = cloud_df1 + pico_df1
+    assert df1._to_pandas().equals(expected)
+    assert df2._to_pandas().equals(expected)

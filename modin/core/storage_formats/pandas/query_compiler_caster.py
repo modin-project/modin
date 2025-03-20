@@ -290,11 +290,17 @@ def apply_argument_cast(obj: Fn) -> Fn:
         if qc is None or qc is type(current_qc):
             return obj(*args, **kwargs)
 
-        # we need to cast current_qc to a new query compiler
+        # we need to cast current_qc to a new query compiler,
+        # then lookup the same function on the new query compiler
+        # we need to also drop the first argument to the original
+        # args since it references self on the original argument
+        # call
         if qc != current_qc:
             data_cls = current_qc._modin_frame
-            return qc.from_pandas(current_qc.to_pandas(), data_cls)
-        # need to find the new function for obj
+            new_qc = qc.from_pandas(current_qc.to_pandas(), data_cls)
+            obj_new = getattr(new_qc, obj.__name__)
+            return obj_new(*args[1:], **kwargs)
+
         return obj(*args, **kwargs)
 
     return cast_args
