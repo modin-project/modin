@@ -122,33 +122,32 @@ def test_set_valid_backend(
     progress_iter_count = 2
     with patch.object(
         tqdm.auto, "trange", return_value=range(progress_iter_count)
-    ) as mock_trange:
-        with config_context(Backend=starting_backend):
-            original_df = data_class([1])
-            # convert to pandas for comparison while still on the `starting_backend`.
-            original_df_as_pandas = original_df.modin.to_pandas()
-            method_result = getattr(original_df, setter_method)(
-                new_backend, **inplace_kwargs
-            )
-            if inplace_kwargs.get("inplace", False):
-                assert method_result is None
-                result_df = original_df
-            else:
-                assert method_result is not None
-                result_df = method_result
-            assert result_df.get_backend() == expected_result_backend
-            df_equals(result_df, original_df_as_pandas)
-            # The global Backend should remain the same even if we change the
-            # backend for a single dataframe.
-            assert Backend.get() == Backend.normalize(starting_backend)
-            if Backend.normalize(starting_backend) == Backend.normalize(
-                expected_result_backend
-            ):
-                mock_trange.assert_not_called()
-            else:
-                # trange constructor is only called once and the iterator is consumed
-                # progress_iter_count times, but we can't easily assert on the number of iterations
-                mock_trange.assert_called_once()
+    ) as mock_trange, config_context(Backend=starting_backend):
+        original_df = data_class([1])
+        # convert to pandas for comparison while still on the `starting_backend`.
+        original_df_as_pandas = original_df.modin.to_pandas()
+        method_result = getattr(original_df, setter_method)(
+            new_backend, **inplace_kwargs
+        )
+        if inplace_kwargs.get("inplace", False):
+            assert method_result is None
+            result_df = original_df
+        else:
+            assert method_result is not None
+            result_df = method_result
+        assert result_df.get_backend() == expected_result_backend
+        df_equals(result_df, original_df_as_pandas)
+        # The global Backend should remain the same even if we change the
+        # backend for a single dataframe.
+        assert Backend.get() == Backend.normalize(starting_backend)
+        if Backend.normalize(starting_backend) == Backend.normalize(
+            expected_result_backend
+        ):
+            mock_trange.assert_not_called()
+        else:
+            # trange constructor is only called once and the iterator is consumed
+            # progress_iter_count times, but we can't easily assert on the number of iterations
+            mock_trange.assert_called_once()
 
 
 def test_set_nonexistent_backend():
