@@ -277,13 +277,22 @@ def test_qc_default_self_cost(default_df, default2_df):
     )
 
 
-def test_qc_casting_moved_data(pico_df, cloud_df):
+def test_qc_casting_changed_operation(pico_df, cloud_df):
     pico_df1 = pd.DataFrame(query_compiler=pico_df)
     cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
     native_cdf2 = cloud_df1._to_pandas()
     native_pdf2 = pico_df1._to_pandas()
     expected = native_cdf2 + native_pdf2
-    df1 = pico_df1 + cloud_df1
-    df2 = cloud_df1 + pico_df1
-    assert df1._to_pandas().equals(expected)
-    assert df2._to_pandas().equals(expected)
+    # test both directions
+    df_cast_to_rhs = pico_df1 + cloud_df1
+    df_cast_to_lhs = cloud_df1 + pico_df1
+    assert df_cast_to_rhs._to_pandas().equals(expected)
+    assert df_cast_to_lhs._to_pandas().equals(expected)
+
+
+def test_qc_mixed_loc(pico_df, cloud_df):
+    pico_df1 = pd.DataFrame(query_compiler=pico_df)
+    cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
+    assert pico_df1[pico_df1[0][0]][cloud_df1[0][1]] == 1
+    assert pico_df1[cloud_df1[0][0]][pico_df1[0][1]] == 1
+    assert cloud_df1[pico_df1[0][0]][pico_df1[0][1]] == 1
