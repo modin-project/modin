@@ -4402,7 +4402,7 @@ class BasePandasDataset(ClassLogger):
 
         progress_split_count = 2
         progress_iter = iter(range(progress_split_count))
-        if backend != self.get_backend():
+        if Backend.normalize(backend) != self.get_backend():
             try:
                 from tqdm.auto import trange
 

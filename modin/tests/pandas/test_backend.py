@@ -141,7 +141,9 @@ def test_set_valid_backend(
             # The global Backend should remain the same even if we change the
             # backend for a single dataframe.
             assert Backend.get() == Backend.normalize(starting_backend)
-            if starting_backend == expected_result_backend:
+            if Backend.normalize(starting_backend) == Backend.normalize(
+                expected_result_backend
+            ):
                 mock_trange.assert_not_called()
             else:
                 # trange constructor is only called once and the iterator is consumed
