@@ -4463,6 +4463,7 @@ class BasePandasDataset(ClassLogger):
     move_to = set_backend
 
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    @disable_logging
     def get_backend(self) -> str:
         return self._query_compiler.get_backend()
 

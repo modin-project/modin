@@ -2604,6 +2604,7 @@ class DataFrame(BasePandasDataset):
             s._parent_axis = 1
         return s
 
+    @disable_logging
     def __getattribute__(self, item: str) -> Any:
         """
         Return attribute from the `BasePandasDataset`.
@@ -3389,6 +3390,7 @@ class DataFrame(BasePandasDataset):
     move_to = set_backend
 
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    @disable_logging
     def get_backend(self) -> str:
         return super().get_backend()
 

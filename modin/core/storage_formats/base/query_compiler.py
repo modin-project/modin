@@ -52,6 +52,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
+from modin.logging.logger_decorator import disable_logging
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 
 from . import doc_utils
@@ -166,6 +167,7 @@ class BaseQueryCompiler(
         if self._should_warn_on_default_to_pandas:
             ErrorMessage.default_to_pandas(message=message, reason=reason)
 
+    @disable_logging
     def get_backend(self) -> str:
         """
         Get the backend for this query compiler.

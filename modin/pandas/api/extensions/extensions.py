@@ -22,8 +22,8 @@ from modin.config import Backend
 _attrs_to_delete_on_test = defaultdict(list)
 
 _NON_EXTENDABLE_ATTRIBUTES = (
-    # we use these attributes to implement the extension system, so it's very
-    # difficult to
+    # we use these attributes to implement the extension system, so we can't
+    # allow extensions to override them.
     "__getattribute__",
     "__setattr__",
     "__delattr__",
@@ -71,8 +71,7 @@ def _set_attribute_on_obj(name: str, extensions_dict: dict, backend: str, obj: t
         extensions_dict[Backend.normalize(backend)][name] = new_attr
         if callable(new_attr) and name not in dir(obj):
             # For callable extensions, we add a method to the class that
-            # dispatches to the correct implementation (and eventually, casts
-            # its inputs correctly).
+            # dispatches to the correct implementation.
             setattr(
                 obj,
                 name,
@@ -280,7 +279,7 @@ def wrap_method_in_backend_dispatcher(
     """
 
     @wraps(method)
-    def wrapped(*args, **kwargs):
+    def method_dispatcher(*args, **kwargs):
         if len(args) == 0:
             # Handle some cases like __init__()
             return method(*args, **kwargs)
@@ -309,7 +308,7 @@ def wrap_method_in_backend_dispatcher(
             # Otherwise, use the default implementation.
             return extensions_dict[None][name](self, *remaining_args, **kwargs)
 
-    return wrapped
+    return method_dispatcher
 
 
 def wrap_class_methods_in_backend_dispatcher(extensions_dict: defaultdict) -> Callable:

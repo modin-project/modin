@@ -585,7 +585,7 @@ class Series(BasePandasDataset):
             and hasattr(_SERIES_EXTENSIONS_[self.get_backend()][name], "__set__")
         ):
             return _SERIES_EXTENSIONS_[self.get_backend()][name].__set__(self, value)
-        super().__setattr__(name, value)
+        return super().__setattr__(name, value)
 
     @disable_logging
     def __delattr__(self, name) -> None:
@@ -2882,5 +2882,6 @@ class Series(BasePandasDataset):
     move_to = set_backend
 
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    @disable_logging
     def get_backend(self) -> str:
         return super().get_backend()

@@ -178,15 +178,14 @@ class TestProperty:
 
 
 def test_deleting_extension_that_is_not_property_raises_attribute_error(Backend1):
-    df = pd.DataFrame([0])
     expected_string_val = "Some string value"
     method_name = "new_method"
-    df = pd.DataFrame([1, 2, 3]).set_backend(Backend1)
 
     @register_dataframe_accessor(name=method_name, backend=Backend1)
     def my_method_implementation(self):
         return expected_string_val
 
+    df = pd.DataFrame([1, 2, 3]).set_backend(Backend1)
     assert hasattr(pd.DataFrame, method_name)
     assert df.new_method() == expected_string_val
     with pytest.raises(AttributeError):

@@ -239,7 +239,9 @@ def get_unique_base_execution():
     execution_name = f"{format_name}On{engine_name}"
 
     # Dynamically building all the required classes to form a new execution
-    base_qc = type(format_name, (TestQC,), {})
+    base_qc = type(
+        format_name, (TestQC,), {"get_backend": (lambda self: execution_name)}
+    )
     base_io = type(
         f"{execution_name}IO", (BaseOnPythonIO,), {"query_compiler_cls": base_qc}
     )
@@ -252,7 +254,7 @@ def get_unique_base_execution():
     # Setting up the new execution
     setattr(factories, f"{execution_name}Factory", base_factory)
     Backend.register_backend(
-        "execution_name", Execution(engine=engine_name, storage_format=format_name)
+        execution_name, Execution(engine=engine_name, storage_format=format_name)
     )
     old_engine, old_format = modin.set_execution(
         engine=engine_name, storage_format=format_name
