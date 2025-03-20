@@ -76,6 +76,7 @@ from pandas.util._validators import (
 )
 
 from modin import pandas as pd
+from modin.config import Backend
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
