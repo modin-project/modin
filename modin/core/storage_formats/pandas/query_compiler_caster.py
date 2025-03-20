@@ -270,9 +270,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
             qc_type = calculator.calculate()
             if qc_type is None or qc_type is type(arg):
                 return arg
-            frame_data = calculator.result_data_cls()
-            result = qc_type.from_pandas(arg.to_pandas(), frame_data)
-            return result
+            return qc_type.from_pandas(arg.to_pandas(), data_cls=calculator.result_data_cls())
 
         if isinstance(current_qc, BaseQueryCompiler):
             visit_nested_args(kwargs, register_query_compilers)
