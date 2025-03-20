@@ -307,7 +307,7 @@ class BaseQueryCompiler(
             Cost of migrating the data from this qc to the other_qc or
             None if the cost cannot be determined.
         """
-        if isinstance(type(self), other_qc_type):
+        if isinstance(self, other_qc_type):
             return QCCoercionCost.COST_ZERO
         return None
 

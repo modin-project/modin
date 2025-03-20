@@ -151,7 +151,7 @@ def default_df():
 
 @pytest.fixture()
 def default2_df():
-    return DefaultQC(pandas.DataFrame([0, 1, 2]))
+    return DefaultQC2(pandas.DataFrame([0, 1, 2]))
 
 
 def test_two_same_qc_types_noop(pico_df):
@@ -268,3 +268,10 @@ def test_no_qc_to_calculate():
     calculator = QueryCompilerCasterCalculator()
     with pytest.raises(ValueError):
         calculator.calculate()
+
+
+def test_qc_default_self_cost(default_df, default2_df):
+    assert default_df.qc_engine_switch_cost(type(default2_df)) is None
+    assert (
+        default_df.qc_engine_switch_cost(type(default_df)) is QCCoercionCost.COST_ZERO
+    )
