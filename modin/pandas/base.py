@@ -4403,15 +4403,8 @@ class BasePandasDataset(ClassLogger):
         progress_split_count = 2
         progress_iter = iter(range(progress_split_count))
         if backend != self.get_backend():
-            # TODO declare TQDM as an optional setup.py dependency; it's used elsewhere in the codebase as well
             try:
-                # Check if we're in a notebook
-                from IPython import get_ipython
-
-                if get_ipython().__class__.__name__ == "ZMQInteractiveShell":
-                    from tqdm.notebook import trange  # pragma: no cover
-                else:
-                    from tqdm import trange
+                from tqdm.auto import trange
 
                 progress_iter = iter(
                     trange(
@@ -4420,7 +4413,7 @@ class BasePandasDataset(ClassLogger):
                     )
                 )
             except ImportError:
-                # Iterate over blank range(2) if tqdm or IPython is not installed
+                # Iterate over blank range(2) if tqdm is not installed
                 pass
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
         next(progress_iter)
