@@ -13,8 +13,10 @@
 
 import platform
 import re
+from unittest.mock import patch
 
 import pytest
+import tqdm.auto
 
 import modin.pandas as pd
 from modin.config import Backend
@@ -117,7 +119,10 @@ def test_set_valid_backend(
     data_class,
     expected_result_backend,
 ):
-    with config_context(Backend=starting_backend):
+    progress_iter_count = 2
+    with patch.object(
+        tqdm.auto, "trange", return_value=range(progress_iter_count)
+    ) as mock_trange, config_context(Backend=starting_backend):
         original_df = data_class([1])
         # convert to pandas for comparison while still on the `starting_backend`.
         original_df_as_pandas = original_df.modin.to_pandas()
@@ -135,6 +140,14 @@ def test_set_valid_backend(
         # The global Backend should remain the same even if we change the
         # backend for a single dataframe.
         assert Backend.get() == Backend.normalize(starting_backend)
+        if Backend.normalize(starting_backend) == Backend.normalize(
+            expected_result_backend
+        ):
+            mock_trange.assert_not_called()
+        else:
+            # trange constructor is only called once and the iterator is consumed
+            # progress_iter_count times, but we can't easily assert on the number of iterations
+            mock_trange.assert_called_once()
 
 
 def test_set_nonexistent_backend():

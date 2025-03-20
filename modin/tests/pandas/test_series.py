@@ -5197,3 +5197,21 @@ def test_argmax_argmin_7413(op):
     result_md = getattr(series_md, op)()
     result_pd = getattr(series_pd, op)()
     assert result_md == result_pd
+
+
+def test_rename_axis():
+    series_md, series_pd = create_test_series([0, 1, 2])
+    eval_general(series_md, series_pd, lambda ser: ser.rename_axis("name"))
+    eval_general(
+        series_md,
+        series_pd,
+        lambda ser: ser.rename_axis("new_name", inplace=True),
+        __inplace__=True,
+    )
+    # axis=1 is invalid for series
+    eval_general(
+        series_md,
+        series_pd,
+        lambda ser: ser.rename_axis("newer_name", axis=1),
+        expected_exception=ValueError("No axis named 1 for object type Series"),
+    )

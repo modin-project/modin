@@ -4452,8 +4452,31 @@ class BasePandasDataset(ClassLogger):
             FactoryDispatcher,
         )
 
+        progress_split_count = 2
+        progress_iter = iter(range(progress_split_count))
+        if Backend.normalize(backend) != self.get_backend():
+            try:
+                from tqdm.auto import trange
+
+                progress_iter = iter(
+                    trange(
+                        progress_split_count,
+                        desc=f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} ...",
+                    )
+                )
+            except ImportError:
+                # Iterate over blank range(2) if tqdm is not installed
+                pass
+        # If tqdm is imported and a conversion is necessary, then display a progress bar.
+        next(progress_iter)
         pandas_self = self._query_compiler.to_pandas()
+        next(progress_iter)
         query_compiler = FactoryDispatcher.from_pandas(df=pandas_self, backend=backend)
+        try:
+            next(progress_iter)
+        except StopIteration:
+            # Last call to next informs tqdm that the operation is done
+            pass
         if inplace:
             self._update_inplace(query_compiler)
             return None
