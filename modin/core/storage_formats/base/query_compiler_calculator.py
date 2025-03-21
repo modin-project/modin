@@ -11,6 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains ``QueryCompilerCostCalculator`` class.
+
+``QueryCompilerCostCalculator`` is used to determine the casting cost
+between a set of different backends. It aggregates the cost across
+all query compilers to determine the best query compiler to use.
+"""
+
 from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 
 
