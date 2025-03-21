@@ -16,10 +16,10 @@ import pytest
 
 import modin.pandas as pd
 from modin.core.storage_formats.base.query_compiler import QCCoercionCost
-from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
-from modin.core.storage_formats.pandas.query_compiler_caster import (
-    QueryCompilerCasterCalculator,
+from modin.core.storage_formats.base.query_compiler_calculator import (
+    QueryCompilerCostCalculator,
 )
+from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 
 
 class CloudQC(NativeQueryCompiler):
@@ -229,7 +229,7 @@ def test_default_to_caller(default_df, default2_df):
 
 
 def test_no_qc_data_to_calculate():
-    calculator = QueryCompilerCasterCalculator()
+    calculator = QueryCompilerCostCalculator()
     calculator.add_query_compiler(ClusterQC)
     result = calculator.calculate()
     assert result is ClusterQC
@@ -237,7 +237,7 @@ def test_no_qc_data_to_calculate():
 
 
 def test_no_qc_to_calculate():
-    calculator = QueryCompilerCasterCalculator()
+    calculator = QueryCompilerCostCalculator()
     with pytest.raises(ValueError):
         calculator.calculate()
 
