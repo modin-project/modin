@@ -272,6 +272,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
             qc_type = calculator.calculate()
             if qc_type is None or qc_type is type(arg):
                 return arg
+            # TODO: Should use the factory dispatcher here to switch backends
             return qc_type.from_pandas(
                 arg.to_pandas(), data_cls=calculator.result_data_cls()
             )
@@ -294,8 +295,10 @@ def apply_argument_cast(obj: Fn) -> Fn:
         # args since it references self on the original argument
         # call
         if result_qc_type != current_qc:
-            data_cls = current_qc._modin_frame
-            new_qc = result_qc_type.from_pandas(current_qc.to_pandas(), data_cls)
+            # TODO: Should use the factory dispatcher here to switch backends
+            new_qc = result_qc_type.from_pandas(
+                current_qc.to_pandas(), data_cls=calculator.result_data_cls()
+            )
             obj_new = getattr(new_qc, obj.__name__)
             return obj_new(*args[1:], **kwargs)
 
