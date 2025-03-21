@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import abc
 import warnings
+from enum import IntEnum
 from functools import cached_property
 from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
@@ -105,6 +106,47 @@ def _set_axis(axis):
         self.__dict__.update(new_qc.__dict__)
 
     return axis_setter
+
+
+class QCCoercionCost(IntEnum):  # noqa: PR01
+    """
+    Coercion costs between different Query Compiler backends.
+
+    Coercion costs between query compilers can be expressed
+    as integers in the range 0 to 1000, where 1000 is
+    considered impossible. Since coercion costs can be a
+    function of many variables ( dataset size, partitioning,
+    network throughput, and query time ) we define a set range
+    of cost values to simplify comparisons between two query
+    compilers / engines in a unified way.
+
+    COST_ZERO means there is no cost associated, or that the query compilers
+    are the same.
+
+    COST_IMPOSSIBLE means the coercion is effectively impossible, which can
+    occur if the target system is unable to store the data as a result
+    of the coercion. Currently this does not prevent coercion.
+    """
+
+    COST_ZERO = 0
+    COST_LOW = 250
+    COST_MEDIUM = 500
+    COST_HIGH = 750
+    COST_IMPOSSIBLE = 1000
+
+    @classmethod
+    def validate_coersion_cost(cls, cost: QCCoercionCost):
+        """
+        Validate that the coercion cost is within range.
+
+        Parameters
+        ----------
+        cost : QCCoercionCost
+        """
+        if int(cost) < int(QCCoercionCost.COST_ZERO) or int(cost) > int(
+            QCCoercionCost.COST_IMPOSSIBLE
+        ):
+            raise ValueError("Query compiler coercsion cost out of range")
 
 
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
@@ -246,6 +288,28 @@ class BaseQueryCompiler(
                 return result
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)
+
+    def qc_engine_switch_cost(self, other_qc_type: type) -> int:
+        """
+        Return the coercion costs of this qc to other_qc type.
+
+        Values returned must be within the acceptable range of
+        QCCoercionCost
+
+        Parameters
+        ----------
+        other_qc_type : QueryCompiler Class
+            The query compiler class to which we should return the cost of switching.
+
+        Returns
+        -------
+        int
+            Cost of migrating the data from this qc to the other_qc or
+            None if the cost cannot be determined.
+        """
+        if isinstance(self, other_qc_type):
+            return QCCoercionCost.COST_ZERO
+        return None
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
