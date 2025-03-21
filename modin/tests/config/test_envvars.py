@@ -147,8 +147,12 @@ class TestDocModule:
         )
         # Test scenario 2 from https://github.com/modin-project/modin/issues/7113:
         # We can correctly override the docstring for BasePandasDataset.astype,
-        # which is the same method as Series.astype.
-        assert pd.Series.astype is BasePandasDataset.astype
+        # which is the same method (modulo some wrapping that we add to handle
+        # extensions) as Series.astype.
+        assert (
+            pd.Series.astype.__wrapped__.__wrapped__
+            is BasePandasDataset.astype.__wrapped__
+        )
         assert BasePandasDataset.astype.__doc__ == (
             "This is a test of the documentation module for BasePandasDataSet.astype."
         )
