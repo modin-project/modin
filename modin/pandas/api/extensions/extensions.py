@@ -339,13 +339,16 @@ def wrap_class_methods_in_backend_dispatcher(extensions_dict: defaultdict) -> Ca
                 continue
             elif method_name not in _NON_EXTENDABLE_ATTRIBUTES:
                 extensions_dict[None][method_name] = method_value
-                setattr(
-                    cls,
-                    method_name,
-                    wrap_method_in_backend_dispatcher(
-                        method_name, method_value, extensions_dict
-                    ),
+                wrapped = wrap_method_in_backend_dispatcher(
+                    method_name, method_value, extensions_dict
                 )
+                if method_name not in cls.__dict__:
+                    # If this class's method comes from a superclass (i.e.
+                    # it's not in cls.__dict__), mark it so that
+                    # modin.utils._inherit_docstrings knows that the method
+                    # must get its docstrings from its superclass.
+                    wrapped._wrapped_superclass_method = method_value
+                setattr(cls, method_name, wrapped)
                 already_seen_to_wrapped[method_value] = getattr(cls, method_name)
         return cls
 
