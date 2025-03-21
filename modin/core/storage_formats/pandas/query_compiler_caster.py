@@ -29,6 +29,9 @@ from pandas.core.indexes.frozen import FrozenList
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
 )
+from modin.core.storage_formats.base.query_compiler_calculator import (
+    QueryCompilerCostCalculator,
+)
 
 Fn = TypeVar("Fn", bound=Any)
 
@@ -147,10 +150,6 @@ def apply_argument_cast(obj: Fn) -> Fn:
         """
         if len(args) == 0 and len(kwargs) == 0:
             return
-        from modin.core.storage_formats.base.query_compiler_calculator import (
-            QueryCompilerCostCalculator,
-        )
-
         current_qc = args[0]
         calculator = QueryCompilerCostCalculator()
         calculator.add_query_compiler(current_qc)
