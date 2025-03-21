@@ -14,11 +14,11 @@
 import pandas
 import pytest
 
+import modin.pandas as pd
+from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 from modin.core.storage_formats.base.query_compiler_calculator import (
     QueryCompilerCostCalculator,
 )
-import modin.pandas as pd
-from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 
 
