@@ -43,7 +43,9 @@ _NON_EXTENDABLE_ATTRIBUTES = (
 )
 
 
-def _set_attribute_on_obj(name: str, extensions: dict, backend: str, obj: type):
+def _set_attribute_on_obj(
+    name: str, extensions: dict, backend: Optional[str], obj: type
+):
     """
     Create a new or override existing attribute on obj.
 
@@ -53,6 +55,9 @@ def _set_attribute_on_obj(name: str, extensions: dict, backend: str, obj: type):
         The name of the attribute to assign to `obj`.
     extensions : dict
         The dictionary mapping extension name to `new_attr` (assigned below).
+    backend : Optional[str]
+        The backend to which the accessor applies. If `None`, this accessor
+        will become the default for all backends.
     obj : DataFrame, Series, or modin.pandas
         The object we are assigning the new attribute to.
 
@@ -78,7 +83,9 @@ def _set_attribute_on_obj(name: str, extensions: dict, backend: str, obj: type):
         new_attr
             Unmodified new_attr is return from the decorator.
         """
-        extensions[Backend.normalize(backend)][name] = new_attr
+        extensions[None if backend is None else Backend.normalize(backend)][
+            name
+        ] = new_attr
         if callable(new_attr) and name not in dir(obj):
             # For callable extensions, we add a method to the class that
             # dispatches to the correct implementation.
@@ -93,7 +100,7 @@ def _set_attribute_on_obj(name: str, extensions: dict, backend: str, obj: type):
     return decorator
 
 
-def register_dataframe_accessor(*, name: str, backend: str):
+def register_dataframe_accessor(name: str, *, backend: Optional[str] = None):
     """
     Registers a dataframe attribute with the name provided.
 
@@ -122,15 +129,16 @@ def register_dataframe_accessor(*, name: str, backend: str):
     -------
     decorator
         Returns the decorator function.
-    backend : str
-        The backend to which the accessor applies.
+    backend : Optional[str]
+        The backend to which the accessor applies. If ``None``, this accessor
+        will become the default for all backends.
     """
     return _set_attribute_on_obj(
         name, pd.dataframe._DATAFRAME_EXTENSIONS_, backend, pd.dataframe.DataFrame
     )
 
 
-def register_series_accessor(*, name: str, backend: str):
+def register_series_accessor(name: str, *, backend: Optional[str] = None):
     """
     Registers a series attribute with the name provided.
 
@@ -154,8 +162,9 @@ def register_series_accessor(*, name: str, backend: str):
     ----------
     name : str
         The name of the attribute to assign to Series.
-    backend : str
-        The backend to which the accessor applies.
+    backend : Optional[str]
+        The backend to which the accessor applies. If ``None``, this accessor
+        will become the default for all backends.
 
     Returns
     -------
@@ -167,7 +176,7 @@ def register_series_accessor(*, name: str, backend: str):
     )
 
 
-def register_base_accessor(*, name: str, backend: str):
+def register_base_accessor(name: str, *, backend: Optional[str] = None):
     """
     Register a base attribute with the name provided.
 
@@ -191,8 +200,9 @@ def register_base_accessor(*, name: str, backend: str):
     ----------
     name : str
         The name of the attribute to assign to BasePandasDataset.
-    backend : str
-        The backend to which the accessor applies.
+    backend : Optional[str]
+        The backend to which the accessor applies. If ``None``, this accessor
+        will become the default for all backends.
 
     Returns
     -------
@@ -314,6 +324,10 @@ def wrap_method_in_backend_dispatcher(
             return extensions[self.get_backend()][name](self, *remaining_args, **kwargs)
         else:
             # Otherwise, use the default implementation.
+            if name not in extensions[None]:
+                raise AttributeError(
+                    f"{type(self).__name__} object has no attribute {name}"
+                )
             return extensions[None][name](self, *remaining_args, **kwargs)
 
     return method_dispatcher

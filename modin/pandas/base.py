@@ -4508,6 +4508,8 @@ class BasePandasDataset(ClassLogger):
             extensions_for_backend = extensions[self.get_backend()]
             if name in extensions_for_backend:
                 return extensions_for_backend[name]
+            if name in extensions[None]:
+                return extensions[None][name]
         return sentinel
 
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
