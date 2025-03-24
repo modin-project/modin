@@ -103,7 +103,8 @@ if TYPE_CHECKING:
 # special meaning and needs to be distinguished from a user explicitly passing None.
 sentinel = object()
 
-# Do not look up these attributes when searching for extensions.
+# Do not look up these attributes when searching for extensions. We use them
+# to implement the extension lookup itself.
 _EXTENSION_NO_LOOKUP = {
     "_get_extension",
     "_query_compiler",
