@@ -2658,7 +2658,7 @@ class DataFrame(BasePandasDataset):
         try:
             return super().__getattr__(key)
         except AttributeError as err:
-            if key not in _ATTRS_NO_LOOKUP and key in self._query_compiler.columns:
+            if key not in _ATTRS_NO_LOOKUP and key in self.columns:
                 return self[key]
             raise err
 

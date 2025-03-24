@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import re
+from unittest import mock
 
 import pytest
 
@@ -128,6 +129,24 @@ class TestProperty:
             "3_custom",
             "2_custom",
         ]
+
+    def test_search_for_missing_attribute_in_overridden_columns(self, Backend1):
+        """
+        Test a scenario where we override the columns getter, then search for a
+        missing dataframe attribute. Modin should look in the dataframe's
+        overridden columns for the attribute.
+        """
+        column_name = "column_name"
+        column_getter = mock.Mock(wraps=(lambda self: self._query_compiler.columns))
+        register_dataframe_accessor(name="columns", backend=Backend1)(
+            property(fget=column_getter)
+        )
+
+        df = pd.DataFrame({column_name: ["a"]}).set_backend(Backend1)
+
+        with pytest.raises(AttributeError):
+            getattr(df, "non_existent_column")
+        column_getter.assert_called_once_with(df)
 
     def test_add_deletable_property(self, Backend1):
         public_property_name = "property_name"
