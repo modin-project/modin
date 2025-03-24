@@ -2672,6 +2672,10 @@ class DataFrame(BasePandasDataset):
             Key to set.
         value : Any
             Value to set.
+
+        Returns
+        -------
+        None
         """
         # While we let users assign to a column labeled "x" with "df.x" , there
         # are some attributes that we should assume are NOT column names and
