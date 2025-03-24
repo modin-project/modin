@@ -290,7 +290,7 @@ def wrap_method_in_backend_dispatcher(
 
     @wraps(method)
     def method_dispatcher(*args, **kwargs):
-        if len(args) == 0:
+        if len(args) == 0 and len(kwargs) == 0:
             # Handle some cases like __init__()
             return method(*args, **kwargs)
         # TODO(https://github.com/modin-project/modin/issues/7470): this
