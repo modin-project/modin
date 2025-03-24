@@ -4510,7 +4510,6 @@ class BasePandasDataset(ClassLogger):
                 return extensions_for_backend[name]
         return sentinel
 
-    @disable_logging
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
     @disable_logging
     def get_backend(self) -> str:
