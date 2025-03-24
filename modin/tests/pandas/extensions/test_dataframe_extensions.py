@@ -65,6 +65,17 @@ def test_dataframe_extension_overrides_existing_method(Backend1):
     assert df.set_backend(Backend1).sort_values().iloc[0, 0] == 3
 
 
+def test_dataframe_extension_method_uses_superclass_method(Backend1):
+    df = pd.DataFrame([3, 2, 1])
+    assert df.sort_values(0).iloc[0, 0] == 1
+
+    @register_dataframe_accessor(name="sort_values", backend=Backend1)
+    def my_sort_values(self, by):
+        return super(pd.DataFrame, self).sort_values(by=by, ascending=False)
+
+    assert df.set_backend(Backend1).sort_values(by=0).iloc[0, 0] == 3
+
+
 class TestDunders:
     """
     Make sure to test that we override special "dunder" methods like __len__

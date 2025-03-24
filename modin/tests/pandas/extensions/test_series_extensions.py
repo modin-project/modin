@@ -65,6 +65,17 @@ def test_series_extension_overrides_existing_method(Backend1):
     assert series.set_backend(Backend1).sort_values().iloc[0] == 3
 
 
+def test_series_extension_method_uses_superclass_method(Backend1):
+    series = pd.Series([3, 2, 1], name="name")
+    assert series.sort_values().iloc[0] == 1
+
+    @register_series_accessor(name="sort_values", backend=Backend1)
+    def my_sort_values(self):
+        return super(pd.Series, self).sort_values(by="name", ascending=False)
+
+    assert series.set_backend(Backend1).sort_values().iloc[0] == 3
+
+
 class TestDunders:
     """
     Make sure to test that we override special "dunder" methods like __len__

@@ -14,15 +14,16 @@
 import inspect
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import modin.pandas as pd
 from modin.config import Backend
 
-# This type describes a defaultdict that maps backend name to the dictionary of
+# This type describes a defaultdict that maps backend name (or `None` for
+# method implementation and not bound to any one extension) to the dictionary of
 # extensions for that backend. The keys of the inner dictionary are the names of
 # the extensions, and the values are the extensions themselves.
-EXTENSION_DICT_TYPE = defaultdict[str, dict[str, Any]]
+EXTENSION_DICT_TYPE = defaultdict[Optional[str], dict[str, Any]]
 
 _attrs_to_delete_on_test = defaultdict(list)
 
@@ -36,8 +37,9 @@ _NON_EXTENDABLE_ATTRIBUTES = (
     "set_backend",
     "__getattr__",
     "_get_extension",
-    "getattribute__from_extension_impl",
-    "getattr__from_extension_impl",
+    "_getattribute__from_extension_impl",
+    "_getattr__from_extension_impl",
+    "_query_compiler",
 )
 
 

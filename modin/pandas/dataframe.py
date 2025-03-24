@@ -2622,7 +2622,7 @@ class DataFrame(BasePandasDataset):
         # then falls back to __getattr__() if the former raises an AttributeError.
 
         if item not in _EXTENSION_NO_LOOKUP:
-            extensions_result = self.getattribute__from_extension_impl(
+            extensions_result = self._getattribute__from_extension_impl(
                 item, _DATAFRAME_EXTENSIONS_
             )
             if extensions_result is not sentinel:
@@ -2652,17 +2652,13 @@ class DataFrame(BasePandasDataset):
         # then falls back to __getattr__() if the former raises an AttributeError.
 
         if key not in _EXTENSION_NO_LOOKUP:
-            extension = self.getattr__from_extension_impl(key, _DATAFRAME_EXTENSIONS_)
+            extension = self._getattr__from_extension_impl(key, _DATAFRAME_EXTENSIONS_)
             if extension is not sentinel:
                 return extension
         try:
             return super().__getattr__(key)
         except AttributeError as err:
-            if (
-                key not in _EXTENSION_NO_LOOKUP
-                and key not in _ATTRS_NO_LOOKUP
-                and key in self._query_compiler.columns
-            ):
+            if key not in _ATTRS_NO_LOOKUP and key in self._query_compiler.columns:
                 return self[key]
             raise err
 

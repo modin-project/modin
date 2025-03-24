@@ -103,6 +103,14 @@ if TYPE_CHECKING:
 # special meaning and needs to be distinguished from a user explicitly passing None.
 sentinel = object()
 
+# Do not look up these attributes when searching for extensions.
+_EXTENSION_NO_LOOKUP = {
+    "_get_extension",
+    "_query_compiler",
+    "get_backend",
+    "_getattribute__from_extension_impl",
+    "_getattr__from_extension_impl",
+}
 
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
@@ -112,56 +120,46 @@ _ATTRS_NO_LOOKUP = {
     "_ipython_canary_method_should_not_exist_",
     "_ipython_display_",
     "_repr_mimebundle_",
-}
+    # Also avoid looking up the attributes that we use to implement the
+    # extension system.
+} | _EXTENSION_NO_LOOKUP
 
 
-_EXTENSION_NO_LOOKUP = {
-    "_get_extension",
+_DEFAULT_BEHAVIOUR = {
+    "__init__",
+    "__class__",
+    "_get_index",
+    "_set_index",
+    "_pandas_class",
+    "_get_axis_number",
+    "empty",
+    "index",
+    "columns",
+    "name",
+    "dtypes",
+    "dtype",
+    "groupby",
+    "_get_name",
+    "_set_name",
+    "_default_to_pandas",
     "_query_compiler",
-    "get_backend",
-    "getattribute__from_extension_impl",
-    "getattr__from_extension_impl",
-}
-
-_DEFAULT_BEHAVIOUR = (
-    {
-        "__init__",
-        "__class__",
-        "_get_index",
-        "_set_index",
-        "_pandas_class",
-        "_get_axis_number",
-        "empty",
-        "index",
-        "columns",
-        "name",
-        "dtypes",
-        "dtype",
-        "groupby",
-        "_get_name",
-        "_set_name",
-        "_default_to_pandas",
-        "_query_compiler",
-        "_to_pandas",
-        "_repartition",
-        "_build_repr_df",
-        "_reduce_dimension",
-        "__repr__",
-        "__len__",
-        "__constructor__",
-        "_create_or_update_from_compiler",
-        "_update_inplace",
-        # for persistance support;
-        # see DataFrame methods docstrings for more
-        "_inflate_light",
-        "_inflate_full",
-        "__reduce__",
-        "__reduce_ex__",
-        "_init",
-    }
-    | _ATTRS_NO_LOOKUP
-    | _EXTENSION_NO_LOOKUP
-)
+    "_to_pandas",
+    "_repartition",
+    "_build_repr_df",
+    "_reduce_dimension",
+    "__repr__",
+    "__len__",
+    "__constructor__",
+    "_create_or_update_from_compiler",
+    "_update_inplace",
+    # for persistance support;
+    # see DataFrame methods docstrings for more
+    "_inflate_light",
+    "_inflate_full",
+    "__reduce__",
+    "__reduce_ex__",
+    "_init",
+} | _ATTRS_NO_LOOKUP
 
 _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasDataset"}
 
@@ -4352,7 +4350,7 @@ class BasePandasDataset(ClassLogger):
         # then falls back to __getattr__() if the former raises an AttributeError.
 
         if item not in _EXTENSION_NO_LOOKUP:
-            extensions_result = self.getattribute__from_extension_impl(
+            extensions_result = self._getattribute__from_extension_impl(
                 item, _BASE_EXTENSIONS
             )
             if extensions_result is not sentinel:
@@ -4389,7 +4387,7 @@ class BasePandasDataset(ClassLogger):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
         if item not in _EXTENSION_NO_LOOKUP:
-            extension = self.getattr__from_extension_impl(item, _BASE_EXTENSIONS)
+            extension = self._getattr__from_extension_impl(item, _BASE_EXTENSIONS)
             if extension is not sentinel:
                 return extension
         return object.__getattribute__(self, item)
@@ -4560,7 +4558,7 @@ class BasePandasDataset(ClassLogger):
         return super().__delattr__(name)
 
     @disable_logging
-    def getattribute__from_extension_impl(
+    def _getattribute__from_extension_impl(
         self, item: str, extensions: EXTENSION_DICT_TYPE
     ):
         """
@@ -4586,10 +4584,13 @@ class BasePandasDataset(ClassLogger):
         extension = self._get_extension(item, extensions)
         if (
             extension is not sentinel
-            # We should implement callable extensions by dispatching
-            # to the corrrect backend inside the corresponding method
-            # rather than by getting the extension when we call
-            # __getattribute__.
+            # We should implement callable extensions by wrapping them in
+            # methods that dispatch to the corrrect backend. We should get the
+            # wrapped method with the usual object.__getattribute__() method
+            # lookup rather than by getting a particular extension when we call
+            # __getattribute__(). For example, if we've extended sort_values(),
+            # then __getattribute__('sort_values') should return a wrapper that
+            # calls the correct extension once it's invoked.
             and not callable(extension)
         ):
             return (
@@ -4598,7 +4599,7 @@ class BasePandasDataset(ClassLogger):
         return sentinel
 
     @disable_logging
-    def getattr__from_extension_impl(self, item, extensions: EXTENSION_DICT_TYPE):
+    def _getattr__from_extension_impl(self, item, extensions: EXTENSION_DICT_TYPE):
         """
         __getattr__() an extension with the given name from the given set of extensions.
 

@@ -362,7 +362,7 @@ class Series(BasePandasDataset):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
         if key not in _EXTENSION_NO_LOOKUP:
-            extensions_result = self.getattribute__from_extension_impl(
+            extensions_result = self._getattribute__from_extension_impl(
                 key, _SERIES_EXTENSIONS_
             )
             if extensions_result is not sentinel:
@@ -392,17 +392,13 @@ class Series(BasePandasDataset):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
         if key not in _EXTENSION_NO_LOOKUP:
-            extension = self.getattr__from_extension_impl(key, _SERIES_EXTENSIONS_)
+            extension = self._getattr__from_extension_impl(key, _SERIES_EXTENSIONS_)
             if extension is not sentinel:
                 return extension
         try:
             return super().__getattr__(key)
         except AttributeError as err:
-            if (
-                key not in _EXTENSION_NO_LOOKUP
-                and key not in _ATTRS_NO_LOOKUP
-                and key in self._query_compiler.index
-            ):
+            if key not in _ATTRS_NO_LOOKUP and key in self._query_compiler.index:
                 return self[key]
             raise err
 
