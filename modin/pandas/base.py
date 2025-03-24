@@ -19,7 +19,6 @@ import abc
 import pickle as pkl
 import re
 import warnings
-from collections import defaultdict
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -81,6 +80,7 @@ from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
 from modin.pandas.api.extensions.extensions import (
+    EXTENSION_DICT_TYPE,
     wrap_class_methods_in_backend_dispatcher,
 )
 from modin.pandas.utils import GET_BACKEND_DOC, SET_BACKEND_DOC, is_scalar
@@ -103,6 +103,7 @@ if TYPE_CHECKING:
 # special meaning and needs to be distinguished from a user explicitly passing None.
 sentinel = object()
 
+
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
 _ATTRS_NO_LOOKUP = {
@@ -113,42 +114,54 @@ _ATTRS_NO_LOOKUP = {
     "_repr_mimebundle_",
 }
 
-_DEFAULT_BEHAVIOUR = {
-    "__init__",
-    "__class__",
-    "_get_index",
-    "_set_index",
-    "_pandas_class",
-    "_get_axis_number",
-    "empty",
-    "index",
-    "columns",
-    "name",
-    "dtypes",
-    "dtype",
-    "groupby",
-    "_get_name",
-    "_set_name",
-    "_default_to_pandas",
+
+_EXTENSION_NO_LOOKUP = {
+    "_get_extension",
     "_query_compiler",
-    "_to_pandas",
-    "_repartition",
-    "_build_repr_df",
-    "_reduce_dimension",
-    "__repr__",
-    "__len__",
-    "__constructor__",
-    "_create_or_update_from_compiler",
-    "_update_inplace",
     "get_backend",
-    # for persistance support;
-    # see DataFrame methods docstrings for more
-    "_inflate_light",
-    "_inflate_full",
-    "__reduce__",
-    "__reduce_ex__",
-    "_init",
-} | _ATTRS_NO_LOOKUP
+    "getattribute__from_extension_impl",
+    "getattr__from_extension_impl",
+}
+
+_DEFAULT_BEHAVIOUR = (
+    {
+        "__init__",
+        "__class__",
+        "_get_index",
+        "_set_index",
+        "_pandas_class",
+        "_get_axis_number",
+        "empty",
+        "index",
+        "columns",
+        "name",
+        "dtypes",
+        "dtype",
+        "groupby",
+        "_get_name",
+        "_set_name",
+        "_default_to_pandas",
+        "_query_compiler",
+        "_to_pandas",
+        "_repartition",
+        "_build_repr_df",
+        "_reduce_dimension",
+        "__repr__",
+        "__len__",
+        "__constructor__",
+        "_create_or_update_from_compiler",
+        "_update_inplace",
+        # for persistance support;
+        # see DataFrame methods docstrings for more
+        "_inflate_light",
+        "_inflate_full",
+        "__reduce__",
+        "__reduce_ex__",
+        "_init",
+    }
+    | _ATTRS_NO_LOOKUP
+    | _EXTENSION_NO_LOOKUP
+)
 
 _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasDataset"}
 
@@ -200,11 +213,11 @@ def _get_repr_axis_label_indexer(labels, num_for_repr):
     )
 
 
-_BASE_EXTENSIONS = defaultdict(dict)
+_BASE_EXTENSIONS: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-@wrap_class_methods_in_backend_dispatcher(extensions_dict=_BASE_EXTENSIONS)
+@wrap_class_methods_in_backend_dispatcher(extensions=_BASE_EXTENSIONS)
 class BasePandasDataset(ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
@@ -4338,15 +4351,12 @@ class BasePandasDataset(ClassLogger):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
 
-        # An extension property is only accessible if the backend supports it.
-        if (
-            item not in ("_query_compiler", "get_backend")
-            and hasattr(self, "_query_compiler")
-            and self.get_backend() in _BASE_EXTENSIONS
-            and item in _BASE_EXTENSIONS[self.get_backend()]
-            and isinstance(_BASE_EXTENSIONS[self.get_backend()][item], property)
-        ):
-            return _BASE_EXTENSIONS[self.get_backend()][item].fget(self)
+        if item not in _EXTENSION_NO_LOOKUP:
+            extensions_result = self.getattribute__from_extension_impl(
+                item, _BASE_EXTENSIONS
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
 
         attr = super().__getattribute__(item)
         if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_shape:
@@ -4378,18 +4388,10 @@ class BasePandasDataset(ClassLogger):
         """
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
-        if (
-            item not in ("_query_compiler", "get_backend")
-            and hasattr(self, "_query_compiler")
-            and self.get_backend() in _BASE_EXTENSIONS
-            and item in _BASE_EXTENSIONS[self.get_backend()]
-        ):
-            extension_item = _BASE_EXTENSIONS[self.get_backend()][item]
-            # We need to handle callable extensions separately because they
-            # need to dispatch to the appropriate backend.
-            assert not callable(extension_item)
-            return _BASE_EXTENSIONS[self.get_backend()][item]
-
+        if item not in _EXTENSION_NO_LOOKUP:
+            extension = self.getattr__from_extension_impl(item, _BASE_EXTENSIONS)
+            if extension is not sentinel:
+                return extension
         return object.__getattribute__(self, item)
 
     def __array_ufunc__(
@@ -4486,6 +4488,30 @@ class BasePandasDataset(ClassLogger):
 
     move_to = set_backend
 
+    @disable_logging
+    def _get_extension(self, name: str, extensions: EXTENSION_DICT_TYPE) -> Any:
+        """
+        Get an extension with the given name from the given set of extensions.
+
+        Parameters
+        ----------
+        name : str
+            The name of the extension.
+        extensions : EXTENSION_DICT_TYPE
+            The set of extensions.
+
+        Returns
+        -------
+        Any
+            The extension with the given name, or `sentinel` if the extension is not found.
+        """
+        if hasattr(self, "_query_compiler"):
+            extensions_for_backend = extensions[self.get_backend()]
+            if name in extensions_for_backend:
+                return extensions_for_backend[name]
+        return sentinel
+
+    @disable_logging
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
     @disable_logging
     def get_backend(self) -> str:
@@ -4508,15 +4534,10 @@ class BasePandasDataset(ClassLogger):
         None
         """
         # An extension property is only accessible if the backend supports it.
-        if (
-            hasattr(self, "_query_compiler")
-            and self.get_backend() in _BASE_EXTENSIONS
-            and key in _BASE_EXTENSIONS[self.get_backend()]
-            and hasattr(_BASE_EXTENSIONS[self.get_backend()][key], "__set__")
-        ):
-            _BASE_EXTENSIONS[self.get_backend()][key].__set__(self, value)
-        else:
-            super().__setattr__(key, value)
+        extension = self._get_extension(key, _BASE_EXTENSIONS)
+        if extension is not sentinel and hasattr(extension, "__set__"):
+            return extension.__set__(self, value)
+        return super().__setattr__(key, value)
 
     @disable_logging
     def __delattr__(self, name) -> None:
@@ -4533,11 +4554,75 @@ class BasePandasDataset(ClassLogger):
         None
         """
         # An extension property is only accessible if the backend supports it.
-        if (
-            hasattr(self, "_query_compiler")
-            and self.get_backend() in _BASE_EXTENSIONS
-            and name in _BASE_EXTENSIONS[self.get_backend()]
-            and hasattr(_BASE_EXTENSIONS[self.get_backend()][name], "__delete__")
-        ):
-            return _BASE_EXTENSIONS[self.get_backend()][name].__delete__(self)
+        extension = self._get_extension(name, _BASE_EXTENSIONS)
+        if extension is not sentinel and hasattr(extension, "__delete__"):
+            return extension.__delete__(self)
         return super().__delattr__(name)
+
+    @disable_logging
+    def getattribute__from_extension_impl(
+        self, item: str, extensions: EXTENSION_DICT_TYPE
+    ):
+        """
+        __getatttribute__() an extension with the given name from the given set of extensions.
+
+        Implement __getattribute__() for extensions. Python calls
+        __getattribute_() every time you access an attribute of an object.
+
+        Parameters
+        ----------
+        item : str
+            The name of the attribute to get.
+        extensions : EXTENSION_DICT_TYPE
+            The set of extensions.
+
+        Returns
+        -------
+        Any
+            The attribute from the extension, or `sentinel` if the attribute is
+            not found.
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(item, extensions)
+        if (
+            extension is not sentinel
+            # We should implement callable extensions by dispatching
+            # to the corrrect backend inside the corresponding method
+            # rather than by getting the extension when we call
+            # __getattribute__.
+            and not callable(extension)
+        ):
+            return (
+                extension.__get__(self) if hasattr(extension, "__get__") else extension
+            )
+        return sentinel
+
+    @disable_logging
+    def getattr__from_extension_impl(self, item, extensions: EXTENSION_DICT_TYPE):
+        """
+        __getattr__() an extension with the given name from the given set of extensions.
+
+        Implement __getattr__() for extensions. python falls back to
+        __getattr__() if __getattribute__() raises an AttributeError.
+
+        Parameters
+        ----------
+        item : str
+            The name of the attribute to get.
+        extensions : EXTENSION_DICT_TYPE
+            The set of extensions.
+
+        Returns
+        -------
+        Any
+            The attribute from the extension, or `sentinel` if the attribute is
+            not found.
+        """
+        extension = self._get_extension(item, extensions)
+        if extension is not sentinel:
+            # We need to implement callable extensions before we fall back
+            # to __getattr__(), because they need to dispatch to the
+            # appropriate backend.
+            assert not callable(extension)
+            return extension
+        return sentinel

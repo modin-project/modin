@@ -22,7 +22,6 @@ import os
 import re
 import sys
 import warnings
-from collections import defaultdict
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -64,6 +63,7 @@ from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
 from modin.pandas.api.extensions.extensions import (
+    EXTENSION_DICT_TYPE,
     wrap_class_methods_in_backend_dispatcher,
 )
 from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
@@ -77,7 +77,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseFrameAccessor
-from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, _EXTENSION_NO_LOOKUP, BasePandasDataset, sentinel
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
@@ -96,13 +96,13 @@ if TYPE_CHECKING:
 
 
 # Dictionary of extensions assigned to this class
-_DATAFRAME_EXTENSIONS_ = defaultdict(dict)
+_DATAFRAME_EXTENSIONS_: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-@wrap_class_methods_in_backend_dispatcher(extensions_dict=_DATAFRAME_EXTENSIONS_)
+@wrap_class_methods_in_backend_dispatcher(extensions=_DATAFRAME_EXTENSIONS_)
 class DataFrame(BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
@@ -2621,15 +2621,12 @@ class DataFrame(BasePandasDataset):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
 
-        # An extension property is only accessible if the backend supports it.
-        if (
-            item not in ("_query_compiler", "get_backend")
-            and hasattr(self, "_query_compiler")
-            and self.get_backend() in _DATAFRAME_EXTENSIONS_
-            and item in _DATAFRAME_EXTENSIONS_[self.get_backend()]
-            and isinstance(_DATAFRAME_EXTENSIONS_[self.get_backend()][item], property)
-        ):
-            return _DATAFRAME_EXTENSIONS_[self.get_backend()][item].fget(self)
+        if item not in _EXTENSION_NO_LOOKUP:
+            extensions_result = self.getattribute__from_extension_impl(
+                item, _DATAFRAME_EXTENSIONS_
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
         return super().__getattribute__(item)
 
     @disable_logging
@@ -2654,24 +2651,15 @@ class DataFrame(BasePandasDataset):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
 
-        if (
-            key not in ("_query_compiler", "get_backend")
-            and hasattr(self, "_query_compiler")
-            and self.get_backend() in _DATAFRAME_EXTENSIONS_
-            and key in _DATAFRAME_EXTENSIONS_[self.get_backend()]
-        ):
-            extension_item = _DATAFRAME_EXTENSIONS_[self.get_backend()][key]
-            assert not callable(extension_item)
-            return _DATAFRAME_EXTENSIONS_[self.get_backend()][key]
+        if key not in _EXTENSION_NO_LOOKUP:
+            extension = self.getattr__from_extension_impl(key, _DATAFRAME_EXTENSIONS_)
+            if extension is not sentinel:
+                return extension
         try:
             return super().__getattr__(key)
         except AttributeError as err:
             if (
-                key
-                not in (
-                    "_query_compiler",
-                    "get_backend",
-                )
+                key not in _EXTENSION_NO_LOOKUP
                 and key not in _ATTRS_NO_LOOKUP
                 and key in self._query_compiler.columns
             ):
@@ -2703,14 +2691,8 @@ class DataFrame(BasePandasDataset):
         #   before it appears in __dict__.
         if key in ("_query_compiler", "_siblings") or key in self.__dict__:
             pass
-        elif (
-            hasattr(self, "_query_compiler")
-            and self.get_backend() in _DATAFRAME_EXTENSIONS_
-            and key in _DATAFRAME_EXTENSIONS_[self.get_backend()]
-        ):
-            extension = _DATAFRAME_EXTENSIONS_[self.get_backend()][key]
-            extension.__set__(self, value)
-            return
+        elif self._get_extension(key, _DATAFRAME_EXTENSIONS_) is not sentinel:
+            return self._get_extension(key, _DATAFRAME_EXTENSIONS_).__set__(self, value)
         # we have to check for the key in `dir(self)` first in order not to trigger columns computation
         elif key not in dir(self) and key in self:
             self.__setitem__(key, value)
@@ -3408,11 +3390,7 @@ class DataFrame(BasePandasDataset):
         -------
         None
         """
-        if (
-            hasattr(self, "_query_compiler")
-            and self.get_backend() in _DATAFRAME_EXTENSIONS_
-            and name in _DATAFRAME_EXTENSIONS_[self.get_backend()]
-            and hasattr(_DATAFRAME_EXTENSIONS_[self.get_backend()][name], "__delete__")
-        ):
-            return _DATAFRAME_EXTENSIONS_[self.get_backend()][name].__delete__(self)
+        extension = self._get_extension(name, _DATAFRAME_EXTENSIONS_)
+        if extension is not sentinel:
+            return extension.__delete__(self)
         return super().__delattr__(name)

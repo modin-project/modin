@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import os
 import warnings
-from collections import defaultdict
 from typing import IO, TYPE_CHECKING, Any, Hashable, Iterable, Optional, Union
 
 import numpy as np
@@ -36,6 +35,7 @@ from pandas.util._validators import validate_bool_kwarg
 from modin.config import PersistentPickle
 from modin.logging import disable_logging
 from modin.pandas.api.extensions.extensions import (
+    EXTENSION_DICT_TYPE,
     wrap_class_methods_in_backend_dispatcher,
 )
 from modin.pandas.io import from_pandas, to_pandas
@@ -46,7 +46,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseAccessor
-from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, _EXTENSION_NO_LOOKUP, BasePandasDataset, sentinel
 from .iterator import PartitionIterator
 from .series_utils import (
     CategoryMethods,
@@ -72,13 +72,13 @@ if TYPE_CHECKING:
     from .dataframe import DataFrame
 
 # Dictionary of extensions assigned to this class
-_SERIES_EXTENSIONS_ = defaultdict(dict)
+_SERIES_EXTENSIONS_: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
 
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
-@wrap_class_methods_in_backend_dispatcher(extensions_dict=_SERIES_EXTENSIONS_)
+@wrap_class_methods_in_backend_dispatcher(extensions=_SERIES_EXTENSIONS_)
 class Series(BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
@@ -361,16 +361,13 @@ class Series(BasePandasDataset):
         """
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
+        if key not in _EXTENSION_NO_LOOKUP:
+            extensions_result = self.getattribute__from_extension_impl(
+                key, _SERIES_EXTENSIONS_
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
 
-        # An extension property is only accessible if the backend supports it.
-        if (
-            key not in ("_query_compiler", "get_backend")
-            and hasattr(self, "_query_compiler")
-            and self.get_backend() in _SERIES_EXTENSIONS_
-            and key in _SERIES_EXTENSIONS_[self.get_backend()]
-            and isinstance(_SERIES_EXTENSIONS_[self.get_backend()][key], property)
-        ):
-            return _SERIES_EXTENSIONS_[self.get_backend()][key].fget(self)
         return super().__getattribute__(key)
 
     @disable_logging
@@ -394,25 +391,15 @@ class Series(BasePandasDataset):
         """
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
-
-        if (
-            key not in ("_query_compiler", "get_backend")
-            and hasattr(self, "_query_compiler")
-            and self.get_backend() in _SERIES_EXTENSIONS_
-            and key in _SERIES_EXTENSIONS_[self.get_backend()]
-        ):
-            extension_item = _SERIES_EXTENSIONS_[self.get_backend()][key]
-            assert not callable(extension_item)
-            return extension_item
+        if key not in _EXTENSION_NO_LOOKUP:
+            extension = self.getattr__from_extension_impl(key, _SERIES_EXTENSIONS_)
+            if extension is not sentinel:
+                return extension
         try:
             return super().__getattr__(key)
         except AttributeError as err:
             if (
-                key
-                not in (
-                    "_query_compiler",
-                    "get_backend",
-                )
+                key not in _EXTENSION_NO_LOOKUP
                 and key not in _ATTRS_NO_LOOKUP
                 and key in self._query_compiler.index
             ):
@@ -578,13 +565,10 @@ class Series(BasePandasDataset):
         -------
         None
         """
-        if name not in ("_query_compiler", "_siblings") and (
-            hasattr(self, "_query_compiler")
-            and self.get_backend() in _SERIES_EXTENSIONS_
-            and name in _SERIES_EXTENSIONS_[self.get_backend()]
-            and hasattr(_SERIES_EXTENSIONS_[self.get_backend()][name], "__set__")
-        ):
-            return _SERIES_EXTENSIONS_[self.get_backend()][name].__set__(self, value)
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(name, _SERIES_EXTENSIONS_)
+        if extension is not sentinel and hasattr(extension, "__set__"):
+            return extension.__set__(self, value)
         return super().__setattr__(name, value)
 
     @disable_logging
@@ -601,13 +585,10 @@ class Series(BasePandasDataset):
         -------
         None
         """
-        if (
-            hasattr(self, "_query_compiler")
-            and self.get_backend() in _SERIES_EXTENSIONS_
-            and name in _SERIES_EXTENSIONS_[self.get_backend()]
-            and hasattr(_SERIES_EXTENSIONS_[self.get_backend()][name], "__delete__")
-        ):
-            return _SERIES_EXTENSIONS_[self.get_backend()][name].__delete__(self)
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(name, _SERIES_EXTENSIONS_)
+        if extension is not sentinel and hasattr(extension, "__delete__"):
+            return extension.__delete__(self)
         return super().__delattr__(name)
 
     @_doc_binary_op(operation="subtraction", bin_op="sub")

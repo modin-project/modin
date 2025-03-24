@@ -248,10 +248,8 @@ def apply_argument_cast(obj: Fn) -> Fn:
         -------
         Any
         """
-        if len(args) == 0:
-            # this is a hack to handle methods like __new__() which don't have
-            # any arguments
-            return obj(*args, **kwargs)
+        if len(args) == 0 and len(kwargs) == 0:
+            return
         current_qc = args[0]
         calculator = QueryCompilerCasterCalculator()
         calculator.add_query_compiler(current_qc)

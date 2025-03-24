@@ -19,6 +19,11 @@ from typing import Any, Callable
 import modin.pandas as pd
 from modin.config import Backend
 
+# This type describes a defaultdict that maps backend name to the dictionary of
+# extensions for that backend. The keys of the inner dictionary are the names of
+# the extensions, and the values are the extensions themselves.
+EXTENSION_DICT_TYPE = defaultdict[str, dict[str, Any]]
+
 _attrs_to_delete_on_test = defaultdict(list)
 
 _NON_EXTENDABLE_ATTRIBUTES = (
@@ -30,10 +35,13 @@ _NON_EXTENDABLE_ATTRIBUTES = (
     "get_backend",
     "set_backend",
     "__getattr__",
+    "_get_extension",
+    "getattribute__from_extension_impl",
+    "getattr__from_extension_impl",
 )
 
 
-def _set_attribute_on_obj(name: str, extensions_dict: dict, backend: str, obj: type):
+def _set_attribute_on_obj(name: str, extensions: dict, backend: str, obj: type):
     """
     Create a new or override existing attribute on obj.
 
@@ -41,7 +49,7 @@ def _set_attribute_on_obj(name: str, extensions_dict: dict, backend: str, obj: t
     ----------
     name : str
         The name of the attribute to assign to `obj`.
-    extensions_dict : dict
+    extensions : dict
         The dictionary mapping extension name to `new_attr` (assigned below).
     obj : DataFrame, Series, or modin.pandas
         The object we are assigning the new attribute to.
@@ -68,14 +76,14 @@ def _set_attribute_on_obj(name: str, extensions_dict: dict, backend: str, obj: t
         new_attr
             Unmodified new_attr is return from the decorator.
         """
-        extensions_dict[Backend.normalize(backend)][name] = new_attr
+        extensions[Backend.normalize(backend)][name] = new_attr
         if callable(new_attr) and name not in dir(obj):
             # For callable extensions, we add a method to the class that
             # dispatches to the correct implementation.
             setattr(
                 obj,
                 name,
-                wrap_method_in_backend_dispatcher(name, new_attr, extensions_dict),
+                wrap_method_in_backend_dispatcher(name, new_attr, extensions),
             )
             _attrs_to_delete_on_test[obj].append(name)
         return new_attr
@@ -255,7 +263,7 @@ def register_pd_accessor(name: str):
 
 
 def wrap_method_in_backend_dispatcher(
-    name: str, method: Callable, extensions_dict: defaultdict
+    name: str, method: Callable, extensions: EXTENSION_DICT_TYPE
 ) -> Callable:
     """
     Wraps a method to dispatch to the correct backend implementation.
@@ -269,7 +277,7 @@ def wrap_method_in_backend_dispatcher(
         The name of the method being wrapped.
     method : Callable
         The method being wrapped.
-    extensions_dict : defaultdict
+    extensions : EXTENSION_DICT_TYPE
         The extensions dictionary for the class this method is defined on.
 
     Returns
@@ -296,28 +304,28 @@ def wrap_method_in_backend_dispatcher(
         remaining_args = args[1:]
         if (
             hasattr(self, "_query_compiler")
-            and self.get_backend() in extensions_dict
-            and name in extensions_dict[self.get_backend()]
+            and self.get_backend() in extensions
+            and name in extensions[self.get_backend()]
         ):
             # If `self` is using a query compiler whose backend has an
             # extension for this method, use that extension.
-            return extensions_dict[self.get_backend()][name](
-                self, *remaining_args, **kwargs
-            )
+            return extensions[self.get_backend()][name](self, *remaining_args, **kwargs)
         else:
             # Otherwise, use the default implementation.
-            return extensions_dict[None][name](self, *remaining_args, **kwargs)
+            return extensions[None][name](self, *remaining_args, **kwargs)
 
     return method_dispatcher
 
 
-def wrap_class_methods_in_backend_dispatcher(extensions_dict: defaultdict) -> Callable:
+def wrap_class_methods_in_backend_dispatcher(
+    extensions: EXTENSION_DICT_TYPE,
+) -> Callable:
     """
     Get a function that can wrap a class's instance methods so that they dispatch to the correct backend.
 
     Parameters
     ----------
-    extensions_dict : defaultdict
+    extensions : EXTENSION_DICT_TYPE
         The extension dictionary for the class.
 
     Returns
@@ -338,9 +346,9 @@ def wrap_class_methods_in_backend_dispatcher(extensions_dict: defaultdict) -> Ca
                 setattr(cls, method_name, already_seen_to_wrapped[method_value])
                 continue
             elif method_name not in _NON_EXTENDABLE_ATTRIBUTES:
-                extensions_dict[None][method_name] = method_value
+                extensions[None][method_name] = method_value
                 wrapped = wrap_method_in_backend_dispatcher(
-                    method_name, method_value, extensions_dict
+                    method_name, method_value, extensions
                 )
                 if method_name not in cls.__dict__:
                     # If this class's method comes from a superclass (i.e.
