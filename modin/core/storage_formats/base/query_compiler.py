@@ -214,22 +214,6 @@ class BaseQueryCompiler(
     def get_backend(self) -> str:
         """
         Get the backend for this query compiler.
-        Returns
-        -------
-        str
-            The backend for this query compiler.
-        """
-        return Backend.get_backend_for_execution(
-            Execution(
-                engine=self.engine,
-                storage_format=self.storage_format,
-            )
-        )
-
-    @disable_logging
-    def get_backend(self) -> str:
-        """
-        Get the backend for this query compiler.
 
         Returns
         -------
@@ -345,13 +329,7 @@ class BaseQueryCompiler(
         """
         if isinstance(self, other_qc_type):
             return QCCoercionCost.COST_ZERO
-        return None
-    
-    def get_backend():
-        """
-        Return the Backend string associated with this query compiler instance
-        """
-        
+        return None    
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for

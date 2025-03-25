@@ -83,6 +83,7 @@ def eval_general_interop(
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
+        #breakpoint()
         try:
             pd_result = fn(pandas_df1, pandas_df2, **pd_kwargs)
         except Exception as pd_e:
