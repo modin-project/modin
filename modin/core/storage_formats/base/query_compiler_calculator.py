@@ -133,4 +133,4 @@ class BackendCostCalculator:
             QCCoercionCost.validate_coersion_cost(cost)
             self._backend_data[backend].cost += cost
         else:
-            raise "No backend data for cost"
+            raise ValueError("No backend data available for cost optimization")
