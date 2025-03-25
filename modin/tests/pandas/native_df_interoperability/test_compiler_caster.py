@@ -14,11 +14,11 @@
 import pandas
 import pytest
 
+import modin.pandas as pd
 from modin.config.envvars import Backend, Engine, Execution
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory
 from modin.core.io.io import BaseIO
-import modin.pandas as pd
 from modin.core.storage_formats.base.query_compiler import QCCoercionCost
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,

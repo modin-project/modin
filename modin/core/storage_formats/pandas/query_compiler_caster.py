@@ -26,9 +26,7 @@ from typing import Any, Dict, Tuple, TypeVar
 
 from pandas.core.indexes.frozen import FrozenList
 
-from modin.core.storage_formats.base.query_compiler import (
-    BaseQueryCompiler,
-)
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )

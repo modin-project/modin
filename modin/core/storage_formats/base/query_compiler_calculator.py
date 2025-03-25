@@ -20,6 +20,7 @@ all query compilers to determine the best query compiler to use.
 """
 
 from typing import Union
+
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,

@@ -32,7 +32,6 @@ from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
 
 from modin.config.envvars import Backend, Execution
-
 from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     CatDefault,
