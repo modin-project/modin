@@ -31,7 +31,8 @@ import pandas.core.resample
 from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
 
-from modin.config import Backend, Execution
+from modin.config.envvars import Backend, Execution
+
 from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     CatDefault,
@@ -208,6 +209,22 @@ class BaseQueryCompiler(
         """
         if self._should_warn_on_default_to_pandas:
             ErrorMessage.default_to_pandas(message=message, reason=reason)
+    
+    @disable_logging
+    def get_backend(self) -> str:
+        """
+        Get the backend for this query compiler.
+        Returns
+        -------
+        str
+            The backend for this query compiler.
+        """
+        return Backend.get_backend_for_execution(
+            Execution(
+                engine=self.engine,
+                storage_format=self.storage_format,
+            )
+        )
 
     @disable_logging
     def get_backend(self) -> str:
@@ -329,6 +346,12 @@ class BaseQueryCompiler(
         if isinstance(self, other_qc_type):
             return QCCoercionCost.COST_ZERO
         return None
+    
+    def get_backend():
+        """
+        Return the Backend string associated with this query compiler instance
+        """
+        
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for

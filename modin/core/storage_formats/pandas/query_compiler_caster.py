@@ -30,7 +30,7 @@ from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
 )
 from modin.core.storage_formats.base.query_compiler_calculator import (
-    QueryCompilerCostCalculator,
+    BackendCostCalculator,
 )
 
 Fn = TypeVar("Fn", bound=Any)
@@ -117,6 +117,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
         for key in current_class_attrs:
             all_attrs[key] = current_class_attrs[key]
         all_attrs.pop("__abstractmethods__")
+        all_attrs.pop("get_backend")
         all_attrs.pop("__init__")
         all_attrs.pop("qc_engine_switch_cost")
         all_attrs.pop("from_pandas")
@@ -150,8 +151,11 @@ def apply_argument_cast(obj: Fn) -> Fn:
         """
         if len(args) == 0 and len(kwargs) == 0:
             return
+        
+        from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+        
         current_qc = args[0]
-        calculator = QueryCompilerCostCalculator()
+        calculator = BackendCostCalculator()
         calculator.add_query_compiler(current_qc)
 
         def arg_needs_casting(arg):
@@ -173,9 +177,8 @@ def apply_argument_cast(obj: Fn) -> Fn:
             if qc_type is None or qc_type is type(arg):
                 return arg
             # TODO: Should use the factory dispatcher here to switch backends
-            return qc_type.from_pandas(
-                arg.to_pandas(), data_cls=calculator.result_data_cls()
-            )
+            # TODO: handle the non-backend string approach
+            return FactoryDispatcher.from_pandas(current_qc.to_pandas(), calculator.calculate())
 
         if isinstance(current_qc, BaseQueryCompiler):
             visit_nested_args(kwargs, register_query_compilers)
@@ -184,24 +187,16 @@ def apply_argument_cast(obj: Fn) -> Fn:
             args = visit_nested_args(args, cast_to_qc)
             kwargs = visit_nested_args(kwargs, cast_to_qc)
 
-        result_qc_type = calculator.calculate()
+        result_backend = calculator.calculate()
+        current_backend = args[0].get_backend()
+        #result_qc_type = calculator.calculate()
 
-        if result_qc_type is None or result_qc_type is type(current_qc):
+        if result_backend == current_backend:
             return obj(*args, **kwargs)
-
-        # we need to cast current_qc to a new query compiler,
-        # then lookup the same function on the new query compiler
-        # we need to also drop the first argument to the original
-        # args since it references self on the original argument
-        # call
-        if result_qc_type != current_qc:
-            # TODO: Should use the factory dispatcher here to switch backends
-            new_qc = result_qc_type.from_pandas(
-                current_qc.to_pandas(), data_cls=calculator.result_data_cls()
-            )
-            obj_new = getattr(new_qc, obj.__name__)
-            return obj_new(*args[1:], **kwargs)
-
-        return obj(*args, **kwargs)
+        # TODO: Should use the factory dispatcher here to switch backends
+        # TODO: handle the non-backend string approach
+        new_qc = FactoryDispatcher.from_pandas(current_qc.to_pandas(), calculator.calculate())
+        obj_new = getattr(new_qc, obj.__name__)
+        return obj_new(*args[1:], **kwargs)
 
     return cast_args
