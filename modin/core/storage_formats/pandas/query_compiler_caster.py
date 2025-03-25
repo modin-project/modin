@@ -150,9 +150,8 @@ def apply_argument_cast(obj: Fn) -> Fn:
         if len(args) == 0 and len(kwargs) == 0:
             return
 
-        from modin.core.execution.dispatching.factories.dispatcher import (
-            FactoryDispatcher,
-        )
+        # Import moved inside the function to avoid cyclic import
+
 
         current_qc = args[0]
         calculator = BackendCostCalculator()
@@ -178,6 +177,9 @@ def apply_argument_cast(obj: Fn) -> Fn:
                 return arg
             # TODO: Should use the factory dispatcher here to switch backends
             # TODO: handle the non-backend string approach
+            from modin.core.execution.dispatching.factories.dispatcher import (
+                FactoryDispatcher,
+            )
             return FactoryDispatcher.from_pandas(
                 arg.to_pandas(), calculator.calculate()
             )
@@ -197,6 +199,9 @@ def apply_argument_cast(obj: Fn) -> Fn:
         # TODO: Should use the factory dispatcher here to switch backends
         # TODO: handle the non-backend string approach
 
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
         new_qc = FactoryDispatcher.from_pandas(
             current_qc.to_pandas(), calculator.calculate()
         )
