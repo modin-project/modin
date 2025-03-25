@@ -209,7 +209,7 @@ class BaseQueryCompiler(
         """
         if self._should_warn_on_default_to_pandas:
             ErrorMessage.default_to_pandas(message=message, reason=reason)
-    
+
     @disable_logging
     def get_backend(self) -> str:
         """
@@ -329,7 +329,7 @@ class BaseQueryCompiler(
         """
         if isinstance(self, other_qc_type):
             return QCCoercionCost.COST_ZERO
-        return None    
+        return None
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for

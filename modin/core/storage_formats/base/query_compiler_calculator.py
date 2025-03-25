@@ -20,16 +20,22 @@ all query compilers to determine the best query compiler to use.
 """
 
 from typing import Union
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler, QCCoercionCost
+from modin.core.storage_formats.base.query_compiler import (
+    BaseQueryCompiler,
+    QCCoercionCost,
+)
+
 
 class AggregatedBackendData:
     """
     Contains information on Backends considered for computation.
     """
-    def __init__(self, backend, query_compiler:BaseQueryCompiler):
+
+    def __init__(self, backend, query_compiler: BaseQueryCompiler):
         self.backend = backend
         self.qc_cls = type(query_compiler)
         self.cost = 0
+
 
 class BackendCostCalculator:
     """
@@ -39,7 +45,7 @@ class BackendCostCalculator:
     which query compiler's backend would minimize the cost of casting
     or coercion. Use the aggregate sum of coercion to determine overall
     cost.
-    """        
+    """
 
     def __init__(self):
         self._backend_data = {}
@@ -84,26 +90,25 @@ class BackendCostCalculator:
             raise ValueError("No query compilers registered")
         if len(self._backend_data) == 0:
             return self._default_qc
-        
+
         # instance selection
         for qc_from in self._qc_list:
             qc_to_cls_costed = set()
             for qc_to in self._qc_list:
                 qc_cls_to = type(qc_to)
-                if not qc_cls_to in qc_to_cls_costed:
+                if qc_cls_to not in qc_to_cls_costed:
                     qc_to_cls_costed.add(qc_cls_to)
                     backend_to = qc_to.get_backend()
                     cost = qc_from.qc_engine_switch_cost(qc_cls_to)
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
-                        
+
         min_value = None
         for k, v in self._backend_data.items():
             if min_value is None or min_value > v.cost:
                 min_value = v.cost
                 self._result_backend = k
-            
-            
+
         return self._result_backend
 
     def _add_cost_data(self, backend, cost):
@@ -120,4 +125,3 @@ class BackendCostCalculator:
             self._backend_data[backend].cost += cost
         else:
             raise "No backend data for cost"
-

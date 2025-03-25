@@ -45,10 +45,8 @@ class CloudQC(NativeQueryCompiler):
 class ClusterQC(NativeQueryCompiler):
     "Represents a local network cluster query compiler"
 
-
     def get_backend(self):
         return "cluster"
-
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -63,10 +61,8 @@ class ClusterQC(NativeQueryCompiler):
 class LocalMachineQC(NativeQueryCompiler):
     "Represents a local machine query compiler"
 
-
     def get_backend(self):
         return "local_machine"
-
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -79,7 +75,6 @@ class LocalMachineQC(NativeQueryCompiler):
 
 class PicoQC(NativeQueryCompiler):
     "Represents a query compiler with very few resources"
-
 
     def get_backend(self):
         return "pico"
@@ -109,29 +104,34 @@ class AdversarialQC(NativeQueryCompiler):
 
 class DefaultQC(NativeQueryCompiler):
     "Represents a query compiler with no costing information"
+
     def get_backend(self):
         return "test_casting_default"
 
 
 class DefaultQC2(NativeQueryCompiler):
     "Represents a query compiler with no costing information, but different."
+
     def get_backend(self):
         return "test_casting_default_2"
+
 
 def register_backend(name, qc):
     class TestCasterIO(BaseIO):
         _should_warn_on_default_to_pandas: bool = False
         query_compiler_cls = qc
+
     class TestCasterFactory(BaseFactory):
         @classmethod
         def prepare(cls):
             cls.io_cls = TestCasterIO
-            
+
     factory_name = f"{name}OnNativeFactory"
     setattr(factories, factory_name, TestCasterFactory)
     Engine.add_option(name)
     Backend.register_backend(name, Execution(name, "Native"))
-  
+
+
 register_backend("pico", PicoQC)
 register_backend("cluster", ClusterQC)
 register_backend("cloud", CloudQC)
@@ -139,6 +139,7 @@ register_backend("local_machine", LocalMachineQC)
 register_backend("adversarial", AdversarialQC)
 register_backend("test_casting_default", DefaultQC)
 register_backend("test_casting_default_2", DefaultQC2)
+
 
 @pytest.fixture()
 def cloud_df():
@@ -282,6 +283,7 @@ def test_no_qc_data_to_calculate():
     calculator.add_query_compiler(ClusterQC)
     result = calculator.calculate()
     assert result is ClusterQC
+
 
 def test_no_qc_to_calculate():
     calculator = BackendCostCalculator()
