@@ -500,16 +500,30 @@ def _inherit_docstrings_in_place(
                 if attr in seen or (base, attr) in _attributes_with_docstrings_replaced:
                     continue
                 seen.add(attr)
-                # Try to get the attribute from the docs class first, then
-                # from the default parent (pandas), and if it's not in either,
-                # set `parent_obj` to `None`.
-                parent_obj = getattr(parent, attr, getattr(default_parent, attr, None))
-                if (
-                    parent_obj in excluded
-                    or not _documentable_obj(parent_obj)
-                    or not _documentable_obj(obj)
-                ):
-                    continue
+                if hasattr(obj, "_wrapped_superclass_method"):
+                    # If this method originally comes from a superclass, we get
+                    # docstrings directly from the wrapped superclass method
+                    # rather than inheriting docstrings from the usual parent.
+                    # For example, for BasePandasDataset and Series, the behavior is:
+                    # - If Series inherits a method from BasePandasDataset, then
+                    #   it gets the docstring from that method in BasePandasDataset.
+                    # - If Series overrides a method or defines its own method
+                    #   that's not present in BasePandasDataset, it follows the usual
+                    #   inheritance hierarchy of `parent` and `default_parent`.
+                    parent_obj = obj._wrapped_superclass_method
+                else:
+                    # Try to get the attribute from the docs class first, then
+                    # from the default parent (pandas), and if it's not in either,
+                    # set `parent_obj` to `None`.
+                    parent_obj = getattr(
+                        parent, attr, getattr(default_parent, attr, None)
+                    )
+                    if (
+                        parent_obj in excluded
+                        or not _documentable_obj(parent_obj)
+                        or not _documentable_obj(obj)
+                    ):
+                        continue
 
                 _replace_doc(
                     parent_obj,

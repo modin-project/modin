@@ -34,6 +34,10 @@ from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
 from modin.logging import disable_logging
+from modin.pandas.api.extensions.extensions import (
+    EXTENSION_DICT_TYPE,
+    wrap_class_methods_in_backend_dispatcher,
+)
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
@@ -42,7 +46,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseAccessor
-from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, _EXTENSION_NO_LOOKUP, BasePandasDataset, sentinel
 from .iterator import PartitionIterator
 from .series_utils import (
     CategoryMethods,
@@ -68,12 +72,13 @@ if TYPE_CHECKING:
     from .dataframe import DataFrame
 
 # Dictionary of extensions assigned to this class
-_SERIES_EXTENSIONS_ = {}
+_SERIES_EXTENSIONS_: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
 
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
+@wrap_class_methods_in_backend_dispatcher(extensions=_SERIES_EXTENSIONS_)
 class Series(BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
@@ -340,6 +345,32 @@ class Series(BasePandasDataset):
         return self.rfloordiv(right)
 
     @disable_logging
+    def __getattribute__(self, key: str) -> Any:
+        """
+        Get attribute identified by `key`.
+
+        Parameters
+        ----------
+        key : str
+            Key to get.
+
+        Returns
+        -------
+        Any
+            The attribute.
+        """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+        if key not in _EXTENSION_NO_LOOKUP:
+            extensions_result = self._getattribute__from_extension_impl(
+                key, _SERIES_EXTENSIONS_
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
+
+        return super().__getattribute__(key)
+
+    @disable_logging
     def __getattr__(self, key: Hashable) -> Any:
         """
         Return item identified by `key`.
@@ -358,10 +389,16 @@ class Series(BasePandasDataset):
         First try to use `__getattribute__` method. If it fails
         try to get `key` from `Series` fields.
         """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+        if key not in _EXTENSION_NO_LOOKUP:
+            extension = self._getattr__from_extension_impl(key, _SERIES_EXTENSIONS_)
+            if extension is not sentinel:
+                return extension
         try:
-            return _SERIES_EXTENSIONS_.get(key, object.__getattribute__(self, key))
+            return super().__getattr__(key)
         except AttributeError as err:
-            if key not in _ATTRS_NO_LOOKUP and key in self.index:
+            if key not in _ATTRS_NO_LOOKUP and key in self._query_compiler.index:
                 return self[key]
             raise err
 
@@ -507,6 +544,48 @@ class Series(BasePandasDataset):
             self._setitem_slice(key, value)
         else:
             self.loc[key] = value
+
+    @disable_logging
+    def __setattr__(self, name: str, value: Any) -> None:
+        """
+        Set attribute `name` to `value`.
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute to set.
+        value : Any
+            Value to set.
+
+        Returns
+        -------
+        None
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(name, _SERIES_EXTENSIONS_)
+        if extension is not sentinel and hasattr(extension, "__set__"):
+            return extension.__set__(self, value)
+        return super().__setattr__(name, value)
+
+    @disable_logging
+    def __delattr__(self, name) -> None:
+        """
+        Delete attribute `name`.
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute to delete.
+
+        Returns
+        -------
+        None
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(name, _SERIES_EXTENSIONS_)
+        if extension is not sentinel and hasattr(extension, "__delete__"):
+            return extension.__delete__(self)
+        return super().__delattr__(name)
 
     @_doc_binary_op(operation="subtraction", bin_op="sub")
     def __sub__(self, right) -> Series:
@@ -2803,5 +2882,6 @@ class Series(BasePandasDataset):
     move_to = set_backend
 
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    @disable_logging
     def get_backend(self) -> str:
         return super().get_backend()
