@@ -178,7 +178,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
                 return arg
             # TODO: Should use the factory dispatcher here to switch backends
             # TODO: handle the non-backend string approach
-            return FactoryDispatcher.from_pandas(current_qc.to_pandas(), calculator.calculate())
+            return FactoryDispatcher.from_pandas(arg.to_pandas(), calculator.calculate())
         if isinstance(current_qc, BaseQueryCompiler):
             visit_nested_args(kwargs, register_query_compilers)
             visit_nested_args(args, register_query_compilers)
@@ -188,9 +188,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
 
         result_backend = calculator.calculate()
         current_backend = args[0].get_backend()
-        #result_qc_type = calculator.calculate()
-        if "add" == obj.__name__:
-            breakpoint()
+
         if result_backend == current_backend:
             return obj(*args, **kwargs)
         # TODO: Should use the factory dispatcher here to switch backends
