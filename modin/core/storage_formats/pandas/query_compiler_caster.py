@@ -152,7 +152,6 @@ def apply_argument_cast(obj: Fn) -> Fn:
 
         # Import moved inside the function to avoid cyclic import
 
-
         current_qc = args[0]
         calculator = BackendCostCalculator()
         calculator.add_query_compiler(current_qc)
@@ -180,6 +179,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
             from modin.core.execution.dispatching.factories.dispatcher import (
                 FactoryDispatcher,
             )
+
             return FactoryDispatcher.from_pandas(
                 arg.to_pandas(), calculator.calculate()
             )
@@ -202,6 +202,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
         from modin.core.execution.dispatching.factories.dispatcher import (
             FactoryDispatcher,
         )
+
         new_qc = FactoryDispatcher.from_pandas(
             current_qc.to_pandas(), calculator.calculate()
         )
