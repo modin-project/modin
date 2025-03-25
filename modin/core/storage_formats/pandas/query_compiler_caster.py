@@ -174,8 +174,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
             qc_type = calculator.calculate()
             if qc_type is None or qc_type is type(arg):
                 return arg
-            # TODO: Should use the factory dispatcher here to switch backends
-            # TODO: handle the non-backend string approach
+
             from modin.core.execution.dispatching.factories.dispatcher import (
                 FactoryDispatcher,
             )
@@ -192,21 +191,33 @@ def apply_argument_cast(obj: Fn) -> Fn:
             kwargs = visit_nested_args(kwargs, cast_to_qc)
 
         result_backend = calculator.calculate()
-        current_backend = args[0].get_backend()
+        obj_or_cls = args[0]
+        if isinstance(obj_or_cls, type):
+            if isinstance(result_backend, str):
+                raise TypeError("Result backend is a string, but we expected a class")
+            # Currently we are executing a class method, get the same method on the new
+            # query compiler
+            if obj_or_cls == result_backend:
+                return obj(*args, **kwargs)
+            obj_new = getattr(obj_or_cls, obj.__name__)
+            return obj_new(*args, **kwargs)
+        else:
+            if isinstance(result_backend, type):
+                raise TypeError("Result backend is a class, but we expected a string")
 
-        if result_backend == current_backend:
-            return obj(*args, **kwargs)
-        # TODO: Should use the factory dispatcher here to switch backends
-        # TODO: handle the non-backend string approach
+            current_backend = obj_or_cls.get_backend()
 
-        from modin.core.execution.dispatching.factories.dispatcher import (
-            FactoryDispatcher,
-        )
+            if result_backend == current_backend:
+                return obj(*args, **kwargs)
 
-        new_qc = FactoryDispatcher.from_pandas(
-            current_qc.to_pandas(), calculator.calculate()
-        )
-        obj_new = getattr(new_qc, obj.__name__)
-        return obj_new(*args[1:], **kwargs)
+            from modin.core.execution.dispatching.factories.dispatcher import (
+                FactoryDispatcher,
+            )
+
+            new_qc = FactoryDispatcher.from_pandas(
+                current_qc.to_pandas(), result_backend
+            )
+            obj_new = getattr(new_qc, obj.__name__)
+            return obj_new(*args[1:], **kwargs)
 
     return cast_args
