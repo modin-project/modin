@@ -30,9 +30,15 @@ from modin.core.storage_formats.base.query_compiler import (
 class AggregatedBackendData:
     """
     Contains information on Backends considered for computation.
+    
+    Parameters
+    ----------
+    backend : str 
+        String representing the backend name.
+    query_compiler : QueryCompiler 
     """
 
-    def __init__(self, backend, query_compiler: BaseQueryCompiler):
+    def __init__(self, backend:str, query_compiler: BaseQueryCompiler):
         self.backend = backend
         self.qc_cls = type(query_compiler)
         self.cost = 0
@@ -118,7 +124,9 @@ class BackendCostCalculator:
 
         Parameters
         ----------
-        costs : dict
+        backend : str
+            String representing the backend for this engine.
+        cost : dict
             Dictionary of query compiler classes to costs.
         """
         if backend in self._backend_data.keys():
