@@ -28,7 +28,9 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
-from modin.utils import _inherit_docstrings
+from modin.utils import (
+    _inherit_docstrings,
+)
 
 _NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE = (
     "Modin dataframes and series using native execution do not have partitions."
