@@ -26,114 +26,12 @@ from typing import Any, Dict, Tuple, TypeVar
 
 from pandas.core.indexes.frozen import FrozenList
 
-from modin.core.storage_formats.base.query_compiler import (
-    BaseQueryCompiler,
-    QCCoercionCost,
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.base.query_compiler_calculator import (
+    BackendCostCalculator,
 )
 
 Fn = TypeVar("Fn", bound=Any)
-
-
-class QueryCompilerCasterCalculator:
-    """
-    Calculate which QueryCompiler should be used for an operation.
-
-    Given a set of QueryCompilers containing various data, determine
-    which query compiler's backend would minimize the cost of casting
-    or coercion. Use the aggregate sum of coercion to determine overall
-    cost.
-    """
-
-    def __init__(self):
-        self._compiler_class_to_cost = {}
-        self._compiler_class_to_data_class = {}
-        self._qc_list = []
-        self._qc_cls_set = set()
-        self._result_type = None
-
-    def add_query_compiler(self, query_compiler):
-        """
-        Add a query compiler to be considered for casting.
-
-        Parameters
-        ----------
-        query_compiler : QueryCompiler
-        """
-        if isinstance(query_compiler, type):
-            # class
-            qc_type = query_compiler
-        else:
-            # instance
-            qc_type = type(query_compiler)
-            self._qc_list.append(query_compiler)
-            self._compiler_class_to_data_class[qc_type] = type(
-                query_compiler._modin_frame
-            )
-        self._qc_cls_set.add(qc_type)
-
-    def calculate(self):
-        """
-        Calculate which query compiler we should cast to.
-
-        Returns
-        -------
-        type
-            QueryCompiler class which should be used for the operation.
-        """
-        if self._result_type is not None:
-            return self._result_type
-        if len(self._qc_cls_set) == 1:
-            return list(self._qc_cls_set)[0]
-        if len(self._qc_cls_set) == 0:
-            raise ValueError("No query compilers registered")
-
-        for qc_from in self._qc_list:
-            for qc_cls_to in self._qc_cls_set:
-                cost = qc_from.qc_engine_switch_cost(qc_cls_to)
-                if cost is not None:
-                    self._add_cost_data({qc_cls_to: cost})
-            self._add_cost_data({type(qc_from): QCCoercionCost.COST_ZERO})
-        min_value = min(self._compiler_class_to_cost.values())
-        for key, value in self._compiler_class_to_cost.items():
-            if min_value == value:
-                self._result_type = key
-                break
-        return self._result_type
-
-    def _add_cost_data(self, costs: dict):
-        """
-        Add the cost data to the calculator.
-
-        Parameters
-        ----------
-        costs : dict
-            Dictionary of query compiler classes to costs.
-        """
-        for k, v in costs.items():
-            # filter out any extranious query compilers not in this operation
-            if k in self._qc_cls_set:
-                QCCoercionCost.validate_coersion_cost(v)
-                # Adds the costs associated with all coercions to a type, k
-                self._compiler_class_to_cost[k] = (
-                    v + self._compiler_class_to_cost[k]
-                    if k in self._compiler_class_to_cost
-                    else v
-                )
-
-    def result_data_cls(self):
-        """
-        Return the data frame associated with the calculated query compiler.
-
-        Returns
-        -------
-        DataFrame object
-            DataFrame object associated with the preferred query compiler.
-        """
-        qc_type = self.calculate()
-        if qc_type in self._compiler_class_to_data_class:
-            return self._compiler_class_to_data_class[qc_type]
-        else:
-            return None
 
 
 class QueryCompilerCaster:
@@ -217,6 +115,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
         for key in current_class_attrs:
             all_attrs[key] = current_class_attrs[key]
         all_attrs.pop("__abstractmethods__")
+        all_attrs.pop("get_backend")
         all_attrs.pop("__init__")
         all_attrs.pop("qc_engine_switch_cost")
         all_attrs.pop("from_pandas")
@@ -250,8 +149,9 @@ def apply_argument_cast(obj: Fn) -> Fn:
         """
         if len(args) == 0 and len(kwargs) == 0:
             return
+
         current_qc = args[0]
-        calculator = QueryCompilerCasterCalculator()
+        calculator = BackendCostCalculator()
         calculator.add_query_compiler(current_qc)
 
         def arg_needs_casting(arg):
@@ -272,9 +172,13 @@ def apply_argument_cast(obj: Fn) -> Fn:
             qc_type = calculator.calculate()
             if qc_type is None or qc_type is type(arg):
                 return arg
-            # TODO: Should use the factory dispatcher here to switch backends
-            return qc_type.from_pandas(
-                arg.to_pandas(), data_cls=calculator.result_data_cls()
+
+            from modin.core.execution.dispatching.factories.dispatcher import (
+                FactoryDispatcher,
+            )
+
+            return FactoryDispatcher.from_pandas(
+                arg.to_pandas(), calculator.calculate()
             )
 
         if isinstance(current_qc, BaseQueryCompiler):
@@ -284,24 +188,44 @@ def apply_argument_cast(obj: Fn) -> Fn:
             args = visit_nested_args(args, cast_to_qc)
             kwargs = visit_nested_args(kwargs, cast_to_qc)
 
-        result_qc_type = calculator.calculate()
+        result_backend = calculator.calculate()
+        obj_or_cls = args[0]
+        if isinstance(obj_or_cls, type):
+            # Currently we are executing on a class method
+            if isinstance(result_backend, str):
+                raise TypeError(
+                    "Result backend is a string, but we expected a class"
+                )  # pragma: no cover
+            # The preferred class has not changed;
+            if obj_or_cls == result_backend:
+                return obj(*args, **kwargs)
+            # The preferred class is different; get the replacement function
+            # There are no instances where this occurs, but if we add more class
+            # methods on DataFrame we can use the following lines to get the new
+            # function:
+            # > obj_new = getattr(obj_or_cls, obj.__name__)
+            # > return obj_new(*args, **kwargs)
+            raise NotImplementedError("Class methods on objects not supported")
+        else:
+            if isinstance(result_backend, type):
+                raise TypeError(
+                    "Result backend is a class, but we expected a string"
+                )  # pragma: no cover
 
-        if result_qc_type is None or result_qc_type is type(current_qc):
-            return obj(*args, **kwargs)
+            current_backend = obj_or_cls.get_backend()
 
-        # we need to cast current_qc to a new query compiler,
-        # then lookup the same function on the new query compiler
-        # we need to also drop the first argument to the original
-        # args since it references self on the original argument
-        # call
-        if result_qc_type != current_qc:
-            # TODO: Should use the factory dispatcher here to switch backends
-            new_qc = result_qc_type.from_pandas(
-                current_qc.to_pandas(), data_cls=calculator.result_data_cls()
+            if result_backend == current_backend:
+                return obj(*args, **kwargs)
+
+            # Import moved inside the function to avoid cyclic import
+            from modin.core.execution.dispatching.factories.dispatcher import (
+                FactoryDispatcher,
+            )
+
+            new_qc = FactoryDispatcher.from_pandas(
+                current_qc.to_pandas(), result_backend
             )
             obj_new = getattr(new_qc, obj.__name__)
             return obj_new(*args[1:], **kwargs)
-
-        return obj(*args, **kwargs)
 
     return cast_args

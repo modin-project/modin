@@ -31,7 +31,7 @@ import pandas.core.resample
 from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
 
-from modin.config import Backend, Execution
+from modin.config.envvars import Backend, Execution
 from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     CatDefault,
@@ -308,6 +308,7 @@ class BaseQueryCompiler(
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)
 
+    @disable_logging
     def qc_engine_switch_cost(self, other_qc_type: type) -> int:
         """
         Return the coercion costs of this qc to other_qc type.

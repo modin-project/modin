@@ -15,15 +15,22 @@ import pandas
 import pytest
 
 import modin.pandas as pd
+from modin.config.envvars import Backend, Engine, Execution
+from modin.core.execution.dispatching.factories import factories
+from modin.core.execution.dispatching.factories.factories import BaseFactory
+from modin.core.io.io import BaseIO
 from modin.core.storage_formats.base.query_compiler import QCCoercionCost
-from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
-from modin.core.storage_formats.pandas.query_compiler_caster import (
-    QueryCompilerCasterCalculator,
+from modin.core.storage_formats.base.query_compiler_calculator import (
+    BackendCostCalculator,
 )
+from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 
 
 class CloudQC(NativeQueryCompiler):
     "Represents a cloud-hosted query compiler"
+
+    def get_backend(self):
+        return "cloud"
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -38,6 +45,9 @@ class CloudQC(NativeQueryCompiler):
 class ClusterQC(NativeQueryCompiler):
     "Represents a local network cluster query compiler"
 
+    def get_backend(self):
+        return "cluster"
+
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
@@ -51,6 +61,9 @@ class ClusterQC(NativeQueryCompiler):
 class LocalMachineQC(NativeQueryCompiler):
     "Represents a local machine query compiler"
 
+    def get_backend(self):
+        return "local_machine"
+
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
@@ -62,6 +75,9 @@ class LocalMachineQC(NativeQueryCompiler):
 
 class PicoQC(NativeQueryCompiler):
     "Represents a query compiler with very few resources"
+
+    def get_backend(self):
+        return "pico"
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -75,6 +91,9 @@ class PicoQC(NativeQueryCompiler):
 class AdversarialQC(NativeQueryCompiler):
     "Represents a query compiler which returns non-sensical costs"
 
+    def get_backend(self):
+        return "adversarial"
+
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: -1000,
@@ -86,9 +105,40 @@ class AdversarialQC(NativeQueryCompiler):
 class DefaultQC(NativeQueryCompiler):
     "Represents a query compiler with no costing information"
 
+    def get_backend(self):
+        return "test_casting_default"
+
 
 class DefaultQC2(NativeQueryCompiler):
     "Represents a query compiler with no costing information, but different."
+
+    def get_backend(self):
+        return "test_casting_default_2"
+
+
+def register_backend(name, qc):
+    class TestCasterIO(BaseIO):
+        _should_warn_on_default_to_pandas: bool = False
+        query_compiler_cls = qc
+
+    class TestCasterFactory(BaseFactory):
+        @classmethod
+        def prepare(cls):
+            cls.io_cls = TestCasterIO
+
+    factory_name = f"{name}OnNativeFactory"
+    setattr(factories, factory_name, TestCasterFactory)
+    Engine.add_option(name)
+    Backend.register_backend(name, Execution(name, "Native"))
+
+
+register_backend("pico", PicoQC)
+register_backend("cluster", ClusterQC)
+register_backend("cloud", CloudQC)
+register_backend("local_machine", LocalMachineQC)
+register_backend("adversarial", AdversarialQC)
+register_backend("test_casting_default", DefaultQC)
+register_backend("test_casting_default_2", DefaultQC2)
 
 
 @pytest.fixture()
@@ -229,15 +279,14 @@ def test_default_to_caller(default_df, default2_df):
 
 
 def test_no_qc_data_to_calculate():
-    calculator = QueryCompilerCasterCalculator()
+    calculator = BackendCostCalculator()
     calculator.add_query_compiler(ClusterQC)
     result = calculator.calculate()
     assert result is ClusterQC
-    assert calculator.result_data_cls() is None
 
 
 def test_no_qc_to_calculate():
-    calculator = QueryCompilerCasterCalculator()
+    calculator = BackendCostCalculator()
     with pytest.raises(ValueError):
         calculator.calculate()
 
