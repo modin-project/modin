@@ -26,7 +26,6 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 
 
-
 class CloudQC(NativeQueryCompiler):
     "Represents a cloud-hosted query compiler"
 
