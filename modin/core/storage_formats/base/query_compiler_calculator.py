@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains ``QueryCompilerCostCalculator`` class.
+Module contains ``BackendCostCalculator`` class.
 
-``QueryCompilerCostCalculator`` is used to determine the casting cost
+``BackendCostCalculator`` is used to determine the casting cost
 between a set of different backends. It aggregates the cost across
 all query compilers to determine the best query compiler to use.
 """
