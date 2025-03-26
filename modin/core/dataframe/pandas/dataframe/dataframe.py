@@ -4717,6 +4717,12 @@ class PandasDataframe(
                     # into the internal ones
                     df = df.set_axis(axis=axis, labels=external_index, copy=False)
 
+        # Hacky way to coerce the output to the correct type for booleans which might
+        # contain NA
+        if len(df.columns) and self.has_materialized_dtypes:
+            for col in self.dtypes.index:
+                if df.dtypes[col] != self.dtypes[col] and self.dtypes[col] == np.dtype('bool'):
+                    df[col] = df[col].replace(1.0, True).replace(0.0, False)   
         return df
 
     def to_numpy(self, **kwargs):
