@@ -207,7 +207,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
             # function:
             # > obj_new = getattr(obj_or_cls, obj.__name__)
             # > return obj_new(*args, **kwargs)
-            raise NotImplemented("Class methods on objects not supported")
+            raise NotImplementedError("Class methods on objects not supported")
         else:
             if isinstance(result_backend, type):
                 raise TypeError(
