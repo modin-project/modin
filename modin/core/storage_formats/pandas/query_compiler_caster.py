@@ -118,6 +118,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
         all_attrs.pop("get_backend")
         all_attrs.pop("__init__")
         all_attrs.pop("qc_engine_switch_cost")
+        all_attrs.pop("qc_engine_switch_max_cost")
         all_attrs.pop("from_pandas")
         for attr_name, attr_value in all_attrs.items():
             if isinstance(
