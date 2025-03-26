@@ -193,17 +193,26 @@ def apply_argument_cast(obj: Fn) -> Fn:
         result_backend = calculator.calculate()
         obj_or_cls = args[0]
         if isinstance(obj_or_cls, type):
+            # Currently we are executing on a class method
             if isinstance(result_backend, str):
-                raise TypeError("Result backend is a string, but we expected a class")
-            # Currently we are executing a class method, get the same method on the new
-            # query compiler
+                raise TypeError(
+                    "Result backend is a string, but we expected a class"
+                )  # pragma: no cover
+            # The preferred class has not changed;
             if obj_or_cls == result_backend:
                 return obj(*args, **kwargs)
-            obj_new = getattr(obj_or_cls, obj.__name__)
-            return obj_new(*args, **kwargs)
+            # The preferred class is different; get the replacement function
+            # There are no instances where this occurs, but if we add more class
+            # methods on DataFrame we can use the following lines to get the new
+            # function:
+            # > obj_new = getattr(obj_or_cls, obj.__name__)
+            # > return obj_new(*args, **kwargs)
+            raise NotImplemented("Class methods on objects not supported")
         else:
             if isinstance(result_backend, type):
-                raise TypeError("Result backend is a class, but we expected a string")
+                raise TypeError(
+                    "Result backend is a class, but we expected a string"
+                )  # pragma: no cover
 
             current_backend = obj_or_cls.get_backend()
 

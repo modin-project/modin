@@ -24,6 +24,7 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
+from modin.pandas.dataframe import DataFrame
 
 
 class CloudQC(NativeQueryCompiler):

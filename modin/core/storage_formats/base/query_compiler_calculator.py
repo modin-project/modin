@@ -129,8 +129,7 @@ class BackendCostCalculator:
         cost : dict
             Dictionary of query compiler classes to costs.
         """
-        if backend in self._backend_data.keys():
-            QCCoercionCost.validate_coersion_cost(cost)
-            self._backend_data[backend].cost += cost
-        else:
-            raise ValueError("No backend data available for cost optimization")
+        # We can assume that if we call this method, backend
+        # exists in the backend_data map
+        QCCoercionCost.validate_coersion_cost(cost)
+        self._backend_data[backend].cost += cost
