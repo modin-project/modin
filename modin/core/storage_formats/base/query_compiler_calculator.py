@@ -88,8 +88,9 @@ class BackendCostCalculator:
 
         Returns
         -------
-        type
-            QueryCompiler class which should be used for the operation.
+        Union[str, type[BaseQueryCompiler]]
+            A string representing a backend or, in the cases when we are executing
+            a class method, the QueryCompiler class which should be used for the operation.
         """
         if self._result_backend is not None:
             return self._result_backend

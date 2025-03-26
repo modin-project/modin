@@ -150,8 +150,6 @@ def apply_argument_cast(obj: Fn) -> Fn:
         if len(args) == 0 and len(kwargs) == 0:
             return
 
-        # Import moved inside the function to avoid cyclic import
-
         current_qc = args[0]
         calculator = BackendCostCalculator()
         calculator.add_query_compiler(current_qc)
@@ -219,6 +217,7 @@ def apply_argument_cast(obj: Fn) -> Fn:
             if result_backend == current_backend:
                 return obj(*args, **kwargs)
 
+            # Import moved inside the function to avoid cyclic import
             from modin.core.execution.dispatching.factories.dispatcher import (
                 FactoryDispatcher,
             )
