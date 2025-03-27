@@ -120,7 +120,7 @@ class BackendCostCalculator:
                 min_value = v.cost
                 self._result_backend = k
 
-        if self._result_backend == None:
+        if self._result_backend is None:
             raise ValueError(
                 "Cannot find an engine that can handle all the data required."
             )
