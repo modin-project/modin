@@ -122,7 +122,7 @@ class BackendCostCalculator:
 
         if self._result_backend is None:
             raise ValueError(
-                "Cannot find an engine that can handle all the data required."
+                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends [{','.join(self._backend_data.keys())}]"
             )
 
         return self._result_backend
