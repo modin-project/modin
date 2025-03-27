@@ -333,10 +333,10 @@ class BaseQueryCompiler(
 
     @disable_logging
     @classmethod
-    def qc_engine_switch_cost_from(cls, other_qc:BaseQueryCompiler) -> int:
+    def qc_engine_switch_cost_from(cls, other_qc: BaseQueryCompiler) -> int:
         """
         Return the coercion costs from other_qc to this qc type.
-        
+
         Values returned must be within the acceptable range of
         QCCoercionCost
 
