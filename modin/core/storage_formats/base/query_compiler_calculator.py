@@ -19,6 +19,7 @@ between a set of different backends. It aggregates the cost across
 all query compilers to determine the best query compiler to use.
 """
 
+import logging
 from typing import Union
 
 from modin.core.storage_formats.base.query_compiler import (
@@ -118,7 +119,6 @@ class BackendCostCalculator:
                         cost = qc_cls_to.qc_engine_switch_cost_from(qc_from)
                         if cost is not None:
                             self._add_cost_data(backend_to, cost)
-                    
 
         min_value = None
         for k, v in self._backend_data.items():
@@ -131,6 +131,11 @@ class BackendCostCalculator:
         if self._result_backend is None:
             raise ValueError(
                 f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
+            )
+
+        if len(self._backend_data) > 1:
+            logging.info(
+                f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
             )
 
         return self._result_backend
@@ -150,3 +155,9 @@ class BackendCostCalculator:
         # exists in the backend_data map
         QCCoercionCost.validate_coersion_cost(cost)
         self._backend_data[backend].cost += cost
+
+    def _calc_result_log(self, selected):
+        return ",".join(
+            f"{'*'+k if k is selected else k}:{v.cost}/{v.max_cost}"
+            for k, v in self._backend_data.items()
+        )
