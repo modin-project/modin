@@ -111,6 +111,14 @@ class BackendCostCalculator:
                     cost = qc_from.qc_engine_switch_cost(qc_cls_to)
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
+                    else:
+                        # We have some information asymmetry in query compilers,
+                        # qc_from does not know about qc_to types so we instead
+                        # ask the same question but of qc_to.
+                        cost = qc_cls_to.qc_engine_switch_cost_from(qc_from)
+                        if cost is not None:
+                            self._add_cost_data(backend_to, cost)
+                    
 
         min_value = None
         for k, v in self._backend_data.items():
