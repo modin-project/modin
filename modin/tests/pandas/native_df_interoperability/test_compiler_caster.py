@@ -224,7 +224,7 @@ def test_mixed_dfs(df1, df2, df3, df4, result_type, request):
     df2 = request.getfixturevalue(df2)
     df3 = request.getfixturevalue(df3)
     df4 = request.getfixturevalue(df4)
-    if result_type == None:
+    if result_type is None:
         with pytest.raises(ValueError):
             df1.concat(axis=1, other=[df2, df3, df4])
         return
