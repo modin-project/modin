@@ -204,7 +204,7 @@ def test_two_qc_types_lhs(pico_df, cluster_df):
 
 
 def test_no_solution(pico_df, local_df, cluster_df, cloud_df):
-    with pytest.raises(ValueError, match=r'pico,local_machine,cluster,cloud'):
+    with pytest.raises(ValueError, match=r"pico,local_machine,cluster,cloud"):
         pico_df.concat(axis=1, other=[local_df, cluster_df, cloud_df])
 
 
