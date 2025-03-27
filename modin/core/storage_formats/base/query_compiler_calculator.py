@@ -156,7 +156,7 @@ class BackendCostCalculator:
         QCCoercionCost.validate_coersion_cost(cost)
         self._backend_data[backend].cost += cost
 
-    def _calc_result_log(self, selected_backend: str):
+    def _calc_result_log(self, selected_backend: str) -> str:
         """
         Create a string summary of the backend costs.
 
@@ -171,12 +171,12 @@ class BackendCostCalculator:
         ----------
         selected_backend : str
             String representing the backend selected by
-            the calculator
+            the calculator.
 
         Returns
         -------
         str
-            string representation of calculator state
+            String representation of calculator state.
         """
         return ",".join(
             f"{'*'+k if k is selected_backend else k}:{v.cost}/{v.max_cost}"
