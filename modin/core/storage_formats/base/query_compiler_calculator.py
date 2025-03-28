@@ -42,6 +42,7 @@ class AggregatedBackendData:
         self.backend = backend
         self.qc_cls = type(query_compiler)
         self.cost = 0
+        self.max_cost = query_compiler.qc_engine_switch_max_cost()
 
 
 class BackendCostCalculator:
@@ -113,9 +114,16 @@ class BackendCostCalculator:
 
         min_value = None
         for k, v in self._backend_data.items():
+            if v.cost > v.max_cost:
+                continue
             if min_value is None or min_value > v.cost:
                 min_value = v.cost
                 self._result_backend = k
+
+        if self._result_backend is None:
+            raise ValueError(
+                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
+            )
 
         return self._result_backend
 

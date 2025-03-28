@@ -331,6 +331,18 @@ class BaseQueryCompiler(
             return QCCoercionCost.COST_ZERO
         return None
 
+    @disable_logging
+    def qc_engine_switch_max_cost(self) -> int:
+        """
+        Return the max coercion cost allowed for switching to this engine.
+
+        Returns
+        -------
+        int
+            Max cost allowed for migrating the data to this qc.
+        """
+        return QCCoercionCost.COST_IMPOSSIBLE
+
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are

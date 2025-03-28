@@ -32,6 +32,9 @@ class CloudQC(NativeQueryCompiler):
     def get_backend(self):
         return "cloud"
 
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_IMPOSSIBLE
+
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
@@ -47,6 +50,9 @@ class ClusterQC(NativeQueryCompiler):
 
     def get_backend(self):
         return "cluster"
+
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_HIGH
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -64,6 +70,9 @@ class LocalMachineQC(NativeQueryCompiler):
     def get_backend(self):
         return "local_machine"
 
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_MEDIUM
+
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
@@ -78,6 +87,9 @@ class PicoQC(NativeQueryCompiler):
 
     def get_backend(self):
         return "pico"
+
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_LOW
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -191,6 +203,11 @@ def test_two_qc_types_lhs(pico_df, cluster_df):
     assert type(df3) is type(cluster_df)  # should move to cluster
 
 
+def test_no_solution(pico_df, local_df, cluster_df, cloud_df):
+    with pytest.raises(ValueError, match=r"pico,local_machine,cluster,cloud"):
+        pico_df.concat(axis=1, other=[local_df, cluster_df, cloud_df])
+
+
 @pytest.mark.parametrize(
     "df1, df2, df3, df4, result_type",
     [
@@ -198,12 +215,13 @@ def test_two_qc_types_lhs(pico_df, cluster_df):
         ("cloud_df", "cloud_df", "cloud_df", "cloud_df", CloudQC),
         # moving all dfs to cloud is 1250, moving to cluster is 1000
         # regardless of how they are ordered
-        ("pico_df", "local_df", "cluster_df", "cloud_df", ClusterQC),
-        ("cloud_df", "local_df", "cluster_df", "pico_df", ClusterQC),
-        ("cloud_df", "cluster_df", "local_df", "pico_df", ClusterQC),
+        ("pico_df", "local_df", "cluster_df", "cloud_df", None),
+        ("cloud_df", "local_df", "cluster_df", "pico_df", None),
+        ("cloud_df", "cluster_df", "local_df", "pico_df", None),
         ("cloud_df", "cloud_df", "local_df", "pico_df", CloudQC),
         # Still move everything to cloud
         ("pico_df", "pico_df", "pico_df", "cloud_df", CloudQC),
+        ("pico_df", "pico_df", "local_df", "cloud_df", CloudQC),
     ],
 )
 def test_mixed_dfs(df1, df2, df3, df4, result_type, request):
@@ -211,17 +229,12 @@ def test_mixed_dfs(df1, df2, df3, df4, result_type, request):
     df2 = request.getfixturevalue(df2)
     df3 = request.getfixturevalue(df3)
     df4 = request.getfixturevalue(df4)
+    if result_type is None:
+        with pytest.raises(ValueError):
+            df1.concat(axis=1, other=[df2, df3, df4])
+        return
     result = df1.concat(axis=1, other=[df2, df3, df4])
     assert type(result) is result_type
-
-
-# This currently passes because we have no "max cost" associated
-# with a particular QC, so we would move all data to the PicoQC
-# As soon as we can represent "max-cost" the result of this operation
-# should be to move all dfs to the CloudQC
-def test_extreme_pico(pico_df, cloud_df):
-    result = cloud_df.concat(axis=1, other=[pico_df] * 7)
-    assert type(result) is PicoQC
 
 
 def test_call_on_non_qc(pico_df, cloud_df):
