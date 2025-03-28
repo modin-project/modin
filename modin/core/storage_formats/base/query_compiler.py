@@ -332,7 +332,6 @@ class BaseQueryCompiler(
         return None
 
     @disable_logging
-    @abc.abstractmethod
     def qc_engine_switch_max_cost(self) -> int:
         """
         Return the max coercion cost allowed for switching to this engine.
