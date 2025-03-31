@@ -15,6 +15,7 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
+from pytest import param
 
 import modin.pandas as pd
 from modin.config import NPartitions
@@ -205,7 +206,40 @@ def test_join_cross_6786(df_mode_pair):
         ),
     ],
 )
-def test_merge(test_data, test_data2, df_mode_pair):
+@pytest.mark.parametrize(
+    "merge_with_on, merge_with_left_on_right_on",
+    [
+        param(
+            lambda df1, df2, *, lib, how, sort, on=None: df1.merge(
+                df2, how=how, on=on, sort=sort
+            ),
+            lambda df1, df2, *, lib, how, sort: df1.merge(
+                df2, how=how, left_on="key", right_on="key", sort=sort
+            ),
+            id="merge_with_dataframe_method",
+        ),
+        param(
+            lambda df1, df2, *, lib, how, sort, on=None: lib.merge(
+                df1,
+                df2,
+                how=how,
+                on=on,
+                sort=sort,
+            ),
+            lambda df1, df2, *, lib, how, sort: lib.merge(
+                df1, df2, how=how, left_on="key", right_on="key", sort=sort
+            ),
+            id="merge_with_general_function",
+        ),
+    ],
+)
+def test_merge(
+    test_data,
+    test_data2,
+    df_mode_pair,
+    merge_with_on,
+    merge_with_left_on_right_on,
+):
     modin_df, pandas_df = create_test_df_in_defined_mode(
         test_data,
         columns=["col{}".format(i) for i in range(test_data.shape[1])],
@@ -224,28 +258,20 @@ def test_merge(test_data, test_data2, df_mode_pair):
     assert len(ons) == len(sorts), "the loop below is designed for this condition"
     for i in range(len(hows)):
         for j in range(len(ons)):
-            modin_result = modin_df.merge(
-                modin_df2, how=hows[i], on=ons[j], sort=sorts[j]
+            modin_result = merge_with_on(
+                modin_df, modin_df2, how=hows[i], on=ons[j], sort=sorts[j], lib=pd
             )
-            pandas_result = pandas_df.merge(
-                pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
+            pandas_result = merge_with_on(
+                pandas_df, pandas_df2, how=hows[i], on=ons[j], sort=sorts[j], lib=pandas
             )
             # FIXME: https://github.com/modin-project/modin/issues/2246
             df_equals_and_sort(modin_result, pandas_result)
 
-            modin_result = modin_df.merge(
-                modin_df2,
-                how=hows[i],
-                left_on="key",
-                right_on="key",
-                sort=sorts[j],
+            modin_result = merge_with_left_on_right_on(
+                modin_df, modin_df2, how=hows[i], sort=sorts[j], lib=pd
             )
-            pandas_result = pandas_df.merge(
-                pandas_df2,
-                how=hows[i],
-                left_on="key",
-                right_on="key",
-                sort=sorts[j],
+            pandas_result = merge_with_left_on_right_on(
+                pandas_df, pandas_df2, how=hows[i], sort=sorts[j], lib=pandas
             )
             # FIXME: https://github.com/modin-project/modin/issues/2246
             df_equals_and_sort(modin_result, pandas_result)
