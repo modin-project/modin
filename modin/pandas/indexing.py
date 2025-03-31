@@ -40,8 +40,11 @@ from pandas.api.types import is_bool, is_list_like
 from pandas.core.dtypes.common import is_bool_dtype, is_integer, is_integer_dtype
 from pandas.core.indexing import IndexingError
 
+from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.error_message import ErrorMessage
-from modin.logging import ClassLogger
+from modin.logging import ClassLogger, disable_logging
+from modin.pandas.api.extensions.extensions import EXTENSION_DICT_TYPE
+from modin.utils import _inherit_docstrings
 
 from .dataframe import DataFrame
 from .series import Series
@@ -273,7 +276,7 @@ def _compute_ndim(row_loc, col_loc):
     return ndim
 
 
-class _LocationIndexerBase(ClassLogger):
+class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
     """
     Base class for location indexer like loc and iloc.
 
@@ -285,6 +288,29 @@ class _LocationIndexerBase(ClassLogger):
 
     df: Union[DataFrame, Series]
     qc: BaseQueryCompiler
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster.set_backend)
+    def set_backend(self, backend):
+        return type(self)(self.df.set_backend(backend))
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
+    def _get_query_compiler(self):
+        return self.qc
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster.get_backend)
+    def get_backend(self):
+        return self.qc.get_backend()
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster._copy_into)
+    def _copy_into(self, other: Series):
+        other.qc = self.df._query_compiler
+        other.df._update_inplace(new_query_compiler=self.df._query_compiler)
+        return None
 
     def __init__(self, modin_df: Union[DataFrame, Series]):
         self.df = modin_df
@@ -624,6 +650,8 @@ class _LocIndexer(_LocationIndexerBase):
     modin_df : Union[DataFrame, Series]
         DataFrame to operate on.
     """
+
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     def __getitem__(self, key):
         """
@@ -979,6 +1007,8 @@ class _iLocIndexer(_LocationIndexerBase):
     modin_df : Union[DataFrame, Series]
         DataFrame to operate on.
     """
+
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     def __getitem__(self, key):
         """

@@ -69,7 +69,6 @@ from modin.core.dataframe.pandas.metadata import (
     extract_dtype,
 )
 from modin.core.storage_formats import BaseQueryCompiler
-from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.error_message import ErrorMessage
 from modin.logging import get_logger
 from modin.utils import (
@@ -277,7 +276,7 @@ def _series_logical_binop(func):
 
 
 @_inherit_docstrings(BaseQueryCompiler)
-class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
+class PandasQueryCompiler(BaseQueryCompiler):
     """
     Query compiler for the pandas storage format.
 

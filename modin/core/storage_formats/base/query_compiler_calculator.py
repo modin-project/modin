@@ -19,8 +19,6 @@ between a set of different backends. It aggregates the cost across
 all query compilers to determine the best query compiler to use.
 """
 
-from typing import Union
-
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
@@ -58,10 +56,9 @@ class BackendCostCalculator:
     def __init__(self):
         self._backend_data = {}
         self._qc_list = []
-        self._default_qc = None
         self._result_backend = None
 
-    def add_query_compiler(self, query_compiler):
+    def add_query_compiler(self, query_compiler: BaseQueryCompiler):
         """
         Add a query compiler to be considered for casting.
 
@@ -69,36 +66,24 @@ class BackendCostCalculator:
         ----------
         query_compiler : QueryCompiler
         """
-        if isinstance(query_compiler, type):
-            # class, no data
-            qc_type = query_compiler
-        else:
-            # instance
-            qc_type = type(query_compiler)
-            self._qc_list.append(query_compiler)
-            backend = query_compiler.get_backend()
-            backend_data = AggregatedBackendData(backend, query_compiler)
-            self._backend_data[backend] = backend_data
-        # TODO: Handle the case where we have a class method and an instance argument of different
-        # backends.
-        self._default_qc = qc_type
+        self._qc_list.append(query_compiler)
+        backend = query_compiler.get_backend()
+        backend_data = AggregatedBackendData(backend, query_compiler)
+        self._backend_data[backend] = backend_data
 
-    def calculate(self) -> Union[str, type[BaseQueryCompiler]]:
+    def calculate(self) -> str:
         """
         Calculate which query compiler we should cast to.
 
         Returns
         -------
-        Union[str, type[BaseQueryCompiler]]
-            A string representing a backend or, in the cases when we are executing
-            a class method, the QueryCompiler class which should be used for the operation.
+        str
+            A string representing a backend
         """
         if self._result_backend is not None:
             return self._result_backend
-        if self._default_qc is None:
+        if len(self._qc_list) == 0:
             raise ValueError("No query compilers registered")
-        if len(self._backend_data) == 0:
-            return self._default_qc
 
         # instance selection
         for qc_from in self._qc_list:

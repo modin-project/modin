@@ -76,15 +76,18 @@ from pandas.util._validators import (
 
 from modin import pandas as pd
 from modin.config import Backend
+from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
-from modin.pandas.api.extensions.extensions import (
-    EXTENSION_DICT_TYPE,
-    wrap_class_methods_in_backend_dispatcher,
-)
+from modin.pandas.api.extensions.extensions import EXTENSION_DICT_TYPE
 from modin.pandas.utils import GET_BACKEND_DOC, SET_BACKEND_DOC, is_scalar
-from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
+from modin.utils import (
+    _inherit_docstrings,
+    expanduser_path_arg,
+    sentinel,
+    try_cast_to_pandas,
+)
 
 from .utils import _doc_binary_op, is_full_grab_slice
 
@@ -99,9 +102,6 @@ if TYPE_CHECKING:
     from .series import Series
     from .window import Expanding, Rolling, Window
 
-# Similar to pandas, sentinel value to use as kwarg in place of None when None has
-# special meaning and needs to be distinguished from a user explicitly passing None.
-sentinel = object()
 
 # Do not look up these attributes when searching for extensions. We use them
 # to implement the extension lookup itself.
@@ -111,6 +111,8 @@ _EXTENSION_NO_LOOKUP = {
     "get_backend",
     "_getattribute__from_extension_impl",
     "_getattr__from_extension_impl",
+    "_get_query_compiler",
+    "set_backend",
 }
 
 # Do not lookup certain attributes in columns or index, as they're used for some
@@ -212,12 +214,8 @@ def _get_repr_axis_label_indexer(labels, num_for_repr):
     )
 
 
-_BASE_EXTENSIONS: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
-
-
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-@wrap_class_methods_in_backend_dispatcher(extensions=_BASE_EXTENSIONS)
-class BasePandasDataset(ClassLogger):
+class BasePandasDataset(QueryCompilerCaster, ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -231,6 +229,8 @@ class BasePandasDataset(ClassLogger):
     _pandas_class = pandas.core.generic.NDFrame
     _query_compiler: BaseQueryCompiler
     _siblings: list[BasePandasDataset]
+
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     @cached_property
     def _is_dataframe(self) -> bool:
@@ -4352,7 +4352,7 @@ class BasePandasDataset(ClassLogger):
 
         if item not in _EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
-                item, _BASE_EXTENSIONS
+                item, __class__._extensions
             )
             if extensions_result is not sentinel:
                 return extensions_result
@@ -4388,7 +4388,7 @@ class BasePandasDataset(ClassLogger):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
         if item not in _EXTENSION_NO_LOOKUP:
-            extension = self._getattr__from_extension_impl(item, _BASE_EXTENSIONS)
+            extension = self._getattr__from_extension_impl(item, __class__._extensions)
             if extension is not sentinel:
                 return extension
         return object.__getattribute__(self, item)
@@ -4534,7 +4534,7 @@ class BasePandasDataset(ClassLogger):
         None
         """
         # An extension property is only accessible if the backend supports it.
-        extension = self._get_extension(key, _BASE_EXTENSIONS)
+        extension = self._get_extension(key, __class__._extensions)
         if extension is not sentinel and hasattr(extension, "__set__"):
             return extension.__set__(self, value)
         return super().__setattr__(key, value)
@@ -4554,7 +4554,7 @@ class BasePandasDataset(ClassLogger):
         None
         """
         # An extension property is only accessible if the backend supports it.
-        extension = self._get_extension(name, _BASE_EXTENSIONS)
+        extension = self._get_extension(name, __class__._extensions)
         if extension is not sentinel and hasattr(extension, "__delete__"):
             return extension.__delete__(self)
         return super().__delattr__(name)
@@ -4629,3 +4629,8 @@ class BasePandasDataset(ClassLogger):
             assert not callable(extension)
             return extension
         return sentinel
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster._copy_into)
+    def _get_query_compiler(self):
+        return self._query_compiler

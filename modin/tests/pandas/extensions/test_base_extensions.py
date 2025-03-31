@@ -17,7 +17,6 @@ import pytest
 
 import modin.pandas as pd
 from modin.pandas.api.extensions import register_base_accessor
-from modin.pandas.api.extensions.extensions import _NON_EXTENDABLE_ATTRIBUTES
 from modin.tests.pandas.utils import df_equals
 
 
@@ -269,10 +268,13 @@ def test_deleting_extension_that_is_not_property_raises_attribute_error(
         delattr(modin_object, method_name)
 
 
-@pytest.mark.parametrize("name", _NON_EXTENDABLE_ATTRIBUTES)
-def test_disallowed_extensions(Backend1, name):
+def test_disallowed_extensions(Backend1, non_extendable_attribute_name):
     with pytest.raises(
         ValueError,
-        match=re.escape(f"Cannot register an extension with the reserved name {name}."),
+        match=re.escape(
+            f"Cannot register an extension with the reserved name {non_extendable_attribute_name}."
+        ),
     ):
-        register_base_accessor(name=name, backend=Backend1)("unused_value")
+        register_base_accessor(name=non_extendable_attribute_name, backend=Backend1)(
+            "unused_value"
+        )

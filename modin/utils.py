@@ -51,6 +51,10 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 from modin._version import get_versions
 from modin.config import DocModule, Engine, StorageFormat
 
+# Similar to pandas, sentinel value to use as kwarg in place of None when None has
+# special meaning and needs to be distinguished from a user explicitly passing None.
+sentinel = object()
+
 T = TypeVar("T")
 """Generic type parameter"""
 
