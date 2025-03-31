@@ -78,7 +78,7 @@ class BackendCostCalculator:
         Returns
         -------
         str
-            A string representing a backend
+            A string representing a backend.
         """
         if self._result_backend is not None:
             return self._result_backend
