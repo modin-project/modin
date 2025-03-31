@@ -1758,7 +1758,7 @@ class PandasDataframe(
 
         else:
             # Assume that the dtype is a scalar.
-            if not (col_dtypes == self_dtypes).all():
+            if not (self_dtypes == col_dtypes).all():
                 new_dtypes = self_dtypes.copy()
                 new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
                 if self.engine == "Dask" and hasattr(new_dtype, "_is_materialized"):
