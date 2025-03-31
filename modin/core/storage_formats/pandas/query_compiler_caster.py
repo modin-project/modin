@@ -104,7 +104,7 @@ class QueryCompilerCaster(ABC):
         Returns
         -------
         str
-            The backend of this object.
+            The backend of this object. The backend name must be title-cased.
         """
         pass
 
