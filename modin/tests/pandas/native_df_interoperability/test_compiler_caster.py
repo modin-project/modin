@@ -24,13 +24,14 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
+from modin.tests.pandas.utils import df_equals
 
 
 class CloudQC(NativeQueryCompiler):
     "Represents a cloud-hosted query compiler"
 
     def get_backend(self):
-        return "cloud"
+        return "Cloud"
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE
@@ -49,7 +50,7 @@ class ClusterQC(NativeQueryCompiler):
     "Represents a local network cluster query compiler"
 
     def get_backend(self):
-        return "cluster"
+        return "Cluster"
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_HIGH
@@ -68,7 +69,7 @@ class LocalMachineQC(NativeQueryCompiler):
     "Represents a local machine query compiler"
 
     def get_backend(self):
-        return "local_machine"
+        return "Local_machine"
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_MEDIUM
@@ -86,7 +87,7 @@ class PicoQC(NativeQueryCompiler):
     "Represents a query compiler with very few resources"
 
     def get_backend(self):
-        return "pico"
+        return "Pico"
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_LOW
@@ -104,7 +105,7 @@ class AdversarialQC(NativeQueryCompiler):
     "Represents a query compiler which returns non-sensical costs"
 
     def get_backend(self):
-        return "adversarial"
+        return "Adversarial"
 
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
@@ -118,14 +119,14 @@ class DefaultQC(NativeQueryCompiler):
     "Represents a query compiler with no costing information"
 
     def get_backend(self):
-        return "test_casting_default"
+        return "Test_casting_default"
 
 
 class DefaultQC2(NativeQueryCompiler):
     "Represents a query compiler with no costing information, but different."
 
     def get_backend(self):
-        return "test_casting_default_2"
+        return "Test_casting_default_2"
 
 
 def register_backend(name, qc):
@@ -144,158 +145,159 @@ def register_backend(name, qc):
     Backend.register_backend(name, Execution(name, "Native"))
 
 
-register_backend("pico", PicoQC)
-register_backend("cluster", ClusterQC)
-register_backend("cloud", CloudQC)
-register_backend("local_machine", LocalMachineQC)
-register_backend("adversarial", AdversarialQC)
-register_backend("test_casting_default", DefaultQC)
-register_backend("test_casting_default_2", DefaultQC2)
+register_backend("Pico", PicoQC)
+register_backend("Cluster", ClusterQC)
+register_backend("Cloud", CloudQC)
+register_backend("Local_machine", LocalMachineQC)
+register_backend("Adversarial", AdversarialQC)
+register_backend("Test_casting_default", DefaultQC)
+register_backend("Test_casting_default_2", DefaultQC2)
 
 
 @pytest.fixture()
 def cloud_df():
-    return CloudQC(pandas.DataFrame([0, 1, 2]))
+    return pd.DataFrame(query_compiler=CloudQC(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
 def cluster_df():
-    return ClusterQC(pandas.DataFrame([0, 1, 2]))
+    return pd.DataFrame(query_compiler=ClusterQC(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
 def local_df():
-    return LocalMachineQC(pandas.DataFrame([0, 1, 2]))
+    return pd.DataFrame(query_compiler=LocalMachineQC(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
 def pico_df():
-    return PicoQC(pandas.DataFrame([0, 1, 2]))
+    return pd.DataFrame(query_compiler=PicoQC(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
 def adversarial_df():
-    return AdversarialQC(pandas.DataFrame([0, 1, 2]))
+    return pd.DataFrame(query_compiler=AdversarialQC(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
 def default_df():
-    return DefaultQC(pandas.DataFrame([0, 1, 2]))
+    return pd.DataFrame(query_compiler=DefaultQC(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
 def default2_df():
-    return DefaultQC2(pandas.DataFrame([0, 1, 2]))
+    return pd.DataFrame(query_compiler=DefaultQC2(pandas.DataFrame([0, 1, 2])))
 
 
-def test_two_same_qc_types_noop(pico_df):
-    df3 = pico_df.concat(axis=1, other=pico_df)
-    assert type(df3) is type(pico_df)
+def test_two_same_backend(pico_df):
+    df3 = pd.concat([pico_df, pico_df], axis=1)
+    assert pico_df.get_backend() == "Pico"
+    assert df3.get_backend() == "Pico"
 
 
-def test_two_qc_types_rhs(pico_df, cluster_df):
-    df3 = pico_df.concat(axis=1, other=cluster_df)
-    assert type(df3) is type(cluster_df)  # should move to cluster
+def test_cast_to_second_backend(pico_df, cluster_df):
+    df3 = pd.concat([pico_df, cluster_df], axis=1)
+    assert pico_df.get_backend() == "Pico"
+    assert cluster_df.get_backend() == "Cluster"
+    assert df3.get_backend() == "Cluster"  # result should be on cluster
 
 
-def test_two_qc_types_lhs(pico_df, cluster_df):
-    df3 = cluster_df.concat(axis=1, other=pico_df)
-    assert type(df3) is type(cluster_df)  # should move to cluster
+def test_cast_to_first_backend(pico_df, cluster_df):
+    df3 = pd.concat([cluster_df, pico_df], axis=1)
+    assert pico_df.get_backend() == "Pico"
+    assert cluster_df.get_backend() == "Cluster"
+    assert df3.get_backend() == cluster_df.get_backend()  # result should be on cluster
 
 
 def test_no_solution(pico_df, local_df, cluster_df, cloud_df):
-    with pytest.raises(ValueError, match=r"pico,local_machine,cluster,cloud"):
-        pico_df.concat(axis=1, other=[local_df, cluster_df, cloud_df])
+    with pytest.raises(ValueError, match=r"Pico,Local_machine,Cluster,Cloud"):
+        pd.concat(axis=1, objs=[pico_df, local_df, cluster_df, cloud_df])
 
 
 @pytest.mark.parametrize(
-    "df1, df2, df3, df4, result_type",
+    "df1, df2, df3, df4, expected_result_backend",
     [
         # no-op
-        ("cloud_df", "cloud_df", "cloud_df", "cloud_df", CloudQC),
+        ("cloud_df", "cloud_df", "cloud_df", "cloud_df", "Cloud"),
         # moving all dfs to cloud is 1250, moving to cluster is 1000
         # regardless of how they are ordered
         ("pico_df", "local_df", "cluster_df", "cloud_df", None),
         ("cloud_df", "local_df", "cluster_df", "pico_df", None),
         ("cloud_df", "cluster_df", "local_df", "pico_df", None),
-        ("cloud_df", "cloud_df", "local_df", "pico_df", CloudQC),
+        ("cloud_df", "cloud_df", "local_df", "pico_df", "Cloud"),
         # Still move everything to cloud
-        ("pico_df", "pico_df", "pico_df", "cloud_df", CloudQC),
-        ("pico_df", "pico_df", "local_df", "cloud_df", CloudQC),
+        ("pico_df", "pico_df", "pico_df", "cloud_df", "Cloud"),
+        ("pico_df", "pico_df", "local_df", "cloud_df", "Cloud"),
     ],
 )
-def test_mixed_dfs(df1, df2, df3, df4, result_type, request):
+def test_mixed_dfs(df1, df2, df3, df4, expected_result_backend, request):
     df1 = request.getfixturevalue(df1)
     df2 = request.getfixturevalue(df2)
     df3 = request.getfixturevalue(df3)
     df4 = request.getfixturevalue(df4)
-    if result_type is None:
+    if expected_result_backend is None:
         with pytest.raises(ValueError):
-            df1.concat(axis=1, other=[df2, df3, df4])
-        return
-    result = df1.concat(axis=1, other=[df2, df3, df4])
-    assert type(result) is result_type
-
-
-def test_call_on_non_qc(pico_df, cloud_df):
-    pico_df1 = pd.DataFrame(query_compiler=pico_df)
-    cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
-
-    df1 = pd.concat([pico_df1, cloud_df1])
-    assert type(df1._query_compiler) is CloudQC
+            pd.concat(axis=1, objs=[df1, df2, df3, df4])
+    else:
+        result = pd.concat(axis=1, objs=[df1, df2, df3, df4])
+        assert result.get_backend() == expected_result_backend
 
 
 def test_adversarial_high(adversarial_df, cluster_df):
     with pytest.raises(ValueError):
-        adversarial_df.concat(axis=1, other=cluster_df)
+        pd.concat([adversarial_df, cluster_df], axis=1)
 
 
 def test_adversarial_low(adversarial_df, cloud_df):
     with pytest.raises(ValueError):
-        adversarial_df.concat(axis=1, other=cloud_df)
+        pd.concat([adversarial_df, cloud_df], axis=1)
 
 
 def test_two_two_qc_types_default_rhs(default_df, cluster_df):
     # none of the query compilers know about each other here
     # so we default to the caller
-    df3 = default_df.concat(axis=1, other=cluster_df)
-    assert type(df3) is type(default_df)  # should move to default
+    df3 = pd.concat([default_df, cluster_df], axis=1)
+    assert default_df.get_backend() == "Test_casting_default"
+    assert cluster_df.get_backend() == "Cluster"
+    assert df3.get_backend() == default_df.get_backend()  # should move to default
 
 
 def test_two_two_qc_types_default_lhs(default_df, cluster_df):
     # none of the query compilers know about each other here
     # so we default to the caller
-    df3 = cluster_df.concat(axis=1, other=default_df)
-    assert type(df3) is type(cluster_df)  # should move to cluster
+    df3 = pd.concat([cluster_df, default_df], axis=1)
+    assert default_df.get_backend() == "Test_casting_default"
+    assert cluster_df.get_backend() == "Cluster"
+    assert df3.get_backend() == cluster_df.get_backend()  # should move to cluster
 
 
 def test_two_two_qc_types_default_2_rhs(default_df, cloud_df):
     # cloud knows a bit about costing; so we prefer moving to there
-    df3 = default_df.concat(axis=1, other=cloud_df)
-    assert type(df3) is type(cloud_df)  # should move to cloud
+    df3 = pd.concat([default_df, cloud_df], axis=1)
+    assert default_df.get_backend() == "Test_casting_default"
+    assert cloud_df.get_backend() == "Cloud"
+    assert df3.get_backend() == cloud_df.get_backend()  # should move to cloud
 
 
 def test_two_two_qc_types_default_2_lhs(default_df, cloud_df):
     # cloud knows a bit about costing; so we prefer moving to there
-    df3 = cloud_df.concat(axis=1, other=default_df)
-    assert type(df3) is type(cloud_df)  # should move to cloud
+    df3 = pd.concat([cloud_df, default_df], axis=1)
+    assert default_df.get_backend() == "Test_casting_default"
+    assert cloud_df.get_backend() == "Cloud"
+    assert df3.get_backend() == cloud_df.get_backend()  # should move to cloud
 
 
 def test_default_to_caller(default_df, default2_df):
     # No qc knows anything; default to caller
-    df3 = default_df.concat(axis=1, other=default2_df)
-    assert type(df3) is type(default_df)  # should stay on caller
-    df3 = default2_df.concat(axis=1, other=default_df)
-    assert type(df3) is type(default2_df)  # should stay on caller
-    df3 = default_df.concat(axis=1, other=default_df)
-    assert type(df3) is type(default_df)  # no change
 
+    df3 = pd.concat([default_df, default2_df], axis=1)
+    assert df3.get_backend() == default_df.get_backend()  # should stay on caller
 
-def test_no_qc_data_to_calculate():
-    calculator = BackendCostCalculator()
-    calculator.add_query_compiler(ClusterQC)
-    result = calculator.calculate()
-    assert result is ClusterQC
+    df3 = pd.concat([default2_df, default_df], axis=1)
+    assert df3.get_backend() == default2_df.get_backend()  # should stay on caller
+
+    df3 = pd.concat([default_df, default_df], axis=1)
+    assert df3.get_backend() == default_df.get_backend()  # no change
 
 
 def test_no_qc_to_calculate():
@@ -305,15 +307,23 @@ def test_no_qc_to_calculate():
 
 
 def test_qc_default_self_cost(default_df, default2_df):
-    assert default_df.qc_engine_switch_cost(type(default2_df)) is None
     assert (
-        default_df.qc_engine_switch_cost(type(default_df)) is QCCoercionCost.COST_ZERO
+        default_df._query_compiler.qc_engine_switch_cost(
+            type(default2_df._query_compiler)
+        )
+        is None
+    )
+    assert (
+        default_df._query_compiler.qc_engine_switch_cost(
+            type(default_df._query_compiler)
+        )
+        is QCCoercionCost.COST_ZERO
     )
 
 
 def test_qc_casting_changed_operation(pico_df, cloud_df):
-    pico_df1 = pd.DataFrame(query_compiler=pico_df)
-    cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
+    pico_df1 = pico_df
+    cloud_df1 = cloud_df
     native_cdf2 = cloud_df1._to_pandas()
     native_pdf2 = pico_df1._to_pandas()
     expected = native_cdf2 + native_pdf2
@@ -325,8 +335,26 @@ def test_qc_casting_changed_operation(pico_df, cloud_df):
 
 
 def test_qc_mixed_loc(pico_df, cloud_df):
-    pico_df1 = pd.DataFrame(query_compiler=pico_df)
-    cloud_df1 = pd.DataFrame(query_compiler=cloud_df)
+    pico_df1 = pico_df
+    cloud_df1 = cloud_df
     assert pico_df1[pico_df1[0][0]][cloud_df1[0][1]] == 1
     assert pico_df1[cloud_df1[0][0]][pico_df1[0][1]] == 1
     assert cloud_df1[pico_df1[0][0]][pico_df1[0][1]] == 1
+
+
+def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
+    local_df.iloc[1, 0] = cloud_df.iloc[1, 0] + local_df.iloc[1, 0]
+    # compute happens in cloud, but we have to make sure that we propagate the
+    # in-place update to the local_df
+    df_equals(
+        local_df,
+        pandas.DataFrame(
+            [
+                0,
+                2,
+                2,
+            ]
+        ),
+    )
+    assert local_df.get_backend() == "Local_machine"
+    assert cloud_df.get_backend() == "Cloud"

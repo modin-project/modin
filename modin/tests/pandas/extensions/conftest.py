@@ -20,6 +20,7 @@ from modin.config import Backend, Engine, Execution, StorageFormat
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory, NativeIO
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
+from modin.pandas.api.extensions.extensions import _NON_EXTENDABLE_ATTRIBUTES
 
 
 class Test1QueryCompiler(NativeQueryCompiler):
@@ -41,16 +42,16 @@ class Test1Factory(BaseFactory):
 @pytest.fixture(autouse=True)
 def clean_up_extensions():
 
-    original_dataframe_extensions = copy.deepcopy(pd.dataframe._DATAFRAME_EXTENSIONS_)
-    original_series_extensions = copy.deepcopy(pd.series._SERIES_EXTENSIONS_)
-    original_base_extensions = copy.deepcopy(pd.base._BASE_EXTENSIONS)
+    original_dataframe_extensions = copy.deepcopy(pd.dataframe.DataFrame._extensions)
+    original_series_extensions = copy.deepcopy(pd.Series._extensions)
+    original_base_extensions = copy.deepcopy(pd.base.BasePandasDataset._extensions)
     yield
-    pd.dataframe._DATAFRAME_EXTENSIONS_.clear()
-    pd.dataframe._DATAFRAME_EXTENSIONS_.update(original_dataframe_extensions)
-    pd.series._SERIES_EXTENSIONS_.clear()
-    pd.series._SERIES_EXTENSIONS_.update(original_series_extensions)
-    pd.base._BASE_EXTENSIONS.clear()
-    pd.base._BASE_EXTENSIONS.update(original_base_extensions)
+    pd.dataframe.DataFrame._extensions.clear()
+    pd.dataframe.DataFrame._extensions.update(original_dataframe_extensions)
+    pd.Series._extensions.clear()
+    pd.Series._extensions.update(original_series_extensions)
+    pd.base.BasePandasDataset._extensions.clear()
+    pd.base.BasePandasDataset._extensions.update(original_base_extensions)
 
     from modin.pandas.api.extensions.extensions import _attrs_to_delete_on_test
 
@@ -71,3 +72,12 @@ def Backend1():
             Execution(storage_format="Test1_Storage_Format", engine="Test1_Engine"),
         )
     return "Backend1"
+
+
+@pytest.fixture(
+    # sort the set of non-extendable attributes to make the sequence of test
+    # cases deterministic for pytest-xdist.
+    params=sorted(_NON_EXTENDABLE_ATTRIBUTES),
+)
+def non_extendable_attribute_name(request) -> str:
+    return request.param

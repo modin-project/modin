@@ -62,10 +62,7 @@ from modin.config import PersistentPickle
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
-from modin.pandas.api.extensions.extensions import (
-    EXTENSION_DICT_TYPE,
-    wrap_class_methods_in_backend_dispatcher,
-)
+from modin.pandas.api.extensions.extensions import EXTENSION_DICT_TYPE
 from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
@@ -73,11 +70,12 @@ from modin.utils import (
     expanduser_path_arg,
     hashable,
     import_optional_dependency,
+    sentinel,
     try_cast_to_pandas,
 )
 
 from .accessor import CachedAccessor, SparseFrameAccessor
-from .base import _ATTRS_NO_LOOKUP, _EXTENSION_NO_LOOKUP, BasePandasDataset, sentinel
+from .base import _ATTRS_NO_LOOKUP, _EXTENSION_NO_LOOKUP, BasePandasDataset
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
@@ -95,14 +93,9 @@ if TYPE_CHECKING:
     from modin.core.storage_formats import BaseQueryCompiler
 
 
-# Dictionary of extensions assigned to this class
-_DATAFRAME_EXTENSIONS_: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
-
-
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-@wrap_class_methods_in_backend_dispatcher(extensions=_DATAFRAME_EXTENSIONS_)
 class DataFrame(BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
@@ -147,6 +140,7 @@ class DataFrame(BasePandasDataset):
     """
 
     _pandas_class = pandas.DataFrame
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     def __init__(
         self,
@@ -2623,7 +2617,7 @@ class DataFrame(BasePandasDataset):
 
         if item not in _EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
-                item, _DATAFRAME_EXTENSIONS_
+                item, __class__._extensions
             )
             if extensions_result is not sentinel:
                 return extensions_result
@@ -2652,7 +2646,7 @@ class DataFrame(BasePandasDataset):
         # then falls back to __getattr__() if the former raises an AttributeError.
 
         if key not in _EXTENSION_NO_LOOKUP:
-            extension = self._getattr__from_extension_impl(key, _DATAFRAME_EXTENSIONS_)
+            extension = self._getattr__from_extension_impl(key, __class__._extensions)
             if extension is not sentinel:
                 return extension
         try:
@@ -2691,8 +2685,8 @@ class DataFrame(BasePandasDataset):
         #   before it appears in __dict__.
         if key in ("_query_compiler", "_siblings") or key in self.__dict__:
             pass
-        elif self._get_extension(key, _DATAFRAME_EXTENSIONS_) is not sentinel:
-            return self._get_extension(key, _DATAFRAME_EXTENSIONS_).__set__(self, value)
+        elif self._get_extension(key, __class__._extensions) is not sentinel:
+            return self._get_extension(key, __class__._extensions).__set__(self, value)
         # we have to check for the key in `dir(self)` first in order not to trigger columns computation
         elif key not in dir(self) and key in self:
             self.__setitem__(key, value)
@@ -3390,7 +3384,14 @@ class DataFrame(BasePandasDataset):
         -------
         None
         """
-        extension = self._get_extension(name, _DATAFRAME_EXTENSIONS_)
+        extension = self._get_extension(name, __class__._extensions)
         if extension is not sentinel:
             return extension.__delete__(self)
         return super().__delattr__(name)
+
+    @disable_logging
+    @_inherit_docstrings(BasePandasDataset._copy_into)
+    def _copy_into(self, other: DataFrame) -> None:
+        other._query_compiler = self._query_compiler
+        other._siblings = self._siblings
+        return None

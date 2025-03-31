@@ -16,6 +16,13 @@ import itertools
 import pytest
 
 
-@pytest.fixture(params=list(itertools.product([True, False], repeat=2)))
+def _get_native_bool_descriptor(v: bool) -> str:
+    return "native" if v else "default"
+
+
+@pytest.fixture(
+    params=list(itertools.product([True, False], repeat=2)),
+    ids=lambda param: "_".join(_get_native_bool_descriptor(v) for v in param),
+)
 def df_mode_pair(request):
     return request.param

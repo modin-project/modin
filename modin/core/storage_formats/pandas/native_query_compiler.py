@@ -27,10 +27,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
-from modin.utils import (
-    _inherit_docstrings,
-)
+from modin.utils import _inherit_docstrings
 
 _NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE = (
     "Modin dataframes and series using native execution do not have partitions."
@@ -83,7 +80,7 @@ def _set_axis(axis):
 
 
 @_inherit_docstrings(BaseQueryCompiler)
-class NativeQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
+class NativeQueryCompiler(BaseQueryCompiler):
     """
     Query compiler for executing operations with native pandas.
 
