@@ -36,6 +36,9 @@ class CloudQC(NativeQueryCompiler):
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE
 
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_IMPOSSIBLE
+
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
@@ -43,6 +46,8 @@ class CloudQC(NativeQueryCompiler):
             DefaultQC: QCCoercionCost.COST_MEDIUM,
             LocalMachineQC: QCCoercionCost.COST_HIGH,
             PicoQC: QCCoercionCost.COST_IMPOSSIBLE,
+            OmniscientEagerQC: None,
+            OmniscientLazyQC: None,
         }[other_qc_cls]
 
 
@@ -51,6 +56,9 @@ class ClusterQC(NativeQueryCompiler):
 
     def get_backend(self):
         return "Cluster"
+
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_HIGH
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_HIGH
@@ -74,6 +82,9 @@ class LocalMachineQC(NativeQueryCompiler):
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_MEDIUM
 
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_MEDIUM
+
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
@@ -88,6 +99,9 @@ class PicoQC(NativeQueryCompiler):
 
     def get_backend(self):
         return "Pico"
+
+    def qc_engine_switch_max_cost(self):
+        return QCCoercionCost.COST_LOW
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_LOW
@@ -113,6 +127,42 @@ class AdversarialQC(NativeQueryCompiler):
             ClusterQC: 10000,
             AdversarialQC: QCCoercionCost.COST_ZERO,
         }[other_qc_cls]
+
+
+class OmniscientEagerQC(NativeQueryCompiler):
+    "Represents a query compiler which knows a lot, and wants to steal work"
+
+    def get_backend(self):
+        return "Eager"
+
+    # keep other workloads from getting my workload
+    def qc_engine_switch_cost(self, other_qc_cls):
+        if OmniscientEagerQC is other_qc_cls:
+            return QCCoercionCost.COST_ZERO
+        return QCCoercionCost.COST_IMPOSSIBLE
+
+    # try to force other workloads to my engine
+    @classmethod
+    def qc_engine_switch_cost_from(cls, other_qc):
+        return QCCoercionCost.COST_ZERO
+
+
+class OmniscientLazyQC(NativeQueryCompiler):
+    "Represents a query compiler which knows a lot, and wants to avoid work"
+
+    def get_backend(self):
+        return "Lazy"
+
+    # encorage other engines to take my workload
+    def qc_engine_switch_cost(self, other_qc_cls):
+        return QCCoercionCost.COST_ZERO
+
+    # try to keep other workloads from getting my workload
+    @classmethod
+    def qc_engine_switch_cost_from(cls, other_qc):
+        if isinstance(other_qc, cls):
+            return QCCoercionCost.COST_ZERO
+        return QCCoercionCost.COST_IMPOSSIBLE
 
 
 class DefaultQC(NativeQueryCompiler):
@@ -150,6 +200,8 @@ register_backend("Cluster", ClusterQC)
 register_backend("Cloud", CloudQC)
 register_backend("Local_machine", LocalMachineQC)
 register_backend("Adversarial", AdversarialQC)
+register_backend("Eager", OmniscientEagerQC)
+register_backend("Lazy", OmniscientLazyQC)
 register_backend("Test_casting_default", DefaultQC)
 register_backend("Test_casting_default_2", DefaultQC2)
 
@@ -177,6 +229,16 @@ def pico_df():
 @pytest.fixture()
 def adversarial_df():
     return pd.DataFrame(query_compiler=AdversarialQC(pandas.DataFrame([0, 1, 2])))
+
+
+@pytest.fixture()
+def eager_df():
+    return pd.DataFrame(query_compiler=OmniscientEagerQC(pandas.DataFrame([0, 1, 2])))
+
+
+@pytest.fixture()
+def lazy_df():
+    return pd.DataFrame(query_compiler=OmniscientLazyQC(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
@@ -340,6 +402,23 @@ def test_qc_mixed_loc(pico_df, cloud_df):
     assert pico_df1[pico_df1[0][0]][cloud_df1[0][1]] == 1
     assert pico_df1[cloud_df1[0][0]][pico_df1[0][1]] == 1
     assert cloud_df1[pico_df1[0][0]][pico_df1[0][1]] == 1
+
+
+def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
+    # normally, the default query compiler should be chosen
+    # here, but since eager knows about default, but not
+    # the other way around, eager has a special ability to
+    # control the directionality of the cast.
+    df = default_df.merge(eager_df)
+    assert type(df) is type(eager_df)
+    df = cloud_df.merge(eager_df)
+    assert type(df) is type(eager_df)
+
+    # lazy_df tries to pawn off work on other engines
+    df = default_df.merge(lazy_df)
+    assert type(df) is type(default_df)
+    df = cloud_df.merge(lazy_df)
+    assert type(df) is type(cloud_df)
 
 
 def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
