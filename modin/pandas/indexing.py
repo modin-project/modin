@@ -298,7 +298,7 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
     def _get_query_compiler(self):
-        return self.qc
+        return getattr(self, "qc", None)
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster.get_backend)
