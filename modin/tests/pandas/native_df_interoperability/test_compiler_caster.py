@@ -36,9 +36,6 @@ class CloudQC(NativeQueryCompiler):
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE
 
-    def qc_engine_switch_max_cost(self):
-        return QCCoercionCost.COST_IMPOSSIBLE
-
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
@@ -56,9 +53,6 @@ class ClusterQC(NativeQueryCompiler):
 
     def get_backend(self):
         return "Cluster"
-
-    def qc_engine_switch_max_cost(self):
-        return QCCoercionCost.COST_HIGH
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_HIGH
@@ -82,9 +76,6 @@ class LocalMachineQC(NativeQueryCompiler):
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_MEDIUM
 
-    def qc_engine_switch_max_cost(self):
-        return QCCoercionCost.COST_MEDIUM
-
     def qc_engine_switch_cost(self, other_qc_cls):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
@@ -99,9 +90,6 @@ class PicoQC(NativeQueryCompiler):
 
     def get_backend(self):
         return "Pico"
-
-    def qc_engine_switch_max_cost(self):
-        return QCCoercionCost.COST_LOW
 
     def qc_engine_switch_max_cost(self):
         return QCCoercionCost.COST_LOW
