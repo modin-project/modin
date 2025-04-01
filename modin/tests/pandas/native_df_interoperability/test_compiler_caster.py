@@ -195,8 +195,15 @@ def test_two_same_backend(pico_df):
     assert df3.get_backend() == "Pico"
 
 
-def test_cast_to_second_backend(pico_df, cluster_df):
+def test_cast_to_second_backend_with_concat(pico_df, cluster_df):
     df3 = pd.concat([pico_df, cluster_df], axis=1)
+    assert pico_df.get_backend() == "Pico"
+    assert cluster_df.get_backend() == "Cluster"
+    assert df3.get_backend() == "Cluster"  # result should be on cluster
+
+
+def test_cast_to_second_backend_with___init__(pico_df, cluster_df):
+    df3 = pd.DataFrame({"pico": pico_df.iloc[:, 0], "cluster": cluster_df.iloc[:, 0]})
     assert pico_df.get_backend() == "Pico"
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
@@ -207,6 +214,18 @@ def test_cast_to_first_backend(pico_df, cluster_df):
     assert pico_df.get_backend() == "Pico"
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == cluster_df.get_backend()  # result should be on cluster
+
+
+def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
+    df3 = pd.DataFrame(
+        {
+            "cluster": cluster_df.iloc[:, 0],
+            "pico": pico_df.iloc[:, 0],
+        }
+    )
+    assert pico_df.get_backend() == "Pico"
+    assert cluster_df.get_backend() == "Cluster"
+    assert df3.get_backend() == "Cluster"  # result should be on cluster
 
 
 def test_no_solution(pico_df, local_df, cluster_df, cloud_df):

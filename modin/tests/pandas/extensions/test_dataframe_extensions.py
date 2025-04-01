@@ -17,7 +17,11 @@ from unittest import mock
 import pytest
 
 import modin.pandas as pd
+from modin.config import Backend
+from modin.config import context as config_context
 from modin.pandas.api.extensions import register_dataframe_accessor
+
+default___init__ = pd.DataFrame._extensions[None]["__init__"]
 
 
 def test_dataframe_extension_simple_method(Backend1):
@@ -74,6 +78,55 @@ def test_dataframe_extension_method_uses_superclass_method(Backend1):
         return super(pd.DataFrame, self).sort_values(by=by, ascending=False)
 
     assert df.set_backend(Backend1).sort_values(by=0).iloc[0, 0] == 3
+
+
+class TestOverride__init__:
+    def test_override_one_backend_and_pass_no_query_compilers(self):
+        default_backend = Backend.get()
+        backend_init = mock.Mock(wraps=default___init__)
+        register_dataframe_accessor(name="__init__", backend=default_backend)(
+            backend_init
+        )
+        output_df = pd.DataFrame([1], index=["a"], columns=["b"])
+        assert output_df.get_backend() == default_backend
+        backend_init.assert_has_calls(
+            [
+                mock.call(output_df, [1], index=["a"], columns=["b"]),
+                # There's a second, internal call to the dataframe constructor that
+                # uses a different dataframe as `self`.
+                mock.call(mock.ANY, query_compiler=output_df._query_compiler),
+            ]
+        )
+
+    def test_override_one_backend_and_pass_query_compiler_kwarg(self):
+        backend = "Pandas"
+        backend_init = mock.Mock(wraps=default___init__)
+        register_dataframe_accessor(name="__init__", backend=backend)(backend_init)
+
+        with config_context(Backend=backend):
+            input_df = pd.DataFrame()
+
+        backend_init.reset_mock()
+        output_df = pd.DataFrame(query_compiler=input_df._query_compiler)
+        assert output_df.get_backend() == backend
+        backend_init.assert_called_once_with(
+            output_df, query_compiler=input_df._query_compiler
+        )
+
+    @pytest.mark.parametrize("input_backend", ["Python_Test", "Pandas"])
+    def test_override_all_backends_and_pass_query_compiler_kwarg(self, input_backend):
+        backend_init = mock.Mock(wraps=default___init__)
+        register_dataframe_accessor(name="__init__")(backend_init)
+
+        with config_context(Backend=input_backend):
+            input_df = pd.DataFrame()
+
+        backend_init.reset_mock()
+        output_df = pd.DataFrame(query_compiler=input_df._query_compiler)
+        assert output_df.get_backend() == input_backend
+        backend_init.assert_called_once_with(
+            output_df, query_compiler=input_df._query_compiler
+        )
 
 
 class TestDunders:

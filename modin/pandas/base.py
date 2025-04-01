@@ -4631,6 +4631,6 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         return sentinel
 
     @disable_logging
-    @_inherit_docstrings(QueryCompilerCaster._copy_into)
+    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
     def _get_query_compiler(self):
-        return self._query_compiler
+        return getattr(self, "_query_compiler", None)

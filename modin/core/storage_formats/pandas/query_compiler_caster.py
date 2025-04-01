@@ -29,6 +29,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, ValuesV
 from pandas.core.indexes.frozen import FrozenList
 from typing_extensions import Self
 
+from modin.config import Backend
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
@@ -53,11 +54,6 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "_query_compiler",
     "_get_query_compiler",
     "_copy_into",
-    # TODO(https://github.com/modin-project/modin/issues/7475): Choose the
-    # correct __init__ implementation from extensions. We have to handle
-    # __init__ differently because the object passed to __init__ does not yet
-    # have a query compiler.
-    "__init__",
 }
 
 
@@ -85,14 +81,15 @@ class QueryCompilerCaster(ABC):
         apply_argument_cast_to_class(cls)
 
     @abstractmethod
-    def _get_query_compiler(self) -> BaseQueryCompiler:
+    def _get_query_compiler(self) -> Optional[BaseQueryCompiler]:
         """
         Get the query compiler storing data for this object.
 
         Returns
         -------
-        BaseQueryCompiler
-            The query compiler storing data for this object.
+        Optional[BaseQueryCompiler]
+            The query compiler storing data for this object, if it exists.
+            Otherwise, None.
         """
         pass
 
@@ -337,21 +334,29 @@ def wrap_function_in_argument_caster(
         calculator: BackendCostCalculator = BackendCostCalculator()
 
         def register_query_compilers(arg):
-            if isinstance(arg, QueryCompilerCaster):
-                calculator.add_query_compiler(arg._get_query_compiler())
+            if (
+                isinstance(arg, QueryCompilerCaster)
+                and (qc := arg._get_query_compiler()) is not None
+            ):
+                calculator.add_query_compiler(qc)
+            elif isinstance(arg, BaseQueryCompiler):
+                # We might get query compiler arguments in __init__()
+                calculator.add_query_compiler(arg)
             return arg
 
         visit_nested_args(args, register_query_compilers)
         visit_nested_args(kwargs, register_query_compilers)
 
         # Sometimes the function takes no query compilers as inputs,
-        # e.g. pd.to_datetime(0)
+        # e.g. pd.to_datetime(0), or some cases of DataFrame.__init__()
         if len(calculator._qc_list) > 0:
             result_backend = calculator.calculate()
 
             def cast_to_qc(arg):
                 if not (
                     isinstance(arg, QueryCompilerCaster)
+                    and (original_query_compiler := arg._get_query_compiler())
+                    is not None
                     and arg.get_backend() != result_backend
                 ):
                     return arg
@@ -359,7 +364,7 @@ def wrap_function_in_argument_caster(
                 inplace_update_trackers.append(
                     InplaceUpdateTracker(
                         input_castable=arg,
-                        original_query_compiler=arg._get_query_compiler(),
+                        original_query_compiler=original_query_compiler,
                         new_castable=cast,
                     )
                 )
@@ -367,6 +372,8 @@ def wrap_function_in_argument_caster(
 
             args = visit_nested_args(args, cast_to_qc)
             kwargs = visit_nested_args(kwargs, cast_to_qc)
+        else:
+            result_backend = Backend.get()
 
         if wrapping_function_type is None:
             # TODO(https://github.com/modin-project/modin/issues/7474): dispatch
@@ -381,9 +388,8 @@ def wrap_function_in_argument_caster(
         # When python invokes a method on an object, it passes the object as
         # the first positional argument.
         self = args[0]
-        self_backend = self.get_backend()
-        if name in cls._extensions[self_backend]:
-            f_to_apply = cls._extensions[self_backend][name]
+        if name in cls._extensions[result_backend]:
+            f_to_apply = cls._extensions[result_backend][name]
         else:
             if name not in cls._extensions[None]:
                 raise AttributeError(

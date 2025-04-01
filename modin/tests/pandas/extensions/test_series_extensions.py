@@ -12,11 +12,16 @@
 # governing permissions and limitations under the License.
 
 import re
+from unittest import mock
 
 import pytest
 
 import modin.pandas as pd
+from modin.config import Backend
+from modin.config import context as config_context
 from modin.pandas.api.extensions import register_series_accessor
+
+default___init__ = pd.Series._extensions[None]["__init__"]
 
 
 def test_series_extension_simple_method(Backend1):
@@ -73,6 +78,49 @@ def test_series_extension_method_uses_superclass_method(Backend1):
         return super(pd.Series, self).sort_values(by="name", ascending=False)
 
     assert series.set_backend(Backend1).sort_values().iloc[0] == 3
+
+
+class TestOverride__init__:
+    def test_override_one_backend_and_pass_no_query_compilers(self):
+        default_backend = Backend.get()
+        backend_init = mock.Mock(wraps=default___init__)
+        register_series_accessor(name="__init__", backend=default_backend)(backend_init)
+        output_series = pd.Series([1], index=["a"])
+        assert output_series.get_backend() == default_backend
+        backend_init.assert_has_calls(
+            [
+                mock.call(output_series, [1], index=["a"]),
+            ]
+        )
+
+    def test_override_one_backend_and_pass_query_compiler_kwarg(self):
+        backend_init = mock.Mock(wraps=default___init__)
+        register_series_accessor(name="__init__", backend="Pandas")(backend_init)
+
+        with config_context(Backend="Pandas"):
+            input_series = pd.Series()
+
+        backend_init.reset_mock()
+        output_series = pd.Series(query_compiler=input_series._query_compiler)
+        assert output_series.get_backend() == "Pandas"
+        backend_init.assert_called_once_with(
+            output_series, query_compiler=input_series._query_compiler
+        )
+
+    @pytest.mark.parametrize("input_backend", ["Python_Test", "Pandas"])
+    def test_override_all_backends_and_pass_query_compiler_kwarg(self, input_backend):
+        backend_init = mock.Mock(wraps=default___init__)
+        register_series_accessor(name="__init__")(backend_init)
+
+        with config_context(Backend=input_backend):
+            input_series = pd.Series()
+
+        backend_init.reset_mock()
+        output_series = pd.Series(query_compiler=input_series._query_compiler)
+        assert output_series.get_backend() == input_backend
+        backend_init.assert_called_once_with(
+            output_series, query_compiler=input_series._query_compiler
+        )
 
 
 class TestDunders:
