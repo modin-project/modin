@@ -566,13 +566,13 @@ def test_astype_category_large():
     df_equals(modin_result, pandas_result)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
-    dtype = pd.CategoricalDtype(categories=["A", "B"])
+    dtype = pd.CategoricalDtype(categories=["str0", "str1"])
     modin_result = modin_df.astype({"col1": dtype})
     pandas_result = pandas_df.astype({"col1": dtype})
     df_equals(modin_result, pandas_result)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
-    dtype = pd.CategoricalDtype(categories=["A", "B"])
+    dtype = pd.CategoricalDtype(categories=["str0", "str1"])
     modin_result = modin_df.astype(dtype)
     pandas_result = pandas_df.astype(dtype)
     df_equals(modin_result, pandas_result)
