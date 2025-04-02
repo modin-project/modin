@@ -332,6 +332,30 @@ class BaseQueryCompiler(
         return None
 
     @disable_logging
+    @classmethod
+    def qc_engine_switch_cost_from(cls, other_qc: BaseQueryCompiler) -> Optional[int]:
+        """
+        Return the coercion costs from other_qc to this qc type.
+
+        Values returned must be within the acceptable range of
+        QCCoercionCost
+
+        Parameters
+        ----------
+        other_qc : BaseQueryCompiler
+            The query compiler from which we should return the cost of switching.
+
+        Returns
+        -------
+        Optional[int]
+            Cost of migrating the data from other_qc to this qc or
+            None if the cost cannot be determined.
+        """
+        if isinstance(other_qc, cls):
+            return QCCoercionCost.COST_ZERO
+        return None
+
+    @disable_logging
     def qc_engine_switch_max_cost(self) -> int:
         """
         Return the max coercion cost allowed for switching to this engine.

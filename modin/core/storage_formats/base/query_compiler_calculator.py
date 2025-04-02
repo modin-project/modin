@@ -19,6 +19,8 @@ between a set of different backends. It aggregates the cost across
 all query compilers to determine the best query compiler to use.
 """
 
+import logging
+
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
@@ -96,6 +98,13 @@ class BackendCostCalculator:
                     cost = qc_from.qc_engine_switch_cost(qc_cls_to)
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
+                    else:
+                        # We have some information asymmetry in query compilers,
+                        # qc_from does not know about qc_to types so we instead
+                        # ask the same question but of qc_to.
+                        cost = qc_cls_to.qc_engine_switch_cost_from(qc_from)
+                        if cost is not None:
+                            self._add_cost_data(backend_to, cost)
 
         min_value = None
         for k, v in self._backend_data.items():
@@ -108,6 +117,11 @@ class BackendCostCalculator:
         if self._result_backend is None:
             raise ValueError(
                 f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
+            )
+
+        if len(self._backend_data) > 1:
+            logging.info(
+                f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
             )
 
         return self._result_backend
@@ -127,3 +141,30 @@ class BackendCostCalculator:
         # exists in the backend_data map
         QCCoercionCost.validate_coersion_cost(cost)
         self._backend_data[backend].cost += cost
+
+    def _calc_result_log(self, selected_backend: str) -> str:
+        """
+        Create a string summary of the backend costs.
+
+        The format is
+            [*|][backend name]:[cost]/[max_cost],...
+        where '*' indicates this was the selected backend
+        and [cost]/[max_cost] represents the aggregated
+        cost of moving to that backend over the maximum
+        cost allowed on that backend.
+
+        Parameters
+        ----------
+        selected_backend : str
+            String representing the backend selected by
+            the calculator.
+
+        Returns
+        -------
+        str
+            String representation of calculator state.
+        """
+        return ",".join(
+            f"{'*'+k if k is selected_backend else k}:{v.cost}/{v.max_cost}"
+            for k, v in self._backend_data.items()
+        )
