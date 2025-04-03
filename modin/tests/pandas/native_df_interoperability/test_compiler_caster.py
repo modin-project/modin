@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from unittest import mock
+
 import pandas
 import pytest
 
@@ -262,6 +264,17 @@ def test_cast_to_second_backend_with_concat_uses_second_backend_api_override(
     assert pd.concat([pico_df, cluster_df], axis=1) == "custom_concat_result"
     assert pico_df.get_backend() == "Pico"
     assert cluster_df.get_backend() == "Cluster"
+
+
+def test_moving_pico_to_cluster_in_place_calls_set_backend_only_once_github_issue_7490(
+    pico_df, cluster_df
+):
+    with mock.patch.object(
+        pd.DataFrame, "set_backend", wraps=pico_df.set_backend
+    ) as mock_set_backend:
+        pico_df.set_backend(cluster_df.get_backend(), inplace=True)
+    assert pico_df.get_backend() == "Cluster"
+    mock_set_backend.assert_called_once_with("Cluster", inplace=True)
 
 
 def test_cast_to_second_backend_with___init__(pico_df, cluster_df):

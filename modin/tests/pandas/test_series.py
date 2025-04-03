@@ -1120,6 +1120,12 @@ def test_astype_categorical(data):
     df_equals(modin_result, pandas_result)
     assert modin_result.dtype == pandas_result.dtype
 
+    dtype = pd.CategoricalDtype(categories=sorted(set(data)))
+    modin_result = modin_df.astype(dtype)
+    pandas_result = pandas_df.astype(dtype)
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtype == pandas_result.dtype
+
 
 @pytest.mark.parametrize("data", [["a", "a", "b", "c", "c", "d", "b", "d"]])
 @pytest.mark.parametrize(

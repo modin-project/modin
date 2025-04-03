@@ -55,6 +55,8 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "_getattribute__from_extension_impl",
     "_getattr__from_extension_impl",
     "get_backend",
+    "move_to",
+    "_update_inplace",
     "set_backend",
     "_get_extension",
     "_query_compiler",
