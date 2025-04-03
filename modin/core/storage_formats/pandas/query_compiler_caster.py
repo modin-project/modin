@@ -333,7 +333,7 @@ def wrap_function_in_argument_caster(
             ["input_castable", "original_query_compiler", "new_castable"],
         )
         inplace_update_trackers: list[InplaceUpdateTracker] = []
-        calculator: BackendCostCalculator = BackendCostCalculator()
+        calculator: BackendCostCalculator = BackendCostCalculator(f.__name__)
 
         def register_query_compilers(arg):
             if (

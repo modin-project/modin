@@ -321,7 +321,7 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
-        op : str
+        op : str, default: None
             The operation being performed or None which can be used as a consideration
             for the costing analysis.
 
@@ -355,7 +355,7 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
-        op : str
+        op : str, default: None
             The operation being performed or None which can be used as a consideration
             for the costing analysis.
 
@@ -385,6 +385,9 @@ class BaseQueryCompiler(
         ----------
         other_qc : BaseQueryCompiler
             The query compiler from which we should return the cost of switching.
+        op : str, default: None
+            The operation being performed or None which can be used as a consideration
+            for the costing analysis.
 
         Returns
         -------
