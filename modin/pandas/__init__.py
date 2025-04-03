@@ -97,7 +97,7 @@ with warnings.catch_warnings():
 
 import os
 
-from modin.config import Backend, Parameter
+from modin.config import Parameter
 
 _engine_initialized = {}
 
@@ -135,8 +135,8 @@ def _initialize_engine(engine_string: str):
     _engine_initialized[engine_string] = True
 
 
-from modin.core.storage_formats.pandas.query_compiler_caster import _GENERAL_EXTENSIONS
 from modin.pandas import arrays, errors
+from modin.pandas.api.extensions.extensions import __getattr___impl
 from modin.utils import show_versions
 
 from .. import __version__
@@ -194,32 +194,7 @@ from .io import (
 from .plotting import Plotting as plotting
 from .series import Series
 
-
-def __getattr__(name: str):
-    """
-    Overrides getattr on the module to enable extensions.
-
-    Note that python only falls back to this function if the attribute is not
-    found in this module's namespace.
-
-    Parameters
-    ----------
-    name : str
-        The name of the attribute being retrieved.
-
-    Returns
-    -------
-    Attribute
-        Returns the extension attribute, if it exists, otherwise returns the attribute
-        imported in this file.
-    """
-    backend = Backend.get()
-    if name in _GENERAL_EXTENSIONS[backend]:
-        return _GENERAL_EXTENSIONS[backend][name]
-    elif name in _GENERAL_EXTENSIONS[None]:
-        return _GENERAL_EXTENSIONS[None][name]
-    else:
-        raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
+__getattr__ = __getattr___impl
 
 
 __all__ = [  # noqa: F405
@@ -336,4 +311,5 @@ __all__ = [  # noqa: F405
     "errors",
 ]
 
-del pandas, Parameter
+# Remove these attributes from this module's namespace.
+del pandas, Parameter, __getattr___impl

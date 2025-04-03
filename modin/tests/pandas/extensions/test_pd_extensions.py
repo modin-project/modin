@@ -45,7 +45,6 @@ class TestRegisterForOneBackend:
         backend = "Pandas"
         expected_string_val = "Some string value"
         method_name = "new_method"
-        backend = "Pandas"
 
         @register_pd_accessor(method_name, backend=backend)
         def my_method_implementation():

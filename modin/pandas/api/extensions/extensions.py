@@ -252,3 +252,33 @@ def register_pd_accessor(name: str, *, backend: Optional[str] = None):
     return _set_attribute_on_obj(
         name=name, extensions=_GENERAL_EXTENSIONS, backend=backend, obj=pd
     )
+
+
+def __getattr___impl(name: str):
+    """
+    Override __getatttr__ on the modin.pandas module to enable extensions.
+
+    Note that python only falls back to this function if the attribute is not
+    found in this module's namespace.
+
+    Parameters
+    ----------
+    name : str
+        The name of the attribute being retrieved.
+
+    Returns
+    -------
+    Attribute
+        Returns the extension attribute, if it exists, otherwise returns the attribute
+        imported in this file.
+    """
+
+    from modin.config import Backend
+
+    backend = Backend.get()
+    if name in _GENERAL_EXTENSIONS[backend]:
+        return _GENERAL_EXTENSIONS[backend][name]
+    elif name in _GENERAL_EXTENSIONS[None]:
+        return _GENERAL_EXTENSIONS[None][name]
+    else:
+        raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
