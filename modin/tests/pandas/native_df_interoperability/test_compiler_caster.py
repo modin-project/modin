@@ -35,10 +35,10 @@ class CloudQC(NativeQueryCompiler):
     def get_backend(self):
         return "Cloud"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, op):
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
@@ -56,10 +56,10 @@ class ClusterQC(NativeQueryCompiler):
     def get_backend(self):
         return "Cluster"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_HIGH
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, op):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
@@ -75,10 +75,10 @@ class LocalMachineQC(NativeQueryCompiler):
     def get_backend(self):
         return "Local_machine"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_MEDIUM
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, op):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -93,10 +93,10 @@ class PicoQC(NativeQueryCompiler):
     def get_backend(self):
         return "Pico"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_LOW
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, op):
         return {
             CloudQC: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -111,7 +111,7 @@ class AdversarialQC(NativeQueryCompiler):
     def get_backend(self):
         return "Adversarial"
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, op):
         return {
             CloudQC: -1000,
             ClusterQC: 10000,
@@ -126,7 +126,7 @@ class OmniscientEagerQC(NativeQueryCompiler):
         return "Eager"
 
     # keep other workloads from getting my workload
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, op):
         if OmniscientEagerQC is other_qc_cls:
             return QCCoercionCost.COST_ZERO
         return QCCoercionCost.COST_IMPOSSIBLE
@@ -144,12 +144,12 @@ class OmniscientLazyQC(NativeQueryCompiler):
         return "Lazy"
 
     # encorage other engines to take my workload
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, op):
         return QCCoercionCost.COST_ZERO
 
     # try to keep other workloads from getting my workload
     @classmethod
-    def qc_engine_switch_cost_from(cls, other_qc):
+    def move_to_me_cost(cls, other_qc, op):
         if isinstance(other_qc, cls):
             return QCCoercionCost.COST_ZERO
         return QCCoercionCost.COST_IMPOSSIBLE
@@ -390,15 +390,11 @@ def test_no_qc_to_calculate():
 
 def test_qc_default_self_cost(default_df, default2_df):
     assert (
-        default_df._query_compiler.qc_engine_switch_cost(
-            type(default2_df._query_compiler)
-        )
+        default_df._query_compiler.move_to_cost(type(default2_df._query_compiler))
         is None
     )
     assert (
-        default_df._query_compiler.qc_engine_switch_cost(
-            type(default_df._query_compiler)
-        )
+        default_df._query_compiler.move_to_cost(type(default_df._query_compiler))
         is QCCoercionCost.COST_ZERO
     )
 

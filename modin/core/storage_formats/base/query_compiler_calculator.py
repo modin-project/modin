@@ -42,7 +42,7 @@ class AggregatedBackendData:
         self.backend = backend
         self.qc_cls = type(query_compiler)
         self.cost = 0
-        self.max_cost = query_compiler.qc_engine_switch_max_cost()
+        self.max_cost = query_compiler.max_cost()
 
 
 class BackendCostCalculator:
@@ -55,10 +55,11 @@ class BackendCostCalculator:
     cost.
     """
 
-    def __init__(self):
+    def __init__(self, operation: str = None):
         self._backend_data = {}
         self._qc_list = []
         self._result_backend = None
+        self._op = operation
 
     def add_query_compiler(self, query_compiler: BaseQueryCompiler):
         """
@@ -95,14 +96,14 @@ class BackendCostCalculator:
                 if qc_cls_to not in qc_to_cls_costed:
                     qc_to_cls_costed.add(qc_cls_to)
                     backend_to = qc_to.get_backend()
-                    cost = qc_from.qc_engine_switch_cost(qc_cls_to)
+                    cost = qc_from.move_to_cost(qc_cls_to, self._op)
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
                     else:
                         # We have some information asymmetry in query compilers,
                         # qc_from does not know about qc_to types so we instead
                         # ask the same question but of qc_to.
-                        cost = qc_cls_to.qc_engine_switch_cost_from(qc_from)
+                        cost = qc_cls_to.move_to_me_cost(qc_from, self._op)
                         if cost is not None:
                             self._add_cost_data(backend_to, cost)
 
