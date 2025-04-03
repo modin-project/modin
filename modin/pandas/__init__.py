@@ -27,8 +27,6 @@ if (
         + f" Modin ({__pandas_version__}.X). This may cause undesired side effects!"
     )
 
-# The extensions assigned to this module
-_PD_EXTENSIONS_ = {}
 
 # to not pollute namespace
 del version
@@ -99,7 +97,7 @@ with warnings.catch_warnings():
 
 import os
 
-from modin.config import Parameter
+from modin.config import Backend, Parameter
 
 _engine_initialized = {}
 
@@ -137,6 +135,7 @@ def _initialize_engine(engine_string: str):
     _engine_initialized[engine_string] = True
 
 
+from modin.core.storage_formats.pandas.query_compiler_caster import _GENERAL_EXTENSIONS
 from modin.pandas import arrays, errors
 from modin.utils import show_versions
 
@@ -200,6 +199,9 @@ def __getattr__(name: str):
     """
     Overrides getattr on the module to enable extensions.
 
+    Note that python only falls back to this function if the attribute is not
+    found in this module's namespace.
+
     Parameters
     ----------
     name : str
@@ -211,14 +213,16 @@ def __getattr__(name: str):
         Returns the extension attribute, if it exists, otherwise returns the attribute
         imported in this file.
     """
-    try:
-        return _PD_EXTENSIONS_.get(name, globals()[name])
-    except KeyError:
+    backend = Backend.get()
+    if name in _GENERAL_EXTENSIONS[backend]:
+        return _GENERAL_EXTENSIONS[backend][name]
+    elif name in _GENERAL_EXTENSIONS[None]:
+        return _GENERAL_EXTENSIONS[None][name]
+    else:
         raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
 
 
 __all__ = [  # noqa: F405
-    "_PD_EXTENSIONS_",
     "DataFrame",
     "Series",
     "read_csv",
