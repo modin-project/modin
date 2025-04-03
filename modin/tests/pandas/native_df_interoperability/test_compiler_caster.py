@@ -26,6 +26,7 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
+from modin.pandas.api.extensions import register_pd_accessor
 from modin.tests.pandas.utils import df_equals
 
 
@@ -254,6 +255,17 @@ def test_cast_to_second_backend_with_concat(pico_df, cluster_df):
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
 
+def test_cast_to_second_backend_with_concat_uses_second_backend_api_override(
+    pico_df, cluster_df
+):
+    register_pd_accessor(name="concat", backend="Cluster")(
+        lambda *args, **kwargs: "custom_concat_result"
+    )
+    assert pd.concat([pico_df, cluster_df], axis=1) == "custom_concat_result"
+    assert pico_df.get_backend() == "Pico"
+    assert cluster_df.get_backend() == "Cluster"
+
+
 def test_moving_pico_to_cluster_in_place_calls_set_backend_only_once_github_issue_7490(
     pico_df, cluster_df
 ):
@@ -277,6 +289,17 @@ def test_cast_to_first_backend(pico_df, cluster_df):
     assert pico_df.get_backend() == "Pico"
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == cluster_df.get_backend()  # result should be on cluster
+
+
+def test_cast_to_first_backend_with_concat_uses_first_backend_api_override(
+    pico_df, cluster_df
+):
+    register_pd_accessor(name="concat", backend="Cluster")(
+        lambda *args, **kwargs: "custom_concat_result"
+    )
+    assert pd.concat([cluster_df, pico_df], axis=1) == "custom_concat_result"
+    assert pico_df.get_backend() == "Pico"
+    assert cluster_df.get_backend() == "Cluster"
 
 
 def test_cast_to_first_backend_with___init__(pico_df, cluster_df):

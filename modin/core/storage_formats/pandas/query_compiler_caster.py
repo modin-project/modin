@@ -22,7 +22,7 @@ This ensures compatibility between different query compiler classes.
 import functools
 import inspect
 from abc import ABC, abstractmethod
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from types import FunctionType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, ValuesView
 
@@ -34,9 +34,15 @@ from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
-from modin.error_message import ErrorMessage
 
 Fn = TypeVar("Fn", bound=Any)
+
+
+# This type describes a defaultdict that maps backend name (or `None` for
+# method implementation and not bound to any one extension) to the dictionary of
+# extensions for that backend. The keys of the inner dictionary are the names of
+# the extensions, and the values are the extensions themselves.
+EXTENSION_DICT_TYPE = defaultdict[Optional[str], dict[str, Any]]
 
 
 _NON_EXTENDABLE_ATTRIBUTES = {
@@ -234,7 +240,7 @@ def apply_argument_cast_to_class(klass: type) -> type:
                             else MethodType
                         )
                     ),
-                    cls=klass,
+                    extensions=klass._extensions,
                     name=attr_name,
                 )
                 wrapped = (
@@ -264,7 +270,7 @@ def wrap_function_in_argument_caster(
     wrapping_function_type: Optional[
         Union[type[classmethod], type[staticmethod], type[MethodType]]
     ],
-    cls: Optional[type],
+    extensions: EXTENSION_DICT_TYPE,
 ) -> callable:
     """
     Wrap a function so that it casts all castable arguments to a consistent query compiler, and uses the correct extension implementation for methods.
@@ -281,7 +287,7 @@ def wrap_function_in_argument_caster(
         - `classmethod` means we are wrapping a classmethod.
         - `staticmethod` means we are wrapping a staticmethod.
         - `MethodType` means we are wrapping a regular method of a class.
-    cls : Optional[type]
+    extensions : EXTENSION_DICT_TYPE
         The class of the function we are wrapping. This should be None if
         and only if `wrapping_function_type` is None.
 
@@ -290,11 +296,6 @@ def wrap_function_in_argument_caster(
     callable
         The wrapped function.
     """
-    ErrorMessage.catch_bugs_and_request_email(
-        (cls is None and wrapping_function_type is not None)
-        or (cls is not None and wrapping_function_type is None),
-        extra_log="`cls` should be None if and only if `wrapping_function_type` is None",
-    )
 
     @functools.wraps(f)
     def f_with_argument_casting(*args: Tuple, **kwargs: Dict) -> Any:
@@ -312,9 +313,6 @@ def wrap_function_in_argument_caster(
         -------
         Any
         """
-        if len(args) == 0 and len(kwargs) == 0:
-            return
-
         if wrapping_function_type in (classmethod, staticmethod):
             # TODO: currently we don't support any kind of casting or extension
             # for classmethod or staticmethod.
@@ -357,8 +355,7 @@ def wrap_function_in_argument_caster(
             def cast_to_qc(arg):
                 if not (
                     isinstance(arg, QueryCompilerCaster)
-                    and (original_query_compiler := arg._get_query_compiler())
-                    is not None
+                    and arg._get_query_compiler() is not None
                     and arg.get_backend() != result_backend
                 ):
                     return arg
@@ -366,7 +363,7 @@ def wrap_function_in_argument_caster(
                 inplace_update_trackers.append(
                     InplaceUpdateTracker(
                         input_castable=arg,
-                        original_query_compiler=original_query_compiler,
+                        original_query_compiler=cast._get_query_compiler(),
                         new_castable=cast,
                     )
                 )
@@ -376,29 +373,24 @@ def wrap_function_in_argument_caster(
             kwargs = visit_nested_args(kwargs, cast_to_qc)
         else:
             result_backend = Backend.get()
-
-        if wrapping_function_type is None:
-            # TODO(https://github.com/modin-project/modin/issues/7474): dispatch
-            # free functions like pd.concat() to the correct extension.
-            return f(*args, **kwargs)
-
-        # Now we should be dealing with a regular method of a class.
-        ErrorMessage.catch_bugs_and_request_email(
-            wrapping_function_type is not MethodType
-        )
-
-        # When python invokes a method on an object, it passes the object as
-        # the first positional argument.
-        self = args[0]
-        if name in cls._extensions[result_backend]:
-            f_to_apply = cls._extensions[result_backend][name]
+        if name in extensions[result_backend]:
+            f_to_apply = extensions[result_backend][name]
         else:
-            if name not in cls._extensions[None]:
+            if name not in extensions[None]:
                 raise AttributeError(
-                    f"{type(self).__name__} object has no attribute {name}"
+                    (
+                        # When python invokes a method on an object, it passes the object as
+                        # the first positional argument.
+                        (
+                            f"{(type(args[0]).__name__)} object"
+                            if wrapping_function_type is MethodType
+                            else "module 'modin.pandas'"
+                        )
+                        + f" has no attribute {name}"
+                    )
                 )
-            f_to_apply = cls._extensions[None][name]
-        method_result = f_to_apply(*args, **kwargs)
+            f_to_apply = extensions[None][name]
+        result = f_to_apply(*args, **kwargs)
         for (
             original_castable,
             original_qc,
@@ -407,9 +399,12 @@ def wrap_function_in_argument_caster(
             new_qc = new_castable._get_query_compiler()
             if original_qc is not new_qc:
                 new_castable._copy_into(original_castable)
-        return method_result
+        return result
 
     return f_with_argument_casting
+
+
+_GENERAL_EXTENSIONS: EXTENSION_DICT_TYPE = defaultdict(dict)
 
 
 def wrap_free_function_in_argument_caster(name: str) -> callable:
@@ -426,9 +421,16 @@ def wrap_free_function_in_argument_caster(name: str) -> callable:
     callable
         A wrapper for a free function that casts all castable arguments to a consistent query compiler.
     """
-    return functools.partial(
-        wrap_function_in_argument_caster,
-        wrapping_function_type=None,
-        cls=None,
-        name=name,
-    )
+
+    def wrapper(f):
+        if name not in _GENERAL_EXTENSIONS[None]:
+            _GENERAL_EXTENSIONS[None][name] = f
+
+        return wrap_function_in_argument_caster(
+            f=f,
+            wrapping_function_type=None,
+            extensions=_GENERAL_EXTENSIONS,
+            name=name,
+        )
+
+    return wrapper

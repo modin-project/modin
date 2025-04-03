@@ -40,10 +40,12 @@ from pandas.api.types import is_bool, is_list_like
 from pandas.core.dtypes.common import is_bool_dtype, is_integer, is_integer_dtype
 from pandas.core.indexing import IndexingError
 
-from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    EXTENSION_DICT_TYPE,
+    QueryCompilerCaster,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
-from modin.pandas.api.extensions.extensions import EXTENSION_DICT_TYPE
 from modin.utils import _inherit_docstrings
 
 from .dataframe import DataFrame
