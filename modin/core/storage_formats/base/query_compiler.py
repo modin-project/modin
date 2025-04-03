@@ -399,7 +399,7 @@ class BaseQueryCompiler(
     @disable_logging
     def max_cost(self) -> int:
         """
-        Return the max cost allowed by this engine
+        Return the max cost allowed by this engine.
 
         Returns
         -------
