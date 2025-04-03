@@ -53,7 +53,7 @@ class BackendCostCalculator:
     which query compiler's backend would minimize the cost of casting
     or coercion. Use the aggregate sum of coercion to determine overall
     cost.
-    
+
     Parameters
     ----------
     operation : str or None representing the operation being performed
