@@ -69,6 +69,33 @@ def test_dataframe_extension_overrides_existing_method(Backend1):
     assert df.set_backend(Backend1).sort_values().iloc[0, 0] == 3
 
 
+@pytest.mark.parametrize(
+    "method_name",
+    [
+        "pow",
+        "__pow__",
+        "__ipow__",
+    ],
+)
+def test_dataframe_extension_overrides_pow_github_issue_7495(method_name):
+    register_dataframe_accessor(method_name, backend="Pandas")(
+        lambda *args, **kwargs: 4
+    )
+    assert getattr(pd.DataFrame([1]).set_backend("Pandas"), method_name)() == 4
+
+
+def test_override_pow_and__pow__to_different_implementations():
+    register_dataframe_accessor("pow", backend="Pandas")(
+        lambda *args, **kwargs: "pow_result"
+    )
+    register_dataframe_accessor("__pow__", backend="Pandas")(
+        lambda *args, **kwargs: "__pow___result"
+    )
+    df = pd.DataFrame([1]).set_backend("pandas")
+    assert df.pow() == "pow_result"
+    assert df.__pow__() == "__pow___result"
+
+
 def test_dataframe_extension_method_uses_superclass_method(Backend1):
     df = pd.DataFrame([3, 2, 1])
     assert df.sort_values(0).iloc[0, 0] == 1

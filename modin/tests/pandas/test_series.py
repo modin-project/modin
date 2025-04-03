@@ -31,6 +31,9 @@ from pandas.errors import PerformanceWarning, SpecificationError
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _assert_casting_functions_wrap_same_implementation,
+)
 from modin.pandas.io import to_pandas
 from modin.tests.test_utils import (
     current_execution_is_native,
@@ -764,7 +767,9 @@ def test_add_custom_class():
 
 def test_aggregate_alias():
     # It's optimization. If failed, Series.agg should be tested explicitly
-    assert pd.Series.aggregate == pd.Series.agg
+    _assert_casting_functions_wrap_same_implementation(
+        pd.Series.aggregate, pd.Series.agg
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2373,7 +2378,9 @@ def test_keys(data):
 def test_kurtosis_alias():
     # It's optimization. If failed, Series.kurt should be tested explicitly
     # in tests: `test_kurt_kurtosis`, `test_kurt_kurtosis_level`.
-    assert pd.Series.kurt == pd.Series.kurtosis
+    _assert_casting_functions_wrap_same_implementation(
+        pd.Series.kurt, pd.Series.kurtosis
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -2783,7 +2790,9 @@ def test_pow(data):
 
 
 def test_product_alias():
-    assert pd.Series.prod == pd.Series.product
+    _assert_casting_functions_wrap_same_implementation(
+        pd.Series.prod, pd.Series.product
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
