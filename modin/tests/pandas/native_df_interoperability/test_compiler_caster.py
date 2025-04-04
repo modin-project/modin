@@ -39,6 +39,7 @@ class CloudQC(NativeQueryCompiler):
         return QCCoercionCost.COST_IMPOSSIBLE
 
     def move_to_cost(self, other_qc_cls, op):
+        assert op is not None
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
@@ -48,6 +49,9 @@ class CloudQC(NativeQueryCompiler):
             OmniscientEagerQC: None,
             OmniscientLazyQC: None,
         }[other_qc_cls]
+
+    def stay_cost(self, other_qc_type, op):
+        return QCCoercionCost.COST_HIGH
 
 
 class ClusterQC(NativeQueryCompiler):
@@ -453,3 +457,24 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
     )
     assert local_df.get_backend() == "Local_machine"
     assert cloud_df.get_backend() == "Cloud"
+
+
+# Outlines a future generic function for determining when to stay
+# or move to different engines. In the current state it is pretty
+# trivial, but added for completeness
+def test_stay_or_move_evaluation(cloud_df, default_df):
+    default_cls = type(default_df._get_query_compiler())
+    cloud_cls = type(cloud_df._get_query_compiler())
+
+    stay_cost = cloud_df._get_query_compiler().stay_cost(default_cls, "myop")
+    move_cost = cloud_df._get_query_compiler().move_to_cost(default_cls, "myop")
+    df = cloud_df
+    if stay_cost > move_cost:
+        df = cloud_df.move_to("Test_casting_default")
+    else:
+        assert False
+
+    stay_cost = df._get_query_compiler().stay_cost(cloud_cls, "myop")
+    move_cost = df._get_query_compiler().move_to_cost(cloud_cls, "myop")
+    assert stay_cost == None
+    assert move_cost == None
