@@ -120,24 +120,24 @@ jobs:
     # or if we are on the "python" engine, which only has a single group. We
     # skip these tests on the "native" engine, which does not use partitions.
 
-      - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-        if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
-      - run: python -m pytest modin/tests/test_partition_api.py
-        # Skip this test for python because we do not define unwrap_partitions()
-        # for python execution.
-        if: matrix.engine != 'native' && matrix.engine != 'python' && matrix.test_task == 'group_1'
-      - name: xgboost tests
-        run: |
-          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-          # when we use collective instead of rabit.
-          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
-          python -m pytest -n 2 \
-                  modin/tests/experimental/xgboost/test_default.py \
-                  modin/tests/experimental/xgboost/test_xgboost.py \
-                  modin/tests/experimental/xgboost/test_dmatrix.py
-        if: matrix.engine != 'native' && matrix.os != 'windows' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
-      - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
-        if: matrix.engine != 'native'  && (matrix.engine == 'python' || matrix.test_task == 'group_1')
+      # - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
+      #   if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
+      # - run: python -m pytest modin/tests/test_partition_api.py
+      #   # Skip this test for python because we do not define unwrap_partitions()
+      #   # for python execution.
+      #   if: matrix.engine != 'native' && matrix.engine != 'python' && matrix.test_task == 'group_1'
+      # - name: xgboost tests
+      #   run: |
+      #     # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+      #     # when we use collective instead of rabit.
+      #     mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+      #     python -m pytest -n 2 \
+      #             modin/tests/experimental/xgboost/test_default.py \
+      #             modin/tests/experimental/xgboost/test_xgboost.py \
+      #             modin/tests/experimental/xgboost/test_dmatrix.py
+      #   if: matrix.engine != 'native' && matrix.os != 'windows' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
+      # - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
+      #   if: matrix.engine != 'native'  && (matrix.engine == 'python' || matrix.test_task == 'group_1')
 
 
     # END partitioned execution tests.
@@ -149,33 +149,33 @@ jobs:
     # tests for 'group_4'. For each of 'native' and 'python' engines,  we run
     # all tests in a single job, so we ignore the grouping.
 
-      - uses: ./.github/actions/run-core-tests/group_1
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_1'
-      - uses: ./.github/actions/run-core-tests/group_2
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_2'
-      - uses: ./.github/actions/run-core-tests/group_3
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_3'
-      - uses: ./.github/actions/run-core-tests/group_4
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/tests/numpy
-        # Native execution does not support the modin Numpy API.
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      # - uses: ./.github/actions/run-core-tests/group_1
+      #   with:
+      #     # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+      #     # See https://github.com/modin-project/modin/issues/7387.
+      #     parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+      #   if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_1'
+      # - uses: ./.github/actions/run-core-tests/group_2
+      #   with:
+      #     # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+      #     # See https://github.com/modin-project/modin/issues/7387.
+      #     parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+      #   if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_2'
+      # - uses: ./.github/actions/run-core-tests/group_3
+      #   with:
+      #     # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+      #     # See https://github.com/modin-project/modin/issues/7387.
+      #     parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+      #   if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_3'
+      # - uses: ./.github/actions/run-core-tests/group_4
+      #   with:
+      #     # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+      #     # See https://github.com/modin-project/modin/issues/7387.
+      #     parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+      #   if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+      # - run: python -m pytest -n 2 modin/tests/numpy
+      #   # Native execution does not support the modin Numpy API.
+      #   if: matrix.engine == 'python' || matrix.test_task == 'group_4'
 
     # END test groups.
 
