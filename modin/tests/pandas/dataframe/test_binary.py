@@ -21,6 +21,9 @@ from modin.config import NPartitions, StorageFormat
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _assert_casting_functions_wrap_same_implementation,
+)
 from modin.tests.pandas.utils import (
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
@@ -186,7 +189,9 @@ def test_math_functions_level(op):
     ],
 )
 def test_math_alias(math_op, alias):
-    assert getattr(pd.DataFrame, math_op) == getattr(pd.DataFrame, alias)
+    _assert_casting_functions_wrap_same_implementation(
+        getattr(pd.DataFrame, math_op), getattr(pd.DataFrame, alias)
+    )
 
 
 @pytest.mark.parametrize("other", ["as_left", 4, 4.0, "a"])

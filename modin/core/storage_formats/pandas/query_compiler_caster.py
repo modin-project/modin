@@ -24,7 +24,7 @@ import inspect
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
 from types import FunctionType, MethodType
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, ValuesView
+from typing import Any, Dict, Optional, Tuple, TypeVar, Union, ValuesView
 
 from pandas.core.indexes.frozen import FrozenList
 from typing_extensions import Self
@@ -182,6 +182,42 @@ def visit_nested_args(arguments, fn: callable):
     return arguments
 
 
+def _assert_casting_functions_wrap_same_implementation(
+    m1: callable, m2: callable
+) -> None:
+    """
+    Assert that two casting wrappers wrap the same implementation.
+
+    Parameters
+    ----------
+    m1 : callable
+        The first casting wrapper.
+    m2 : callable
+        The second casting wrapper.
+
+    Raises
+    ------
+    AssertionError
+        If the two casting wrappers wrap different implementations.
+    """
+    assert (
+        # For cases like (m1=Series.agg, m2=Series.aggregate), where Series
+        # defines its own method and aliases it, the two wrapped methods
+        # are the same.
+        m2._wrapped_method_for_casting is m1._wrapped_method_for_casting
+        # For cases like (m1=Series.kurt, m2=Series.kurtosis), where Series
+        # inherits both kurt and kurtosis from BasePandasDataset but does
+        # not define its own implementation of either,
+        # Series.kurt._wrapped_method_for_casting points to
+        # BasePandasDataset.kurt, which is not the same as
+        # BasePandasDataset.kurtosis. In that case, we need to go one level
+        # deeper to compare the wrapped methods of the two aliases of
+        # BasePandasDataset.
+        or m2._wrapped_method_for_casting._wrapped_method_for_casting
+        is m1._wrapped_method_for_casting._wrapped_method_for_casting
+    )
+
+
 def apply_argument_cast_to_class(klass: type) -> type:
     """
     Apply argument casting to all functions in a class.
@@ -202,64 +238,52 @@ def apply_argument_cast_to_class(klass: type) -> type:
     for key in current_class_attrs:
         all_attrs[key] = current_class_attrs[key]
 
-    # We want to avoid wrapping synonyms like __add__() and add() with
-    # different wrappers, so keep a dict mapping methods we've wrapped
-    # to their wrapped versions.
-    already_seen_to_wrapped: dict[Callable, Callable] = {}
-
     for attr_name, attr_value in all_attrs.items():
-        if isinstance(attr_value, (FunctionType, classmethod, staticmethod)):
-            implementation_function = (
-                attr_value.__func__
-                if isinstance(attr_value, (classmethod, staticmethod))
-                else attr_value
+        if attr_name in _NON_EXTENDABLE_ATTRIBUTES or not isinstance(
+            attr_value, (FunctionType, classmethod, staticmethod)
+        ):
+            continue
+
+        implementation_function = (
+            attr_value.__func__
+            if isinstance(attr_value, (classmethod, staticmethod))
+            else attr_value
+        )
+        if attr_name not in klass._extensions[None]:
+            # Register the original implementation as the default
+            # extension. We fall back to this implementation if the
+            # object's backend does not have an implementation for this
+            # method.
+            klass._extensions[None][attr_name] = implementation_function
+
+        casting_implementation = wrap_function_in_argument_caster(
+            f=implementation_function,
+            wrapping_function_type=(
+                classmethod
+                if isinstance(attr_value, classmethod)
+                else (
+                    staticmethod if isinstance(attr_value, staticmethod) else MethodType
+                )
+            ),
+            extensions=klass._extensions,
+            name=attr_name,
+        )
+        wrapped = (
+            classmethod(casting_implementation)
+            if isinstance(attr_value, classmethod)
+            else (
+                staticmethod(casting_implementation)
+                if isinstance(attr_value, staticmethod)
+                else casting_implementation
             )
-
-            if attr_name not in klass._extensions[None]:
-                # Register the original implementation as the default
-                # extension. We fall back to this implementation if the
-                # object's backend does not have an implementation for this
-                # method.
-                klass._extensions[None][attr_name] = implementation_function
-
-            if attr_value in already_seen_to_wrapped:
-                setattr(
-                    klass,
-                    attr_name,
-                    already_seen_to_wrapped[attr_value],
-                )
-            elif attr_name not in _NON_EXTENDABLE_ATTRIBUTES:
-                casting_implementation = wrap_function_in_argument_caster(
-                    f=implementation_function,
-                    wrapping_function_type=(
-                        classmethod
-                        if isinstance(attr_value, classmethod)
-                        else (
-                            staticmethod
-                            if isinstance(attr_value, staticmethod)
-                            else MethodType
-                        )
-                    ),
-                    extensions=klass._extensions,
-                    name=attr_name,
-                )
-                wrapped = (
-                    classmethod(casting_implementation)
-                    if isinstance(attr_value, classmethod)
-                    else (
-                        staticmethod(casting_implementation)
-                        if isinstance(attr_value, staticmethod)
-                        else casting_implementation
-                    )
-                )
-                if attr_name not in klass.__dict__:
-                    # If this class's method comes from a superclass (i.e.
-                    # it's not in klass.__dict__), mark it so that
-                    # modin.utils._inherit_docstrings knows that the method
-                    # must get its docstrings from its superclass.
-                    wrapped._wrapped_superclass_method = attr_value
-                setattr(klass, attr_name, wrapped)
-                already_seen_to_wrapped[attr_value] = wrapped
+        )
+        if attr_name not in klass.__dict__:
+            # If this class's method comes from a superclass (i.e.
+            # it's not in klass.__dict__), mark it so that
+            # modin.utils._inherit_docstrings knows that the method
+            # must get its docstrings from its superclass.
+            wrapped._wrapped_superclass_method = attr_value
+        setattr(klass, attr_name, wrapped)
 
     return klass
 
@@ -401,6 +425,7 @@ def wrap_function_in_argument_caster(
                 new_castable._copy_into(original_castable)
         return result
 
+    f_with_argument_casting._wrapped_method_for_casting = f
     return f_with_argument_casting
 
 
