@@ -476,5 +476,5 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
 
     stay_cost = df._get_query_compiler().stay_cost(cloud_cls, "myop")
     move_cost = df._get_query_compiler().move_to_cost(cloud_cls, "myop")
-    assert stay_cost == None
-    assert move_cost == None
+    assert stay_cost is None
+    assert move_cost is None
