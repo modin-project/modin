@@ -14,6 +14,7 @@
 import csv
 import inspect
 import os
+import platform
 import sys
 import unittest.mock as mock
 from collections import defaultdict
@@ -2726,6 +2727,10 @@ class TestSql:
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHtml:
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="https://github.com/modin-project/modin/issues/7497",
+    )
     def test_read_html(self, make_html_file):
         eval_io(fn_name="read_html", io=make_html_file())
 
@@ -3160,6 +3165,10 @@ class TestPickle:
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestXml:
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="https://github.com/modin-project/modin/issues/7497",
+    )
     def test_read_xml(self):
         # example from pandas
         data = """<?xml version='1.0' encoding='utf-8'?>
@@ -3295,6 +3304,10 @@ def test_to_latex():
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="https://github.com/modin-project/modin/issues/7497",
+)
 def test_to_xml():
     # `lxml` is a required dependency for `to_xml`, but optional for Modin.
     # For some engines we do not install it.
