@@ -14,6 +14,7 @@
 # We turn off mypy type checks in this file because it's not imported anywhere
 # type: ignore
 
+import copy
 import os
 import platform
 import shutil
@@ -56,6 +57,7 @@ import uuid  # noqa: E402
 
 import modin  # noqa: E402
 import modin.config  # noqa: E402
+import modin.pandas as pd  # noqa: E402
 import modin.tests.config  # noqa: E402
 from modin.config import (  # noqa: E402
     AsyncReadMode,
@@ -72,6 +74,9 @@ from modin.core.execution.python.implementations.pandas_on_python.io import (  #
 from modin.core.storage_formats import (  # noqa: E402
     BaseQueryCompiler,
     PandasQueryCompiler,
+)
+from modin.core.storage_formats.pandas.query_compiler_caster import (  # noqa: E402
+    _GENERAL_EXTENSIONS,
 )
 from modin.tests.pandas.utils import (  # noqa: E402
     NROWS,
@@ -719,3 +724,28 @@ def modify_config(request):
                 key.put(False)
             else:
                 raise e
+
+
+@pytest.fixture(autouse=True)
+def clean_up_extensions():
+
+    original_dataframe_extensions = copy.deepcopy(pd.dataframe.DataFrame._extensions)
+    original_series_extensions = copy.deepcopy(pd.Series._extensions)
+    original_base_extensions = copy.deepcopy(pd.base.BasePandasDataset._extensions)
+    original_general_extensions = copy.deepcopy(_GENERAL_EXTENSIONS)
+    yield
+    pd.dataframe.DataFrame._extensions.clear()
+    pd.dataframe.DataFrame._extensions.update(original_dataframe_extensions)
+    pd.Series._extensions.clear()
+    pd.Series._extensions.update(original_series_extensions)
+    pd.base.BasePandasDataset._extensions.clear()
+    pd.base.BasePandasDataset._extensions.update(original_base_extensions)
+    _GENERAL_EXTENSIONS.clear()
+    _GENERAL_EXTENSIONS.update(original_general_extensions)
+
+    from modin.pandas.api.extensions.extensions import _attrs_to_delete_on_test
+
+    for k, v in _attrs_to_delete_on_test.items():
+        for obj in v:
+            delattr(k, obj)
+    _attrs_to_delete_on_test.clear()

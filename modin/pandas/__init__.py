@@ -27,8 +27,6 @@ if (
         + f" Modin ({__pandas_version__}.X). This may cause undesired side effects!"
     )
 
-# The extensions assigned to this module
-_PD_EXTENSIONS_ = {}
 
 # to not pollute namespace
 del version
@@ -138,6 +136,7 @@ def _initialize_engine(engine_string: str):
 
 
 from modin.pandas import arrays, errors
+from modin.pandas.api.extensions.extensions import __getattr___impl
 from modin.utils import show_versions
 
 from .. import __version__
@@ -195,30 +194,10 @@ from .io import (
 from .plotting import Plotting as plotting
 from .series import Series
 
-
-def __getattr__(name: str):
-    """
-    Overrides getattr on the module to enable extensions.
-
-    Parameters
-    ----------
-    name : str
-        The name of the attribute being retrieved.
-
-    Returns
-    -------
-    Attribute
-        Returns the extension attribute, if it exists, otherwise returns the attribute
-        imported in this file.
-    """
-    try:
-        return _PD_EXTENSIONS_.get(name, globals()[name])
-    except KeyError:
-        raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
+__getattr__ = __getattr___impl
 
 
 __all__ = [  # noqa: F405
-    "_PD_EXTENSIONS_",
     "DataFrame",
     "Series",
     "read_csv",
@@ -332,4 +311,5 @@ __all__ = [  # noqa: F405
     "errors",
 ]
 
-del pandas, Parameter
+# Remove these attributes from this module's namespace.
+del pandas, Parameter, __getattr___impl

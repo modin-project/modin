@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 import json
+import platform
 from pathlib import Path
 
 import numpy as np
@@ -323,6 +324,10 @@ def test_json_glob(tmp_path, filename):
 @pytest.mark.parametrize(
     "filename",
     ["test_xml_glob.xml", "test_xml_glob*.xml"],
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="https://github.com/modin-project/modin/issues/7497",
 )
 def test_xml_glob(tmp_path, filename):
     data = test_data["int_data"]
