@@ -11,11 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import copy
-
 import pytest
 
-import modin.pandas as pd
 from modin.config import Backend, Engine, Execution, StorageFormat
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory, NativeIO
@@ -37,28 +34,6 @@ class Test1Factory(BaseFactory):
     @classmethod
     def prepare(cls):
         cls.io_cls = Test1IO
-
-
-@pytest.fixture(autouse=True)
-def clean_up_extensions():
-
-    original_dataframe_extensions = copy.deepcopy(pd.dataframe.DataFrame._extensions)
-    original_series_extensions = copy.deepcopy(pd.Series._extensions)
-    original_base_extensions = copy.deepcopy(pd.base.BasePandasDataset._extensions)
-    yield
-    pd.dataframe.DataFrame._extensions.clear()
-    pd.dataframe.DataFrame._extensions.update(original_dataframe_extensions)
-    pd.Series._extensions.clear()
-    pd.Series._extensions.update(original_series_extensions)
-    pd.base.BasePandasDataset._extensions.clear()
-    pd.base.BasePandasDataset._extensions.update(original_base_extensions)
-
-    from modin.pandas.api.extensions.extensions import _attrs_to_delete_on_test
-
-    for k, v in _attrs_to_delete_on_test.items():
-        for obj in v:
-            delattr(k, obj)
-    _attrs_to_delete_on_test.clear()
 
 
 @pytest.fixture

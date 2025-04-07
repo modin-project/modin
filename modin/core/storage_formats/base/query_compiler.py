@@ -309,7 +309,12 @@ class BaseQueryCompiler(
         return self.__wrap_in_qc(result)
 
     @disable_logging
-    def move_to_cost(self, other_qc_type: type, op: str = None) -> int:
+    def move_to_cost(
+        self,
+        other_qc_type: type,
+        api: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> int:
         """
         Return the coercion costs of this qc to other_qc type.
 
@@ -321,8 +326,11 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
-        op : str, default: None
-            The operation being performed or None which can be used as a consideration
+        api : str, default: None
+            The class name performing the operation which can be used as a
+            consideration for the costing analysis.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
             for the costing analysis.
 
         Returns
@@ -336,7 +344,12 @@ class BaseQueryCompiler(
         return None
 
     @disable_logging
-    def stay_cost(self, other_qc_type: type, op: str = None) -> int:
+    def stay_cost(
+        self,
+        other_qc_type: type,
+        api: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> int:
         """
         Return the "opportunity cost" of not moving the data.
 
@@ -355,8 +368,11 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
-        op : str, default: None
-            The operation being performed or None which can be used as a consideration
+        api : str, default: None
+            The class name performing the operation which can be used as a
+            consideration for the costing analysis.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
             for the costing analysis.
 
         Returns
@@ -372,7 +388,10 @@ class BaseQueryCompiler(
     @disable_logging
     @classmethod
     def move_to_me_cost(
-        cls, other_qc: BaseQueryCompiler, op: str = None
+        cls,
+        other_qc: BaseQueryCompiler,
+        api: Optional[str] = None,
+        operation: Optional[str] = None,
     ) -> Optional[int]:
         """
         Return the coercion costs from other_qc to this qc type.
@@ -385,8 +404,11 @@ class BaseQueryCompiler(
         ----------
         other_qc : BaseQueryCompiler
             The query compiler from which we should return the cost of switching.
-        op : str, default: None
-            The operation being performed or None which can be used as a consideration
+        api : str, default: None
+            The class name performing the operation which can be used as a
+            consideration for the costing analysis.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
             for the costing analysis.
 
         Returns

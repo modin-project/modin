@@ -12,27 +12,26 @@
 # governing permissions and limitations under the License.
 
 from collections import defaultdict
-from types import MethodType
-from typing import Any, Optional
+from types import MethodType, ModuleType
+from typing import Any, Optional, Union
 
 import modin.pandas as pd
 from modin.config import Backend
 from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _GENERAL_EXTENSIONS,
     _NON_EXTENDABLE_ATTRIBUTES,
+    EXTENSION_DICT_TYPE,
     wrap_function_in_argument_caster,
 )
-
-# This type describes a defaultdict that maps backend name (or `None` for
-# method implementation and not bound to any one extension) to the dictionary of
-# extensions for that backend. The keys of the inner dictionary are the names of
-# the extensions, and the values are the extensions themselves.
-EXTENSION_DICT_TYPE = defaultdict[Optional[str], dict[str, Any]]
 
 _attrs_to_delete_on_test = defaultdict(list)
 
 
 def _set_attribute_on_obj(
-    name: str, extensions: dict, backend: Optional[str], obj: type
+    name: str,
+    extensions: EXTENSION_DICT_TYPE,
+    backend: Optional[str],
+    obj: Union[type, ModuleType],
 ):
     """
     Create a new or override existing attribute on obj.
@@ -41,7 +40,7 @@ def _set_attribute_on_obj(
     ----------
     name : str
         The name of the attribute to assign to `obj`.
-    extensions : dict
+    extensions : EXTENSION_DICT_TYPE
         The dictionary mapping extension name to `new_attr` (assigned below).
     backend : Optional[str]
         The backend to which the accessor applies. If `None`, this accessor
@@ -75,15 +74,17 @@ def _set_attribute_on_obj(
             name
         ] = new_attr
         if callable(new_attr) and name not in dir(obj):
-            # For callable extensions, we add a method to the class that
+            # For callable extensions, we add a method to `obj`'s namespace that
             # dispatches to the correct implementation.
             setattr(
                 obj,
                 name,
                 wrap_function_in_argument_caster(
                     f=new_attr,
-                    wrapping_function_type=MethodType,
-                    cls=obj,
+                    wrapping_function_type=(
+                        MethodType if isinstance(obj, type) else None
+                    ),
+                    extensions=extensions,
                     name=name,
                 ),
             )
@@ -212,7 +213,7 @@ def register_base_accessor(name: str, *, backend: Optional[str] = None):
     )
 
 
-def register_pd_accessor(name: str):
+def register_pd_accessor(name: str, *, backend: Optional[str] = None):
     """
     Registers a pd namespace attribute with the name provided.
 
@@ -239,29 +240,45 @@ def register_pd_accessor(name: str):
     ----------
     name : str
         The name of the attribute to assign to modin.pandas.
+    backend : Optional[str]
+        The backend to which the accessor applies. If ``None``, this accessor
+        will become the default for all backends.
 
     Returns
     -------
     decorator
         Returns the decorator function.
     """
+    return _set_attribute_on_obj(
+        name=name, extensions=_GENERAL_EXTENSIONS, backend=backend, obj=pd
+    )
 
-    def decorator(new_attr: Any):
-        """
-        The decorator for a function or class to be assigned to name
 
-        Parameters
-        ----------
-        new_attr : Any
-            The new attribute to assign to name.
+def __getattr___impl(name: str):
+    """
+    Override __getatttr__ on the modin.pandas module to enable extensions.
 
-        Returns
-        -------
-        new_attr
-            Unmodified new_attr is return from the decorator.
-        """
-        pd._PD_EXTENSIONS_[name] = new_attr
-        setattr(pd, name, new_attr)
-        return new_attr
+    Note that python only falls back to this function if the attribute is not
+    found in this module's namespace.
 
-    return decorator
+    Parameters
+    ----------
+    name : str
+        The name of the attribute being retrieved.
+
+    Returns
+    -------
+    Attribute
+        Returns the extension attribute, if it exists, otherwise returns the attribute
+        imported in this file.
+    """
+
+    from modin.config import Backend
+
+    backend = Backend.get()
+    if name in _GENERAL_EXTENSIONS[backend]:
+        return _GENERAL_EXTENSIONS[backend][name]
+    elif name in _GENERAL_EXTENSIONS[None]:
+        return _GENERAL_EXTENSIONS[None][name]
+    else:
+        raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")

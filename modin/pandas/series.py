@@ -33,8 +33,8 @@ from pandas.util._decorators import doc
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
+from modin.core.storage_formats.pandas.query_compiler_caster import EXTENSION_DICT_TYPE
 from modin.logging import disable_logging
-from modin.pandas.api.extensions.extensions import EXTENSION_DICT_TYPE
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
