@@ -372,7 +372,7 @@ class BaseQueryCompiler(
     @disable_logging
     @classmethod
     def move_to_me_cost(
-        cls, other_qc: BaseQueryCompiler, op: str = None
+        cls, other_qc: BaseQueryCompiler, op: Optional[str] = None
     ) -> Optional[int]:
         """
         Return the coercion costs from other_qc to this qc type.
