@@ -336,7 +336,7 @@ class BaseQueryCompiler(
         return None
 
     @disable_logging
-    def stay_cost(self, other_qc_type: type, op: str = None) -> int:
+    def stay_cost(self, other_qc_type: type, op: Optional[str] = None) -> int:
         """
         Return the "opportunity cost" of not moving the data.
 
