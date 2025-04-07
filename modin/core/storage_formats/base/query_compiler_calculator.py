@@ -59,7 +59,7 @@ class BackendCostCalculator:
     ----------
     api : str or None
         Representing the api, often the module name for the operation
-        such as 'modin.pandas.base' or 'modin.pandas.dataframe'
+        such as 'modin.pandas.base' or 'modin.pandas.dataframe'.
     operation : str or None representing the operation being performed
     """
 
