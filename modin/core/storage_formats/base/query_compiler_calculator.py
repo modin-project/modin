@@ -20,6 +20,7 @@ all query compilers to determine the best query compiler to use.
 """
 
 import logging
+from typing import Optional
 
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
@@ -56,13 +57,17 @@ class BackendCostCalculator:
 
     Parameters
     ----------
+    api : str or None
+        Representing the api, often the module name for the operation
+        such as 'modin.pandas.base' or 'modin.pandas.dataframe'
     operation : str or None representing the operation being performed
     """
 
-    def __init__(self, operation: str = None):
+    def __init__(self, api: Optional[str] = None, operation: Optional[str] = None):
         self._backend_data = {}
         self._qc_list = []
         self._result_backend = None
+        self._api = api
         self._op = operation
 
     def add_query_compiler(self, query_compiler: BaseQueryCompiler):
@@ -100,14 +105,14 @@ class BackendCostCalculator:
                 if qc_cls_to not in qc_to_cls_costed:
                     qc_to_cls_costed.add(qc_cls_to)
                     backend_to = qc_to.get_backend()
-                    cost = qc_from.move_to_cost(qc_cls_to, self._op)
+                    cost = qc_from.move_to_cost(qc_cls_to, self._api, self._op)
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
                     else:
                         # We have some information asymmetry in query compilers,
                         # qc_from does not know about qc_to types so we instead
                         # ask the same question but of qc_to.
-                        cost = qc_cls_to.move_to_me_cost(qc_from, self._op)
+                        cost = qc_cls_to.move_to_me_cost(qc_from, self._api, self._op)
                         if cost is not None:
                             self._add_cost_data(backend_to, cost)
 

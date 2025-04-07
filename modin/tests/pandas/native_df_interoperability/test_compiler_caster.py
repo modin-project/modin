@@ -39,8 +39,15 @@ class CloudQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE
 
-    def move_to_cost(self, other_qc_cls, op):
+    def move_to_cost(self, other_qc_cls, api, op):
         assert op is not None
+        assert api in [
+            "modin.pandas.general",
+            "modin.pandas.base",
+            "modin.pandas.dataframe",
+            "modin.pandas.series",
+            "modin.pandas.indexing",
+        ]
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
@@ -51,7 +58,7 @@ class CloudQC(NativeQueryCompiler):
             OmniscientLazyQC: None,
         }[other_qc_cls]
 
-    def stay_cost(self, other_qc_type, op):
+    def stay_cost(self, other_qc_type, api, op):
         return QCCoercionCost.COST_HIGH
 
 
@@ -64,7 +71,7 @@ class ClusterQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_HIGH
 
-    def move_to_cost(self, other_qc_cls, op):
+    def move_to_cost(self, other_qc_cls, api, op):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
@@ -83,7 +90,7 @@ class LocalMachineQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_MEDIUM
 
-    def move_to_cost(self, other_qc_cls, op):
+    def move_to_cost(self, other_qc_cls, api, op):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -101,7 +108,7 @@ class PicoQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_LOW
 
-    def move_to_cost(self, other_qc_cls, op):
+    def move_to_cost(self, other_qc_cls, api, op):
         return {
             CloudQC: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -116,7 +123,7 @@ class AdversarialQC(NativeQueryCompiler):
     def get_backend(self):
         return "Adversarial"
 
-    def move_to_cost(self, other_qc_cls, op):
+    def move_to_cost(self, other_qc_cls, api, op):
         return {
             CloudQC: -1000,
             ClusterQC: 10000,
@@ -131,14 +138,14 @@ class OmniscientEagerQC(NativeQueryCompiler):
         return "Eager"
 
     # keep other workloads from getting my workload
-    def move_to_cost(self, other_qc_cls, op):
+    def move_to_cost(self, other_qc_cls, api, op):
         if OmniscientEagerQC is other_qc_cls:
             return QCCoercionCost.COST_ZERO
         return QCCoercionCost.COST_IMPOSSIBLE
 
     # try to force other workloads to my engine
     @classmethod
-    def qc_engine_switch_cost_from(cls, other_qc):
+    def move_to_me_cost(cls, other_qc, api, op):
         return QCCoercionCost.COST_ZERO
 
 
@@ -149,12 +156,12 @@ class OmniscientLazyQC(NativeQueryCompiler):
         return "Lazy"
 
     # encorage other engines to take my workload
-    def move_to_cost(self, other_qc_cls, op):
+    def move_to_cost(self, other_qc_cls, api, op):
         return QCCoercionCost.COST_ZERO
 
     # try to keep other workloads from getting my workload
     @classmethod
-    def move_to_me_cost(cls, other_qc, op):
+    def move_to_me_cost(cls, other_qc, api, op):
         if isinstance(other_qc, cls):
             return QCCoercionCost.COST_ZERO
         return QCCoercionCost.COST_IMPOSSIBLE
@@ -489,15 +496,23 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
     default_cls = type(default_df._get_query_compiler())
     cloud_cls = type(cloud_df._get_query_compiler())
 
-    stay_cost = cloud_df._get_query_compiler().stay_cost(default_cls, "myop")
-    move_cost = cloud_df._get_query_compiler().move_to_cost(default_cls, "myop")
+    stay_cost = cloud_df._get_query_compiler().stay_cost(
+        default_cls, "modin.pandas.series", "myop"
+    )
+    move_cost = cloud_df._get_query_compiler().move_to_cost(
+        default_cls, "modin.pandas.series", "myop"
+    )
     df = cloud_df
     if stay_cost > move_cost:
         df = cloud_df.move_to("Test_casting_default")
     else:
         assert False
 
-    stay_cost = df._get_query_compiler().stay_cost(cloud_cls, "myop")
-    move_cost = df._get_query_compiler().move_to_cost(cloud_cls, "myop")
+    stay_cost = df._get_query_compiler().stay_cost(
+        cloud_cls, "modin.pandas.series", "myop"
+    )
+    move_cost = df._get_query_compiler().move_to_cost(
+        cloud_cls, "modin.pandas.series", "myop"
+    )
     assert stay_cost is None
     assert move_cost is None
