@@ -309,7 +309,7 @@ class BaseQueryCompiler(
         return self.__wrap_in_qc(result)
 
     @disable_logging
-    def move_to_cost(self, other_qc_type: type, op: str = None) -> int:
+    def move_to_cost(self, other_qc_type: type, op: Optional[str] = None) -> int:
         """
         Return the coercion costs of this qc to other_qc type.
 
