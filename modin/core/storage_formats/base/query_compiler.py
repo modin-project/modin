@@ -327,7 +327,7 @@ class BaseQueryCompiler(
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
         api : str, default: None
-            The class name performing the operation which can be used as a
+            The module name performing the operation which can be used as a
             consideration for the costing analysis.
         operation : str, default: None
             The operation being performed which can be used as a consideration
@@ -369,7 +369,7 @@ class BaseQueryCompiler(
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
         api : str, default: None
-            The class name performing the operation which can be used as a
+            The module name performing the operation which can be used as a
             consideration for the costing analysis.
         operation : str, default: None
             The operation being performed which can be used as a consideration
@@ -405,7 +405,7 @@ class BaseQueryCompiler(
         other_qc : BaseQueryCompiler
             The query compiler from which we should return the cost of switching.
         api : str, default: None
-            The class name performing the operation which can be used as a
+            The clmoduleass name performing the operation which can be used as a
             consideration for the costing analysis.
         operation : str, default: None
             The operation being performed which can be used as a consideration
