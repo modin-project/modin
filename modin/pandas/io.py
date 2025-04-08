@@ -133,10 +133,10 @@ def _read(**kwargs):
     return result
 
 
-@wrap_free_function_in_argument_caster("read_xml")
 @_inherit_docstrings(pandas.read_xml, apilink="pandas.read_xml")
-@expanduser_path_arg("path_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_xml")
+@expanduser_path_arg("path_or_buffer")
 def read_xml(
     path_or_buffer: FilePath | ReadBuffer[bytes] | ReadBuffer[str],
     *,
@@ -161,10 +161,10 @@ def read_xml(
     return ModinObjects.DataFrame(pandas.read_xml(**kwargs))
 
 
-@wrap_free_function_in_argument_caster("read_csv")
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
-@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_csv")
+@expanduser_path_arg("filepath_or_buffer")
 def read_csv(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
     *,
@@ -234,10 +234,10 @@ def read_csv(
     return _read(**kwargs)
 
 
-@wrap_free_function_in_argument_caster("read_table")
 @_inherit_docstrings(pandas.read_table, apilink="pandas.read_table")
-@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_table")
+@expanduser_path_arg("filepath_or_buffer")
 def read_table(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
     *,
@@ -309,10 +309,10 @@ def read_table(
     return _read(**kwargs)
 
 
-@wrap_free_function_in_argument_caster("read_parquet")
 @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
-@expanduser_path_arg("path")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_parquet")
+@expanduser_path_arg("path")
 def read_parquet(
     path,
     engine: str = "auto",
@@ -346,10 +346,10 @@ def read_parquet(
     )
 
 
-@wrap_free_function_in_argument_caster("read_json")
 @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
-@expanduser_path_arg("path_or_buf")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_json")
+@expanduser_path_arg("path_or_buf")
 def read_json(
     path_or_buf,
     *,
@@ -378,9 +378,9 @@ def read_json(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
 
 
-@wrap_free_function_in_argument_caster("read_gbq")
 @_inherit_docstrings(pandas.read_gbq, apilink="pandas.read_gbq")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_gbq")
 def read_gbq(
     query: str,
     project_id: str | None = None,
@@ -404,10 +404,10 @@ def read_gbq(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
 
 
-@wrap_free_function_in_argument_caster("read_html")
 @_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
-@expanduser_path_arg("io")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_html")
+@expanduser_path_arg("io")
 def read_html(
     io,
     *,
@@ -440,9 +440,9 @@ def read_html(
     return [ModinObjects.DataFrame(query_compiler=qc) for qc in qcs]
 
 
-@wrap_free_function_in_argument_caster("read_clipboard")
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_clipboard")
 def read_clipboard(
     sep=r"\s+",
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
@@ -461,10 +461,10 @@ def read_clipboard(
     )
 
 
-@wrap_free_function_in_argument_caster("read_excel")
 @_inherit_docstrings(pandas.read_excel, apilink="pandas.read_excel")
-@expanduser_path_arg("io")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_excel")
+@expanduser_path_arg("io")
 def read_excel(
     io,
     sheet_name: str | int | list[IntStrT] | None = 0,
@@ -511,10 +511,10 @@ def read_excel(
         return ModinObjects.DataFrame(query_compiler=intermediate)
 
 
-@wrap_free_function_in_argument_caster("read_hdf")
 @_inherit_docstrings(pandas.read_hdf, apilink="pandas.read_hdf")
-@expanduser_path_arg("path_or_buf")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_hdf")
+@expanduser_path_arg("path_or_buf")
 def read_hdf(
     path_or_buf,
     key=None,
@@ -539,10 +539,10 @@ def read_hdf(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
 
 
-@wrap_free_function_in_argument_caster("read_feather")
 @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
-@expanduser_path_arg("path")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_feather")
+@expanduser_path_arg("path")
 def read_feather(
     path,
     columns: Sequence[Hashable] | None = None,
@@ -559,10 +559,10 @@ def read_feather(
     )
 
 
-@wrap_free_function_in_argument_caster("read_stata")
 @_inherit_docstrings(pandas.read_stata)
-@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_stata")
+@expanduser_path_arg("filepath_or_buffer")
 def read_stata(
     filepath_or_buffer,
     *,
@@ -585,10 +585,10 @@ def read_stata(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
 
 
-@wrap_free_function_in_argument_caster("read_sas")
 @_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
-@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_sas")
+@expanduser_path_arg("filepath_or_buffer")
 def read_sas(
     filepath_or_buffer,
     *,
@@ -617,10 +617,10 @@ def read_sas(
     )
 
 
-@wrap_free_function_in_argument_caster("read_pickle")
 @_inherit_docstrings(pandas.read_pickle, apilink="pandas.read_pickle")
-@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_pickle")
+@expanduser_path_arg("filepath_or_buffer")
 def read_pickle(
     filepath_or_buffer,
     compression: CompressionOptions = "infer",
@@ -635,9 +635,9 @@ def read_pickle(
     )
 
 
-@wrap_free_function_in_argument_caster("read_sql")
 @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_sql")
 def read_sql(
     sql,
     con,
@@ -667,10 +667,10 @@ def read_sql(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
 
 
-@wrap_free_function_in_argument_caster("read_fwf")
 @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
-@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_fwf")
+@expanduser_path_arg("filepath_or_buffer")
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
     *,
@@ -704,9 +704,9 @@ def read_fwf(
     return ModinObjects.DataFrame(query_compiler=pd_obj)
 
 
-@wrap_free_function_in_argument_caster("read_sql_table")
 @_inherit_docstrings(pandas.read_sql_table, apilink="pandas.read_sql_table")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_sql_table")
 def read_sql_table(
     table_name,
     con,
@@ -730,9 +730,9 @@ def read_sql_table(
     )
 
 
-@wrap_free_function_in_argument_caster("read_sql_query")
 @_inherit_docstrings(pandas.read_sql_query, apilink="pandas.read_sql_query")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_sql_query")
 def read_sql_query(
     sql,
     con,
@@ -753,10 +753,10 @@ def read_sql_query(
     )
 
 
-@wrap_free_function_in_argument_caster("to_pickle")
 @_inherit_docstrings(pandas.to_pickle)
-@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
+@wrap_free_function_in_argument_caster("to_pickle")
+@expanduser_path_arg("filepath_or_buffer")
 def to_pickle(
     obj: Any,
     filepath_or_buffer,
@@ -777,10 +777,10 @@ def to_pickle(
     )
 
 
-@wrap_free_function_in_argument_caster("read_spss")
 @_inherit_docstrings(pandas.read_spss, apilink="pandas.read_spss")
-@expanduser_path_arg("path")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_spss")
+@expanduser_path_arg("path")
 def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Optional[Sequence[str]] = None,
@@ -802,9 +802,9 @@ def read_spss(
     )
 
 
-@wrap_free_function_in_argument_caster("json_normalize")
 @_inherit_docstrings(pandas.json_normalize, apilink="pandas.json_normalize")
 @enable_logging
+@wrap_free_function_in_argument_caster("json_normalize")
 def json_normalize(
     data: Union[Dict, List[Dict]],
     record_path: Optional[Union[str, List]] = None,
@@ -826,10 +826,10 @@ def json_normalize(
     )
 
 
-@wrap_free_function_in_argument_caster("read_orc")
 @_inherit_docstrings(pandas.read_orc, apilink="pandas.read_orc")
-@expanduser_path_arg("path")
 @enable_logging
+@wrap_free_function_in_argument_caster("read_orc")
+@expanduser_path_arg("path")
 def read_orc(
     path,
     columns: Optional[List[str]] = None,
