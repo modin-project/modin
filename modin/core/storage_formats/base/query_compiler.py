@@ -327,8 +327,8 @@ class BaseQueryCompiler(
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
         api_cls_name : str, default: None
-            The mod classule name performing the operation which can be used as a
-            consideration for the costing analysis.
+            The name of the class performing the operation which can be used as a
+            consideration for the costing analysis. `None` means the function does not belong to a class.
         operation : str, default: None
             The operation being performed which can be used as a consideration
             for the costing analysis.
