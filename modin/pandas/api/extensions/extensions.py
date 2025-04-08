@@ -80,6 +80,7 @@ def _set_attribute_on_obj(
                 obj,
                 name,
                 wrap_function_in_argument_caster(
+                    klass=type(obj),
                     f=new_attr,
                     wrapping_function_type=(
                         MethodType if isinstance(obj, type) else None
