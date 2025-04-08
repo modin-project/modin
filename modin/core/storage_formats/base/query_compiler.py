@@ -309,9 +309,57 @@ class BaseQueryCompiler(
         return self.__wrap_in_qc(result)
 
     @disable_logging
-    def qc_engine_switch_cost(self, other_qc_type: type) -> int:
+    def move_to_cost(
+        self,
+        other_qc_type: type,
+        api_cls_name: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> int:
         """
         Return the coercion costs of this qc to other_qc type.
+
+        This is called for forced casting and opportunistic switching
+        decision points. Values returned must be within the acceptable
+        range of QCCoercionCost
+
+        Parameters
+        ----------
+        other_qc_type : QueryCompiler Class
+            The query compiler class to which we should return the cost of switching.
+        api_cls_name : str, default: None
+            The name of the class performing the operation which can be used as a
+            consideration for the costing analysis. `None` means the function does not belong to a class.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
+            for the costing analysis.
+
+        Returns
+        -------
+        int
+            Cost of migrating the data from this qc to the other_qc or
+            None if the cost cannot be determined.
+        """
+        if isinstance(self, other_qc_type):
+            return QCCoercionCost.COST_ZERO
+        return None
+
+    @disable_logging
+    def stay_cost(
+        self,
+        other_qc_type: type,
+        api_cls_name: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> int:
+        """
+        Return the "opportunity cost" of not moving the data.
+
+        This is called for opportunistic decision points where we
+        have a single data frame which may be moved to another engine.
+        This is can often the inverse of the move_to_cost, but it can
+        be independently calculated and different. For instance, the
+        move_to_cost may include the cost of network transmission to
+        the other engine, where as the cost returned by 'stay_cost'
+        may be simply the cost of running the operation locally.
 
         Values returned must be within the acceptable range of
         QCCoercionCost
@@ -320,6 +368,13 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
+        api_cls_name : str, default: None
+            The class name performing the operation which can be used as a
+            consideration for the costing analysis. `None` means the function is
+            not associated with a class.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
+            for the costing analysis.
 
         Returns
         -------
@@ -333,17 +388,30 @@ class BaseQueryCompiler(
 
     @disable_logging
     @classmethod
-    def qc_engine_switch_cost_from(cls, other_qc: BaseQueryCompiler) -> Optional[int]:
+    def move_to_me_cost(
+        cls,
+        other_qc: BaseQueryCompiler,
+        api_cls_name: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> Optional[int]:
         """
         Return the coercion costs from other_qc to this qc type.
 
-        Values returned must be within the acceptable range of
-        QCCoercionCost
+        This is called for forced casting decision points, where one or more
+        DataFrames from different engines must interoperate. Values returned
+        must be within the acceptable range of QCCoercionCost
 
         Parameters
         ----------
         other_qc : BaseQueryCompiler
             The query compiler from which we should return the cost of switching.
+        api_cls_name : str, default: None
+            The class name performing the operation which can be used as a
+            consideration for the costing analysis. `None` means the function
+            is not associated with a class.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
+            for the costing analysis.
 
         Returns
         -------
@@ -356,9 +424,9 @@ class BaseQueryCompiler(
         return None
 
     @disable_logging
-    def qc_engine_switch_max_cost(self) -> int:
+    def max_cost(self) -> int:
         """
-        Return the max coercion cost allowed for switching to this engine.
+        Return the max cost allowed by this engine.
 
         Returns
         -------

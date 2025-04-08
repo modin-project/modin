@@ -36,10 +36,19 @@ class CloudQC(NativeQueryCompiler):
     def get_backend(self):
         return "Cloud"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+        assert op is not None
+        assert api_cls_name in [
+            None,
+            "_iLocIndexer",
+            "_LocationIndexerBase",
+            "Series",
+            "DataFrame",
+            "BasePandasDataset",
+        ]
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
@@ -50,6 +59,9 @@ class CloudQC(NativeQueryCompiler):
             OmniscientLazyQC: None,
         }[other_qc_cls]
 
+    def stay_cost(self, other_qc_type, api_cls_name, op):
+        return QCCoercionCost.COST_HIGH
+
 
 class ClusterQC(NativeQueryCompiler):
     "Represents a local network cluster query compiler"
@@ -57,10 +69,10 @@ class ClusterQC(NativeQueryCompiler):
     def get_backend(self):
         return "Cluster"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_HIGH
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
@@ -76,10 +88,10 @@ class LocalMachineQC(NativeQueryCompiler):
     def get_backend(self):
         return "Local_machine"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_MEDIUM
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -94,10 +106,10 @@ class PicoQC(NativeQueryCompiler):
     def get_backend(self):
         return "Pico"
 
-    def qc_engine_switch_max_cost(self):
+    def max_cost(self):
         return QCCoercionCost.COST_LOW
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op):
         return {
             CloudQC: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -112,7 +124,7 @@ class AdversarialQC(NativeQueryCompiler):
     def get_backend(self):
         return "Adversarial"
 
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op):
         return {
             CloudQC: -1000,
             ClusterQC: 10000,
@@ -127,14 +139,14 @@ class OmniscientEagerQC(NativeQueryCompiler):
         return "Eager"
 
     # keep other workloads from getting my workload
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op):
         if OmniscientEagerQC is other_qc_cls:
             return QCCoercionCost.COST_ZERO
         return QCCoercionCost.COST_IMPOSSIBLE
 
     # try to force other workloads to my engine
     @classmethod
-    def qc_engine_switch_cost_from(cls, other_qc):
+    def move_to_me_cost(cls, other_qc, api_cls_name, op):
         return QCCoercionCost.COST_ZERO
 
 
@@ -145,12 +157,12 @@ class OmniscientLazyQC(NativeQueryCompiler):
         return "Lazy"
 
     # encorage other engines to take my workload
-    def qc_engine_switch_cost(self, other_qc_cls):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op):
         return QCCoercionCost.COST_ZERO
 
     # try to keep other workloads from getting my workload
     @classmethod
-    def qc_engine_switch_cost_from(cls, other_qc):
+    def move_to_me_cost(cls, other_qc, api_cls_name, op):
         if isinstance(other_qc, cls):
             return QCCoercionCost.COST_ZERO
         return QCCoercionCost.COST_IMPOSSIBLE
@@ -413,15 +425,11 @@ def test_no_qc_to_calculate():
 
 def test_qc_default_self_cost(default_df, default2_df):
     assert (
-        default_df._query_compiler.qc_engine_switch_cost(
-            type(default2_df._query_compiler)
-        )
+        default_df._query_compiler.move_to_cost(type(default2_df._query_compiler))
         is None
     )
     assert (
-        default_df._query_compiler.qc_engine_switch_cost(
-            type(default_df._query_compiler)
-        )
+        default_df._query_compiler.move_to_cost(type(default_df._query_compiler))
         is QCCoercionCost.COST_ZERO
     )
 
@@ -480,3 +488,26 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
     )
     assert local_df.get_backend() == "Local_machine"
     assert cloud_df.get_backend() == "Cloud"
+
+
+# Outlines a future generic function for determining when to stay
+# or move to different engines. In the current state it is pretty
+# trivial, but added for completeness
+def test_stay_or_move_evaluation(cloud_df, default_df):
+    default_cls = type(default_df._get_query_compiler())
+    cloud_cls = type(cloud_df._get_query_compiler())
+
+    stay_cost = cloud_df._get_query_compiler().stay_cost(default_cls, "Series", "myop")
+    move_cost = cloud_df._get_query_compiler().move_to_cost(
+        default_cls, "Series", "myop"
+    )
+    df = cloud_df
+    if stay_cost > move_cost:
+        df = cloud_df.move_to("Test_casting_default")
+    else:
+        assert False
+
+    stay_cost = df._get_query_compiler().stay_cost(cloud_cls, "Series", "myop")
+    move_cost = df._get_query_compiler().move_to_cost(cloud_cls, "Series", "myop")
+    assert stay_cost is None
+    assert move_cost is None
