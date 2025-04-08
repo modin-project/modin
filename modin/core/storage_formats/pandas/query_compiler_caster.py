@@ -257,6 +257,7 @@ def apply_argument_cast_to_class(klass: type) -> type:
             klass._extensions[None][attr_name] = implementation_function
 
         casting_implementation = wrap_function_in_argument_caster(
+            klass=klass,
             f=implementation_function,
             wrapping_function_type=(
                 classmethod
@@ -289,6 +290,7 @@ def apply_argument_cast_to_class(klass: type) -> type:
 
 
 def wrap_function_in_argument_caster(
+    klass: Optional[type],
     f: callable,
     name: str,
     wrapping_function_type: Optional[
@@ -355,8 +357,10 @@ def wrap_function_in_argument_caster(
             ["input_castable", "original_query_compiler", "new_castable"],
         )
         inplace_update_trackers: list[InplaceUpdateTracker] = []
+        # The function name and class name of the function are passed to the calculator as strings
+        class_of_wrapped_fn = klass.__name__ if klass is not None else None
         calculator: BackendCostCalculator = BackendCostCalculator(
-            f.__module__, f.__name__
+            class_of_wrapped_fn, f.__name__
         )
 
         def register_query_compilers(arg):
@@ -454,6 +458,7 @@ def wrap_free_function_in_argument_caster(name: str) -> callable:
             _GENERAL_EXTENSIONS[None][name] = f
 
         return wrap_function_in_argument_caster(
+            klass=None,
             f=f,
             wrapping_function_type=None,
             extensions=_GENERAL_EXTENSIONS,

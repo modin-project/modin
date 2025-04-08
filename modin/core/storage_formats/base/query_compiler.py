@@ -312,7 +312,7 @@ class BaseQueryCompiler(
     def move_to_cost(
         self,
         other_qc_type: type,
-        api: Optional[str] = None,
+        api_cls_name: Optional[str] = None,
         operation: Optional[str] = None,
     ) -> int:
         """
@@ -326,8 +326,8 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
-        api : str, default: None
-            The module name performing the operation which can be used as a
+        api_cls_name : str, default: None
+            The mod classule name performing the operation which can be used as a
             consideration for the costing analysis.
         operation : str, default: None
             The operation being performed which can be used as a consideration
@@ -347,7 +347,7 @@ class BaseQueryCompiler(
     def stay_cost(
         self,
         other_qc_type: type,
-        api: Optional[str] = None,
+        api_cls_name: Optional[str] = None,
         operation: Optional[str] = None,
     ) -> int:
         """
@@ -368,8 +368,8 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
-        api : str, default: None
-            The module name performing the operation which can be used as a
+        api_cls_name : str, default: None
+            The class name performing the operation which can be used as a
             consideration for the costing analysis.
         operation : str, default: None
             The operation being performed which can be used as a consideration
@@ -390,7 +390,7 @@ class BaseQueryCompiler(
     def move_to_me_cost(
         cls,
         other_qc: BaseQueryCompiler,
-        api: Optional[str] = None,
+        api_cls_name: Optional[str] = None,
         operation: Optional[str] = None,
     ) -> Optional[int]:
         """
@@ -404,8 +404,8 @@ class BaseQueryCompiler(
         ----------
         other_qc : BaseQueryCompiler
             The query compiler from which we should return the cost of switching.
-        api : str, default: None
-            The clmoduleass name performing the operation which can be used as a
+        api_cls_name : str, default: None
+            The class name performing the operation which can be used as a
             consideration for the costing analysis.
         operation : str, default: None
             The operation being performed which can be used as a consideration
