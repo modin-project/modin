@@ -68,6 +68,9 @@ from modin.config import ModinNumpy
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    wrap_free_function_in_argument_caster,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
@@ -130,6 +133,7 @@ def _read(**kwargs):
     return result
 
 
+@wrap_free_function_in_argument_caster("read_xml")
 @_inherit_docstrings(pandas.read_xml, apilink="pandas.read_xml")
 @expanduser_path_arg("path_or_buffer")
 @enable_logging
@@ -157,6 +161,7 @@ def read_xml(
     return ModinObjects.DataFrame(pandas.read_xml(**kwargs))
 
 
+@wrap_free_function_in_argument_caster("read_csv")
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
 @expanduser_path_arg("filepath_or_buffer")
 @enable_logging
@@ -229,6 +234,7 @@ def read_csv(
     return _read(**kwargs)
 
 
+@wrap_free_function_in_argument_caster("read_table")
 @_inherit_docstrings(pandas.read_table, apilink="pandas.read_table")
 @expanduser_path_arg("filepath_or_buffer")
 @enable_logging
@@ -303,6 +309,7 @@ def read_table(
     return _read(**kwargs)
 
 
+@wrap_free_function_in_argument_caster("read_parquet")
 @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
 @expanduser_path_arg("path")
 @enable_logging
@@ -339,6 +346,7 @@ def read_parquet(
     )
 
 
+@wrap_free_function_in_argument_caster("read_json")
 @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
 @expanduser_path_arg("path_or_buf")
 @enable_logging
@@ -370,6 +378,7 @@ def read_json(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
 
 
+@wrap_free_function_in_argument_caster("read_gbq")
 @_inherit_docstrings(pandas.read_gbq, apilink="pandas.read_gbq")
 @enable_logging
 def read_gbq(
@@ -395,6 +404,7 @@ def read_gbq(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
 
 
+@wrap_free_function_in_argument_caster("read_html")
 @_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
 @expanduser_path_arg("io")
 @enable_logging
@@ -430,6 +440,7 @@ def read_html(
     return [ModinObjects.DataFrame(query_compiler=qc) for qc in qcs]
 
 
+@wrap_free_function_in_argument_caster("read_clipboard")
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
 @enable_logging
 def read_clipboard(
@@ -450,6 +461,7 @@ def read_clipboard(
     )
 
 
+@wrap_free_function_in_argument_caster("read_excel")
 @_inherit_docstrings(pandas.read_excel, apilink="pandas.read_excel")
 @expanduser_path_arg("io")
 @enable_logging
@@ -499,6 +511,7 @@ def read_excel(
         return ModinObjects.DataFrame(query_compiler=intermediate)
 
 
+@wrap_free_function_in_argument_caster("read_hdf")
 @_inherit_docstrings(pandas.read_hdf, apilink="pandas.read_hdf")
 @expanduser_path_arg("path_or_buf")
 @enable_logging
@@ -526,6 +539,7 @@ def read_hdf(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
 
 
+@wrap_free_function_in_argument_caster("read_feather")
 @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
 @expanduser_path_arg("path")
 @enable_logging
@@ -545,6 +559,7 @@ def read_feather(
     )
 
 
+@wrap_free_function_in_argument_caster("read_stata")
 @_inherit_docstrings(pandas.read_stata)
 @expanduser_path_arg("filepath_or_buffer")
 @enable_logging
@@ -570,6 +585,7 @@ def read_stata(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
 
 
+@wrap_free_function_in_argument_caster("read_sas")
 @_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
 @expanduser_path_arg("filepath_or_buffer")
 @enable_logging
@@ -601,6 +617,7 @@ def read_sas(
     )
 
 
+@wrap_free_function_in_argument_caster("read_pickle")
 @_inherit_docstrings(pandas.read_pickle, apilink="pandas.read_pickle")
 @expanduser_path_arg("filepath_or_buffer")
 @enable_logging
@@ -618,6 +635,7 @@ def read_pickle(
     )
 
 
+@wrap_free_function_in_argument_caster("read_sql")
 @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
 @enable_logging
 def read_sql(
@@ -649,6 +667,7 @@ def read_sql(
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
 
 
+@wrap_free_function_in_argument_caster("read_fwf")
 @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
 @expanduser_path_arg("filepath_or_buffer")
 @enable_logging
@@ -685,6 +704,7 @@ def read_fwf(
     return ModinObjects.DataFrame(query_compiler=pd_obj)
 
 
+@wrap_free_function_in_argument_caster("read_sql_table")
 @_inherit_docstrings(pandas.read_sql_table, apilink="pandas.read_sql_table")
 @enable_logging
 def read_sql_table(
@@ -710,6 +730,7 @@ def read_sql_table(
     )
 
 
+@wrap_free_function_in_argument_caster("read_sql_query")
 @_inherit_docstrings(pandas.read_sql_query, apilink="pandas.read_sql_query")
 @enable_logging
 def read_sql_query(
@@ -732,6 +753,7 @@ def read_sql_query(
     )
 
 
+@wrap_free_function_in_argument_caster("to_pickle")
 @_inherit_docstrings(pandas.to_pickle)
 @expanduser_path_arg("filepath_or_buffer")
 @enable_logging
@@ -755,6 +777,7 @@ def to_pickle(
     )
 
 
+@wrap_free_function_in_argument_caster("read_spss")
 @_inherit_docstrings(pandas.read_spss, apilink="pandas.read_spss")
 @expanduser_path_arg("path")
 @enable_logging
@@ -779,6 +802,7 @@ def read_spss(
     )
 
 
+@wrap_free_function_in_argument_caster("json_normalize")
 @_inherit_docstrings(pandas.json_normalize, apilink="pandas.json_normalize")
 @enable_logging
 def json_normalize(
@@ -802,6 +826,7 @@ def json_normalize(
     )
 
 
+@wrap_free_function_in_argument_caster("read_orc")
 @_inherit_docstrings(pandas.read_orc, apilink="pandas.read_orc")
 @expanduser_path_arg("path")
 @enable_logging
@@ -950,6 +975,7 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
         return method
 
 
+@wrap_free_function_in_argument_caster("from_non_pandas")
 def from_non_pandas(df, index, columns, dtype) -> DataFrame | None:
     """
     Convert a non-pandas DataFrame into Modin DataFrame.
@@ -978,6 +1004,7 @@ def from_non_pandas(df, index, columns, dtype) -> DataFrame | None:
     return new_qc
 
 
+@wrap_free_function_in_argument_caster("from_pandas")
 def from_pandas(df) -> DataFrame:
     """
     Convert a pandas DataFrame to a Modin DataFrame.
@@ -997,6 +1024,7 @@ def from_pandas(df) -> DataFrame:
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 
 
+@wrap_free_function_in_argument_caster("from_arrow")
 def from_arrow(at) -> DataFrame:
     """
     Convert an Arrow Table to a Modin DataFrame.
@@ -1016,6 +1044,7 @@ def from_arrow(at) -> DataFrame:
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
 
 
+@wrap_free_function_in_argument_caster("from_dataframe")
 def from_dataframe(df: ProtocolDataframe) -> DataFrame:
     """
     Convert a DataFrame implementing the dataframe interchange protocol to a Modin DataFrame.
@@ -1039,6 +1068,7 @@ def from_dataframe(df: ProtocolDataframe) -> DataFrame:
     )
 
 
+@wrap_free_function_in_argument_caster("from_ray")
 def from_ray(ray_obj) -> DataFrame:
     """
     Convert a Ray Dataset into Modin DataFrame.
@@ -1062,6 +1092,7 @@ def from_ray(ray_obj) -> DataFrame:
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_ray(ray_obj))
 
 
+@wrap_free_function_in_argument_caster("from_dask")
 def from_dask(dask_obj) -> DataFrame:
     """
     Convert a Dask DataFrame to a Modin DataFrame.
@@ -1085,6 +1116,7 @@ def from_dask(dask_obj) -> DataFrame:
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dask(dask_obj))
 
 
+@wrap_free_function_in_argument_caster("from_map")
 def from_map(func, iterable, *args, **kwargs) -> DataFrame:
     """
     Create a Modin DataFrame from map function applied to an iterable object.
@@ -1115,6 +1147,7 @@ def from_map(func, iterable, *args, **kwargs) -> DataFrame:
     )
 
 
+@wrap_free_function_in_argument_caster("to_pandas")
 def to_pandas(modin_obj: SupportsPublicToPandas) -> DataFrame | Series:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
@@ -1132,6 +1165,7 @@ def to_pandas(modin_obj: SupportsPublicToPandas) -> DataFrame | Series:
     return modin_obj._to_pandas()
 
 
+@wrap_free_function_in_argument_caster("to_numpy")
 def to_numpy(
     modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy],
 ) -> np.ndarray:
@@ -1156,6 +1190,7 @@ def to_numpy(
     return array
 
 
+@wrap_free_function_in_argument_caster("to_ray")
 def to_ray(modin_obj):
     """
     Convert a Modin DataFrame/Series to a Ray Dataset.
@@ -1179,6 +1214,7 @@ def to_ray(modin_obj):
     return FactoryDispatcher.to_ray(modin_obj)
 
 
+@wrap_free_function_in_argument_caster("to_dask")
 def to_dask(modin_obj):
     """
     Convert a Modin DataFrame/Series to a Dask DataFrame/Series.

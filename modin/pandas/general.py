@@ -40,8 +40,7 @@ from .series import Series
 
 @_inherit_docstrings(pandas.isna, apilink="pandas.isna")
 @enable_logging
-@wrap_free_function_in_argument_caster("isna")
-def isna(
+def _isna(
     obj,
 ) -> bool | npt.NDArray[np.bool_] | Series | DataFrame:  # noqa: PR01, RT01, D200
     """
@@ -53,13 +52,14 @@ def isna(
         return pandas.isna(obj)
 
 
-isnull = isna
+isna = wrap_free_function_in_argument_caster("isna")(_isna)
+
+isnull = wrap_free_function_in_argument_caster("isnull")(_isna)
 
 
 @_inherit_docstrings(pandas.notna, apilink="pandas.notna")
 @enable_logging
-@wrap_free_function_in_argument_caster("notna")
-def notna(
+def _notna(
     obj,
 ) -> bool | npt.NDArray[np.bool_] | Series | DataFrame:  # noqa: PR01, RT01, D200
     """
@@ -71,7 +71,9 @@ def notna(
         return pandas.notna(obj)
 
 
-notnull = notna
+notnull = wrap_free_function_in_argument_caster("notnull")(_notna)
+
+notna = wrap_free_function_in_argument_caster("notna")(_notna)
 
 
 @_inherit_docstrings(pandas.merge, apilink="pandas.merge")
