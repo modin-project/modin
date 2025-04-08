@@ -303,6 +303,8 @@ def wrap_function_in_argument_caster(
 
     Parameters
     ----------
+    klass : Optional[type]
+        Class of the function being wrapped.
     f : callable
         The function to wrap.
     name : str
