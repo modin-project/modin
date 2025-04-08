@@ -370,7 +370,8 @@ class BaseQueryCompiler(
             The query compiler class to which we should return the cost of switching.
         api_cls_name : str, default: None
             The class name performing the operation which can be used as a
-            consideration for the costing analysis.
+            consideration for the costing analysis. `None` means the function is
+            not associated with a class.
         operation : str, default: None
             The operation being performed which can be used as a consideration
             for the costing analysis.
