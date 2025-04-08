@@ -38,10 +38,8 @@ from .dataframe import DataFrame
 from .series import Series
 
 
-@_inherit_docstrings(pandas.isna, apilink="pandas.isna")
 @enable_logging
-@wrap_free_function_in_argument_caster("isna")
-def isna(
+def _isna(
     obj,
 ) -> bool | npt.NDArray[np.bool_] | Series | DataFrame:  # noqa: PR01, RT01, D200
     """
@@ -53,13 +51,15 @@ def isna(
         return pandas.isna(obj)
 
 
-isnull = isna
+_inherit_isna_docstring = _inherit_docstrings(pandas.isnull, apilink="pandas.isna")
+
+isna = _inherit_isna_docstring(wrap_free_function_in_argument_caster("isna")(_isna))
+
+isnull = _inherit_isna_docstring(wrap_free_function_in_argument_caster("isnull")(_isna))
 
 
-@_inherit_docstrings(pandas.notna, apilink="pandas.notna")
 @enable_logging
-@wrap_free_function_in_argument_caster("notna")
-def notna(
+def _notna(
     obj,
 ) -> bool | npt.NDArray[np.bool_] | Series | DataFrame:  # noqa: PR01, RT01, D200
     """
@@ -71,7 +71,13 @@ def notna(
         return pandas.notna(obj)
 
 
-notnull = notna
+_inherit_notna_docstring = _inherit_docstrings(pandas.notna, apilink="pandas.notna")
+
+notnull = _inherit_notna_docstring(
+    wrap_free_function_in_argument_caster("notnull")(_notna)
+)
+
+notna = _inherit_notna_docstring(wrap_free_function_in_argument_caster("notna")(_notna))
 
 
 @_inherit_docstrings(pandas.merge, apilink="pandas.merge")
@@ -768,8 +774,8 @@ def lreshape(data: DataFrame, groups, dropna=True) -> DataFrame:
 
 
 @_inherit_docstrings(pandas.wide_to_long, apilink="pandas.wide_to_long")
-@wrap_free_function_in_argument_caster("wide_to_long")
 @enable_logging
+@wrap_free_function_in_argument_caster("wide_to_long")
 def wide_to_long(
     df: DataFrame, stubnames, i, j, sep: str = "", suffix: str = r"\d+"
 ) -> DataFrame:  # noqa: PR01, RT01, D200
@@ -823,9 +829,9 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
         return None
 
 
-@wrap_free_function_in_argument_caster("to_timedelta")
 @_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_timedelta")
 @enable_logging
+@wrap_free_function_in_argument_caster("to_timedelta")
 def to_timedelta(
     arg, unit=None, errors="raise"
 ) -> Scalar | pandas.Index | Series:  # noqa: PR01, RT01, D200

@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import re
+from types import FunctionType
 
 import pandas
 import pytest
@@ -20,6 +21,28 @@ import modin.pandas as pd
 from modin.config import context as config_context
 from modin.pandas.api.extensions import register_pd_accessor
 from modin.tests.pandas.utils import df_equals, eval_general
+
+
+@pytest.fixture(
+    params=sorted(
+        key
+        for key, value in pd.__dict__.items()
+        if isinstance(value, FunctionType) and value.__module__ == pd.general.__name__
+    )
+)
+def pd_general_function(request):
+    return request.param
+
+
+@pytest.fixture(
+    params=sorted(
+        key
+        for key, value in pd.__dict__.items()
+        if isinstance(value, FunctionType) and value.__module__ == pd.io.__name__
+    )
+)
+def pd_io_function(request):
+    return request.param
 
 
 class TestRegisterForAllBackends:
@@ -38,6 +61,16 @@ class TestRegisterForAllBackends:
         attribute_name = "four"
         register_pd_accessor(attribute_name)(expected_val)
         assert pd.four == expected_val
+
+    def test_override_io_function(self, pd_io_function):
+        sentinel = object()
+        register_pd_accessor(pd_io_function)(lambda: sentinel)
+        assert getattr(pd, pd_io_function)() == sentinel
+
+    def test_override_general_function(self, pd_general_function):
+        sentinel = object()
+        register_pd_accessor(pd_general_function)(lambda: sentinel)
+        assert getattr(pd, pd_general_function)() == sentinel
 
 
 class TestRegisterForOneBackend:
