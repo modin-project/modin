@@ -518,7 +518,6 @@ def wrap_function_in_argument_caster(
             kwargs = visit_nested_args(kwargs, cast_to_qc)
         else:
             result_backend = Backend.get()
-
         if name in extensions[result_backend]:
             f_to_apply = extensions[result_backend][name]
         else:
