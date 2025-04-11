@@ -21,6 +21,7 @@ This ensures compatibility between different query compiler classes.
 
 import functools
 import inspect
+import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
 from types import FunctionType, MethodType
@@ -30,7 +31,9 @@ from pandas.core.indexes.frozen import FrozenList
 from typing_extensions import Self
 
 from modin.config import Backend
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.base.query_compiler import (
+    BaseQueryCompiler,
+)
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
@@ -63,6 +66,12 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "_get_query_compiler",
     "_copy_into",
 }
+
+BackendAndClassName = namedtuple("BackendAndClassName", ["backend", "class_name"])
+
+_CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS: defaultdict[
+    BackendAndClassName, set[str]
+] = defaultdict(set)
 
 
 class QueryCompilerCaster(ABC):
@@ -289,6 +298,110 @@ def apply_argument_cast_to_class(klass: type) -> type:
     return klass
 
 
+def _maybe_switch_backend_post_op(
+    result: Any,
+    function_name: str,
+    qc_list: list[BaseQueryCompiler],
+    starting_backend: str,
+    class_of_wrapped_fn: Optional[str],
+) -> Any:
+    """
+    Possibly switch the backend of the result of a function.
+
+    Use cost-based optimization to determine whether to switch the backend of the
+    result of a function. If the function returned a QueryCompilerCaster and the
+    cost of switching is less than the cost of staying on the current backend,
+    we switch. If there are multiple backends we can switch to, we choose the
+    one that minimizes cost_to_move - cost_to_stay.
+
+    Parameters
+    ----------
+    result : Any
+        The result of the function.
+    function_name : str
+        The name of the function.
+    qc_list : list[BaseQueryCompiler]
+        The list of query compilers that were arguments to the function.
+    starting_backend : str
+        The backend used to run the function.
+    class_of_wrapped_fn : Optional[str]
+        The name of the class that the function belongs to. `None` for functions
+        in the modin.pandas module.
+
+    Returns
+    -------
+    Any
+        The result of the function, possibly with its backend switched.
+    """
+    if not (
+        # only apply post-operation switch to nullary and unary methods
+        len(qc_list) in (0, 1)
+        and function_name
+        in _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS[
+            BackendAndClassName(
+                backend=(
+                    qc_list[0].get_backend() if len(qc_list) == 1 else starting_backend
+                ),
+                class_name=class_of_wrapped_fn,
+            )
+        ]
+        # if the operation did not return a query compiler, we can't switch the
+        # backend of the result.
+        and isinstance(result, QueryCompilerCaster)
+        and (result_query_compiler := result._get_query_compiler()) is not None
+    ):
+        return result
+
+    # TODO(https://github.com/modin-project/modin/issues/7503): Make costing
+    # methods take backend instead of query compiler type so that we don't
+    # have to use the dispatcher to figure out the appropriate type for each
+    # backend.
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    min_move_cost = None
+    best_backend = None
+
+    for backend in Backend._BACKEND_TO_EXECUTION:
+        if backend in ("Ray", "Unidist", "Dask"):
+            # Disable automatically switching to these engines for now, because
+            # 1) _get_prepared_factory_for_backend() currently calls
+            # _initialize_engine(), which starts up the ray/dask/unidist
+            #  processes
+            # 2) we can't decide to switch to unidist in the middle of execution.
+            continue
+        if backend == starting_backend:
+            continue
+        move_to_class = FactoryDispatcher._get_prepared_factory_for_backend(
+            backend=backend
+        ).io_cls.query_compiler_cls
+        move_to_cost = result_query_compiler.move_to_cost(
+            move_to_class,
+            api_cls_name=class_of_wrapped_fn,
+            operation=function_name,
+        )
+        stay_cost = result_query_compiler.stay_cost(
+            move_to_class,
+            api_cls_name=class_of_wrapped_fn,
+            operation=function_name,
+        )
+        if move_to_cost is not None and stay_cost is not None:
+            move_cost = move_to_cost - stay_cost
+            if move_cost < 0 and (min_move_cost is None or move_cost < min_move_cost):
+                min_move_cost = move_cost
+                best_backend = backend
+            logging.info(
+                f"After {class_of_wrapped_fn} function {function_name}, "
+                + f"considered moving to backend {backend} with move_to_cost "
+                + f"{move_to_cost}, stay_cost {stay_cost}, and net cost "
+                + f"{move_cost}"
+            )
+    if best_backend is None:
+        logging.info(f"Chose not to switch backends after operation {function_name}")
+        return result
+    logging.info(f"Chose to move to backend {best_backend}")
+    return result.move_to(best_backend)
+
+
 def wrap_function_in_argument_caster(
     klass: Optional[type],
     f: callable,
@@ -405,6 +518,7 @@ def wrap_function_in_argument_caster(
             kwargs = visit_nested_args(kwargs, cast_to_qc)
         else:
             result_backend = Backend.get()
+
         if name in extensions[result_backend]:
             f_to_apply = extensions[result_backend][name]
         else:
@@ -431,7 +545,14 @@ def wrap_function_in_argument_caster(
             new_qc = new_castable._get_query_compiler()
             if original_qc is not new_qc:
                 new_castable._copy_into(original_castable)
-        return result
+
+        return _maybe_switch_backend_post_op(
+            result,
+            function_name=name,
+            qc_list=calculator._qc_list,
+            starting_backend=result_backend,
+            class_of_wrapped_fn=class_of_wrapped_fn,
+        )
 
     f_with_argument_casting._wrapped_method_for_casting = f
     return f_with_argument_casting
@@ -468,3 +589,24 @@ def wrap_free_function_in_argument_caster(name: str) -> callable:
         )
 
     return wrapper
+
+
+def register_function_for_post_op_switch(
+    class_name: Optional[str], backend: str, method: str
+) -> None:
+    """
+    Register a function for post-operation backend switch.
+
+    Parameters
+    ----------
+    class_name : Optional[str]
+        The name of the class that the function belongs to. `None` for functions
+        in the modin.pandas module.
+    backend : str
+        Only consider switching when the starting backend is this one.
+    method : str
+        The name of the method to register.
+    """
+    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS[
+        BackendAndClassName(backend=backend, class_name=class_name)
+    ].add(method)

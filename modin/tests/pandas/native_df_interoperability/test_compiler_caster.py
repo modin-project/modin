@@ -11,12 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import json
+from io import StringIO
 from unittest import mock
 
 import pandas
 import pytest
 
 import modin.pandas as pd
+from modin.config import context as config_context
 from modin.config.envvars import Backend, Engine, Execution
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory
@@ -26,8 +29,13 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    register_function_for_post_op_switch,
+)
 from modin.pandas.api.extensions import register_pd_accessor
 from modin.tests.pandas.utils import df_equals
+
+BIG_DATA_CLOUD_MIN_NUM_ROWS = 10
 
 
 class CloudQC(NativeQueryCompiler):
@@ -182,6 +190,24 @@ class DefaultQC2(NativeQueryCompiler):
         return "Test_casting_default_2"
 
 
+class CloudForBigDataQC(NativeQueryCompiler):
+    """Represents a cloud-hosted query compiler that prefers to stay on the cloud only for big data"""
+
+    def get_backend(self) -> str:
+        return "Big_Data_Cloud"
+
+    def move_to_cost(self, other_qc_type, api_cls_name, operation):
+        return (
+            QCCoercionCost.COST_LOW
+            if other_qc_type is NativeQueryCompiler
+            and self.get_axis_len(axis=0) < BIG_DATA_CLOUD_MIN_NUM_ROWS
+            else None
+        )
+
+    def stay_cost(self, other_qc_type, api_cls_name, operation):
+        return QCCoercionCost.COST_MEDIUM
+
+
 def register_backend(name, qc):
     class TestCasterIO(BaseIO):
         _should_warn_on_default_to_pandas: bool = False
@@ -207,6 +233,7 @@ register_backend("Eager", OmniscientEagerQC)
 register_backend("Lazy", OmniscientLazyQC)
 register_backend("Test_casting_default", DefaultQC)
 register_backend("Test_casting_default_2", DefaultQC2)
+register_backend("Big_Data_Cloud", CloudForBigDataQC)
 
 
 @pytest.fixture()
@@ -511,3 +538,30 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
     move_cost = df._get_query_compiler().move_to_cost(cloud_cls, "Series", "myop")
     assert stay_cost is None
     assert move_cost is None
+
+
+class TestSwitchBackendPostOpDependingOnDataSize:
+    def test_read_json(self):
+        with config_context(Backend="Big_Data_Cloud"):
+            big_json = json.dumps({"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS))})
+            small_json = json.dumps(
+                {"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1))}
+            )
+            assert pd.read_json(StringIO(big_json)).get_backend() == "Big_Data_Cloud"
+            assert pd.read_json(StringIO(small_json)).get_backend() == "Big_Data_Cloud"
+            register_function_for_post_op_switch(
+                class_name=None, backend="Big_Data_Cloud", method="read_json"
+            )
+            assert pd.read_json(StringIO(big_json)).get_backend() == "Big_Data_Cloud"
+            assert pd.read_json(StringIO(small_json)).get_backend() == "Pandas"
+
+    def test_agg(self):
+        with config_context(Backend="Big_Data_Cloud"):
+            df = pd.DataFrame([[1, 2], [3, 4]])
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Big_Data_Cloud"
+            register_function_for_post_op_switch(
+                class_name="DataFrame", backend="Big_Data_Cloud", method="sum"
+            )
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Pandas"
