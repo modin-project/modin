@@ -358,7 +358,7 @@ def _maybe_switch_backend_post_op(
     # backend.
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    min_move_cost = None
+    min_move_stay_delta = None
     best_backend = None
 
     for backend in Backend._BACKEND_TO_EXECUTION:
@@ -385,15 +385,17 @@ def _maybe_switch_backend_post_op(
             operation=function_name,
         )
         if move_to_cost is not None and stay_cost is not None:
-            move_cost = move_to_cost - stay_cost
-            if move_cost < 0 and (min_move_cost is None or move_cost < min_move_cost):
-                min_move_cost = move_cost
+            move_stay_delta = move_to_cost - stay_cost
+            if move_stay_delta < 0 and (
+                min_move_stay_delta is None or move_stay_delta < min_move_stay_delta
+            ):
+                min_move_stay_delta = move_stay_delta
                 best_backend = backend
             logging.info(
                 f"After {class_of_wrapped_fn} function {function_name}, "
                 + f"considered moving to backend {backend} with move_to_cost "
-                + f"{move_to_cost}, stay_cost {stay_cost}, and net cost "
-                + f"{move_cost}"
+                + f"{move_to_cost}, stay_cost {stay_cost}, and move-stay delta "
+                + f"{move_stay_delta}"
             )
     if best_backend is None:
         logging.info(f"Chose not to switch backends after operation {function_name}")
