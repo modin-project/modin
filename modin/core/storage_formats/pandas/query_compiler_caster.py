@@ -361,6 +361,10 @@ def _maybe_switch_backend_post_op(
     min_move_stay_delta = None
     best_backend = None
 
+    stay_cost = result_query_compiler.stay_cost(
+        api_cls_name=class_of_wrapped_fn,
+        operation=function_name,
+    )
     for backend in Backend._BACKEND_TO_EXECUTION:
         if backend in ("Ray", "Unidist", "Dask"):
             # Disable automatically switching to these engines for now, because
@@ -375,11 +379,6 @@ def _maybe_switch_backend_post_op(
             backend=backend
         ).io_cls.query_compiler_cls
         move_to_cost = result_query_compiler.move_to_cost(
-            move_to_class,
-            api_cls_name=class_of_wrapped_fn,
-            operation=function_name,
-        )
-        stay_cost = result_query_compiler.stay_cost(
             move_to_class,
             api_cls_name=class_of_wrapped_fn,
             operation=function_name,

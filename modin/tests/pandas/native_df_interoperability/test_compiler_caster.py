@@ -67,7 +67,7 @@ class CloudQC(NativeQueryCompiler):
             OmniscientLazyQC: None,
         }[other_qc_cls]
 
-    def stay_cost(self, other_qc_type, api_cls_name, op):
+    def stay_cost(self, api_cls_name, op):
         return QCCoercionCost.COST_HIGH
 
 
@@ -204,7 +204,7 @@ class CloudForBigDataQC(NativeQueryCompiler):
             else None
         )
 
-    def stay_cost(self, other_qc_type, api_cls_name, operation):
+    def stay_cost(self, api_cls_name, operation):
         return QCCoercionCost.COST_MEDIUM
 
 
@@ -524,7 +524,7 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
     default_cls = type(default_df._get_query_compiler())
     cloud_cls = type(cloud_df._get_query_compiler())
 
-    stay_cost = cloud_df._get_query_compiler().stay_cost(default_cls, "Series", "myop")
+    stay_cost = cloud_df._get_query_compiler().stay_cost("Series", "myop")
     move_cost = cloud_df._get_query_compiler().move_to_cost(
         default_cls, "Series", "myop"
     )
@@ -534,7 +534,7 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
     else:
         assert False
 
-    stay_cost = df._get_query_compiler().stay_cost(cloud_cls, "Series", "myop")
+    stay_cost = df._get_query_compiler().stay_cost("Series", "myop")
     move_cost = df._get_query_compiler().move_to_cost(cloud_cls, "Series", "myop")
     assert stay_cost is None
     assert move_cost is None
