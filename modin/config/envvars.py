@@ -588,6 +588,29 @@ Backend.register_backend("Unidist", Execution("Pandas", "Unidist"))
 Backend.register_backend("Pandas", Execution("Native", "Native"))
 
 
+class AutoSwitchBackend(EnvironmentVariable, type=bool):
+    """
+    Whether automatic backend switching is allowed.
+
+    When this flag is set, a Modin backend can attempt to automatically choose an appropriate backend
+    for different operations based on features of the input data. When disabled, backends should
+    avoid implicit backend switching outside of explicit operations like `to_pandas` and `to_ray`.
+    """
+
+    varname = "MODIN_AUTO_SWITCH_BACKENDS"
+    default = True
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable automatic backend switching."""
+        cls.put(True)
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable automatic backend switching."""
+        cls.put(False)
+
+
 class IsExperimental(EnvironmentVariable, type=bool):
     """Whether to Turn on experimental features."""
 

@@ -17,6 +17,7 @@ from modin.config.envvars import (
     AsvDataSizeConfig,
     AsvImplementation,
     AsyncReadMode,
+    AutoSwitchBackend,
     Backend,
     BenchmarkMode,
     CIAWSAccessKeyID,
@@ -74,6 +75,7 @@ __all__ = [
     "Memory",
     "Backend",
     "Execution",
+    "AutoSwitchBackend",
     # Ray specific
     "IsRayCluster",
     "RayRedisAddress",
