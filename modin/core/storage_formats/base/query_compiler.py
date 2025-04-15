@@ -346,10 +346,9 @@ class BaseQueryCompiler(
     @disable_logging
     def stay_cost(
         self,
-        other_qc_type: type,
         api_cls_name: Optional[str] = None,
         operation: Optional[str] = None,
-    ) -> int:
+    ) -> Optional[int]:
         """
         Return the "opportunity cost" of not moving the data.
 
@@ -366,8 +365,6 @@ class BaseQueryCompiler(
 
         Parameters
         ----------
-        other_qc_type : QueryCompiler Class
-            The query compiler class to which we should return the cost of switching.
         api_cls_name : str, default: None
             The class name performing the operation which can be used as a
             consideration for the costing analysis. `None` means the function is
@@ -378,12 +375,9 @@ class BaseQueryCompiler(
 
         Returns
         -------
-        int
-            Cost of migrating the data from this qc to the other_qc or
-            None if the cost cannot be determined.
+        Optional[int]
+            Cost of doing this operation on the current backend.
         """
-        if isinstance(self, other_qc_type):
-            return QCCoercionCost.COST_ZERO
         return None
 
     @disable_logging

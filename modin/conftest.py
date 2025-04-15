@@ -749,3 +749,15 @@ def clean_up_extensions():
         for obj in v:
             delattr(k, obj)
     _attrs_to_delete_on_test.clear()
+
+
+@pytest.fixture(autouse=True)
+def clean_up_auto_backend_switching():
+    from modin.core.storage_formats.pandas.query_compiler_caster import (
+        _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS,
+    )
+
+    originals = copy.deepcopy(_CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS)
+    yield
+    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS.clear()
+    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS.update(originals)
