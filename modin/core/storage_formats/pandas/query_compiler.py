@@ -25,7 +25,7 @@ import hashlib
 import re
 import warnings
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Hashable, List, Optional
+from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
@@ -59,6 +59,9 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     GroupByDefault,
     SeriesGroupByDefault,
 )
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
     ModinDtypes,
@@ -66,7 +69,6 @@ from modin.core.dataframe.pandas.metadata import (
     extract_dtype,
 )
 from modin.core.storage_formats import BaseQueryCompiler
-from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
 from modin.error_message import ErrorMessage
 from modin.logging import get_logger
 from modin.utils import (
@@ -253,8 +255,28 @@ def copy_df_for_func(func, display_name: str = None):
     return caller
 
 
+def _series_logical_binop(func):
+    """
+    Build a callable function to pass to Binary.register for Series logical operators.
+
+    Parameters
+    ----------
+    func : callable
+        Binary operator method of pandas.Series to be applied.
+
+    Returns
+    -------
+    callable
+    """
+    return lambda x, y, **kwargs: func(
+        x.squeeze(axis=1),
+        y.squeeze(axis=1) if kwargs.pop("squeeze_other", False) else y,
+        **kwargs,
+    ).to_frame()
+
+
 @_inherit_docstrings(BaseQueryCompiler)
-class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
+class PandasQueryCompiler(BaseQueryCompiler):
     """
     Query compiler for the pandas storage format.
 
@@ -275,6 +297,9 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
     def __init__(self, modin_frame: PandasDataframe, shape_hint: Optional[str] = None):
         self._modin_frame = modin_frame
         self._shape_hint = shape_hint
+
+    storage_format = property(lambda self: self._modin_frame.storage_format)
+    engine = property(lambda self: self._modin_frame.engine)
 
     @property
     def lazy_row_labels(self):
@@ -361,19 +386,39 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
 
     # Dataframe exchange protocol
 
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+    def to_interchange_dataframe(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ):
         return self._modin_frame.__dataframe__(
             nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 
     @classmethod
-    def from_dataframe(cls, df, data_cls):
-        return cls(data_cls.from_dataframe(df))
+    def from_interchange_dataframe(cls, df: ProtocolDataframe, data_cls):
+        return cls(data_cls.from_interchange_dataframe(df))
 
     # END Dataframe exchange protocol
 
     index: pandas.Index = property(_get_axis(0), _set_axis(0))
     columns: pandas.Index = property(_get_axis(1), _set_axis(1))
+
+    def get_axis_len(self, axis: Literal[0, 1]) -> int:
+        """
+        Return the length of the specified axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+
+        Returns
+        -------
+        int
+        """
+        if axis == 0:
+            return len(self._modin_frame)
+        else:
+            return sum(self._modin_frame.column_widths)
 
     @property
     def dtypes(self) -> pandas.Series:
@@ -520,6 +565,26 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
         ),
         join_type="left",
         sort=False,
+    )
+
+    # Series logical operators take an additional fill_value flag that dataframe does not
+    series_eq = Binary.register(
+        _series_logical_binop(pandas.Series.eq), infer_dtypes="bool"
+    )
+    series_ge = Binary.register(
+        _series_logical_binop(pandas.Series.ge), infer_dtypes="bool"
+    )
+    series_gt = Binary.register(
+        _series_logical_binop(pandas.Series.gt), infer_dtypes="bool"
+    )
+    series_le = Binary.register(
+        _series_logical_binop(pandas.Series.le), infer_dtypes="bool"
+    )
+    series_lt = Binary.register(
+        _series_logical_binop(pandas.Series.lt), infer_dtypes="bool"
+    )
+    series_ne = Binary.register(
+        _series_logical_binop(pandas.Series.ne), infer_dtypes="bool"
     )
 
     # Needed for numpy API
@@ -1904,7 +1969,7 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
             result = result.reindex(0, new_index)
         return result
 
-    def stack(self, level, dropna):
+    def stack(self, level, dropna, sort):
         if not isinstance(self.columns, pandas.MultiIndex) or (
             isinstance(self.columns, pandas.MultiIndex)
             and is_list_like(level)
@@ -1916,7 +1981,9 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
 
         new_modin_frame = self._modin_frame.apply_full_axis(
             1,
-            lambda df: pandas.DataFrame(df.stack(level=level, dropna=dropna)),
+            lambda df: pandas.DataFrame(
+                df.stack(level=level, dropna=dropna, sort=sort)
+            ),
             new_columns=new_columns,
         )
         return self.__constructor__(new_modin_frame)
@@ -4636,7 +4703,12 @@ class PandasQueryCompiler(BaseQueryCompiler, QueryCompilerCaster):
             return partition
 
         if not is_scalar(item):
-            broadcasted_item, broadcasted_dtypes = broadcast_item(
+            (
+                broadcasted_item,
+                broadcasted_dtypes,
+                row_numeric_index,
+                col_numeric_index,
+            ) = broadcast_item(
                 self,
                 row_numeric_index,
                 col_numeric_index,

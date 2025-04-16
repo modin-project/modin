@@ -314,36 +314,71 @@ Copy-pastable example, showing how mixing pandas and Modin DataFrames in a singl
   # Possible output: TypeError
 
 
-Execute DataFrame operations using NativeQueryCompiler
-""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Using pandas to execute queries with Modin's ``"Pandas"`` backend
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-By default, Modin distributes data across partitions and performs operations
-using the ``PandasQueryCompiler``. However, for certain scenarios such as handling small or empty DataFrames,
-distributing them may introduce unnecessary overhead. In such cases, it's more efficient to default
-to pandas at the query compiler layer. This can be achieved by setting the ``cfg.NativeDataframeMode``
-:doc:`configuration variable: </flow/modin/config>` to ``Pandas``. When set to ``Pandas``, all operations in Modin default to pandas, and the DataFrames are not distributed,
-avoiding additional overhead. This configuration can be toggled on or off depending on whether
-DataFrame distribution is required.
+By default, Modin distributes the data in a dataframe (or series) and attempts
+to process data for different partitions in parallel.
 
-DataFrames created while the ``NativeDataframeMode`` is active will continue to use the ``NativeQueryCompiler``
-even after the config is disabled. Modin supports interoperability between distributed Modin DataFrames and
-those using the ``NativeQueryCompiler``.
+However, for certain scenarios, such as handling small datasets, Modin's
+parallel execution may introduce unnecessary overhead. In such cases, it's more
+efficient to use serial execution with a single, unpartitioned pandas dataframe.
+You can enable this kind of local pandas execution by setting Modin's
+``Backend``
+:doc:`configuration variable </flow/modin/config>` to ``"Pandas"``.
+
+DataFrames created while Modin's global backend is set to ``"Pandas"``
+will continue to use native execution even if you switch the global backend
+later. Modin supports interoperability between distributed Modin DataFrames
+and those using the pandas backend.
+
+Here is an example of using the pandas backend.
 
 .. code-block:: python
 
   import modin.pandas as pd
-  import modin.config as cfg
+  from modin import set_execution
+  from modin.config import Backend
 
-  # This dataframe will be distributed and use `PandasQueryCompiler` by default
-  df_distributed = pd.DataFrame(...)
+  # This dataframe will use Modin's default, distributed execution.
+  original_backend = Backend.get()
+  assert original_backend != "Pandas"
+  distributed_df_1 = pd.DataFrame([0])
 
-  # Set mode to "Pandas" to avoid distribution and use `NativeQueryCompiler`
-  cfg.NativeDataframeMode.put("Pandas")
-  df_native_qc = pd.DataFrame(...)
+  # Set backend to "Pandas" for local pandas execution.
+  Backend.put("Pandas")
+  modin_on_pandas_df = pd.DataFrame([1])
+  assert modin_on_pandas_df.get_backend() == "Pandas"
 
-  # Revert to default settings for distributed dataframes
-  cfg.NativeDataframeMode.put("Default")
-  df_distributed = pd.DataFrame(...)
+  # Revert to default settings for distributed execution
+  Backend.put(original_backend)
+  distributed_df_2 = pd.DataFrame([2])
+  assert distributed_df_2.get_backend() == original_backend
+
+You can also use the pandas backend for some dataframes while using different
+backends for other dataframes. You can switch the backend of an individual
+dataframe or series with ``set_backend()`` or its synonym ``move_to()``.
+Here's an example of switching the backend for an individual dataframe.
+
+.. code-block:: python
+
+  import modin.pandas as pd
+
+  # This dataframe will use Modin's default, distributed execution.
+  original_backend = Backend.get()
+  assert original_backend != "Pandas"
+  distributed_df_1 = pd.DataFrame([0])
+
+  pandas_df_1 = distributed_df_1.move_to("Pandas")
+  assert pandas_df_1.get_backend() == "Pandas"
+  pandas_df_1 = pandas_df_1.sort_values(0)
+  assert pandas_df_1.get_backend() == "Pandas"
+
+  new_df = pandas_df_1.move_to(original_backend)
+  assert new_df.get_backend() == original_backend
+
+  new_df.set_backend("Pandas", inplace=True)
+  assert new_df.get_backend() == "Pandas"
 
 Operation-specific optimizations
 """"""""""""""""""""""""""""""""

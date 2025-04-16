@@ -17,12 +17,14 @@ import os
 import secrets
 import sys
 import warnings
+from collections import namedtuple
 from textwrap import dedent
-from typing import Any, Optional
+from typing import Any, NoReturn, Optional
 
 from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
+from modin import set_execution
 from modin.config.pubsub import (
     _TYPE_PARAMS,
     _UNSET,
@@ -39,25 +41,25 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
     varname: Optional[str] = None
 
     @classmethod
-    def _get_raw_from_config(cls) -> str:
+    def _get_value_from_config(cls) -> Any:
         """
         Read the value from environment variable.
 
         Returns
         -------
-        str
-            Config raw value.
-
-        Raises
-        ------
-        TypeError
-            If `varname` is None.
-        KeyError
-            If value is absent.
+        Any
+            Config raw value if it's set, otherwise `_UNSET`.
         """
         if cls.varname is None:
             raise TypeError("varname should not be None")
-        return os.environ[cls.varname]
+        if cls.varname not in os.environ:
+            return _UNSET
+        raw = os.environ[cls.varname]
+        if not _TYPE_PARAMS[cls.type].verify(raw):
+            # TODO: use and test a better error message, like "Invalid value
+            # for {cls.varname}: {raw}"
+            raise ValueError(f"Unsupported raw value: {raw}")
+        return _TYPE_PARAMS[cls.type].decode(raw)
 
     @classmethod
     def get_help(cls) -> str:
@@ -164,20 +166,44 @@ class EnvWithSibilings(
                 cls._update_sibling = True
 
 
+class EnvironmentVariableDisallowingExecutionAndBackendBothSet(
+    EnvironmentVariable,
+    type=EnvironmentVariable.type,
+    abstract=True,
+):
+    """Subclass to disallow getting this variable from the environment when both execution and backend are set in the environment."""
+
+    @classmethod
+    @doc(EnvironmentVariable._get_value_from_config.__doc__)
+    def _get_value_from_config(cls) -> str:
+        if Backend.varname in os.environ and (
+            Engine.varname in os.environ or StorageFormat.varname in os.environ
+        ):
+            # Handling this case is tricky, in part because the combination of
+            # Backend and Engine/StorageFormat may be invalid. For now just
+            # disallow it.
+            raise ValueError("Can't specify both execution and backend in environment")
+        return super()._get_value_from_config()
+
+
 class IsDebug(EnvironmentVariable, type=bool):
     """Force Modin engine to be "Python" unless specified by $MODIN_ENGINE."""
 
     varname = "MODIN_DEBUG"
 
 
-class Engine(EnvironmentVariable, type=str):
+class Engine(
+    EnvironmentVariableDisallowingExecutionAndBackendBothSet,
+    type=str,
+):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Unidist")
+    choices = ("Ray", "Dask", "Python", "Unidist", "Native")
 
     NOINIT_ENGINES = {
         "Python",
+        "Native",
     }  # engines that don't require initialization, useful for unit tests
 
     has_custom_engine = False
@@ -250,13 +276,339 @@ class Engine(EnvironmentVariable, type=str):
         cls.has_custom_engine = True
         return choice
 
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Set the engine value.
 
-class StorageFormat(EnvironmentVariable, type=str):
+        Parameters
+        ----------
+        value : str
+            Engine value to set.
+        """
+        value = cls.normalize(value)
+        # Backend.put() will set Engine.
+        Backend.put(
+            Backend.get_backend_for_execution(
+                Execution(engine=value, storage_format=StorageFormat.get())
+            )
+        )
+
+    @classmethod
+    def get(cls) -> str:
+        """
+        Get the engine value.
+
+        Returns
+        -------
+        str
+            Engine value.
+        """
+        # We have to override get() because Engine may need to get its value
+        # from the OS's environment variables for Backend or Engine.
+
+        cls._warn_if_deprecated()
+
+        # First, check if we've already set the engine value.
+        if cls._value is not _UNSET:
+            return cls._value
+
+        engine_config_value = cls._get_value_from_config()
+        backend_config_value = Backend._get_value_from_config()
+
+        # If Engine is in the OS's configuration, use the configured Engine value.
+        # Otherwise, use the Backend config value if that exists. If it doesn't,
+        # fall back to the default Engine value.
+        cls._value = (
+            engine_config_value
+            if engine_config_value is not _UNSET
+            else (
+                Backend.get_execution_for_backend(backend_config_value).engine
+                if backend_config_value is not _UNSET
+                else cls._get_default()
+            )
+        )
+
+        return cls._value
+
+
+class StorageFormat(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str):
     """Engine to run on a single node of distribution."""
+
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Set the storage format value.
+
+        Parameters
+        ----------
+        value : str
+            Storage format value to set.
+        """
+        value = cls.normalize(value)
+        # Backend.put() will set StorageFormat.
+        Backend.put(
+            Backend.get_backend_for_execution(
+                Execution(engine=Engine.get(), storage_format=value)
+            )
+        )
+
+    @classmethod
+    def get(cls) -> str:
+        """
+        Get the storage format value.
+
+        Returns
+        -------
+        str
+            Storage format value.
+        """
+        # We have to override get() because StorageFormat may need to get its
+        # value from the OS's environment variables for Backend or StorageFormat.
+
+        cls._warn_if_deprecated()
+
+        # First, check if we've already set the engine value.
+        if cls._value is not _UNSET:
+            return cls._value
+
+        storage_format_config_value = cls._get_value_from_config()
+        backend_config_value = Backend._get_value_from_config()
+
+        # If StorageFormat is in the OS's configuration, use the configured
+        # StorageFormat value. Otherwise, use the Backend config value if that
+        # exists. If it doesn't, fall back to the default StorageFormat value.
+        cls._value = (
+            storage_format_config_value
+            if storage_format_config_value is not _UNSET
+            else (
+                Backend.get_execution_for_backend(backend_config_value).storage_format
+                if backend_config_value is not _UNSET
+                else cls._get_default()
+            )
+        )
+
+        return cls._value
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas",)
+    choices = ("Pandas", "Native")
+
+
+Execution = namedtuple("Execution", ["storage_format", "engine"])
+
+
+class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str):
+    """
+    An alias for execution, i.e. the combination of StorageFormat and Engine.
+
+    Setting backend may change StorageFormat and/or Engine to the corresponding
+    respective values, and setting Engine or StorageFormat may change Backend.
+
+    Modin's built-in backends include:
+        - "Ray" <-> (StorageFormat="Pandas", Engine="Ray")
+        - "Dask" <-> (StorageFormat="Pandas", Engine="Dask")
+        - "Python_Test" <-> (StorageFormat="Pandas", Engine="Python")
+            - This execution mode is meant for testing only.
+        - "Unidist" <-> (StorageFormat="Pandas", Engine="Unidist")
+        - "Pandas" <-> (StorageFormat="Native", Engine="Native")
+    """
+
+    _BACKEND_TO_EXECUTION: dict[str, Execution] = {}
+    _EXECUTION_TO_BACKEND: dict[Execution, str] = {}
+    varname: str = "MODIN_BACKEND"
+    choices: tuple[str, ...] = ("Ray", "Dask", "Python_Test", "Unidist", "Pandas")
+
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Set the backend value.
+
+        Parameters
+        ----------
+        value : str
+            Backend value to set.
+        """
+        execution = cls.get_execution_for_backend(value)
+        set_execution(execution.engine, execution.storage_format)
+
+    @classmethod
+    def _get_default(cls) -> str:
+        """
+        Get the default backend value.
+
+        Returns
+        -------
+        str
+            Default backend value.
+        """
+        return cls._EXECUTION_TO_BACKEND[
+            Execution(StorageFormat._get_default(), Engine._get_default())
+        ]
+
+    @classmethod
+    def register_backend(cls: type["Backend"], name: str, execution: Execution) -> None:
+        """
+        Register a new backend.
+
+        Parameters
+        ----------
+        name : str
+            Backend name.
+        execution : Execution
+            Execution that corresponds to the backend.
+        """
+        name = cls.normalize(name)
+        super().add_option(name)
+        if name in cls._BACKEND_TO_EXECUTION:
+            raise ValueError(
+                f"Backend '{name}' is already registered with the execution {cls._BACKEND_TO_EXECUTION[name]}."
+            )
+        if execution in cls._EXECUTION_TO_BACKEND:
+            raise ValueError(
+                f"{execution} is already registered with the backend {cls._EXECUTION_TO_BACKEND[execution]}."
+            )
+        cls._BACKEND_TO_EXECUTION[name] = execution
+        cls._EXECUTION_TO_BACKEND[execution] = name
+
+    @classmethod
+    def add_option(cls, choice: str) -> NoReturn:
+        """
+        Raise an exception for trying to add an option to Backend directly.
+
+        Parameters
+        ----------
+        choice : str
+            Choice to add. Unused.
+
+        Raises
+        ------
+        ValueError
+            Always.
+        """
+        raise ValueError(
+            "Cannot add an option to Backend directly. Use Backend.register_backend instead."
+        )
+
+    @classmethod
+    def get_backend_for_execution(cls, execution: Execution) -> str:
+        """
+        Get the backend for the execution.
+
+        Parameters
+        ----------
+        execution : Execution
+            Execution to get the backend for.
+
+        Returns
+        -------
+        str
+            Backend for the execution.
+        """
+        if execution not in cls._EXECUTION_TO_BACKEND:
+            raise ValueError(
+                f"{execution} has no known backend. Please register a "
+                + "backend for it with Backend.register_backend()"
+            )
+        return cls._EXECUTION_TO_BACKEND[execution]
+
+    @classmethod
+    def get_execution_for_backend(cls, backend: str) -> Execution:
+        """
+        Get the execution for the given backend.
+
+        Parameters
+        ----------
+        backend : str
+            Backend to get the execution for.
+
+        Returns
+        -------
+        execution : Execution
+            The execution for the given backend
+        """
+        if not isinstance(backend, str):
+            raise TypeError(
+                "Backend value should be a string, but instead it is "
+                + f"{repr(backend)} of type {type(backend)}."
+            )
+        normalized_value = cls.normalize(backend)
+        if normalized_value not in cls.choices:
+            backend_choice_string = ", ".join(f"'{choice}'" for choice in cls.choices)
+            raise ValueError(
+                f"Unknown backend '{backend}'. Available backends are: "
+                + backend_choice_string
+            )
+        if normalized_value not in cls._BACKEND_TO_EXECUTION:
+            raise ValueError(
+                f"Backend '{backend}' has no known execution. Please "
+                + "register an execution for it with Backend.register_backend()."
+            )
+        return cls._BACKEND_TO_EXECUTION[normalized_value]
+
+    @classmethod
+    def get(cls) -> str:
+        """
+        Get the backend.
+
+        Returns
+        -------
+        str
+            Backend.
+        """
+        # We have to override get() because Backend may need to get its value
+        # from the OS's environment variables for Backend or Engine.
+
+        cls._warn_if_deprecated()
+
+        # First, check if we've already set the Backend value.
+        if cls._value is not _UNSET:
+            return cls._value
+
+        backend_config_value = Backend._get_value_from_config()
+
+        # If Backend is in the OS's configuration, use the configured Backend
+        # value. Otherwise, we need to figure out the Backend value based on
+        # the Engine and StorageFormat values.
+        cls._value = (
+            backend_config_value
+            if backend_config_value is not _UNSET
+            else cls.get_backend_for_execution(
+                Execution(storage_format=StorageFormat.get(), engine=Engine.get())
+            )
+        )
+
+        return cls._value
+
+
+Backend.register_backend("Ray", Execution("Pandas", "Ray"))
+Backend.register_backend("Dask", Execution("Pandas", "Dask"))
+Backend.register_backend("Python_Test", Execution("Pandas", "Python"))
+Backend.register_backend("Unidist", Execution("Pandas", "Unidist"))
+Backend.register_backend("Pandas", Execution("Native", "Native"))
+
+
+class AutoSwitchBackend(EnvironmentVariable, type=bool):
+    """
+    Whether automatic backend switching is allowed.
+
+    When this flag is set, a Modin backend can attempt to automatically choose an appropriate backend
+    for different operations based on features of the input data. When disabled, backends should
+    avoid implicit backend switching outside of explicit operations like `to_pandas` and `to_ray`.
+    """
+
+    varname = "MODIN_AUTO_SWITCH_BACKENDS"
+    default = True
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable automatic backend switching."""
+        cls.put(True)
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable automatic backend switching."""
+        cls.put(False)
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -623,6 +975,31 @@ class LogFileSize(EnvironmentVariable, type=int):
         return log_file_size
 
 
+class MetricsMode(EnvironmentVariable, type=ExactStr):
+    """
+    Set ``MetricsMode`` value to disable/enable metrics collection.
+
+    Metric handlers are registered through `add_metric_handler` and can
+    be used to record graphite-style timings or values. It is the
+    responsibility of the handler to define how those emitted metrics
+    are handled.
+    """
+
+    varname = "MODIN_METRICS_MODE"
+    choices = ("enable", "disable")
+    default = "enable"
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable all metric collection."""
+        cls.put("enable")
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable all metric collection."""
+        cls.put("disable")
+
+
 class PersistentPickle(EnvironmentVariable, type=bool):
     """Whether serialization should be persistent."""
 
@@ -941,28 +1318,6 @@ def _check_vars() -> None:
             deprecated[depr_var].deprecation_message(use_envvar_names=True),
             FutureWarning,
         )
-
-
-class NativeDataframeMode(EnvironmentVariable, type=str):
-    """
-    Configures the query compiler to process Modin data.
-
-    When this config is set to ``Default``, ``PandasQueryCompiler`` is used,
-    which leads to Modin executing dataframes in distributed fashion.
-    When set to a string (e.g., ``pandas``), ``NativeQueryCompiler`` is used,
-    which handles the dataframes without distributing,
-    falling back to native library functions (e.g., ``pandas``).
-
-    This could be beneficial for handling relatively small dataframes
-    without involving additional overhead of communication between processes.
-    """
-
-    varname = "MODIN_NATIVE_DATAFRAME_MODE"
-    choices = (
-        "Default",
-        "Pandas",
-    )
-    default = "Default"
 
 
 _check_vars()

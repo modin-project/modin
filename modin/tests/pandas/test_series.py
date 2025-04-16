@@ -31,11 +31,15 @@ from pandas.errors import PerformanceWarning, SpecificationError
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
-from modin.pandas.io import to_pandas
-from modin.tests.core.storage_formats.pandas.test_internals import (
-    construct_modin_df_by_scheme,
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _assert_casting_functions_wrap_same_implementation,
 )
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.pandas.io import to_pandas
+from modin.tests.test_utils import (
+    current_execution_is_native,
+    df_or_series_using_native_execution,
+    warns_that_defaulting_to_pandas_if,
+)
 from modin.utils import get_current_execution, try_cast_to_pandas
 
 from .utils import (
@@ -236,7 +240,9 @@ def inter_df_math_helper_one_side(
         pass
     else:
         # Operation supports 'level' parameter, so it makes sense to check for a warning
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(
+            not df_or_series_using_native_execution(modin_df_multi_level)
+        ):
             getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
 
 
@@ -659,7 +665,9 @@ def test___setitem___non_hashable(key, index):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___sizeof__(data):
     modin_series, pandas_series = create_test_series(data)
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.__sizeof__()
 
 
@@ -759,7 +767,9 @@ def test_add_custom_class():
 
 def test_aggregate_alias():
     # It's optimization. If failed, Series.agg should be tested explicitly
-    assert pd.Series.aggregate == pd.Series.agg
+    _assert_casting_functions_wrap_same_implementation(
+        pd.Series.aggregate, pd.Series.agg
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -813,7 +823,9 @@ def test_aggregate_error_checking(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_align(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.align(modin_series)
 
 
@@ -989,7 +1001,9 @@ def test_argmin(data, skipna):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_argsort(data):
     modin_series, pandas_series = create_test_series(data)
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_result = modin_series.argsort()
     df_equals(modin_result, pandas_series.argsort())
 
@@ -997,7 +1011,9 @@ def test_argsort(data):
 def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(series)
+    ):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         series.asfreq(freq="30S")
@@ -1106,6 +1122,12 @@ def test_astype_categorical(data):
 
     modin_result = modin_df.astype("category")
     pandas_result = pandas_df.astype("category")
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtype == pandas_result.dtype
+
+    dtype = pd.CategoricalDtype(categories=sorted(set(data)))
+    modin_result = modin_df.astype(dtype)
+    pandas_result = pandas_df.astype(dtype)
     df_equals(modin_result, pandas_result)
     assert modin_result.dtype == pandas_result.dtype
 
@@ -2038,7 +2060,9 @@ def test_equals_with_nans():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_ewm(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.ewm(halflife=6)
 
 
@@ -2051,7 +2075,9 @@ def test_expanding(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_factorize(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.factorize()
 
 
@@ -2194,7 +2220,9 @@ def test_head(data, n):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_hist(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.hist(None)
 
 
@@ -2269,7 +2297,9 @@ def test_index(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_interpolate(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.interpolate()
 
 
@@ -2348,7 +2378,9 @@ def test_keys(data):
 def test_kurtosis_alias():
     # It's optimization. If failed, Series.kurt should be tested explicitly
     # in tests: `test_kurt_kurtosis`, `test_kurt_kurtosis_level`.
-    assert pd.Series.kurt == pd.Series.kurtosis
+    _assert_casting_functions_wrap_same_implementation(
+        pd.Series.kurt, pd.Series.kurtosis
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -2521,7 +2553,7 @@ def test_map(data, na_values):
 def test_mask():
     modin_series = pd.Series(np.arange(10))
     m = modin_series % 3 == 0
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not df_or_series_using_native_execution(m)):
         try:
             modin_series.mask(~m, -modin_series)
         except ValueError:
@@ -2687,7 +2719,9 @@ def test_nunique(data, dropna):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pct_change(data):
     modin_series, pandas_series = create_test_series(data)
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.pct_change()
 
 
@@ -2756,7 +2790,9 @@ def test_pow(data):
 
 
 def test_product_alias():
-    assert pd.Series.prod == pd.Series.product
+    _assert_casting_functions_wrap_same_implementation(
+        pd.Series.prod, pd.Series.product
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -3194,7 +3230,9 @@ def test_sample(data):
         modin_result = modin_series.sample(n=12, random_state=21019)
         df_equals(pandas_result, modin_result)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         df_equals(
             modin_series.sample(n=0, random_state=21019),
             pandas_series.sample(n=0, random_state=21019),
@@ -3565,7 +3603,9 @@ def test_explode(ignore_index):
 def test_to_period():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(series)
+    ):
         series.to_period()
 
 
@@ -3614,14 +3654,18 @@ def test_to_string(request, data):
 def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(series)
+    ):
         series.to_period().to_timestamp()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_xarray(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.to_xarray()
 
 
@@ -3638,7 +3682,9 @@ def test_to_xarray_mock():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tolist(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         modin_series.tolist()
 
 
@@ -4067,7 +4113,9 @@ def test_str_get_dummies(data, sep):
     modin_series, pandas_series = create_test_series(data)
 
     if sep:
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(
+            not df_or_series_using_native_execution(modin_series)
+        ):
             # We are only testing that this defaults to pandas, so we will just check for
             # the warning
             modin_series.str.get_dummies(sep)
@@ -4328,7 +4376,9 @@ def test_str_extract(data, expand, pat):
 def test_str_extractall(data):
     modin_series, pandas_series = create_test_series(data)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_series)
+    ):
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         modin_series.str.extractall(r"([ab])(\d)")
@@ -4800,7 +4850,15 @@ def test_case_when(base, caselist):
     # 'base' and serieses from 'caselist' must have equal lengths, however in this test we want
     # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal.
     # BaseOnPython always uses a single partition, thus skipping this test for them.
-    if f"{StorageFormat.get()}On{Engine.get()}" != "BaseOnPython":
+    if not (
+        f"{StorageFormat.get()}On{Engine.get()}" == "BaseOnPython"
+        or current_execution_is_native()
+    ):
+        # we can only import this function for partitioned execution modes.
+        from modin.tests.core.storage_formats.pandas.test_internals import (
+            construct_modin_df_by_scheme,
+        )
+
         modin_base_repart = construct_modin_df_by_scheme(
             base.to_frame(),
             partitioning_scheme={"row_lengths": [14, 14, 12], "column_widths": [1]},
@@ -5100,3 +5158,75 @@ def test__reduce__():
         .rename("league")
     )
     df_equals(result_md, result_pd)
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
+        "add",
+        "radd",
+        "divmod",
+        "eq",
+        "floordiv",
+        "ge",
+        "gt",
+        "le",
+        "lt",
+        "mod",
+        "mul",
+        "rmul",
+        "ne",
+        "pow",
+        "rdivmod",
+        "rfloordiv",
+        "rmod",
+        "rpow",
+        "rsub",
+        "rtruediv",
+        "sub",
+        "truediv",
+    ],
+)
+def test_binary_with_fill_value_issue_7381(op):
+    # Ensures that series binary operations respect the fill_value flag
+    series_md, series_pd = create_test_series([0, 1, 2, 3])
+    rhs_md, rhs_pd = create_test_series([0])
+    result_md = getattr(series_md, op)(rhs_md, fill_value=2)
+    result_pd = getattr(series_pd, op)(rhs_pd, fill_value=2)
+    df_equals(result_md, result_pd)
+
+
+@pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
+def test_logical_binary_with_list(op):
+    series_md, series_pd = create_test_series([0, 1, 2])
+    rhs = [2, 1, 0]
+    result_md = getattr(series_md, op)(rhs)
+    result_pd = getattr(series_pd, op)(rhs)
+    df_equals(result_md, result_pd)
+
+
+@pytest.mark.parametrize("op", ["argmax", "argmin"])
+def test_argmax_argmin_7413(op):
+    # Ensures that argmin/argmax use positional index, not the actual index value
+    series_md, series_pd = create_test_series([1, 2, 3], index=["b", "a", "c"])
+    result_md = getattr(series_md, op)()
+    result_pd = getattr(series_pd, op)()
+    assert result_md == result_pd
+
+
+def test_rename_axis():
+    series_md, series_pd = create_test_series([0, 1, 2])
+    eval_general(series_md, series_pd, lambda ser: ser.rename_axis("name"))
+    eval_general(
+        series_md,
+        series_pd,
+        lambda ser: ser.rename_axis("new_name", inplace=True),
+        __inplace__=True,
+    )
+    # axis=1 is invalid for series
+    eval_general(
+        series_md,
+        series_pd,
+        lambda ser: ser.rename_axis("newer_name", axis=1),
+        expected_exception=ValueError("No axis named 1 for object type Series"),
+    )

@@ -12,6 +12,8 @@ dependencies:
   - psutil>=5.8.0
 
   # optional dependencies
+  # NOTE Keep the ray and dask dependencies in sync with the Linux and Windows
+  # Unidist environment dependencies.
   # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
   - ray-core>=2.1.0,!=2.5.0
   - pyarrow>=10.0.1

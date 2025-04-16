@@ -89,6 +89,13 @@ Dataframe.
 In the interest of reducing the pandas API, the Query Compiler layer closely follows the
 pandas API, but cuts out a large majority of the repetition.
 
+QueryCompilers which are derived from QueryCompilerCaster can participate in automatic casting when
+different query compilers, representing different underlying engines, are used together in a
+function. A relative "cost" of casting is used to determine which query compiler everything should
+be moved to. Each query compiler must implement the functions, `move_to_cost`, `move_to_me_cost`, 
+`max_cost` and `stay_cost` to provide information and query costs associated with different decision
+points in cost opimization.
+
 Core Modin Dataframe
 """"""""""""""""""""
 

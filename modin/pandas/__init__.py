@@ -27,8 +27,6 @@ if (
         + f" Modin ({__pandas_version__}.X). This may cause undesired side effects!"
     )
 
-# The extensions assigned to this module
-_PD_EXTENSIONS_ = {}
 
 # to not pollute namespace
 del version
@@ -101,10 +99,10 @@ import os
 
 from modin.config import Parameter
 
-_is_first_update = {}
+_engine_initialized = {}
 
 
-def _update_engine(publisher: Parameter):
+def _initialize_engine(engine_string: str):
     from modin.config import (
         CpuCount,
         Engine,
@@ -116,28 +114,29 @@ def _update_engine(publisher: Parameter):
     # Set this so that Pandas doesn't try to multithread by itself
     os.environ["OMP_NUM_THREADS"] = "1"
 
-    if publisher.get() == "Ray":
-        if _is_first_update.get("Ray", True):
+    if engine_string == "Ray":
+        if not _engine_initialized.get("Ray", False):
             from modin.core.execution.ray.common import initialize_ray
 
             initialize_ray()
-    elif publisher.get() == "Dask":
-        if _is_first_update.get("Dask", True):
+    elif engine_string == "Dask":
+        if not _engine_initialized.get("Dask", False):
             from modin.core.execution.dask.common import initialize_dask
 
             initialize_dask()
-    elif publisher.get() == "Unidist":
-        if _is_first_update.get("Unidist", True):
+    elif engine_string == "Unidist":
+        if not _engine_initialized.get("Unidist", False):
             from modin.core.execution.unidist.common import initialize_unidist
 
             initialize_unidist()
-    elif publisher.get() not in Engine.NOINIT_ENGINES:
-        raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
+    elif engine_string not in Engine.NOINIT_ENGINES:
+        raise ImportError("Unrecognized execution engine: {}.".format(engine_string))
 
-    _is_first_update[publisher.get()] = False
+    _engine_initialized[engine_string] = True
 
 
 from modin.pandas import arrays, errors
+from modin.pandas.api.extensions.extensions import __getattr___impl
 from modin.utils import show_versions
 
 from .. import __version__
@@ -195,30 +194,10 @@ from .io import (
 from .plotting import Plotting as plotting
 from .series import Series
 
-
-def __getattr__(name: str):
-    """
-    Overrides getattr on the module to enable extensions.
-
-    Parameters
-    ----------
-    name : str
-        The name of the attribute being retrieved.
-
-    Returns
-    -------
-    Attribute
-        Returns the extension attribute, if it exists, otherwise returns the attribute
-        imported in this file.
-    """
-    try:
-        return _PD_EXTENSIONS_.get(name, globals()[name])
-    except KeyError:
-        raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
+__getattr__ = __getattr___impl
 
 
 __all__ = [  # noqa: F405
-    "_PD_EXTENSIONS_",
     "DataFrame",
     "Series",
     "read_csv",
@@ -332,4 +311,5 @@ __all__ = [  # noqa: F405
     "errors",
 ]
 
-del pandas, Parameter
+# Remove these attributes from this module's namespace.
+del pandas, Parameter, __getattr___impl

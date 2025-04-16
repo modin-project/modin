@@ -14,6 +14,7 @@
 import contextlib
 import json
 from textwrap import dedent, indent
+from typing import Optional, Union
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -22,7 +23,7 @@ import pytest
 
 import modin.pandas as pd
 import modin.utils
-from modin.config import NativeDataframeMode
+from modin.config import Engine, StorageFormat
 from modin.error_message import ErrorMessage
 from modin.tests.pandas.utils import create_test_dfs
 
@@ -250,7 +251,41 @@ def test_format_string():
     assert answer == expected
 
 
-def warns_that_defaulting_to_pandas(prefix=None, suffix=None, force=False):
+def warns_that_defaulting_to_pandas_if(
+    condition: bool, prefix: Optional[str] = None, suffix: Optional[str] = None
+):
+    """
+    Get a context manager that checks for a default to pandas warning if `condition`  is True.
+
+    Parameters
+    ----------
+    condition : bool
+        Whether to check for the default to pandas warning.
+    prefix : Optional[str]
+        If specified, checks that the start of the warning message matches this argument
+        before "[Dd]efaulting to pandas".
+    suffix : Optional[str]
+        If specified, checks that the end of the warning message matches this argument
+        after "[Dd]efaulting to pandas".
+
+    Returns
+    -------
+    pytest.recwarn.WarningsChecker or contextlib.nullcontext
+        If Modin is not operating in ``NativeDataframeMode``, a ``WarningsChecker``
+        is returned, which will check for a ``UserWarning`` indicating that Modin
+        is defaulting to Pandas. If ``NativeDataframeMode`` is set, a
+        ``nullcontext`` is returned to avoid the warning about defaulting to Pandas,
+        as this occurs due to user setting of ``NativeDataframeMode``.
+    """
+    assert isinstance(condition, bool)
+    return (
+        warns_that_defaulting_to_pandas(prefix=prefix, suffix=suffix)
+        if condition
+        else contextlib.nullcontext()
+    )
+
+
+def warns_that_defaulting_to_pandas(prefix=None, suffix=None):
     """
     Assert that code warns that it's defaulting to pandas.
 
@@ -262,21 +297,11 @@ def warns_that_defaulting_to_pandas(prefix=None, suffix=None, force=False):
     suffix : Optional[str]
         If specified, checks that the end of the warning message matches this argument
         after "[Dd]efaulting to pandas".
-    force : Optional[bool]
-        If ``True``, return the ``pytest.recwarn.WarningsChecker`` irrespective of ``NativeDataframeMode``.
 
     Returns
     -------
-    pytest.recwarn.WarningsChecker or contextlib.nullcontext
-        If Modin is not operating in ``NativeDataframeMode``, a ``WarningsChecker``
-        is returned, which will check for a ``UserWarning`` indicating that Modin
-        is defaulting to Pandas. If ``NativeDataframeMode`` is set, a
-        ``nullcontext`` is returned to avoid the warning about defaulting to Pandas,
-        as this occurs due to user setting of ``NativeDataframeMode``.
+    pytest.recwarn.WarningsChecker
     """
-    if NativeDataframeMode.get() == "Pandas" and not force:
-        return contextlib.nullcontext()
-
     match = "[Dd]efaulting to pandas"
     if prefix:
         # Message may be separated by newlines
@@ -303,6 +328,22 @@ def test_warns_that_defaulting_to_pandas():
 
     with warns_that_defaulting_to_pandas():
         ErrorMessage.default_to_pandas(message="Function name")
+
+
+def test_warns_that_defaulting_to_pandas_if_false():
+    with pytest.raises(UserWarning):
+        with warns_that_defaulting_to_pandas_if(False):
+            ErrorMessage.default_to_pandas()
+
+
+def test_warns_that_defaulting_to_pandas_if_true():
+    with warns_that_defaulting_to_pandas_if(True):
+        ErrorMessage.default_to_pandas()
+
+
+def test_warns_that_defaulting_to_pandas_if_non_bool():
+    with pytest.raises(AssertionError):
+        warns_that_defaulting_to_pandas_if(3)
 
 
 def test_assert_dtypes_equal():
@@ -376,3 +417,16 @@ def test_execute():
         modin.utils.execute(modin_df, modin_df[modin_df.columns[:4]])
         mgr_cls.wait_partitions.assert_called
         assert mgr_cls.wait_partitions.call_count == 2
+
+
+def current_execution_is_native() -> bool:
+    """Whether the current global execution mode is native."""
+    return StorageFormat.get() == "Native" and Engine.get() == "Native"
+
+
+def df_or_series_using_native_execution(df: Union[pd.DataFrame, pd.Series]) -> bool:
+    """Whether this Modin DataFrame or Series is using native execution."""
+    return (
+        df._query_compiler.engine == "Native"
+        and df._query_compiler.storage_format == "Native"
+    )

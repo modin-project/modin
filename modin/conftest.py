@@ -14,6 +14,7 @@
 # We turn off mypy type checks in this file because it's not imported anywhere
 # type: ignore
 
+import copy
 import os
 import platform
 import shutil
@@ -29,6 +30,8 @@ import pytest
 import requests
 import s3fs
 from pandas.util._decorators import doc
+
+from modin.config import Backend, Execution
 
 assert (
     "modin.utils" not in sys.modules
@@ -54,6 +57,7 @@ import uuid  # noqa: E402
 
 import modin  # noqa: E402
 import modin.config  # noqa: E402
+import modin.pandas as pd  # noqa: E402
 import modin.tests.config  # noqa: E402
 from modin.config import (  # noqa: E402
     AsyncReadMode,
@@ -70,6 +74,9 @@ from modin.core.execution.python.implementations.pandas_on_python.io import (  #
 from modin.core.storage_formats import (  # noqa: E402
     BaseQueryCompiler,
     PandasQueryCompiler,
+)
+from modin.core.storage_formats.pandas.query_compiler_caster import (  # noqa: E402
+    _GENERAL_EXTENSIONS,
 )
 from modin.tests.pandas.utils import (  # noqa: E402
     NROWS,
@@ -165,6 +172,11 @@ class TestQC(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
+    storage_format = property(
+        lambda self: "Base", doc=BaseQueryCompiler.storage_format.__doc__
+    )
+    engine = property(lambda self: "Python", doc=BaseQueryCompiler.engine.__doc__)
+
     def finalize(self):
         self._modin_frame.finalize()
 
@@ -183,13 +195,15 @@ class TestQC(BaseQueryCompiler):
     def free(self):
         pass
 
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+    def to_interchange_dataframe(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ):
         raise NotImplementedError(
             "The selected execution does not implement the DataFrame exchange protocol."
         )
 
     @classmethod
-    def from_dataframe(cls, df, data_cls):
+    def from_interchange_dataframe(cls, df, data_cls):
         raise NotImplementedError(
             "The selected execution does not implement the DataFrame exchange protocol."
         )
@@ -210,6 +224,13 @@ class BaseOnPythonFactory(factories.BaseFactory):
 
 def set_base_execution(name=BASE_EXECUTION_NAME):
     setattr(factories, f"{name}Factory", BaseOnPythonFactory)
+    Backend.register_backend(
+        "BaseOnPython",
+        Execution(
+            engine="Python",
+            storage_format="Base",
+        ),
+    )
     modin.set_execution(engine="python", storage_format=name.split("On")[0])
 
 
@@ -223,7 +244,9 @@ def get_unique_base_execution():
     execution_name = f"{format_name}On{engine_name}"
 
     # Dynamically building all the required classes to form a new execution
-    base_qc = type(format_name, (TestQC,), {})
+    base_qc = type(
+        format_name, (TestQC,), {"get_backend": (lambda self: execution_name)}
+    )
     base_io = type(
         f"{execution_name}IO", (BaseOnPythonIO,), {"query_compiler_cls": base_qc}
     )
@@ -235,6 +258,9 @@ def get_unique_base_execution():
 
     # Setting up the new execution
     setattr(factories, f"{execution_name}Factory", base_factory)
+    Backend.register_backend(
+        execution_name, Execution(engine=engine_name, storage_format=format_name)
+    )
     old_engine, old_format = modin.set_execution(
         engine=engine_name, storage_format=format_name
     )
@@ -698,3 +724,40 @@ def modify_config(request):
                 key.put(False)
             else:
                 raise e
+
+
+@pytest.fixture(autouse=True)
+def clean_up_extensions():
+
+    original_dataframe_extensions = copy.deepcopy(pd.dataframe.DataFrame._extensions)
+    original_series_extensions = copy.deepcopy(pd.Series._extensions)
+    original_base_extensions = copy.deepcopy(pd.base.BasePandasDataset._extensions)
+    original_general_extensions = copy.deepcopy(_GENERAL_EXTENSIONS)
+    yield
+    pd.dataframe.DataFrame._extensions.clear()
+    pd.dataframe.DataFrame._extensions.update(original_dataframe_extensions)
+    pd.Series._extensions.clear()
+    pd.Series._extensions.update(original_series_extensions)
+    pd.base.BasePandasDataset._extensions.clear()
+    pd.base.BasePandasDataset._extensions.update(original_base_extensions)
+    _GENERAL_EXTENSIONS.clear()
+    _GENERAL_EXTENSIONS.update(original_general_extensions)
+
+    from modin.pandas.api.extensions.extensions import _attrs_to_delete_on_test
+
+    for k, v in _attrs_to_delete_on_test.items():
+        for obj in v:
+            delattr(k, obj)
+    _attrs_to_delete_on_test.clear()
+
+
+@pytest.fixture(autouse=True)
+def clean_up_auto_backend_switching():
+    from modin.core.storage_formats.pandas.query_compiler_caster import (
+        _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS,
+    )
+
+    originals = copy.deepcopy(_CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS)
+    yield
+    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS.clear()
+    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS.update(originals)

@@ -26,7 +26,6 @@ import warnings
 import pandas
 from pandas.util._decorators import doc
 
-from modin.config import NativeDataframeMode
 from modin.core.io import BaseIO
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 from modin.utils import get_current_execution
@@ -170,9 +169,6 @@ class BaseFactory(object):
         method="io.from_pandas",
     )
     def _from_pandas(cls, df):
-        if NativeDataframeMode.get() == "Pandas":
-            df_copy = df.copy()
-            return NativeQueryCompiler(df_copy)
         return cls.io_cls.from_pandas(df)
 
     @classmethod
@@ -200,10 +196,10 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="a DataFrame object supporting exchange protocol `__dataframe__()`",
         params=_doc_io_method_all_params,
-        method="io.from_dataframe",
+        method="io.from_interchange_dataframe",
     )
-    def _from_dataframe(cls, *args, **kwargs):
-        return cls.io_cls.from_dataframe(*args, **kwargs)
+    def _from_interchange_dataframe(cls, *args, **kwargs):
+        return cls.io_cls.from_interchange_dataframe(*args, **kwargs)
 
     @classmethod
     @doc(
@@ -629,6 +625,8 @@ class BaseFactory(object):
         **kwargs : kwargs
             Arguments to the writer method.
         """
+        # TODO(https://github.com/modin-project/modin/issues/7429): Use
+        # frame-level execution instead of the global, default execution.
         current_execution = get_current_execution()
         if current_execution not in supported_executions:
             raise NotImplementedError(
@@ -782,3 +780,24 @@ class PandasOnUnidistFactory(BaseFactory):
         )
 
         cls.io_cls = PandasOnUnidistIO
+
+
+class NativeIO(BaseIO):
+    """
+    I/O class for native pandas execution.
+
+    This class inherits the default function implementations from the
+    ``BaseIO`` parent class.
+    """
+
+    _should_warn_on_default_to_pandas: bool = False
+    query_compiler_cls = NativeQueryCompiler
+
+
+@doc(_doc_factory_class, execution_name="NativeOnNative")
+class NativeOnNativeFactory(BaseFactory):
+
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="`NativeIO`")
+    def prepare(cls):
+        cls.io_cls = NativeIO

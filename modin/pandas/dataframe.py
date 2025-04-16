@@ -55,9 +55,11 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.indexes.frozen import FrozenList
 from pandas.io.formats.info import DataFrameInfo
+from pandas.util._decorators import doc
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
+from modin.core.storage_formats.pandas.query_compiler_caster import EXTENSION_DICT_TYPE
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
@@ -68,25 +70,27 @@ from modin.utils import (
     expanduser_path_arg,
     hashable,
     import_optional_dependency,
+    sentinel,
     try_cast_to_pandas,
 )
 
 from .accessor import CachedAccessor, SparseFrameAccessor
-from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, _EXTENSION_NO_LOOKUP, BasePandasDataset
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
 from .utils import (
+    GET_BACKEND_DOC,
+    SET_BACKEND_DOC,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
     _doc_binary_op,
     cast_function_modin2pandas,
 )
 
 if TYPE_CHECKING:
-    from modin.core.storage_formats import BaseQueryCompiler
+    from typing_extensions import Self
 
-# Dictionary of extensions assigned to this class
-_DATAFRAME_EXTENSIONS_ = {}
+    from modin.core.storage_formats import BaseQueryCompiler
 
 
 @_inherit_docstrings(
@@ -136,6 +140,7 @@ class DataFrame(BasePandasDataset):
     """
 
     _pandas_class = pandas.DataFrame
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     def __init__(
         self,
@@ -268,13 +273,15 @@ class DataFrame(BasePandasDataset):
         -------
         str
         """
-        num_rows = pandas.get_option("display.max_rows") or len(self.index)
-        num_cols = pandas.get_option("display.max_columns") or len(self.columns)
+        num_rows = pandas.get_option("display.max_rows") or len(self)
+        num_cols = pandas.get_option(
+            "display.max_columns"
+        ) or self._query_compiler.get_axis_len(1)
         result = repr(self._build_repr_df(num_rows, num_cols))
-        if len(self.index) > num_rows or len(self.columns) > num_cols:
+        if len(self) > num_rows or self._query_compiler.get_axis_len(1) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
             return result.rsplit("\n\n", 1)[0] + "\n\n[{0} rows x {1} columns]".format(
-                len(self.index), len(self.columns)
+                *self.shape
             )
         else:
             return result
@@ -293,13 +300,11 @@ class DataFrame(BasePandasDataset):
         # We use pandas _repr_html_ to get a string of the HTML representation
         # of the dataframe.
         result = self._build_repr_df(num_rows, num_cols)._repr_html_()
-        if len(self.index) > num_rows or len(self.columns) > num_cols:
+        if len(self) > num_rows or self._query_compiler.get_axis_len(1) > num_cols:
             # We split so that we insert our correct dataframe dimensions.
             return result.split("<p>")[
                 0
-            ] + "<p>{0} rows x {1} columns</p>\n</div>".format(
-                len(self.index), len(self.columns)
-            )
+            ] + "<p>{0} rows x {1} columns</p>\n</div>".format(*self.shape)
         else:
             return result
 
@@ -365,7 +370,7 @@ class DataFrame(BasePandasDataset):
         """
         Indicate whether ``DataFrame`` is empty.
         """
-        return len(self.columns) == 0 or len(self.index) == 0
+        return self._query_compiler.get_axis_len(1) == 0 or len(self) == 0
 
     @property
     def axes(self) -> list[pandas.Index]:  # noqa: RT01, D200
@@ -379,7 +384,7 @@ class DataFrame(BasePandasDataset):
         """
         Return a tuple representing the dimensionality of the ``DataFrame``.
         """
-        return len(self.index), len(self.columns)
+        return len(self), self._query_compiler.get_axis_len(1)
 
     def add_prefix(self, prefix, axis=None) -> DataFrame:  # noqa: PR01, RT01, D200
         """
@@ -781,7 +786,9 @@ class DataFrame(BasePandasDataset):
         """
         if isinstance(other, BasePandasDataset):
             common = self.columns.union(other.index)
-            if len(common) > len(self.columns) or len(common) > len(other.index):
+            if len(common) > self._query_compiler.get_axis_len(1) or len(common) > len(
+                other
+            ):
                 raise ValueError("Matrices are not aligned")
 
             qc = other.reindex(index=common)._query_compiler
@@ -858,8 +865,9 @@ class DataFrame(BasePandasDataset):
             return
         frame = sys._getframe()
         try:
-            f_locals = frame.f_back.f_back.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_back.f_back.f_globals
+            # TODO(https://github.com/modin-project/modin/issues/4478): fix this
+            f_locals = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_globals
         finally:
             del frame
         local_names = set(re.findall(r"@([\w]+)", expr))
@@ -1084,7 +1092,7 @@ class DataFrame(BasePandasDataset):
                     + f"{len(value.columns)} columns instead."
                 )
             value = value.squeeze(axis=1)
-        if not self._query_compiler.lazy_row_count and len(self.index) == 0:
+        if not self._query_compiler.lazy_row_count and len(self) == 0:
             if not hasattr(value, "index"):
                 try:
                     value = pandas.Series(value)
@@ -1099,7 +1107,7 @@ class DataFrame(BasePandasDataset):
             new_query_compiler = self.__constructor__(
                 value, index=new_index, columns=new_columns
             )._query_compiler
-        elif len(self.columns) == 0 and loc == 0:
+        elif self._query_compiler.get_axis_len(1) == 0 and loc == 0:
             new_index = self.index
             new_query_compiler = self.__constructor__(
                 data=value,
@@ -1110,18 +1118,19 @@ class DataFrame(BasePandasDataset):
             if (
                 is_list_like(value)
                 and not isinstance(value, (pandas.Series, Series))
-                and len(value) != len(self.index)
+                and len(value) != len(self)
             ):
                 raise ValueError(
                     "Length of values ({}) does not match length of index ({})".format(
-                        len(value), len(self.index)
+                        len(value), len(self)
                     )
                 )
             if allow_duplicates is not True and column in self.columns:
                 raise ValueError(f"cannot insert {column}, already exists")
-            if not -len(self.columns) <= loc <= len(self.columns):
+            columns_len = self._query_compiler.get_axis_len(1)
+            if not -columns_len <= loc <= columns_len:
                 raise IndexError(
-                    f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
+                    f"index {loc} is out of bounds for axis 0 with size {columns_len}"
                 )
             elif loc < 0:
                 raise ValueError("unbounded slice")
@@ -2074,12 +2083,14 @@ class DataFrame(BasePandasDataset):
         Squeeze 1 dimensional axis objects into scalars.
         """
         axis = self._get_axis_number(axis) if axis is not None else None
-        if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
+        if axis is None and (
+            self._query_compiler.get_axis_len(1) == 1 or len(self) == 1
+        ):
             return Series(query_compiler=self._query_compiler).squeeze()
-        if axis == 1 and len(self.columns) == 1:
+        if axis == 1 and self._query_compiler.get_axis_len(1) == 1:
             self._query_compiler._shape_hint = "column"
             return Series(query_compiler=self._query_compiler)
-        if axis == 0 and len(self.index) == 1:
+        if axis == 0 and len(self) == 1:
             qc = self.T._query_compiler
             qc._shape_hint = "column"
             return Series(query_compiler=qc)
@@ -2113,11 +2124,11 @@ class DataFrame(BasePandasDataset):
             is_multiindex and is_list_like(level) and len(level) == self.columns.nlevels
         ):
             return self._reduce_dimension(
-                query_compiler=self._query_compiler.stack(level, dropna)
+                query_compiler=self._query_compiler.stack(level, dropna, sort)
             )
         else:
             return self.__constructor__(
-                query_compiler=self._query_compiler.stack(level, dropna)
+                query_compiler=self._query_compiler.stack(level, dropna, sort)
             )
 
     def sub(
@@ -2588,6 +2599,31 @@ class DataFrame(BasePandasDataset):
         return s
 
     @disable_logging
+    def __getattribute__(self, item: str) -> Any:
+        """
+        Return attribute from the `BasePandasDataset`.
+
+        Parameters
+        ----------
+        item : str
+            Item to get.
+
+        Returns
+        -------
+        Any
+        """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+
+        if item not in _EXTENSION_NO_LOOKUP:
+            extensions_result = self._getattribute__from_extension_impl(
+                item, __class__._extensions
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
+        return super().__getattribute__(item)
+
+    @disable_logging
     def __getattr__(self, key) -> Any:
         """
         Return item identified by `key`.
@@ -2606,8 +2642,15 @@ class DataFrame(BasePandasDataset):
         First try to use `__getattribute__` method. If it fails
         try to get `key` from ``DataFrame`` fields.
         """
+        # NOTE that to get an attribute, python calls __getattribute__() first and
+        # then falls back to __getattr__() if the former raises an AttributeError.
+
+        if key not in _EXTENSION_NO_LOOKUP:
+            extension = self._getattr__from_extension_impl(key, __class__._extensions)
+            if extension is not sentinel:
+                return extension
         try:
-            return _DATAFRAME_EXTENSIONS_.get(key, object.__getattribute__(self, key))
+            return super().__getattr__(key)
         except AttributeError as err:
             if key not in _ATTRS_NO_LOOKUP and key in self.columns:
                 return self[key]
@@ -2623,6 +2666,10 @@ class DataFrame(BasePandasDataset):
             Key to set.
         value : Any
             Value to set.
+
+        Returns
+        -------
+        None
         """
         # While we let users assign to a column labeled "x" with "df.x" , there
         # are some attributes that we should assume are NOT column names and
@@ -2638,6 +2685,8 @@ class DataFrame(BasePandasDataset):
         #   before it appears in __dict__.
         if key in ("_query_compiler", "_siblings") or key in self.__dict__:
             pass
+        elif self._get_extension(key, __class__._extensions) is not sentinel:
+            return self._get_extension(key, __class__._extensions).__set__(self, value)
         # we have to check for the key in `dir(self)` first in order not to trigger columns computation
         elif key not in dir(self) and key in self:
             self.__setitem__(key, value)
@@ -2650,7 +2699,7 @@ class DataFrame(BasePandasDataset):
                 SET_DATAFRAME_ATTRIBUTE_WARNING,
                 UserWarning,
             )
-        object.__setattr__(self, key, value)
+        super().__setattr__(key, value)
 
     def __setitem__(self, key, value) -> None:
         """
@@ -2671,7 +2720,7 @@ class DataFrame(BasePandasDataset):
             return self._setitem_slice(key, value)
 
         if hashable(key) and key not in self.columns:
-            if isinstance(value, Series) and len(self.columns) == 0:
+            if isinstance(value, Series) and self._query_compiler.get_axis_len(1) == 0:
                 # Note: column information is lost when assigning a query compiler
                 prev_index = self.columns
                 self._query_compiler = value._query_compiler.copy()
@@ -2680,7 +2729,9 @@ class DataFrame(BasePandasDataset):
                 self.columns = prev_index.insert(0, key)
                 return
             # Do new column assignment after error checks and possible value modifications
-            self.insert(loc=len(self.columns), column=key, value=value)
+            self.insert(
+                loc=self._query_compiler.get_axis_len(1), column=key, value=value
+            )
             return
 
         if not hashable(key):
@@ -2756,7 +2807,7 @@ class DataFrame(BasePandasDataset):
 
                 new_qc = self._query_compiler.insert_item(
                     axis=1,
-                    loc=len(self.columns),
+                    loc=self._query_compiler.get_axis_len(1),
                     value=value._query_compiler,
                     how="left",
                 )
@@ -2783,7 +2834,7 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, (Series, Categorical, np.ndarray, list, range)):
                 value = list(value)
 
-        if not self._query_compiler.lazy_row_count and len(self.index) == 0:
+        if not self._query_compiler.lazy_row_count and len(self) == 0:
             new_self = self.__constructor__({key: value}, columns=self.columns)
             self._update_inplace(new_self._query_compiler)
         else:
@@ -2910,7 +2961,7 @@ class DataFrame(BasePandasDataset):
         ProtocolDataframe
             A dataframe object following the dataframe protocol specification.
         """
-        return self._query_compiler.to_dataframe(
+        return self._query_compiler.to_interchange_dataframe(
             nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 
@@ -3307,3 +3358,40 @@ class DataFrame(BasePandasDataset):
         return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END
+
+    @doc(SET_BACKEND_DOC, class_name=__qualname__)
+    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
+        return super().set_backend(backend=backend, inplace=inplace)
+
+    move_to = set_backend
+
+    @doc(GET_BACKEND_DOC, class_name=__qualname__)
+    @disable_logging
+    def get_backend(self) -> str:
+        return super().get_backend()
+
+    @disable_logging
+    def __delattr__(self, name: str) -> None:
+        """
+        Delete attribute `name`.
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute to delete.
+
+        Returns
+        -------
+        None
+        """
+        extension = self._get_extension(name, __class__._extensions)
+        if extension is not sentinel:
+            return extension.__delete__(self)
+        return super().__delattr__(name)
+
+    @disable_logging
+    @_inherit_docstrings(BasePandasDataset._copy_into)
+    def _copy_into(self, other: DataFrame) -> None:
+        other._query_compiler = self._query_compiler
+        other._siblings = self._siblings
+        return None

@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import abc
 import warnings
+from enum import IntEnum
 from functools import cached_property
-from typing import TYPE_CHECKING, Hashable, List, Optional
+from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
@@ -30,6 +31,7 @@ import pandas.core.resample
 from pandas._typing import DtypeBackend, IndexLabel, Suffixes
 from pandas.core.dtypes.common import is_number, is_scalar
 
+from modin.config.envvars import Backend, Execution
 from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     CatDefault,
@@ -45,9 +47,13 @@ from modin.core.dataframe.algebra.default2pandas import (
     StrDefault,
     StructDefault,
 )
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.logging.config import LogLevel
+from modin.logging.logger_decorator import disable_logging
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 
 from . import doc_utils
@@ -74,8 +80,8 @@ def _get_axis(axis):
     callable(BaseQueryCompiler) -> pandas.Index
     """
 
-    def axis_getter(self):
-        ErrorMessage.default_to_pandas(f"DataFrame.get_axis({axis})")
+    def axis_getter(self: "BaseQueryCompiler") -> pandas.Index:
+        self._maybe_warn_on_default(message=f"DataFrame.get_axis({axis})")
         return self.to_pandas().axes[axis]
 
     return axis_getter
@@ -102,6 +108,47 @@ def _set_axis(axis):
         self.__dict__.update(new_qc.__dict__)
 
     return axis_setter
+
+
+class QCCoercionCost(IntEnum):  # noqa: PR01
+    """
+    Coercion costs between different Query Compiler backends.
+
+    Coercion costs between query compilers can be expressed
+    as integers in the range 0 to 1000, where 1000 is
+    considered impossible. Since coercion costs can be a
+    function of many variables ( dataset size, partitioning,
+    network throughput, and query time ) we define a set range
+    of cost values to simplify comparisons between two query
+    compilers / engines in a unified way.
+
+    COST_ZERO means there is no cost associated, or that the query compilers
+    are the same.
+
+    COST_IMPOSSIBLE means the coercion is effectively impossible, which can
+    occur if the target system is unable to store the data as a result
+    of the coercion. Currently this does not prevent coercion.
+    """
+
+    COST_ZERO = 0
+    COST_LOW = 250
+    COST_MEDIUM = 500
+    COST_HIGH = 750
+    COST_IMPOSSIBLE = 1000
+
+    @classmethod
+    def validate_coersion_cost(cls, cost: QCCoercionCost):
+        """
+        Validate that the coercion cost is within range.
+
+        Parameters
+        ----------
+        cost : QCCoercionCost
+        """
+        if int(cost) < int(QCCoercionCost.COST_ZERO) or int(cost) > int(
+            QCCoercionCost.COST_IMPOSSIBLE
+        ):
+            raise ValueError("Query compiler coercsion cost out of range")
 
 
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
@@ -146,6 +193,64 @@ class BaseQueryCompiler(
 
     _modin_frame: PandasDataframe
     _shape_hint: Optional[str]
+    _should_warn_on_default_to_pandas: bool = True
+
+    def _maybe_warn_on_default(self, *, message: str = "", reason: str = "") -> None:
+        """
+        If this class is configured to warn on default to pandas, warn.
+
+        Parameters
+        ----------
+        message : str, default: ""
+            Method that is defaulting to pandas.
+        reason : str, default: ""
+            Reason for default.
+        """
+        if self._should_warn_on_default_to_pandas:
+            ErrorMessage.default_to_pandas(message=message, reason=reason)
+
+    @disable_logging
+    def get_backend(self) -> str:
+        """
+        Get the backend for this query compiler.
+
+        Returns
+        -------
+        str
+            The backend for this query compiler.
+        """
+        return Backend.get_backend_for_execution(
+            Execution(
+                engine=self.engine,
+                storage_format=self.storage_format,
+            )
+        )
+
+    @property
+    @abc.abstractmethod
+    def storage_format(self) -> str:
+        """
+        The storage format for this query compiler.
+
+        Returns
+        -------
+        str
+            The storage format.
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def engine(self) -> str:
+        """
+        The engine for this query compiler.
+
+        Returns
+        -------
+        str
+            The engine.
+        """
+        pass
 
     def __wrap_in_qc(self, obj):
         """
@@ -189,7 +294,7 @@ class BaseQueryCompiler(
             The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
         op_name = getattr(pandas_op, "__name__", str(pandas_op))
-        ErrorMessage.default_to_pandas(op_name)
+        self._maybe_warn_on_default(message=op_name)
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
 
@@ -202,6 +307,127 @@ class BaseQueryCompiler(
                 return result
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)
+
+    @disable_logging
+    def move_to_cost(
+        self,
+        other_qc_type: type,
+        api_cls_name: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> int:
+        """
+        Return the coercion costs of this qc to other_qc type.
+
+        This is called for forced casting and opportunistic switching
+        decision points. Values returned must be within the acceptable
+        range of QCCoercionCost
+
+        Parameters
+        ----------
+        other_qc_type : QueryCompiler Class
+            The query compiler class to which we should return the cost of switching.
+        api_cls_name : str, default: None
+            The name of the class performing the operation which can be used as a
+            consideration for the costing analysis. `None` means the function does not belong to a class.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
+            for the costing analysis.
+
+        Returns
+        -------
+        int
+            Cost of migrating the data from this qc to the other_qc or
+            None if the cost cannot be determined.
+        """
+        if isinstance(self, other_qc_type):
+            return QCCoercionCost.COST_ZERO
+        return None
+
+    @disable_logging
+    def stay_cost(
+        self,
+        api_cls_name: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> Optional[int]:
+        """
+        Return the "opportunity cost" of not moving the data.
+
+        This is called for opportunistic decision points where we
+        have a single data frame which may be moved to another engine.
+        This is can often the inverse of the move_to_cost, but it can
+        be independently calculated and different. For instance, the
+        move_to_cost may include the cost of network transmission to
+        the other engine, where as the cost returned by 'stay_cost'
+        may be simply the cost of running the operation locally.
+
+        Values returned must be within the acceptable range of
+        QCCoercionCost
+
+        Parameters
+        ----------
+        api_cls_name : str, default: None
+            The class name performing the operation which can be used as a
+            consideration for the costing analysis. `None` means the function is
+            not associated with a class.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
+            for the costing analysis.
+
+        Returns
+        -------
+        Optional[int]
+            Cost of doing this operation on the current backend.
+        """
+        return None
+
+    @disable_logging
+    @classmethod
+    def move_to_me_cost(
+        cls,
+        other_qc: BaseQueryCompiler,
+        api_cls_name: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> Optional[int]:
+        """
+        Return the coercion costs from other_qc to this qc type.
+
+        This is called for forced casting decision points, where one or more
+        DataFrames from different engines must interoperate. Values returned
+        must be within the acceptable range of QCCoercionCost
+
+        Parameters
+        ----------
+        other_qc : BaseQueryCompiler
+            The query compiler from which we should return the cost of switching.
+        api_cls_name : str, default: None
+            The class name performing the operation which can be used as a
+            consideration for the costing analysis. `None` means the function
+            is not associated with a class.
+        operation : str, default: None
+            The operation being performed which can be used as a consideration
+            for the costing analysis.
+
+        Returns
+        -------
+        Optional[int]
+            Cost of migrating the data from other_qc to this qc or
+            None if the cost cannot be determined.
+        """
+        if isinstance(other_qc, cls):
+            return QCCoercionCost.COST_ZERO
+        return None
+
+    @disable_logging
+    def max_cost(self) -> int:
+        """
+        Return the max cost allowed by this engine.
+
+        Returns
+        -------
+        int
+            Max cost allowed for migrating the data to this qc.
+        """
+        return QCCoercionCost.COST_IMPOSSIBLE
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
@@ -472,7 +698,9 @@ class BaseQueryCompiler(
     # Dataframe exchange protocol
 
     @abc.abstractmethod
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+    def to_interchange_dataframe(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ) -> ProtocolDataframe:
         """
         Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
 
@@ -501,13 +729,13 @@ class BaseQueryCompiler(
 
     @classmethod
     @abc.abstractmethod
-    def from_dataframe(cls, df, data_cls):
+    def from_interchange_dataframe(cls, df: ProtocolDataframe, data_cls):
         """
         Build QueryCompiler from a DataFrame object supporting the dataframe exchange protocol `__dataframe__()`.
 
         Parameters
         ----------
-        df : DataFrame
+        df : ProtocolDataframe
             The DataFrame object supporting the dataframe exchange protocol.
         data_cls : type
             :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` class
@@ -647,6 +875,18 @@ class BaseQueryCompiler(
     def eq(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
 
+    @doc_utils.doc_binary_method(
+        operation="equality comparison", sign="==", op_type="series_comparison"
+    )
+    def series_eq(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.Series.eq)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=kwargs.pop("squeeze_other", False),
+            **kwargs,
+        )
+
     @doc_utils.add_refer_to("DataFrame.equals")
     def equals(self, other):  # noqa: PR01, RT01
         return BinaryDefault.register(pandas.DataFrame.equals)(self, other=other)
@@ -686,10 +926,36 @@ class BaseQueryCompiler(
         return BinaryDefault.register(pandas.DataFrame.ge)(self, other=other, **kwargs)
 
     @doc_utils.doc_binary_method(
+        operation="greater than or equal comparison",
+        sign=">=",
+        op_type="series_comparison",
+    )
+    def series_ge(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.Series.ge)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=kwargs.pop("squeeze_other", False),
+            **kwargs,
+        )
+
+    @doc_utils.doc_binary_method(
         operation="greater than comparison", sign=">", op_type="comparison"
     )
     def gt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.gt)(self, other=other, **kwargs)
+
+    @doc_utils.doc_binary_method(
+        operation="greater than comparison", sign=">", op_type="series_comparison"
+    )
+    def series_gt(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.Series.gt)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=kwargs.pop("squeeze_other", False),
+            **kwargs,
+        )
 
     @doc_utils.doc_binary_method(
         operation="less than or equal comparison", sign="<=", op_type="comparison"
@@ -698,10 +964,36 @@ class BaseQueryCompiler(
         return BinaryDefault.register(pandas.DataFrame.le)(self, other=other, **kwargs)
 
     @doc_utils.doc_binary_method(
+        operation="less than or equal comparison",
+        sign="<=",
+        op_type="series_comparison",
+    )
+    def series_le(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.Series.le)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=kwargs.pop("squeeze_other", False),
+            **kwargs,
+        )
+
+    @doc_utils.doc_binary_method(
         operation="less than comparison", sign="<", op_type="comparison"
     )
     def lt(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.lt)(self, other=other, **kwargs)
+
+    @doc_utils.doc_binary_method(
+        operation="less than", sign="<", op_type="series_comparison"
+    )
+    def series_lt(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.Series.lt)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=kwargs.pop("squeeze_other", False),
+            **kwargs,
+        )
 
     @doc_utils.doc_binary_method(operation="modulo", sign="%")
     def mod(self, other, **kwargs):  # noqa: PR02
@@ -817,6 +1109,18 @@ class BaseQueryCompiler(
     )
     def ne(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.ne)(self, other=other, **kwargs)
+
+    @doc_utils.doc_binary_method(
+        operation="not equal comparison", sign="!=", op_type="series_comparison"
+    )
+    def series_ne(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.Series.ne)(
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=kwargs.pop("squeeze_other", False),
+            **kwargs,
+        )
 
     @doc_utils.doc_binary_method(operation="exponential power", sign="**")
     def pow(self, other, **kwargs):  # noqa: PR02
@@ -1147,6 +1451,7 @@ class BaseQueryCompiler(
         allow_exact_matches: bool = True,
         direction: str = "backward",
     ):  # noqa: GL08
+        self._maybe_warn_on_default(message="`merge_asof`")
         # Pandas fallbacks for tricky cases:
         if (
             # No idea how this works or why it does what it does; and in fact
@@ -1880,7 +2185,7 @@ class BaseQueryCompiler(
     # END Abstract map partitions operations
 
     @doc_utils.add_refer_to("DataFrame.stack")
-    def stack(self, level, dropna):
+    def stack(self, level, dropna, sort):
         """
         Stack the prescribed level(s) from columns to index.
 
@@ -1888,13 +2193,17 @@ class BaseQueryCompiler(
         ----------
         level : int or label
         dropna : bool
+        sort : bool
 
         Returns
         -------
         BaseQueryCompiler
         """
         return DataFrameDefault.register(pandas.DataFrame.stack)(
-            self, level=level, dropna=dropna
+            self,
+            level=level,
+            dropna=dropna,
+            sort=sort,
         )
 
     # Abstract map partitions across select indices
@@ -4194,6 +4503,24 @@ class BaseQueryCompiler(
         """
         return self.index if axis == 0 else self.columns
 
+    def get_axis_len(self, axis: Literal[0, 1]) -> int:
+        """
+        Return the length of the specified axis.
+
+        A query compiler may choose to override this method if it has a more efficient way
+        of computing the length of an axis without materializing it.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+
+        Returns
+        -------
+        int
+        """
+        return len(self.get_axis(axis))
+
     def take_2d_labels(
         self,
         index,
@@ -4482,12 +4809,13 @@ class BaseQueryCompiler(
             return df
 
         if not is_scalar(item):
-            broadcasted_item, _ = broadcast_item(
+            broadcasted_item, _, _, _ = broadcast_item(
                 self,
                 row_numeric_index,
                 col_numeric_index,
                 item,
                 need_columns_reindex=need_columns_reindex,
+                sort_lookups_and_item=False,
             )
         else:
             broadcasted_item = item

@@ -12,12 +12,14 @@
 # governing permissions and limitations under the License.
 
 from .extensions import (
+    register_base_accessor,
     register_dataframe_accessor,
     register_pd_accessor,
     register_series_accessor,
 )
 
 __all__ = [
+    "register_base_accessor",
     "register_dataframe_accessor",
     "register_series_accessor",
     "register_pd_accessor",

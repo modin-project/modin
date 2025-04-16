@@ -19,12 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import (
-    MinRowPartitionSize,
-    NativeDataframeMode,
-    NPartitions,
-    StorageFormat,
-)
+from modin.config import MinRowPartitionSize, NPartitions, StorageFormat
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.pandas.testing import assert_index_equal, assert_series_equal
@@ -55,7 +50,11 @@ from modin.tests.pandas.utils import (
     test_func_keys,
     test_func_values,
 )
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.tests.test_utils import (
+    current_execution_is_native,
+    df_or_series_using_native_execution,
+    warns_that_defaulting_to_pandas_if,
+)
 from modin.utils import get_current_execution
 
 NPartitions.put(4)
@@ -304,10 +303,7 @@ def test_copy(data):
     assert new_modin_df.columns is not modin_df.columns
     assert new_modin_df.dtypes is not modin_df.dtypes
 
-    if (
-        get_current_execution() != "BaseOnPython"
-        and NativeDataframeMode.get() == "Default"
-    ):
+    if get_current_execution() != "BaseOnPython" and not current_execution_is_native():
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
             modin_df._query_compiler._modin_frame._partitions,
@@ -532,6 +528,18 @@ def test_astype_category():
     df_equals(modin_result, pandas_result)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
+    dtype = pd.CategoricalDtype(categories=["A", "B"])
+    modin_result = modin_df.astype({"col1": dtype})
+    pandas_result = pandas_df.astype({"col1": dtype})
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+    dtype = pd.CategoricalDtype(categories=["A", "B"])
+    modin_result = modin_df.astype(dtype)
+    pandas_result = pandas_df.astype(dtype)
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
 
 def test_astype_category_large():
     series_length = 10_000
@@ -558,6 +566,18 @@ def test_astype_category_large():
     df_equals(modin_result, pandas_result)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
+    dtype = pd.CategoricalDtype(categories=["str0", "str1"])
+    modin_result = modin_df.astype({"col1": dtype})
+    pandas_result = pandas_df.astype({"col1": dtype})
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+    dtype = pd.CategoricalDtype(categories=["str0", "str1"])
+    modin_result = modin_df.astype(dtype)
+    pandas_result = pandas_df.astype(dtype)
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
 
 def test_astype_int64_to_astype_category_github_issue_6259():
     eval_general(
@@ -570,12 +590,8 @@ def test_astype_int64_to_astype_category_github_issue_6259():
 
 
 @pytest.mark.skipif(
-    get_current_execution() == "BaseOnPython",
-    reason="BaseOnPython doesn't have proxy categories",
-)
-@pytest.mark.skipif(
-    NativeDataframeMode.get() == "Pandas",
-    reason="NativeQueryCompiler doesn't have proxy categories",
+    get_current_execution() == "BaseOnPython" or current_execution_is_native(),
+    reason="BaseOnPython and NativeQueryCompiler don't have proxy categories",
 )
 class TestCategoricalProxyDtype:
     """This class contains test and test usilities for the ``LazyProxyCategoricalDtype`` class."""
@@ -800,7 +816,7 @@ def test_convert_dtypes_dtype_backend(dtype_backend):
 
 
 @pytest.mark.skipif(
-    NativeDataframeMode.get() == "Pandas",
+    current_execution_is_native(),
     reason="NativeQueryCompiler does not contain partitions.",
 )
 def test_convert_dtypes_multiple_row_partitions():
@@ -827,7 +843,7 @@ def test_convert_dtypes_5653():
     modin_part1 = pd.DataFrame({"col1": ["a", "b", "c", "d"]})
     modin_part2 = pd.DataFrame({"col1": [None, None, None, None]})
     modin_df = pd.concat([modin_part1, modin_part2])
-    if StorageFormat.get() == "Pandas" and NativeDataframeMode.get() == "Default":
+    if StorageFormat.get() == "Pandas":
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     modin_df = modin_df.convert_dtypes()
     assert len(modin_df.dtypes) == 1
@@ -955,7 +971,9 @@ def test_drop():
             [0.3, 0.2],
         ],
     )
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(df)
+    ):
         df.drop(index="length", level=1)
 
 

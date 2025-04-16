@@ -1191,7 +1191,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
 
 
 def get_categories_dtype(
-    cdt: Union[LazyProxyCategoricalDtype, pandas.CategoricalDtype]
+    cdt: Union[LazyProxyCategoricalDtype, pandas.CategoricalDtype],
 ) -> DtypeObj:
     """
     Get the categories dtype.

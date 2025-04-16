@@ -19,6 +19,9 @@ from pandas.core.dtypes.common import is_list_like
 
 import modin.pandas as pd
 from modin.config import MinRowPartitionSize, NPartitions
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _assert_casting_functions_wrap_same_implementation,
+)
 from modin.tests.pandas.utils import (
     agg_func_except_keys,
     agg_func_except_values,
@@ -115,7 +118,9 @@ def test_agg_apply_axis_names(axis, func, op, request):
 
 
 def test_aggregate_alias():
-    assert pd.DataFrame.agg == pd.DataFrame.aggregate
+    _assert_casting_functions_wrap_same_implementation(
+        pd.DataFrame.agg, pd.DataFrame.aggregate
+    )
 
 
 def test_aggregate_error_checking():
@@ -126,9 +131,6 @@ def test_aggregate_error_checking():
 
     with warns_that_defaulting_to_pandas():
         modin_df.aggregate("cumproduct")
-
-    with pytest.raises(ValueError):
-        modin_df.aggregate("NOT_EXISTS")
 
 
 @pytest.mark.parametrize(

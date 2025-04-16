@@ -21,7 +21,7 @@ import pytest
 from pandas._testing import ensure_clean
 
 import modin.pandas as pd
-from modin.config import MinRowPartitionSize, NativeDataframeMode, NPartitions
+from modin.config import MinRowPartitionSize, NPartitions
 from modin.pandas.indexing import is_range_like
 from modin.pandas.testing import assert_index_equal
 from modin.tests.pandas.utils import (
@@ -586,10 +586,6 @@ def test_loc_setting_single_categorical_column():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skipif(
-    NativeDataframeMode.get() == "Pandas",
-    reason="NativeQueryCompiler does not currently support IO functions.",
-)
 def test_loc_multi_index():
     modin_df = pd.read_csv(
         "modin/tests/pandas/data/blah.csv", header=[0, 1, 2, 3], index_col=0
@@ -2242,10 +2238,6 @@ def test___setitem__partitions_aligning():
     df_equals(md_df, pd_df)
 
 
-@pytest.mark.skipif(
-    NativeDataframeMode.get() == "Pandas",
-    reason="NativeQueryCompiler does not currently support IO functions.",
-)
 def test___setitem__with_mismatched_partitions():
     with ensure_clean(".csv") as fname:
         np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
@@ -2701,3 +2693,77 @@ def test_index_of_empty_frame():
 
     assert md_res.empty and pd_res.empty
     df_equals(md_res.index, pd_res.index)
+
+
+# https://github.com/modin-project/modin/issues/7405
+@pytest.mark.parametrize("indexer", ["loc", "iloc"])
+def test_loc_and_iloc_set_order(indexer):
+    rng = np.random.default_rng(seed=0)
+    is_loc = indexer == "loc"
+    data = {"col": rng.integers(0, 100, size=100)}
+    set_count = 20
+    # Pick a bunch of unsorted row indices; may contain repeat values.
+    row_indexer = rng.integers(0, 100, size=set_count)
+    col_indexer = "col" if is_loc else 0
+    set_data = range(100, 100 + set_count)
+    md_df, pd_df = create_test_dfs(data)
+
+    def get_helper(df):
+        if is_loc:
+            return df.loc[row_indexer, col_indexer]
+        else:
+            return df.iloc[row_indexer, col_indexer]
+
+    # First, ensure loc/iloc read succeeds.
+    eval_general(md_df, pd_df, get_helper)
+
+    def set_helper(df):
+        if is_loc:
+            df.loc[row_indexer, col_indexer] = set_data
+        else:
+            df.iloc[row_indexer, col_indexer] = set_data
+
+    # Second, check results of loc/iloc write.
+    eval_general(
+        md_df,
+        pd_df,
+        set_helper,
+        __inplace__=True,
+    )
+    # Finally, check the result of a loc/iloc read again.
+    eval_general(md_df, pd_df, get_helper)
+
+
+def test_iloc_set_negative_index():
+    rng = np.random.default_rng(seed=0)
+    row_count = 50
+    col_count = 80
+    data = {f"col_{i}": rng.integers(0, 100, size=row_count) for i in range(col_count)}
+    row_set_count = 20
+    col_set_count = 30
+    # Pick a bunch of unsorted row indices; may contain repeat values and negative numbers.
+    row_indexer = rng.integers(-row_count, row_count, size=row_set_count)
+    col_indexer = rng.integers(-col_count, col_count, size=col_set_count)
+    set_data = np.reshape(
+        range(100, 100 + row_set_count * col_set_count), (row_set_count, col_set_count)
+    )
+    md_df, pd_df = create_test_dfs(data)
+
+    def get_helper(df):
+        return df.iloc[row_indexer, col_indexer]
+
+    # First, ensure loc/iloc read succeeds.
+    eval_general(md_df, pd_df, get_helper)
+
+    def set_helper(df):
+        df.iloc[row_indexer, col_indexer] = set_data
+
+    # Second, check results of loc/iloc write.
+    eval_general(
+        md_df,
+        pd_df,
+        set_helper,
+        __inplace__=True,
+    )
+    # Finally, check the result of a loc/iloc read again.
+    eval_general(md_df, pd_df, get_helper)

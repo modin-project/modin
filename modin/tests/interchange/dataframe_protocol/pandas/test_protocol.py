@@ -18,14 +18,20 @@ import pandas
 import modin.pandas as pd
 from modin.pandas.io import from_dataframe
 from modin.tests.pandas.utils import df_equals, test_data
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.tests.test_utils import (
+    df_or_series_using_native_execution,
+    warns_that_defaulting_to_pandas,
+    warns_that_defaulting_to_pandas_if,
+)
 
 
 def eval_df_protocol(modin_df_producer):
     internal_modin_df_producer = modin_df_producer.__dataframe__()
     # Our configuration in pytest.ini requires that we explicitly catch all
     # instances of defaulting to pandas, this one raises a warning on `.from_dataframe`
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_df_producer)
+    ):
         modin_df_consumer = from_dataframe(modin_df_producer)
         internal_modin_df_consumer = from_dataframe(internal_modin_df_producer)
 
@@ -68,3 +74,18 @@ def test_interchange_with_pandas_string():
     modin_df = pd.DataFrame({"fips": ["01001"]})
     pandas_df = pandas.api.interchange.from_dataframe(modin_df.__dataframe__())
     df_equals(modin_df, pandas_df)
+
+
+def test_interchange_with_datetime():
+    date_range = pd.date_range(
+        start=pd.Timestamp("2024-01-01", unit="ns"),
+        end=pd.Timestamp("2024-03-01", unit="ns"),
+        freq="D",
+    )
+    modin_df = pd.DataFrame(
+        {
+            "datetime_s": date_range.astype("datetime64[s]"),
+            "datetime_ns": date_range.astype("datetime64[ns]"),
+        }
+    )
+    eval_df_protocol(modin_df)

@@ -91,6 +91,8 @@ def call_progress_bar(result_parts, line_no):
 
     threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
 
+    # TODO(https://github.com/modin-project/modin/issues/7429): Use
+    # frame-level engine config.
     modin_engine = Engine.get()
     engine_wrapper = None
     if modin_engine == "Ray":

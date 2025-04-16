@@ -2677,8 +2677,9 @@ def test_dynamic_partitioning(partitioning_scheme, expected_map_approach):
             expected_method.assert_called()
 
 
-def test_map_partitions_joined_by_column():
-    with context(NPartitions=CpuCount.get() * 2):
+@pytest.mark.parametrize("npartitions", [7, CpuCount.get() * 2])
+def test_map_partitions_joined_by_column(npartitions):
+    with context(NPartitions=npartitions):
         ncols = MinColumnPartitionSize.get()
         nrows = MinRowPartitionSize.get() * CpuCount.get() * 2
         data = {f"col{i}": np.ones(nrows) for i in range(ncols)}

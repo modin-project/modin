@@ -50,6 +50,22 @@ class BaseIO:
 
     query_compiler_cls: BaseQueryCompiler = None
     frame_cls = None
+    _should_warn_on_default_to_pandas: bool = True
+
+    @classmethod
+    def _maybe_warn_on_default(cls, *, message: str = "", reason: str = "") -> None:
+        """
+        If this class is configured to warn on default to pandas, warn.
+
+        Parameters
+        ----------
+        message : str, default: ""
+            Method that is causing a default to pandas.
+        reason : str, default: ""
+            Reason for default.
+        """
+        if cls._should_warn_on_default_to_pandas:
+            ErrorMessage.default_to_pandas(message=message, reason=reason)
 
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):
@@ -100,7 +116,7 @@ class BaseIO:
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
-    def from_dataframe(cls, df):
+    def from_interchange_dataframe(cls, df):
         """
         Create a Modin QueryCompiler from a DataFrame supporting the DataFrame exchange protocol `__dataframe__()`.
 
@@ -114,7 +130,7 @@ class BaseIO:
         BaseQueryCompiler
             QueryCompiler containing data from the DataFrame.
         """
-        return cls.query_compiler_cls.from_dataframe(df, cls.frame_cls)
+        return cls.query_compiler_cls.from_interchange_dataframe(df, cls.frame_cls)
 
     @classmethod
     def from_ray(cls, ray_obj):
@@ -200,7 +216,7 @@ class BaseIO:
         returns=_doc_returns_qc,
     )
     def read_parquet(cls, **kwargs):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_parquet`")
+        cls._maybe_warn_on_default(message="`read_parquet`")
         return cls.from_pandas(pandas.read_parquet(**kwargs))
 
     @classmethod
@@ -215,7 +231,7 @@ class BaseIO:
         filepath_or_buffer,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_csv`")
+        cls._maybe_warn_on_default(message="`read_csv`")
         pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
@@ -237,7 +253,7 @@ class BaseIO:
         cls,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_json`")
+        cls._maybe_warn_on_default(message="`read_json`")
         return cls.from_pandas(pandas.read_json(**kwargs))
 
     @classmethod
@@ -265,7 +281,7 @@ class BaseIO:
         progress_bar_type=None,
         max_results=None,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_gbq`")
+        cls._maybe_warn_on_default(message="`read_gbq`")
         return cls.from_pandas(
             pandas.read_gbq(
                 query,
@@ -311,7 +327,7 @@ class BaseIO:
         displayed_only=True,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_html`")
+        cls._maybe_warn_on_default(message="`read_html`")
         result = pandas.read_html(
             io=io,
             match=match,
@@ -340,7 +356,7 @@ class BaseIO:
         returns=_doc_returns_qc,
     )
     def read_clipboard(cls, sep=r"\s+", **kwargs):  # pragma: no cover # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_clipboard`")
+        cls._maybe_warn_on_default(message="`read_clipboard`")
         return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
     @classmethod
@@ -352,7 +368,7 @@ class BaseIO:
     QueryCompiler or dict with read data.""",
     )
     def read_excel(cls, **kwargs):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_excel`")
+        cls._maybe_warn_on_default(message="`read_excel`")
         if isinstance(kwargs["io"], ExcelFile):
             # otherwise, Modin objects may be passed to the pandas context, resulting
             # in undefined behavior
@@ -391,7 +407,7 @@ class BaseIO:
     ):  # noqa: PR01
         from modin.pandas.io import HDFStore
 
-        ErrorMessage.default_to_pandas("`read_hdf`")
+        cls._maybe_warn_on_default(message="`read_hdf`")
         modin_store = isinstance(path_or_buf, HDFStore)
         if modin_store:
             path_or_buf._return_modin_dataframe = False
@@ -425,7 +441,7 @@ class BaseIO:
         path,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_feather`")
+        cls._maybe_warn_on_default(message="`read_feather`")
         return cls.from_pandas(
             pandas.read_feather(
                 path,
@@ -445,7 +461,7 @@ class BaseIO:
         filepath_or_buffer,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_stata`")
+        cls._maybe_warn_on_default(message="`read_stata`")
         return cls.from_pandas(pandas.read_stata(filepath_or_buffer, **kwargs))
 
     @classmethod
@@ -466,7 +482,7 @@ class BaseIO:
         iterator=False,
         **kwargs,
     ):  # pragma: no cover # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_sas`")
+        cls._maybe_warn_on_default(message="`read_sas`")
         return cls.from_pandas(
             pandas.read_sas(
                 filepath_or_buffer,
@@ -491,7 +507,7 @@ class BaseIO:
         filepath_or_buffer,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_pickle`")
+        cls._maybe_warn_on_default(message="`read_pickle`")
         return cls.from_pandas(
             pandas.read_pickle(
                 filepath_or_buffer,
@@ -519,7 +535,7 @@ class BaseIO:
         dtype_backend=no_default,
         dtype=None,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_sql`")
+        cls._maybe_warn_on_default(message="`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
             con = con.get_connection()
         result = pandas.read_sql(
@@ -558,7 +574,7 @@ class BaseIO:
         chunksize=None,
         **kwds,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_fwf`")
+        cls._maybe_warn_on_default(message="`read_fwf`")
         pd_obj = pandas.read_fwf(
             filepath_or_buffer,
             colspecs=colspecs,
@@ -599,7 +615,7 @@ class BaseIO:
         chunksize=None,
         dtype_backend=no_default,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_sql_table`")
+        cls._maybe_warn_on_default(message="`read_sql_table`")
         return cls.from_pandas(
             pandas.read_sql_table(
                 table_name,
@@ -627,7 +643,7 @@ class BaseIO:
         con,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_sql_query`")
+        cls._maybe_warn_on_default(message="`read_sql_query`")
         return cls.from_pandas(
             pandas.read_sql_query(
                 sql,
@@ -646,7 +662,7 @@ class BaseIO:
     def read_spss(
         cls, path, usecols, convert_categoricals, dtype_backend
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("`read_spss`")
+        cls._maybe_warn_on_default(message="`read_spss`")
         return cls.from_pandas(
             pandas.read_spss(
                 path,
@@ -676,7 +692,7 @@ class BaseIO:
 
         For parameters description please refer to pandas API.
         """
-        ErrorMessage.default_to_pandas("`to_sql`")
+        cls._maybe_warn_on_default(message="`to_sql`")
         df = qc.to_pandas()
         df.to_sql(
             name=name,
@@ -703,7 +719,7 @@ class BaseIO:
         """
         Pickle (serialize) object to file.
         """
-        ErrorMessage.default_to_pandas("`to_pickle`")
+        cls._maybe_warn_on_default(message="`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
@@ -721,7 +737,7 @@ class BaseIO:
 
         For parameters description please refer to pandas API.
         """
-        ErrorMessage.default_to_pandas("`to_csv`")
+        cls._maybe_warn_on_default(message="`to_csv`")
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
@@ -735,7 +751,7 @@ class BaseIO:
 
         For parameters description please refer to pandas API.
         """
-        ErrorMessage.default_to_pandas("`to_json`")
+        cls._maybe_warn_on_default(message="`to_json`")
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
@@ -749,7 +765,7 @@ class BaseIO:
 
         For parameters description please refer to pandas API.
         """
-        ErrorMessage.default_to_pandas("`to_xml`")
+        cls._maybe_warn_on_default(message="`to_xml`")
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
@@ -765,7 +781,7 @@ class BaseIO:
 
         For parameters description please refer to pandas API.
         """
-        ErrorMessage.default_to_pandas("`to_parquet`")
+        cls._maybe_warn_on_default(message="`to_parquet`")
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 

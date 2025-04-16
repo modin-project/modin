@@ -16,8 +16,7 @@ from contextlib import contextmanager
 import pytest
 
 import modin.pandas as pd
-from modin import set_execution
-from modin.config import Engine, Parameter, StorageFormat
+from modin.config import Backend, Engine, Execution, Parameter, StorageFormat
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.dispatcher import (
     FactoryDispatcher,
@@ -27,15 +26,7 @@ from modin.core.execution.python.implementations.pandas_on_python.io import (
     PandasOnPythonIO,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-
-
-@contextmanager
-def _switch_execution(engine: str, storage_format: str):
-    old_engine, old_storage = set_execution(engine, storage_format)
-    try:
-        yield
-    finally:
-        set_execution(old_engine, old_storage)
+from modin.tests.pandas.utils import switch_execution
 
 
 @contextmanager
@@ -91,6 +82,36 @@ factories.PandasOnTestFactory = PandasOnTestFactory
 factories.TestOnPythonFactory = TestOnPythonFactory
 factories.FooOnBarFactory = FooOnBarFactory
 
+Backend.register_backend(
+    "Test1",
+    Execution(
+        engine="Test",
+        storage_format="Pandas",
+    ),
+)
+
+Backend.register_backend(
+    "Test2",
+    Execution(
+        engine="Python",
+        storage_format="Test",
+    ),
+)
+Backend.register_backend(
+    "Test3",
+    Execution(
+        engine="Bar",
+        storage_format="Foo",
+    ),
+)
+Backend.register_backend(
+    "Test4",
+    Execution(
+        engine="Dask",
+        storage_format="Pyarrow",
+    ),
+)
+
 # register them as known "no init" engines for modin.pandas
 Engine.NOINIT_ENGINES |= {"Test", "Bar"}
 
@@ -101,7 +122,7 @@ def test_default_factory():
 
 
 def test_factory_switch():
-    with _switch_execution("Python", "Pandas"):
+    with switch_execution("Python", "Pandas"):
         with _switch_value(Engine, "Test"):
             assert FactoryDispatcher.get_factory() == PandasOnTestFactory
             assert FactoryDispatcher.get_factory().io_cls == "Foo"
@@ -119,7 +140,7 @@ def test_engine_wrong_factory():
 
 
 def test_set_execution():
-    with _switch_execution("Bar", "Foo"):
+    with switch_execution("Bar", "Foo"):
         assert FactoryDispatcher.get_factory() == FooOnBarFactory
 
 
@@ -132,7 +153,14 @@ def test_add_option():
     factories.StorageOnExecFactory = DifferentlyNamedFactory
     StorageFormat.add_option("sToragE")
     Engine.add_option("Exec")
+    Backend.register_backend(
+        name="Test5",
+        execution=Execution(
+            engine="Exec",
+            storage_format="Storage",
+        ),
+    )
 
-    with _switch_execution("Exec", "Storage"):
+    with switch_execution("Exec", "Storage"):
         df = pd.DataFrame([[1, 2, 3], [3, 4, 5], [5, 6, 7]])
         assert isinstance(df._query_compiler, PandasQueryCompiler)

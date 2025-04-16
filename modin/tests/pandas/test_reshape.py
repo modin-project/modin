@@ -11,12 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
+
 import numpy as np
 import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.config import StorageFormat
+from modin.tests.test_utils import (
+    df_or_series_using_native_execution,
+    warns_that_defaulting_to_pandas,
+    warns_that_defaulting_to_pandas_if,
+)
 
 from .utils import df_equals, test_data_values
 
@@ -76,7 +83,14 @@ def test_get_dummies():
 
 def test_melt():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+
+    with (
+        pytest.warns(
+            UserWarning, match=r"`melt` implementation has mismatches with pandas"
+        )
+        if StorageFormat.get() == "Pandas"
+        else contextlib.nullcontext()
+    ):
         pd.melt(pd.DataFrame(data))
 
 
@@ -152,7 +166,9 @@ def test_wide_to_long():
         }
     )
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(data)
+    ):
         df = pd.wide_to_long(data, ["hr", "year"], "team", "index")
         assert isinstance(df, pd.DataFrame)
 
