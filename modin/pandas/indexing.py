@@ -294,8 +294,12 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster.set_backend)
-    def set_backend(self, backend):
-        return type(self)(self.df.set_backend(backend))
+    def set_backend(self, backend, inplace: bool = False):
+        result = type(self)(self.df.set_backend(backend))
+        if inplace:
+            result._copy_into(self)
+            return None
+        return result
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
