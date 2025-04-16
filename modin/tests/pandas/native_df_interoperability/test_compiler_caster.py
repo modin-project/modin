@@ -522,6 +522,14 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
     assert cloud_df.get_backend() == "Cloud"
 
 
+def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df):
+    local_df.iloc[:, 0] = cloud_df.iloc[:, 0] + 1
+    expected_pandas = local_df._to_pandas()
+    expected_pandas.iloc[:, 0] = cloud_df._to_pandas().iloc[:, 0] + 1
+    df_equals(local_df, expected_pandas)
+    assert local_df.get_backend() == "Cloud"
+
+
 # Outlines a future generic function for determining when to stay
 # or move to different engines. In the current state it is pretty
 # trivial, but added for completeness
