@@ -469,7 +469,6 @@ def _get_backend_for_auto_switch(
     str
         The name of the best backend to switch to.
     """
-
     # TODO(https://github.com/modin-project/modin/issues/7503): Make costing
     # methods take backend instead of query compiler type so that we don't
     # have to use the dispatcher to figure out the appropriate type for each
