@@ -294,12 +294,8 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster.set_backend)
-    def set_backend(self, backend, inplace: bool = False):
-        result = type(self)(self.df.set_backend(backend))
-        if inplace:
-            result._copy_into(self)
-            return None
-        return result
+    def set_backend(self, backend):
+        return type(self)(self.df.set_backend(backend))
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
@@ -319,8 +315,6 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
         return None
 
     def __init__(self, modin_df: Union[DataFrame, Series]):
-        # TODO(https://github.com/modin-project/modin/issues/7513): Do not keep
-        # both `df` and `qc`.
         self.df = modin_df
         self.qc = modin_df._query_compiler
 
@@ -476,12 +470,12 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
             assert len(row_lookup) == 1
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
+            self.qc = self.df._query_compiler
         # Assignment to both axes.
         else:
             new_qc = self.qc.write_items(row_lookup, col_lookup, item)
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
-
-        self.qc = self.df._query_compiler
+            self.qc = self.df._query_compiler
 
     def _determine_setitem_axis(self, row_lookup, col_lookup, row_scalar, col_scalar):
         """
@@ -828,7 +822,6 @@ class _LocIndexer(_LocationIndexerBase):
             self.df._update_inplace(
                 new_query_compiler=self.df._default_to_pandas(_loc)._query_compiler
             )
-            self.qc = self.df._query_compiler
             return
         row_loc, col_loc, ndims = self._parse_row_and_column_locators(key)
         append_axis = self._check_missing_loc(row_loc, col_loc)
@@ -848,7 +841,6 @@ class _LocIndexer(_LocationIndexerBase):
                 self._set_item_existing_loc(row_loc, col_loc, item)
         else:
             self._set_item_existing_loc(row_loc, col_loc, item)
-        self.qc = self.df._query_compiler
 
     def _setitem_with_new_columns(self, row_loc, col_loc, item):
         """
@@ -885,7 +877,6 @@ class _LocIndexer(_LocationIndexerBase):
             self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=np.nan)
             self.df._update_inplace(new_query_compiler=self.qc)
         self._set_item_existing_loc(row_loc, np.array(col_loc), item)
-        self.qc = self.df._query_compiler
 
     def _set_item_existing_loc(self, row_loc, col_loc, item):
         """
@@ -909,7 +900,6 @@ class _LocIndexer(_LocationIndexerBase):
                 row_loc._query_compiler, col_loc, item
             )
             self.df._update_inplace(new_qc)
-            self.qc = self.df._query_compiler
             return
 
         row_lookup, col_lookup = self.qc.get_positions_from_labels(row_loc, col_loc)
@@ -1105,7 +1095,6 @@ class _iLocIndexer(_LocationIndexerBase):
             self.df._update_inplace(
                 new_query_compiler=self.df._default_to_pandas(_iloc)._query_compiler
             )
-            self.qc = self.df._query_compiler
             return
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         row_scalar = is_scalar(row_loc)

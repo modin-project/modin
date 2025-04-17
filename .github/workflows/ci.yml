@@ -556,13 +556,13 @@ jobs:
     # completely. This bizarre behavior is not in the official documentation,
     # of GitHub actions matrices, but someone does mention it here:
     # https://stackoverflow.com/a/77118991
-    if: |
-      github.event_name == 'pull_request' &&
-      (
-        needs.execution-filter.outputs.ray != 'true' ||
-        needs.execution-filter.outputs.dask != 'true' ||
-        needs.execution-filter.outputs.unidist != 'true'
-      )
+    # if: |
+    #   github.event_name == 'pull_request' &&
+    #   (
+    #     needs.execution-filter.outputs.ray != 'true' ||
+    #     needs.execution-filter.outputs.dask != 'true' ||
+    #     needs.execution-filter.outputs.unidist != 'true'
+    #   )
     strategy:
       matrix:
         os:

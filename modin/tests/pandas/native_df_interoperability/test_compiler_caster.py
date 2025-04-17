@@ -17,7 +17,6 @@ from unittest import mock
 
 import pandas
 import pytest
-from pytest import param
 
 import modin.pandas as pd
 from modin.config import context as config_context
@@ -31,12 +30,10 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
 )
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 from modin.core.storage_formats.pandas.query_compiler_caster import (
-    _GENERAL_EXTENSIONS,
     register_function_for_post_op_switch,
-    register_function_for_pre_op_switch,
 )
 from modin.pandas.api.extensions import register_pd_accessor
-from modin.tests.pandas.utils import create_test_dfs, df_equals, eval_general
+from modin.tests.pandas.utils import df_equals
 
 BIG_DATA_CLOUD_MIN_NUM_ROWS = 10
 
@@ -221,8 +218,6 @@ def register_backend(name, qc):
         def prepare(cls):
             cls.io_cls = TestCasterIO
 
-    TestCasterFactory.prepare()
-
     factory_name = f"{name}OnNativeFactory"
     setattr(factories, factory_name, TestCasterFactory)
     Engine.add_option(name)
@@ -232,12 +227,12 @@ def register_backend(name, qc):
 register_backend("Pico", PicoQC)
 register_backend("Cluster", ClusterQC)
 register_backend("Cloud", CloudQC)
-register_backend("Local_Machine", LocalMachineQC)
+register_backend("Local_machine", LocalMachineQC)
 register_backend("Adversarial", AdversarialQC)
 register_backend("Eager", OmniscientEagerQC)
 register_backend("Lazy", OmniscientLazyQC)
-register_backend("Test_Casting_Default", DefaultQC)
-register_backend("Test_Casting_Default_2", DefaultQC2)
+register_backend("Test_casting_default", DefaultQC)
+register_backend("Test_casting_default_2", DefaultQC2)
 register_backend("Big_Data_Cloud", CloudForBigDataQC)
 
 
@@ -522,14 +517,6 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
     assert cloud_df.get_backend() == "Cloud"
 
 
-def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df):
-    local_df.iloc[:, 0] = cloud_df.iloc[:, 0] + 1
-    expected_pandas = local_df._to_pandas()
-    expected_pandas.iloc[:, 0] = cloud_df._to_pandas().iloc[:, 0] + 1
-    df_equals(local_df, expected_pandas)
-    assert local_df.get_backend() == "Cloud"
-
-
 # Outlines a future generic function for determining when to stay
 # or move to different engines. In the current state it is pretty
 # trivial, but added for completeness
@@ -578,189 +565,3 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             )
             assert df.get_backend() == "Big_Data_Cloud"
             assert df.sum().get_backend() == "Pandas"
-
-
-class TestSwitchBackendPreOp:
-    @pytest.mark.parametrize(
-        "data_size, expected_backend",
-        [
-            param(
-                BIG_DATA_CLOUD_MIN_NUM_ROWS - 1,
-                "Pandas",
-                id="small_data_should_move_to_pandas",
-            ),
-            param(
-                BIG_DATA_CLOUD_MIN_NUM_ROWS,
-                "Big_Data_Cloud",
-                id="big_data_should_stay_in_cloud",
-            ),
-        ],
-    )
-    def test_describe_switches_depending_on_data_size(
-        self, data_size, expected_backend
-    ):
-        # Mock the default describe() implementation so that we can check that we
-        # are calling it with the correct backend as an input. We can't just inspect
-        # the mock's call_args_list because call_args_list keeps a reference to the
-        # input dataframe, whose backend may change in place.
-        mock_describe = mock.Mock(
-            wraps=pd.DataFrame._extensions[None]["describe"],
-            side_effect=(
-                # 1) Record the input backend
-                lambda self, *args, **kwargs: setattr(
-                    mock_describe, "_last_input_backend", self.get_backend()
-                )
-                # 2) Return mock.DEFAULT so that we fall back to the original
-                #    describe() implementation
-                or mock.DEFAULT
-            ),
-        )
-        with config_context(Backend="Big_Data_Cloud"):
-            df = pd.DataFrame(list(range(data_size)))
-            with mock.patch.dict(
-                pd.DataFrame._extensions[None], {"describe": mock_describe}
-            ):
-                # Before we register the post-op switch, the describe() method
-                # should not trigger auto-switch.
-                assert df.get_backend() == "Big_Data_Cloud"
-                describe_result = df.describe()
-                df_equals(describe_result, df._to_pandas().describe())
-                assert describe_result.get_backend() == "Big_Data_Cloud"
-                assert df.get_backend() == "Big_Data_Cloud"
-                mock_describe.assert_called_once()
-                assert mock_describe._last_input_backend == "Big_Data_Cloud"
-
-                mock_describe.reset_mock()
-
-                register_function_for_pre_op_switch(
-                    class_name="DataFrame", backend="Big_Data_Cloud", method="describe"
-                )
-
-                # Now that we've registered the pre-op switch, the describe() call
-                # should trigger auto-switch.
-                assert df.get_backend() == "Big_Data_Cloud"
-                describe_result = df.describe()
-                df_equals(describe_result, df._to_pandas().describe())
-                assert describe_result.get_backend() == expected_backend
-                assert df.get_backend() == expected_backend
-                mock_describe.assert_called_once()
-                assert mock_describe._last_input_backend == expected_backend
-
-    def test_read_json_with_extensions(self):
-        json_input = json.dumps({"col0": [1]})
-        # Mock the read_json implementation for each backend so that we can check
-        # that we are calling the correct implementation. Also, we have to make
-        # the extension methods produce dataframes with the correct backends.
-        pandas_read_json = mock.Mock(
-            wraps=(
-                lambda *args, **kwargs: _GENERAL_EXTENSIONS[None]["read_json"](
-                    *args, **kwargs
-                ).move_to("Pandas")
-            )
-        )
-        cloud_read_json = mock.Mock(
-            wraps=(
-                lambda *args, **kwargs: _GENERAL_EXTENSIONS[None]["read_json"](
-                    *args, **kwargs
-                ).move_to("Big_Data_Cloud")
-            )
-        )
-
-        def move_to_cost(self, other_qc_type, api_cls_name, operation):
-            """Make read_json() always move to Pandas backend."""
-            return (
-                QCCoercionCost.COST_LOW
-                if other_qc_type is NativeQueryCompiler and operation == "read_json"
-                else None
-            )
-
-        register_pd_accessor("read_json", backend="Pandas")(pandas_read_json)
-        register_pd_accessor("read_json", backend="Big_Data_Cloud")(cloud_read_json)
-
-        with config_context(Backend="Big_Data_Cloud"), mock.patch.object(
-            CloudForBigDataQC, "move_to_cost", move_to_cost
-        ):
-            df = pd.read_json(StringIO(json_input))
-            assert df.get_backend() == "Big_Data_Cloud"
-            pandas_read_json.assert_not_called()
-            cloud_read_json.assert_called_once()
-
-            register_function_for_pre_op_switch(
-                class_name=None, backend="Big_Data_Cloud", method="read_json"
-            )
-
-            pandas_read_json.reset_mock()
-            cloud_read_json.reset_mock()
-
-            df = pd.read_json(StringIO(json_input))
-
-            assert df.get_backend() == "Pandas"
-            pandas_read_json.assert_called_once()
-            cloud_read_json.assert_not_called()
-
-    def test_read_json_without_extensions(self):
-        json_input = json.dumps({"col0": [1]})
-
-        def move_to_cost(self, other_qc_type, api_cls_name, operation):
-            """Make read_json() always move to Pandas backend."""
-            return (
-                QCCoercionCost.COST_LOW
-                if other_qc_type is NativeQueryCompiler and operation == "read_json"
-                else None
-            )
-
-        with config_context(Backend="Big_Data_Cloud"), mock.patch.object(
-            CloudForBigDataQC, "move_to_cost", move_to_cost
-        ):
-            df = pd.read_json(StringIO(json_input))
-            assert df.get_backend() == "Big_Data_Cloud"
-
-            register_function_for_pre_op_switch(
-                class_name=None, backend="Big_Data_Cloud", method="read_json"
-            )
-
-            df = pd.read_json(StringIO(json_input))
-
-            assert df.get_backend() == "Pandas"
-
-    @pytest.mark.parametrize(
-        "data_size, expected_backend",
-        [
-            param(
-                BIG_DATA_CLOUD_MIN_NUM_ROWS - 1,
-                "Pandas",
-                id="small_data_should_move_to_pandas",
-            ),
-            param(
-                BIG_DATA_CLOUD_MIN_NUM_ROWS,
-                "Big_Data_Cloud",
-                id="big_data_should_stay_in_cloud",
-            ),
-        ],
-    )
-    def test_iloc_setitem_switches_depending_on_data_size(
-        self, data_size, expected_backend
-    ):
-        with config_context(Backend="Big_Data_Cloud"):
-            md_df, pd_df = create_test_dfs(list(range(data_size)))
-            assert md_df.get_backend() == "Big_Data_Cloud"
-            eval_general(
-                md_df,
-                pd_df,
-                lambda df: df.iloc.__setitem__((0, 0), -1),
-                __inplace__=True,
-            )
-            assert md_df.get_backend() == "Big_Data_Cloud"
-
-            register_function_for_pre_op_switch(
-                class_name="_iLocIndexer",
-                backend="Big_Data_Cloud",
-                method="__setitem__",
-            )
-            eval_general(
-                md_df,
-                pd_df,
-                lambda df: df.iloc.__setitem__((0, 0), 0),
-                __inplace__=True,
-            )
-            assert md_df.get_backend() == expected_backend

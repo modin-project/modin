@@ -65,8 +65,8 @@ class BackendCostCalculator:
     def __init__(
         self, api_cls_name: Optional[str] = None, operation: Optional[str] = None
     ):
-        self._backend_data: dict[str, AggregatedBackendData] = {}
-        self._qc_list: list[BaseQueryCompiler] = []
+        self._backend_data = {}
+        self._qc_list = []
         self._result_backend = None
         self._api_cls_name = api_cls_name
         self._op = operation
