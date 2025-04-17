@@ -57,8 +57,7 @@ def test_turn_off(set_benchmark_mode):
 @pytest.mark.parametrize("set_benchmark_mode", [True], indirect=True)
 def test_turn_on(set_benchmark_mode):
     # breakpoint()
-    df = pd.DataFrame([0]).dropna()
+    pd.DataFrame()
     # with mock.patch(wait_method) as wait:
     # breakpoint()
-    df.dropna()
     # wait.assert_called()
