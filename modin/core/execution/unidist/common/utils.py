@@ -26,10 +26,10 @@ def initialize_unidist():
     Initialize unidist based on ``modin.config`` variables and internal defaults.
     """
 
-    # if unidist_cfg.Backend.get() != "mpi":
-    #     raise RuntimeError(
-    #         f"Modin only supports MPI through unidist for now, got unidist backend '{unidist_cfg.Backend.get()}'"
-    #     )
+    if unidist_cfg.Backend.get() != "mpi":
+        raise RuntimeError(
+            f"Modin only supports MPI through unidist for now, got unidist backend '{unidist_cfg.Backend.get()}'"
+        )
 
     if not unidist.is_initialized():
         modin_cfg.CpuCount.subscribe(

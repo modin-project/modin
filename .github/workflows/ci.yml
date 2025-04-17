@@ -638,23 +638,7 @@ jobs:
           command: ray start --head --port=6379 --object-store-memory=1000000000
         if: matrix.os == 'windows' && matrix.execution == 'ray'
       - name: Setup upterm session 1
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 2
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 3
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 4
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 5
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 6
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 7
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 8
-        uses: lhotari/action-upterm@v1
-      - name: Setup upterm session 9
-        uses: lhotari/action-upterm@v1                
+        uses: lhotari/action-upterm@v1           
       - run: MODIN_BENCHMARK_MODE=True $PYTEST_COMMAND modin/tests/pandas/internals/test_benchmark_mode.py      
       - run: $PYTEST_COMMAND $PARALLEL modin/tests/test_partition_api.py
       - run: $PYTEST_COMMAND modin/tests/pandas/extensions
