@@ -58,5 +58,6 @@ def test_turn_off(set_benchmark_mode):
 def test_turn_on(set_benchmark_mode):
     df = pd.DataFrame([0])
     with mock.patch(wait_method) as wait:
+        breakpoint()
         df.dropna()
     wait.assert_called()
