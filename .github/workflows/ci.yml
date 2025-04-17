@@ -639,6 +639,22 @@ jobs:
         if: matrix.os == 'windows' && matrix.execution == 'ray'
       - name: Setup upterm session
         uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1                
       - run: MODIN_BENCHMARK_MODE=True $PYTEST_COMMAND modin/tests/pandas/internals/test_benchmark_mode.py      
       - run: $PYTEST_COMMAND $PARALLEL modin/tests/test_partition_api.py
       - run: $PYTEST_COMMAND modin/tests/pandas/extensions
