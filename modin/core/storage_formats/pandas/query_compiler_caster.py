@@ -614,7 +614,7 @@ def wrap_function_in_argument_caster(
         visit_nested_args(args, register_query_compilers)
         visit_nested_args(kwargs, register_query_compilers)
 
-        if len(calculator._qc_list) in (0, 1):
+        if len(calculator._qc_list) < 2:
             result_backend, cast_to_qc = _maybe_switch_backend_pre_op(
                 name, calculator._qc_list, class_of_wrapped_fn=class_of_wrapped_fn
             )
