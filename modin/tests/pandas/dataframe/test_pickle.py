@@ -59,7 +59,6 @@ def test__reduce__():
     }
     teams_md, teams_pd = create_test_dfs(dataframe_data)
 
-    breakpoint()
     result_md = (
         teams_md.set_index("name")
         .league_abbreviation.apply(lambda abbr: abbr_md[0].loc[abbr])

@@ -663,7 +663,7 @@ jobs:
       #   if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
-          $PYTEST_COMMAND $PARALLEL -s \
+          $PYTEST_COMMAND $PARALLEL \
                   modin/tests/pandas/dataframe/test_reduce.py \
                   modin/tests/pandas/dataframe/test_udf.py \
                   modin/tests/pandas/dataframe/test_window.py \
