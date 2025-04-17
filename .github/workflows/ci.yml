@@ -783,44 +783,44 @@ jobs:
   #     - run: python -m pytest modin/tests/pandas/native_df_interoperability/ -n 2
   #     - uses: ./.github/actions/upload-coverage
 
-  merge-coverage-artifacts:
-    needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity, test-native-dataframe-interoperability]
-    if: always()  # we need to run it regardless of some job being skipped, like in PR
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: coverage-data
-          pattern: coverage-data-*
-          include-hidden-files: true
-          delete-merged: true
+  # merge-coverage-artifacts:
+  #   needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity, test-native-dataframe-interoperability]
+  #   if: always()  # we need to run it regardless of some job being skipped, like in PR
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   steps:
+  #     - name: Merge Artifacts
+  #       uses: actions/upload-artifact/merge@v4
+  #       with:
+  #         name: coverage-data
+  #         pattern: coverage-data-*
+  #         include-hidden-files: true
+  #         delete-merged: true
 
-  upload-coverage:
-    needs: [merge-coverage-artifacts, python-filter]
-    if: always()  # we need to run it regardless of some job being skipped, like in PR
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/python-only
-        with:
-          python-version: ${{ needs.python-filter.outputs.python-version }}
-      - name: Download coverage data
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-data
-      - run: pip install coverage
-      - name: Combine coverage
-        run: python -m coverage combine
-      - name: Generate coverage report in xml format
-        run: python -m coverage xml
-      - uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: ${{ github.event_name == 'push' }}  # do not care about uploads in PR
-          token: ${{ secrets.CODECOV_TOKEN }} # this token is available at https://app.codecov.io/account/github/modin-project/
+  # upload-coverage:
+  #   needs: [merge-coverage-artifacts, python-filter]
+  #   if: always()  # we need to run it regardless of some job being skipped, like in PR
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/python-only
+  #       with:
+  #         python-version: ${{ needs.python-filter.outputs.python-version }}
+  #     - name: Download coverage data
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: coverage-data
+  #     - run: pip install coverage
+  #     - name: Combine coverage
+  #       run: python -m coverage combine
+  #     - name: Generate coverage report in xml format
+  #       run: python -m coverage xml
+  #     - uses: codecov/codecov-action@v4
+  #       with:
+  #         fail_ci_if_error: ${{ github.event_name == 'push' }}  # do not care about uploads in PR
+  #         token: ${{ secrets.CODECOV_TOKEN }} # this token is available at https://app.codecov.io/account/github/modin-project/
