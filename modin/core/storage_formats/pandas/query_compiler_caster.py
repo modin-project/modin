@@ -348,9 +348,9 @@ def _maybe_switch_backend_pre_op(
 
         # we can't ues an empty query compiler on unidist because of
         # https://github.com/modin-project/modin/issues/7516
-        input_qc = FactoryDispatcher.get_factory().io_cls.from_pandas(
-            pandas.DataFrame([0])
-        )
+        input_qc = FactoryDispatcher._get_prepared_factory_for_backend(
+            "Pandas"
+        ).io_cls.from_pandas(pandas.DataFrame([0]))
     else:
         input_qc = qc_list[0]
     input_backend = Backend.get() if len(qc_list) == 0 else input_qc.get_backend()
