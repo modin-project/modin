@@ -570,13 +570,13 @@ jobs:
         # If we're going to run all ray tests because we've detected a
         # change to the ray engine, we don't need to run these sanity tests
         # on ray. Likewise for dask and unidist.
-        exclude:
-          - running-all-ray-tests: 'true'
-            execution: ray
-          - running-all-dask-tests: 'true'
-            execution: dask
-          - running-all-unidist-tests: 'true'
-            execution: unidist
+        # exclude:
+        #   - running-all-ray-tests: 'true'
+        #     execution: ray
+        #   - running-all-dask-tests: 'true'
+        #     execution: dask
+        #   - running-all-unidist-tests: 'true'
+        #     execution: unidist
     runs-on: ${{ matrix.os }}-latest
     defaults:
       run:
