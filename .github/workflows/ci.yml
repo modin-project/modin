@@ -662,9 +662,7 @@ jobs:
       #             modin/tests/pandas/dataframe/test_iter.py
       #   if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
-        run: |
-          $PYTEST_COMMAND \
-                  modin/tests/pandas/dataframe/test_pickle.py::test__reduce__
+        run: "python -m pytest modin/tests/pandas/dataframe/test_pickle.py::test__reduce__"
         if: matrix.os != 'windows'
       # - run: $PYTEST_COMMAND modin/tests/pandas/test_series.py
       #   if: matrix.execution == 'ray'
