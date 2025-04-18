@@ -248,7 +248,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         callable
             An object that can be accepted by ``apply``.
         """
-        return cls.execution_wrapper.put(func, hash=False, broadcast=True)
+        print("preprocessing func...")
+        result = cls.execution_wrapper.put(func, hash=False, broadcast=True)
+        print("preprocessing func finished")
+        return result
 
     def length(self, materialize=True):
         """

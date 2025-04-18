@@ -32,14 +32,17 @@ def initialize_dask():
     from distributed.client import default_client
     from distributed.worker import get_worker
 
+    print(f"initializing dask in pid {os.getpid()}")
     try:
         # Check if running within a Dask worker process
         get_worker()
         # If the above line does not raise an error, we are in a worker process
         # and should not create a new client
+        print(f"returning with worker in pid {os.getpid()}")
         return
     except ValueError:
         # Not in a Dask worker, proceed to check for or create a client
+        print(f"pass from worker in pid {os.getpid()}")
         pass
 
     try:
@@ -51,8 +54,9 @@ def initialize_dask():
             warnings.simplefilter("ignore", category=FutureWarning)
 
         client.run(_disable_warnings)
-
+        print("made default_client()")
     except ValueError:
+        print("initialize_dask() in ValueError")
         from distributed import Client
 
         num_cpus = CpuCount.get()

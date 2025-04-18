@@ -48,6 +48,14 @@ def test_dataframe_pickle(modin_df, persistent):
 
 
 def test__reduce__():
+    # import pickle
+
+    # df = pd.DataFrame([1])
+    # df2 = pd.DataFrame([2])
+    # pickle.loads(pickle.dumps(df))
+
+    # repr(df.applymap(lambda x: df2.iloc[0, 0]))
+
     # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
     dataframe_data = ["Major League Baseball", "National Basketball Association"]
@@ -59,11 +67,15 @@ def test__reduce__():
     }
     teams_md, teams_pd = create_test_dfs(dataframe_data)
 
-    result_md = (
-        teams_md.set_index("name")
-        .league_abbreviation.apply(lambda abbr: abbr_md[0].loc[abbr])
-        .rename("league")
-    )
+    def f(abbr):
+        import os
+
+        print(f"inside f in pid {os.getpid()}")
+        print(f"starting getitem in pid {os.getpid()}")
+        result = abbr_md[0]
+        return result.loc[abbr]
+
+    result_md = teams_md.set_index("name").league_abbreviation.apply(f).rename("league")
 
     result_pd = (
         teams_pd.set_index("name")
