@@ -51,9 +51,10 @@ def test__reduce__():
     import pickle
 
     df = pd.DataFrame([1])
+    df2 = pd.DataFrame([2])
     pickle.loads(pickle.dumps(df))
 
-    repr(df.applymap(lambda x: df.iloc[0, 0]))
+    repr(df.applymap(lambda x: df2.iloc[0, 0]))
 
     # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
