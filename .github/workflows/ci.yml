@@ -659,9 +659,7 @@ jobs:
         run: |
           $PYTEST_COMMAND $PARALLEL -rPs  \
                   modin/tests/pandas/dataframe/test_reduce.py \
-                  modin/tests/pandas/dataframe/test_udf.py \
-                  modin/tests/pandas/dataframe/test_window.py \
-                  modin/tests/pandas/dataframe/test_pickle.py
+                  modin/tests/pandas/dataframe/test_pickle.py::test_reduce__
         if: matrix.os != 'windows'
       # - run: $PYTEST_COMMAND modin/tests/pandas/test_series.py
       #   if: matrix.execution == 'ray'

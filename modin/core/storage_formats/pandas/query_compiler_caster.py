@@ -20,6 +20,7 @@ This ensures compatibility between different query compiler classes.
 """
 
 import functools
+import os
 import inspect
 import logging
 from abc import ABC, abstractmethod
@@ -582,10 +583,13 @@ def wrap_function_in_argument_caster(
         -------
         Any
         """
+        print(f"start f_with_argument_casting for {name} for pid {os.getpid()}")
         if wrapping_function_type in (classmethod, staticmethod):
             # TODO: currently we don't support any kind of casting or extension
             # for classmethod or staticmethod.
             return f(*args, **kwargs)
+
+        print(f"f_with_argument_casting 2 for {name} for pid {os.getpid()}")
 
         # f() may make in-place updates to some of its arguments. If we cast
         # an argument and then f() updates it in place, the updates will not
@@ -606,6 +610,8 @@ def wrap_function_in_argument_caster(
             class_of_wrapped_fn, f.__name__
         )
 
+        print(f"f_with_argument_casting 3 for {name} for pid {os.getpid()}")
+
         def register_query_compilers(arg):
             if (
                 isinstance(arg, QueryCompilerCaster)
@@ -617,14 +623,25 @@ def wrap_function_in_argument_caster(
                 calculator.add_query_compiler(arg)
             return arg
 
+        print(f"f_with_argument_casting 3 for {name} for pid {os.getpid()}")
+
         visit_nested_args(args, register_query_compilers)
         visit_nested_args(kwargs, register_query_compilers)
 
+        print(f"f_with_argument_casting 4 for {name} for pid {os.getpid()}")
+
         if len(calculator._qc_list) < 2:
+            print(f"f_with_argument_casting 5 for {name} for pid {os.getpid()}")
+
             result_backend, cast_to_qc = _maybe_switch_backend_pre_op(
                 name, calculator._qc_list, class_of_wrapped_fn=class_of_wrapped_fn
             )
+
+            print(f"f_with_argument_casting 6 for {name} for pid {os.getpid()}")
+
         else:
+            print(f"f_with_argument_casting 7 for {name} for pid {os.getpid()}")
+
             result_backend = calculator.calculate()
 
             def cast_to_qc(arg):
@@ -643,6 +660,10 @@ def wrap_function_in_argument_caster(
                     )
                 )
                 return cast
+
+            print(f"f_with_argument_casting 8 for {name} for pid {os.getpid()}")
+
+        print(f"f_with_argument_casting 9 for {name} for pid {os.getpid()}")
 
         args = visit_nested_args(args, cast_to_qc)
         kwargs = visit_nested_args(kwargs, cast_to_qc)
@@ -665,7 +686,10 @@ def wrap_function_in_argument_caster(
             f_to_apply = extensions[None][name]
         # We have to set the global Backend correctly for I/O methods like
         # read_json() to use the correct backend.
+        print(f"f_with_argument_casting 10 for {name} for pid {os.getpid()}")
+
         with config_context(Backend=result_backend):
+            print(f"f_with_argument_casting 11 for {name} for pid {os.getpid()}")
             result = f_to_apply(*args, **kwargs)
         for (
             original_castable,
@@ -675,6 +699,8 @@ def wrap_function_in_argument_caster(
             new_qc = new_castable._get_query_compiler()
             if original_qc is not new_qc:
                 new_castable._copy_into(original_castable)
+
+        print(f"f_with_argument_casting 11 for {name} for pid {os.getpid()}")
 
         return _maybe_switch_backend_post_op(
             result,
