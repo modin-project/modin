@@ -123,6 +123,8 @@ class FactoryDispatcher(object):
                 lambda engine_parameter: _initialize_engine(engine_parameter.get())
             )
             Backend.subscribe(cls._update_factory)
+        else:
+            print("factory is not none")
         return_value = cls.__factory
         return return_value
 

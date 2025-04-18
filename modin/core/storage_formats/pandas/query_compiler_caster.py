@@ -346,8 +346,10 @@ def _maybe_switch_backend_pre_op(
             FactoryDispatcher,
         )
 
+        import os
+
         print(
-            f"about to call from_pandas() for {function_name} in {class_of_wrapped_fn}"
+            f"about to call from_pandas() for {function_name} in {class_of_wrapped_fn} in pid {os.getpid()}"
         )
         # we can't ues an empty query compiler on unidist because of
         # https://github.com/modin-project/modin/issues/7516
