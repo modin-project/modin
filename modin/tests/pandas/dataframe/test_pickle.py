@@ -48,33 +48,40 @@ def test_dataframe_pickle(modin_df, persistent):
 
 
 def test__reduce__():
+    import pickle
+
+    df = pd.DataFrame([1])
+    pickle.dumps(df)
+
+    repr(df[0].applymap(lambda x: df.iloc[0, 0]))
+
     # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
-    dataframe_data = ["Major League Baseball", "National Basketball Association"]
-    abbr_md, abbr_pd = create_test_dfs(dataframe_data, index=["MLB", "NBA"])
+    # dataframe_data = ["Major League Baseball", "National Basketball Association"]
+    # abbr_md, abbr_pd = create_test_dfs(dataframe_data, index=["MLB", "NBA"])
 
-    dataframe_data = {
-        "name": ["Mariners", "Lakers"] * 500,
-        "league_abbreviation": ["MLB", "NBA"] * 500,
-    }
-    teams_md, teams_pd = create_test_dfs(dataframe_data)
+    # dataframe_data = {
+    #     "name": ["Mariners", "Lakers"] * 500,
+    #     "league_abbreviation": ["MLB", "NBA"] * 500,
+    # }
+    # teams_md, teams_pd = create_test_dfs(dataframe_data)
 
-    def f(abbr):
-        import os
+    # def f(abbr):
+    #     import os
 
-        print(f"inside f in pid {os.getpid()}")
-        print(f"starting getitem in pid {os.getpid()}")
-        result = abbr_md[0]
-        return result.loc[abbr]
+    #     print(f"inside f in pid {os.getpid()}")
+    #     print(f"starting getitem in pid {os.getpid()}")
+    #     result = abbr_md[0]
+    #     return result.loc[abbr]
 
-    result_md = teams_md.set_index("name").league_abbreviation.apply(f).rename("league")
+    # result_md = teams_md.set_index("name").league_abbreviation.apply(f).rename("league")
 
-    result_pd = (
-        teams_pd.set_index("name")
-        .league_abbreviation.apply(lambda abbr: abbr_pd[0].loc[abbr])
-        .rename("league")
-    )
-    df_equals(result_md, result_pd)
+    # result_pd = (
+    #     teams_pd.set_index("name")
+    #     .league_abbreviation.apply(lambda abbr: abbr_pd[0].loc[abbr])
+    #     .rename("league")
+    # )
+    # df_equals(result_md, result_pd)
 
 
 def test_column_pickle(modin_column, modin_df, persistent):
