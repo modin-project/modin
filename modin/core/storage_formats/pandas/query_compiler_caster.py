@@ -700,15 +700,19 @@ def wrap_function_in_argument_caster(
             if original_qc is not new_qc:
                 new_castable._copy_into(original_castable)
 
-        print(f"f_with_argument_casting 11 for {name} for pid {os.getpid()}")
+        print(f"f_with_argument_casting 12 for {name} for pid {os.getpid()}")
 
-        return _maybe_switch_backend_post_op(
+        result = _maybe_switch_backend_post_op(
             result,
             function_name=name,
             qc_list=calculator._qc_list,
             starting_backend=result_backend,
             class_of_wrapped_fn=class_of_wrapped_fn,
         )
+
+        print(f"f_with_argument_casting 13 for {name} for pid {os.getpid()}")
+        
+        return result
 
     f_with_argument_casting._wrapped_method_for_casting = f
     return f_with_argument_casting
