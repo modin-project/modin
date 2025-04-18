@@ -637,8 +637,8 @@ jobs:
       #     max_attempts: 5
       #     command: ray start --head --port=6379 --object-store-memory=1000000000
       #   if: matrix.os == 'windows' && matrix.execution == 'ray'
-      - name: Setup upterm session 1
-        uses: lhotari/action-upterm@v1           
+      # - name: Setup upterm session 1
+      #   uses: lhotari/action-upterm@v1           
       # - run: MODIN_BENCHMARK_MODE=True $PYTEST_COMMAND modin/tests/pandas/internals/test_benchmark_mode.py      
       # - run: $PYTEST_COMMAND $PARALLEL modin/tests/test_partition_api.py
       # - run: $PYTEST_COMMAND modin/tests/pandas/extensions
@@ -663,7 +663,7 @@ jobs:
       #   if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
-          $PYTEST_COMMAND $PARALLEL \
+          $PYTEST_COMMAND  \
                   modin/tests/pandas/dataframe/test_reduce.py \
                   modin/tests/pandas/dataframe/test_udf.py \
                   modin/tests/pandas/dataframe/test_window.py \
