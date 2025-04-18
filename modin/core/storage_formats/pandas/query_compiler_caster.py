@@ -356,7 +356,7 @@ def _maybe_switch_backend_pre_op(
         input_qc = FactoryDispatcher.get_factory().io_cls.from_pandas(
             pandas.DataFrame([0])
         )
-        print("from_pandas succeeded.")
+        print(f"from_pandas succeeded in pid {os.getpid()}")
     else:
         input_qc = qc_list[0]
     input_backend = Backend.get() if len(qc_list) == 0 else input_qc.get_backend()

@@ -657,7 +657,7 @@ jobs:
       #   if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
-          $PYTEST_COMMAND $PARALLEL -k "reduce or pickle"\
+          $PYTEST_COMMAND $PARALLEL -rPs  -k "test__reduce__"\
                   modin/tests/pandas/dataframe/test_reduce.py \
                   modin/tests/pandas/dataframe/test_udf.py \
                   modin/tests/pandas/dataframe/test_window.py \

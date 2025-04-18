@@ -32,17 +32,17 @@ def initialize_dask():
     from distributed.client import default_client
     from distributed.worker import get_worker
 
-    print("initializing dask ")
+    print(f"initializing dask in pid {os.getpid()}")
     try:
         # Check if running within a Dask worker process
         get_worker()
         # If the above line does not raise an error, we are in a worker process
         # and should not create a new client
-        print("returning with worker")
+        print(f"returning with worker in pid {os.getpid()}")
         return
     except ValueError:
         # Not in a Dask worker, proceed to check for or create a client
-        print("pass from worker")
+        print(f"pass from worker in pid {os.getpid()}")
         pass
 
     try:

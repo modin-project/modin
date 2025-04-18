@@ -60,8 +60,10 @@ def test__reduce__():
     teams_md, teams_pd = create_test_dfs(dataframe_data)
 
     def f(abbr):
-        print("inside f")
-        print("starting getitem")
+        import os
+
+        print(f"inside f in pid {os.getpid()}")
+        print(f"starting getitem in pid {os.getpid()}")
         result = abbr_md[0]
         return result.loc[abbr]
 

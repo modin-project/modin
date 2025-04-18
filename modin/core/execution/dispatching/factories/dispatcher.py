@@ -115,7 +115,9 @@ class FactoryDispatcher(object):
     def get_factory(cls) -> factories.BaseFactory:
         """Get current factory."""
         if cls.__factory is None:
-            print("getting factory")
+            import os
+
+            print(f"getting factory in worker pid {os.getpid()}")
 
             from modin.pandas import _initialize_engine
 
@@ -124,7 +126,9 @@ class FactoryDispatcher(object):
             )
             Backend.subscribe(cls._update_factory)
         else:
-            print("factory is not none")
+            import os
+
+            print(f"factory is not none in worker pid {os.getpid()}")
         return_value = cls.__factory
         return return_value
 
