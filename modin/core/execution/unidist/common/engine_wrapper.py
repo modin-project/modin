@@ -157,7 +157,7 @@ class UnidistWrapper:
         unique_ids = list(set(obj_ids))
         if num_returns is None:
             num_returns = len(unique_ids)
-        if len(num_returns) > 0:
+        if num_returns > 0:
             unidist.wait(unique_ids, num_returns=num_returns)
 
 
