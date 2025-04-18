@@ -753,11 +753,26 @@ def clean_up_extensions():
 
 @pytest.fixture(autouse=True)
 def clean_up_auto_backend_switching():
+
+    # We have to do cyclic imports here because of this import order assertion:
+    # https://github.com/modin-project/modin/blob/735735ed98f81f5ad92a1bc93df5a4287379141a/modin/conftest.py#L36
     from modin.core.storage_formats.pandas.query_compiler_caster import (
         _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS,
+        _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS,
     )
 
-    originals = copy.deepcopy(_CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS)
+    auto_switch_dict_to_original = tuple(
+        # Use a tuples of tuples instead of a dict because dict is not
+        # hashable.
+        (each_dict, copy.deepcopy(each_dict))
+        for each_dict in (
+            _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS,
+            _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS,
+        )
+    )
+
     yield
-    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS.clear()
-    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS.update(originals)
+
+    for each_dict, each_dict_original in auto_switch_dict_to_original:
+        each_dict.clear()
+        each_dict.update(each_dict_original)
