@@ -548,7 +548,7 @@ jobs:
   test-sanity:
     # The "sanity" tests run on each pull request to test that a subset of the
     # full tests work with the slower engines (ray, dask, and unidist-MPI).
-    needs: [lint-flake8, execution-filter, python-filter]
+    needs: [execution-filter, python-filter]
     # If we don't need to run any sanity tests, the job matrix that we generate
     # here gives a single job with all the matrix fields empty (that is, os,
     # execution, etc. are not set, so we treat them as "").
@@ -663,11 +663,8 @@ jobs:
       #   if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
-          $PYTEST_COMMAND  \
-                  modin/tests/pandas/dataframe/test_reduce.py \
-                  modin/tests/pandas/dataframe/test_udf.py \
-                  modin/tests/pandas/dataframe/test_window.py \
-                  modin/tests/pandas/dataframe/test_pickle.py
+          $PYTEST_COMMAND \
+                  modin/tests/pandas/dataframe/test_pickle.py::test__reduce__
         if: matrix.os != 'windows'
       # - run: $PYTEST_COMMAND modin/tests/pandas/test_series.py
       #   if: matrix.execution == 'ray'

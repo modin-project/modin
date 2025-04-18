@@ -115,6 +115,7 @@ class FactoryDispatcher(object):
     def get_factory(cls) -> factories.BaseFactory:
         """Get current factory."""
         if cls.__factory is None:
+            print("getting factory")
 
             from modin.pandas import _initialize_engine
 

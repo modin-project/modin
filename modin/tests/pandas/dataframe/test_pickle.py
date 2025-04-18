@@ -59,11 +59,13 @@ def test__reduce__():
     }
     teams_md, teams_pd = create_test_dfs(dataframe_data)
 
-    result_md = (
-        teams_md.set_index("name")
-        .league_abbreviation.apply(lambda abbr: abbr_md[0].loc[abbr])
-        .rename("league")
-    )
+    def f(abbr):
+        print("inside f")
+        print("starting getitem")
+        result = abbr_md[0]
+        return result.loc[abbr]
+
+    result_md = teams_md.set_index("name").league_abbreviation.apply(f).rename("league")
 
     result_pd = (
         teams_pd.set_index("name")
