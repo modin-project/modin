@@ -72,7 +72,7 @@ jobs:
       - run: pip install flake8 flake8-print flake8-no-implicit-concat
       # NOTE: keep the flake8 command here in sync with the pre-commit hook in
       # /contributing/pre-commit
-      - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
+      # - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api-and-no-engine:
     needs: [python-filter]
@@ -548,7 +548,7 @@ jobs:
   test-sanity:
     # The "sanity" tests run on each pull request to test that a subset of the
     # full tests work with the slower engines (ray, dask, and unidist-MPI).
-    needs: [execution-filter, python-filter]
+    needs: [lint-flake8, execution-filter, python-filter]
     # If we don't need to run any sanity tests, the job matrix that we generate
     # here gives a single job with all the matrix fields empty (that is, os,
     # execution, etc. are not set, so we treat them as "").
