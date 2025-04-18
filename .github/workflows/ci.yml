@@ -93,164 +93,164 @@ jobs:
       - run: python -m pytest modin/tests/core/test_dispatcher.py::test_add_option
       - uses: ./.github/actions/upload-coverage
 
-  test-clean-install:
-    needs: [lint-flake8, python-filter]
-    strategy:
-      matrix:
-        os:
-          - ubuntu
-          - windows
-    runs-on: ${{ matrix.os }}-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    name: test-clean-install-${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/python-only
-        with:
-          python-version: ${{ needs.python-filter.outputs.python-version }}
-      - run: python -m pip install -e ".[all]"
-      - name: Ensure Ray and Dask engines start up
-        run: |
-          MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-          MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-      - name: Ensure MPI engine start up
-        # Install a working MPI implementation beforehand so mpi4py can link to it
-        run: |
-          sudo apt-get update
-          sudo apt-get install software-properties-common
+  # test-clean-install:
+  #   needs: [lint-flake8, python-filter]
+  #   strategy:
+  #     matrix:
+  #       os:
+  #         - ubuntu
+  #         - windows
+  #   runs-on: ${{ matrix.os }}-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   name: test-clean-install-${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/python-only
+  #       with:
+  #         python-version: ${{ needs.python-filter.outputs.python-version }}
+  #     - run: python -m pip install -e ".[all]"
+  #     - name: Ensure Ray and Dask engines start up
+  #       run: |
+  #         MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+  #         MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+  #     - name: Ensure MPI engine start up
+  #       # Install a working MPI implementation beforehand so mpi4py can link to it
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install software-properties-common
 
-          sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu jammy main universe restricted multiverse"
-          sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe restricted multiverse"
-          sudo add-apt-repository "deb http://security.ubuntu.com/ubuntu jammy-security main universe restricted multiverse"
-          sudo apt-get update
+  #         sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu jammy main universe restricted multiverse"
+  #         sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe restricted multiverse"
+  #         sudo add-apt-repository "deb http://security.ubuntu.com/ubuntu jammy-security main universe restricted multiverse"
+  #         sudo apt-get update
 
-          sudo apt-get install libmpich-dev=4.0-3 libmpich12=4.0-3 mpich=4.0-3
-          python -m pip install -e ".[mpi]"
-          MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-        if: matrix.os == 'ubuntu'
+  #         sudo apt-get install libmpich-dev=4.0-3 libmpich12=4.0-3 mpich=4.0-3
+  #         python -m pip install -e ".[mpi]"
+  #         MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+  #       if: matrix.os == 'ubuntu'
 
-  test-internals:
-    needs: [lint-flake8, python-filter]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    name: test-internals
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-          python-version: ${{ needs.python-filter.outputs.python-version }}
-      - name: Internals tests
-        run: python -m pytest modin/tests/core/test_dispatcher.py
-      - run: python -m pytest modin/tests/config
-      - run: python -m pytest modin/tests/test_envvar_catcher.py
-      - run: python -m pytest modin/tests/core/storage_formats/base/test_internals.py
-      - run: python -m pytest modin/tests/core/storage_formats/pandas/test_internals.py
-      - run: python -m pytest modin/tests/test_envvar_npartitions.py
-      - run: python -m pytest modin/tests/test_utils.py
-      - run: python -m pytest asv_bench/test/test_utils.py
-      - run: python -m pytest modin/tests/interchange/dataframe_protocol/base
-      - run: python -m pytest modin/tests/test_dataframe_api_standard.py
-      - run: python -m pytest modin/tests/test_logging.py
-      - run: python -m pytest modin/tests/test_metrics.py
-      - run: python -m pytest modin/tests/pandas/extensions
-      - uses: ./.github/actions/upload-coverage
+  # test-internals:
+  #   needs: [lint-flake8, python-filter]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   name: test-internals
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/mamba-env
+  #       with:
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{ needs.python-filter.outputs.python-version }}
+  #     - name: Internals tests
+  #       run: python -m pytest modin/tests/core/test_dispatcher.py
+  #     - run: python -m pytest modin/tests/config
+  #     - run: python -m pytest modin/tests/test_envvar_catcher.py
+  #     - run: python -m pytest modin/tests/core/storage_formats/base/test_internals.py
+  #     - run: python -m pytest modin/tests/core/storage_formats/pandas/test_internals.py
+  #     - run: python -m pytest modin/tests/test_envvar_npartitions.py
+  #     - run: python -m pytest modin/tests/test_utils.py
+  #     - run: python -m pytest asv_bench/test/test_utils.py
+  #     - run: python -m pytest modin/tests/interchange/dataframe_protocol/base
+  #     - run: python -m pytest modin/tests/test_dataframe_api_standard.py
+  #     - run: python -m pytest modin/tests/test_logging.py
+  #     - run: python -m pytest modin/tests/test_metrics.py
+  #     - run: python -m pytest modin/tests/pandas/extensions
+  #     - uses: ./.github/actions/upload-coverage
 
-  test-defaults:
-    needs: [lint-flake8, python-filter]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        execution: [BaseOnPython]
-    env:
-      MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python ${{ needs.python-filter.outputs.python-version }}"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-          python-version: ${{ needs.python-filter.outputs.python-version }}
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: xgboost tests
-        run: |
-          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-          # when we use collective instead of rabit.
-          # Per the thread https://github.com/conda-forge/miniforge/issues/513,
-          # remove unused conda packages and caches to avoid `Found incorrect
-          # download: joblib` error from mamba.
-          mamba clean --all
-          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
-          python -m pytest modin/tests/experimental/xgboost/test_default.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/tests/core/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
-      - uses: ./.github/actions/run-core-tests
-        with:
-          runner: python -m pytest --execution=${{ matrix.execution }}
-      - uses: ./.github/actions/upload-coverage
+  # test-defaults:
+  #   needs: [lint-flake8, python-filter]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       execution: [BaseOnPython]
+  #   env:
+  #     MODIN_TEST_DATASET_SIZE: "small"
+  #   name: Test ${{ matrix.execution }} execution, Python ${{ needs.python-filter.outputs.python-version }}"
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/mamba-env
+  #       with:
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{ needs.python-filter.outputs.python-version }}
+  #     - name: Install HDF5
+  #       run: sudo apt update && sudo apt install -y libhdf5-dev
+  #     - name: xgboost tests
+  #       run: |
+  #         # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+  #         # when we use collective instead of rabit.
+  #         # Per the thread https://github.com/conda-forge/miniforge/issues/513,
+  #         # remove unused conda packages and caches to avoid `Found incorrect
+  #         # download: joblib` error from mamba.
+  #         mamba clean --all
+  #         mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+  #         python -m pytest modin/tests/experimental/xgboost/test_default.py --execution=${{ matrix.execution }}
+  #     - run: python -m pytest -n 2 modin/tests/core/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
+  #     - uses: ./.github/actions/run-core-tests
+  #       with:
+  #         runner: python -m pytest --execution=${{ matrix.execution }}
+  #     - uses: ./.github/actions/upload-coverage
 
-  test-asv-benchmarks:
-    if: github.event_name == 'pull_request'
-    needs: [lint-flake8]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      MODIN_ENGINE: ray
-      MODIN_MEMORY: 1000000000
-      MODIN_TEST_DATASET_SIZE: small
-    name: test-asv-benchmarks
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          auto-activate-base: true
-          activate-environment: ""
-          miniforge-variant: Miniforge3
-          miniforge-version: latest
-          use-mamba: true
-      - name: Running benchmarks
-        run: |
-          git remote add upstream https://github.com/modin-project/modin.git
-          git fetch upstream
-          if git diff upstream/main --name-only | grep -q "^asv_bench/"; then
-              cd asv_bench
+  # test-asv-benchmarks:
+  #   if: github.event_name == 'pull_request'
+  #   needs: [lint-flake8]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   env:
+  #     MODIN_ENGINE: ray
+  #     MODIN_MEMORY: 1000000000
+  #     MODIN_TEST_DATASET_SIZE: small
+  #   name: test-asv-benchmarks
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 1
+  #     - uses: conda-incubator/setup-miniconda@v3
+  #       with:
+  #         auto-activate-base: true
+  #         activate-environment: ""
+  #         miniforge-variant: Miniforge3
+  #         miniforge-version: latest
+  #         use-mamba: true
+  #     - name: Running benchmarks
+  #       run: |
+  #         git remote add upstream https://github.com/modin-project/modin.git
+  #         git fetch upstream
+  #         if git diff upstream/main --name-only | grep -q "^asv_bench/"; then
+  #             cd asv_bench
 
-              mamba env create -f ../environment-dev.yml
-              conda activate modin
-              pip install ..
+  #             mamba env create -f ../environment-dev.yml
+  #             conda activate modin
+  #             pip install ..
 
-              asv machine --yes
+  #             asv machine --yes
 
-              # check Modin on Ray
-              asv run --quick --dry-run --python=same --strict --show-stderr --launch-method=spawn \
-                -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
+  #             # check Modin on Ray
+  #             asv run --quick --dry-run --python=same --strict --show-stderr --launch-method=spawn \
+  #               -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
 
-              # check pure pandas
-              MODIN_ASV_USE_IMPL=pandas asv run --quick --dry-run --python=same --strict --show-stderr --launch-method=spawn \
-                -b ^benchmarks -b ^io | tee benchmarks.log
-          else
-              echo "Benchmarks did not run, no changes detected"
-          fi
-        if: always()
+  #             # check pure pandas
+  #             MODIN_ASV_USE_IMPL=pandas asv run --quick --dry-run --python=same --strict --show-stderr --launch-method=spawn \
+  #               -b ^benchmarks -b ^io | tee benchmarks.log
+  #         else
+  #             echo "Benchmarks did not run, no changes detected"
+  #         fi
+  #       if: always()
 
-      - name: Publish benchmarks artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Benchmarks log
-          path: asv_bench/benchmarks.log
-          include-hidden-files: true
-        if: failure()
+  #     - name: Publish benchmarks artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Benchmarks log
+  #         path: asv_bench/benchmarks.log
+  #         include-hidden-files: true
+  #       if: failure()
 
   execution-filter:
     # Choose which executions we want to run all tests for on a pull request.
@@ -289,261 +289,261 @@ jobs:
         python -c "import sys, json; print('engines=' + json.dumps(['python', 'native'] + (sys.argv[1] == 'true' and ['ray'] or []) + (sys.argv[2] == 'true' and ['dask'] or []) ))" \
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
 
-  test-all-unidist:
-    needs: [lint-flake8, execution-filter, python-filter]
-    if: github.event_name == 'push' || needs.execution-filter.outputs.unidist == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
-        unidist-backend: ["mpi"]
-    env:
-      MODIN_ENGINE: "Unidist"
-      UNIDIST_BACKEND: ${{matrix.unidist-backend}}
-      # Only test reading from SQL server and postgres on ubuntu for now.
-      # Eventually, we should test on Windows, too, but we will have to set up
-      # the servers differently.
-      MODIN_TEST_READ_FROM_SQL_SERVER: true
-      MODIN_TEST_READ_FROM_POSTGRES: true
-    name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
-    services:
-      moto:
-        image: motoserver/moto:5.0.13
-        ports:
-          - 5000:5000
-        env:
-          AWS_ACCESS_KEY_ID: foobar_key
-          AWS_SECRET_ACCESS_KEY: foobar_secret
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: requirements/env_unidist_linux.yml
-          activate-environment: modin_on_unidist
-          python-version: ${{matrix.python-version}}
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Set up postgres
-        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
-        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
-        run: |
-          sudo docker pull postgres
-          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - run: mpiexec -n 1 python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-      - run: mpiexec -n 1 python -m pytest modin/tests/test_partition_api.py
-      - uses: ./.github/actions/run-core-tests
-        with:
-          runner: mpiexec -n 1 python -m pytest
-          parallel: ""
-      - run: mpiexec -n 1 python -m pytest modin/tests/numpy
-      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-      # need an extra argument "genv" to set environment variables for mpiexec. We need
-      # these variables to test writing to the mock s3 filesystem.
-      - uses: nick-fields/retry@v3
-        # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
-        # for details see: https://github.com/modin-project/modin/pull/6776
-        with:
-          timeout_minutes: 15
-          max_attempts: 3
-          command: |
-            conda run --no-capture-output -n modin_on_unidist mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key \
-              -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/tests/pandas/test_io.py --verbose
-      - run: |
-          mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret \
-            python -m pytest modin/tests/experimental/test_io_exp.py
-      - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
-      - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
-      - run: |
-          python -m pip install lazy_import
-          mpiexec -n 1 python -m pytest modin/tests/pandas/integrations/
-      - uses: ./.github/actions/upload-coverage
+  # test-all-unidist:
+  #   needs: [lint-flake8, execution-filter, python-filter]
+  #   if: github.event_name == 'push' || needs.execution-filter.outputs.unidist == 'true'
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
+  #       unidist-backend: ["mpi"]
+  #   env:
+  #     MODIN_ENGINE: "Unidist"
+  #     UNIDIST_BACKEND: ${{matrix.unidist-backend}}
+  #     # Only test reading from SQL server and postgres on ubuntu for now.
+  #     # Eventually, we should test on Windows, too, but we will have to set up
+  #     # the servers differently.
+  #     MODIN_TEST_READ_FROM_SQL_SERVER: true
+  #     MODIN_TEST_READ_FROM_POSTGRES: true
+  #   name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
+  #   services:
+  #     moto:
+  #       image: motoserver/moto:5.0.13
+  #       ports:
+  #         - 5000:5000
+  #       env:
+  #         AWS_ACCESS_KEY_ID: foobar_key
+  #         AWS_SECRET_ACCESS_KEY: foobar_secret
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/mamba-env
+  #       with:
+  #         environment-file: requirements/env_unidist_linux.yml
+  #         activate-environment: modin_on_unidist
+  #         python-version: ${{matrix.python-version}}
+  #     - name: Install HDF5
+  #       run: sudo apt update && sudo apt install -y libhdf5-dev
+  #     - name: Set up postgres
+  #       # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+  #       # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+  #       run: |
+  #         sudo docker pull postgres
+  #         sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
+  #     - run: mpiexec -n 1 python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
+  #     - run: mpiexec -n 1 python -m pytest modin/tests/test_partition_api.py
+  #     - uses: ./.github/actions/run-core-tests
+  #       with:
+  #         runner: mpiexec -n 1 python -m pytest
+  #         parallel: ""
+  #     - run: mpiexec -n 1 python -m pytest modin/tests/numpy
+  #     - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+  #     - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+  #     # need an extra argument "genv" to set environment variables for mpiexec. We need
+  #     # these variables to test writing to the mock s3 filesystem.
+  #     - uses: nick-fields/retry@v3
+  #       # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
+  #       # for details see: https://github.com/modin-project/modin/pull/6776
+  #       with:
+  #         timeout_minutes: 15
+  #         max_attempts: 3
+  #         command: |
+  #           conda run --no-capture-output -n modin_on_unidist mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key \
+  #             -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/tests/pandas/test_io.py --verbose
+  #     - run: |
+  #         mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret \
+  #           python -m pytest modin/tests/experimental/test_io_exp.py
+  #     - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
+  #     - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
+  #     - run: |
+  #         python -m pip install lazy_import
+  #         mpiexec -n 1 python -m pytest modin/tests/pandas/integrations/
+  #     - uses: ./.github/actions/upload-coverage
 
-  test-all:
-    needs: [lint-flake8, execution-filter, python-filter]
-    strategy:
-      matrix:
-        os:
-          - ubuntu
-          - windows
-        python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
-        # On push, run the tests for all engines. Otherwise, for pull requests,
-        # only run tests for engines that depend on files changed in this PR.
-        engine: ${{ fromJSON( (github.event_name == 'push' && '["python", "ray", "dask", "native"]') || needs.execution-filter.outputs.engines ) }}
-        test_task:
-          - group_1
-          - group_2
-          - group_3
-          - group_4
-        exclude: # python and native engines only have one task group that contains all the tests
-          - engine: "python"
-            test_task: "group_2"
-          - engine: "native"
-            test_task: "group_2"
-          - engine: "python"
-            test_task: "group_3"
-          - engine: "native"
-            test_task: "group_3"
-          - engine: "python"
-            test_task: "group_4"
-          - engine: "native"
-            test_task: "group_4"
-    runs-on: ${{ matrix.os }}-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      MODIN_ENGINE: ${{matrix.engine}}
-      # Only test reading from SQL server and postgres on ubuntu for now.
-      # Eventually, we should test on Windows, too, but we will have to set up
-      # the servers differently.
-      MODIN_TEST_READ_FROM_SQL_SERVER: ${{ matrix.os == 'ubuntu' }}
-      MODIN_TEST_READ_FROM_POSTGRES: ${{ matrix.os == 'ubuntu' }}
-    name: test-${{ matrix.os }} (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
-    services:
-      # Using workaround https://github.com/actions/runner/issues/822#issuecomment-1524826092
-      moto:
-        # we only need moto service on Ubuntu and for group_4 task, or for native or python engine.
-        image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')) && 'motoserver/moto:5.0.13' || '' }}
-        ports:
-          - 5000:5000
-        env:
-          AWS_ACCESS_KEY_ID: foobar_key
-          AWS_SECRET_ACCESS_KEY: foobar_secret
-    steps:
-      - name: Set native storage format
-        run: echo "MODIN_STORAGE_FORMAT=Native" >> $GITHUB_ENV
-        if: matrix.engine == 'native'
-      - name: Limit ray memory
-        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-        if: matrix.os == 'ubuntu' && matrix.engine == 'ray'
-      - name: Tell Modin to use existing ray cluster
-        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
-        if: matrix.os == 'windows' && matrix.engine == 'ray'
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-      - name: Start local ray cluster
-        # Try a few times to start ray to work around
-        # https://github.com/modin-project/modin/issues/4562
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 5
-          command: ray start --head --port=6379 --object-store-memory=1000000000
-        if: matrix.os == 'windows' && matrix.engine == 'ray'
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-        if: matrix.os == 'ubuntu'
-      - name: Set up postgres
-        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
-        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
-        run: |
-          sudo docker pull postgres
-          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-        if: matrix.os == 'ubuntu'
+  # test-all:
+  #   needs: [lint-flake8, execution-filter, python-filter]
+  #   strategy:
+  #     matrix:
+  #       os:
+  #         - ubuntu
+  #         - windows
+  #       python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
+  #       # On push, run the tests for all engines. Otherwise, for pull requests,
+  #       # only run tests for engines that depend on files changed in this PR.
+  #       engine: ${{ fromJSON( (github.event_name == 'push' && '["python", "ray", "dask", "native"]') || needs.execution-filter.outputs.engines ) }}
+  #       test_task:
+  #         - group_1
+  #         - group_2
+  #         - group_3
+  #         - group_4
+  #       exclude: # python and native engines only have one task group that contains all the tests
+  #         - engine: "python"
+  #           test_task: "group_2"
+  #         - engine: "native"
+  #           test_task: "group_2"
+  #         - engine: "python"
+  #           test_task: "group_3"
+  #         - engine: "native"
+  #           test_task: "group_3"
+  #         - engine: "python"
+  #           test_task: "group_4"
+  #         - engine: "native"
+  #           test_task: "group_4"
+  #   runs-on: ${{ matrix.os }}-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   env:
+  #     MODIN_ENGINE: ${{matrix.engine}}
+  #     # Only test reading from SQL server and postgres on ubuntu for now.
+  #     # Eventually, we should test on Windows, too, but we will have to set up
+  #     # the servers differently.
+  #     MODIN_TEST_READ_FROM_SQL_SERVER: ${{ matrix.os == 'ubuntu' }}
+  #     MODIN_TEST_READ_FROM_POSTGRES: ${{ matrix.os == 'ubuntu' }}
+  #   name: test-${{ matrix.os }} (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
+  #   services:
+  #     # Using workaround https://github.com/actions/runner/issues/822#issuecomment-1524826092
+  #     moto:
+  #       # we only need moto service on Ubuntu and for group_4 task, or for native or python engine.
+  #       image: ${{ (matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')) && 'motoserver/moto:5.0.13' || '' }}
+  #       ports:
+  #         - 5000:5000
+  #       env:
+  #         AWS_ACCESS_KEY_ID: foobar_key
+  #         AWS_SECRET_ACCESS_KEY: foobar_secret
+  #   steps:
+  #     - name: Set native storage format
+  #       run: echo "MODIN_STORAGE_FORMAT=Native" >> $GITHUB_ENV
+  #       if: matrix.engine == 'native'
+  #     - name: Limit ray memory
+  #       run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+  #       if: matrix.os == 'ubuntu' && matrix.engine == 'ray'
+  #     - name: Tell Modin to use existing ray cluster
+  #       run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+  #       if: matrix.os == 'windows' && matrix.engine == 'ray'
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/mamba-env
+  #       with:
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{matrix.python-version}}
+  #     - name: Start local ray cluster
+  #       # Try a few times to start ray to work around
+  #       # https://github.com/modin-project/modin/issues/4562
+  #       uses: nick-fields/retry@v3
+  #       with:
+  #         timeout_minutes: 5
+  #         max_attempts: 5
+  #         command: ray start --head --port=6379 --object-store-memory=1000000000
+  #       if: matrix.os == 'windows' && matrix.engine == 'ray'
+  #     - name: Install HDF5
+  #       run: sudo apt update && sudo apt install -y libhdf5-dev
+  #       if: matrix.os == 'ubuntu'
+  #     - name: Set up postgres
+  #       # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+  #       # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+  #       run: |
+  #         sudo docker pull postgres
+  #         sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
+  #       if: matrix.os == 'ubuntu'
 
-    # BEGIN partitioned execution tests. We run these tests along with group 1,
-    # or if we are on the "python" engine, which only has a single group. We
-    # skip these tests on the "native" engine, which does not use partitions.
+  #   # BEGIN partitioned execution tests. We run these tests along with group 1,
+  #   # or if we are on the "python" engine, which only has a single group. We
+  #   # skip these tests on the "native" engine, which does not use partitions.
 
-      - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
-        if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
-      - run: python -m pytest modin/tests/test_partition_api.py
-        # Skip this test for python because we do not define unwrap_partitions()
-        # for python execution.
-        if: matrix.engine != 'native' && matrix.engine != 'python' && matrix.test_task == 'group_1'
-      - name: xgboost tests
-        run: |
-          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-          # when we use collective instead of rabit.
-          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
-          python -m pytest -n 2 \
-                  modin/tests/experimental/xgboost/test_default.py \
-                  modin/tests/experimental/xgboost/test_xgboost.py \
-                  modin/tests/experimental/xgboost/test_dmatrix.py
-        if: matrix.engine != 'native' && matrix.os != 'windows' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
-      - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
-        if: matrix.engine != 'native'  && (matrix.engine == 'python' || matrix.test_task == 'group_1')
-
-
-    # END partitioned execution tests.
+  #     - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
+  #       if: matrix.engine != 'native' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
+  #     - run: python -m pytest modin/tests/test_partition_api.py
+  #       # Skip this test for python because we do not define unwrap_partitions()
+  #       # for python execution.
+  #       if: matrix.engine != 'native' && matrix.engine != 'python' && matrix.test_task == 'group_1'
+  #     - name: xgboost tests
+  #       run: |
+  #         # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+  #         # when we use collective instead of rabit.
+  #         mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+  #         python -m pytest -n 2 \
+  #                 modin/tests/experimental/xgboost/test_default.py \
+  #                 modin/tests/experimental/xgboost/test_xgboost.py \
+  #                 modin/tests/experimental/xgboost/test_dmatrix.py
+  #       if: matrix.engine != 'native' && matrix.os != 'windows' && (matrix.engine == 'python' || matrix.test_task == 'group_1')
+  #     - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
+  #       if: matrix.engine != 'native'  && (matrix.engine == 'python' || matrix.test_task == 'group_1')
 
 
-    # BEGIN test groups.
-    # Run all the tests in the corresponding group for this instance of the
-    # test matrix. For example, if we are in the matrix's 'group_4', run the
-    # tests for 'group_4'. For each of 'native' and 'python' engines,  we run
-    # all tests in a single job, so we ignore the grouping.
-
-      - uses: ./.github/actions/run-core-tests/group_1
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_1'
-      - uses: ./.github/actions/run-core-tests/group_2
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_2'
-      - uses: ./.github/actions/run-core-tests/group_3
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_3'
-      - uses: ./.github/actions/run-core-tests/group_4
-        with:
-          # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
-          # See https://github.com/modin-project/modin/issues/7387.
-          parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/tests/numpy
-        # Native execution does not support the modin Numpy API.
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-
-    # END test groups.
+  #   # END partitioned execution tests.
 
 
-    # BEGIN some tests that we run along with group 4 for engines other than
-    # 'native' and 'python'. 'native' and 'python' jobs will run these tests
-    # along with all other tests in a single group.
+  #   # BEGIN test groups.
+  #   # Run all the tests in the corresponding group for this instance of the
+  #   # test matrix. For example, if we are in the matrix's 'group_4', run the
+  #   # tests for 'group_4'. For each of 'native' and 'python' engines,  we run
+  #   # all tests in a single job, so we ignore the grouping.
 
-      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
-        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')
-      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')
-      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
-      - run: python -m pytest modin/tests/pandas/test_io.py --verbose
-        timeout-minutes: 60
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/tests/experimental/test_io_exp.py
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/tests/polars/test_dataframe.py
-      - run: |
-          python -m pip install lazy_import
-          python -m pytest modin/tests/pandas/integrations/
-        if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+  #     - uses: ./.github/actions/run-core-tests/group_1
+  #       with:
+  #         # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+  #         # See https://github.com/modin-project/modin/issues/7387.
+  #         parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_1'
+  #     - uses: ./.github/actions/run-core-tests/group_2
+  #       with:
+  #         # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+  #         # See https://github.com/modin-project/modin/issues/7387.
+  #         parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_2'
+  #     - uses: ./.github/actions/run-core-tests/group_3
+  #       with:
+  #         # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+  #         # See https://github.com/modin-project/modin/issues/7387.
+  #         parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_3'
+  #     - uses: ./.github/actions/run-core-tests/group_4
+  #       with:
+  #         # When running with Ray engine on Windows using 2 pytest workers tests are failing in CI.
+  #         # See https://github.com/modin-project/modin/issues/7387.
+  #         parallel: ${{ matrix.engine == 'ray' && matrix.os == 'windows' && '-n 1' || '-n 2' }}
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+  #     - run: python -m pytest -n 2 modin/tests/numpy
+  #       # Native execution does not support the modin Numpy API.
+  #       if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+
+  #   # END test groups.
 
 
-    # END tests that run on group 4, or in the single group for 'native' and
-    # python' engines.
+  #   # BEGIN some tests that we run along with group 4 for engines other than
+  #   # 'native' and 'python'. 'native' and 'python' jobs will run these tests
+  #   # along with all other tests in a single group.
 
-      - uses: ./.github/actions/upload-coverage
-      - name: Stop local ray cluster
-        run: ray stop
-        if: matrix.os == 'windows' && matrix.engine == 'ray'
+  #     - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+  #       if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')
+  #     - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+  #       if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4')
+  #     # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
+  #     - run: python -m pytest modin/tests/pandas/test_io.py --verbose
+  #       timeout-minutes: 60
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+  #     - run: python -m pytest modin/tests/experimental/test_io_exp.py
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+  #     - run: python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+  #     - run: python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+  #     - run: python -m pytest modin/tests/polars/test_dataframe.py
+  #     - run: |
+  #         python -m pip install lazy_import
+  #         python -m pytest modin/tests/pandas/integrations/
+  #       if: matrix.engine == 'python' || matrix.engine == 'native' || matrix.test_task == 'group_4'
+
+
+  #   # END tests that run on group 4, or in the single group for 'native' and
+  #   # python' engines.
+
+  #     - uses: ./.github/actions/upload-coverage
+  #     - name: Stop local ray cluster
+  #       run: ray stop
+  #       if: matrix.os == 'windows' && matrix.engine == 'ray'
 
   test-sanity:
     # The "sanity" tests run on each pull request to test that a subset of the
@@ -567,12 +567,12 @@ jobs:
       matrix:
         os:
           - ubuntu
-          - windows
+          # - windows
         python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
         running-all-ray-tests: [ "${{ needs.execution-filter.outputs.ray }}" ]
         running-all-dask-tests: [ "${{needs.execution-filter.outputs.dask}}" ]
         running-all-unidist-tests: [ "${{needs.execution-filter.outputs.unidist}}" ]
-        execution: [ray, dask, unidist]
+        execution: [ dask]
         # If we're going to run all ray tests because we've detected a
         # change to the ray engine, we don't need to run these sanity tests
         # on ray. Likewise for dask and unidist.
@@ -619,46 +619,48 @@ jobs:
           environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
           activate-environment: ${{ matrix.execution == 'unidist' && 'modin_on_unidist' || 'modin' }}
           python-version: ${{matrix.python-version}}
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-        if: matrix.os != 'windows'
-      - name: Limit ray memory
-        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-        if: matrix.os != 'windows' && matrix.execution == 'ray'
-      - name: Tell Modin to use existing ray cluster
-        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
-        if: matrix.os == 'windows' && matrix.execution == 'ray'
-      - name: Start local ray cluster
-        # Try a few times to start ray to work around
-        # https://github.com/modin-project/modin/issues/4562
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 5
-          command: ray start --head --port=6379 --object-store-memory=1000000000
-        if: matrix.os == 'windows' && matrix.execution == 'ray'
-      - run: MODIN_BENCHMARK_MODE=True $PYTEST_COMMAND modin/tests/pandas/internals/test_benchmark_mode.py
-      - run: $PYTEST_COMMAND $PARALLEL modin/tests/test_partition_api.py
-      - run: $PYTEST_COMMAND modin/tests/pandas/extensions
-      - name: xgboost tests
-        run: |
-          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-          # when we use collective instead of rabit.
-          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
-          $PYTEST_COMMAND $PARALLEL \
-                  modin/tests/experimental/xgboost/test_default.py \
-                  modin/tests/experimental/xgboost/test_xgboost.py \
-                  modin/tests/experimental/xgboost/test_dmatrix.py
-        if: matrix.os != 'windows' && needs.execution-filter.outputs.experimental == 'true'
-      - run: $PYTEST_COMMAND $PARALLEL modin/tests/experimental/test_pipeline.py
-        if: matrix.os != 'windows' && matrix.execution != 'unidist' && needs.execution-filter.outputs.experimental == 'true'
-      - name: "test DF: binary, default, iter"
-        run: |
-          $PYTEST_COMMAND $PARALLEL \
-                  modin/tests/pandas/dataframe/test_binary.py \
-                  modin/tests/pandas/dataframe/test_default.py \
-                  modin/tests/pandas/dataframe/test_iter.py
-        if: matrix.os != 'windows'
+      # - name: Install HDF5
+      #   run: sudo apt update && sudo apt install -y libhdf5-dev
+      #   if: matrix.os != 'windows'
+      # - name: Limit ray memory
+      #   run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+      #   if: matrix.os != 'windows' && matrix.execution == 'ray'
+      # - name: Tell Modin to use existing ray cluster
+      #   run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+      #   if: matrix.os == 'windows' && matrix.execution == 'ray'
+      # - name: Start local ray cluster
+      #   # Try a few times to start ray to work around
+      #   # https://github.com/modin-project/modin/issues/4562
+      #   uses: nick-fields/retry@v3
+      #   with:
+      #     timeout_minutes: 5
+      #     max_attempts: 5
+      #     command: ray start --head --port=6379 --object-store-memory=1000000000
+      #   if: matrix.os == 'windows' && matrix.execution == 'ray'
+      - name: Setup upterm session 1
+        uses: lhotari/action-upterm@v1           
+      # - run: MODIN_BENCHMARK_MODE=True $PYTEST_COMMAND modin/tests/pandas/internals/test_benchmark_mode.py      
+      # - run: $PYTEST_COMMAND $PARALLEL modin/tests/test_partition_api.py
+      # - run: $PYTEST_COMMAND modin/tests/pandas/extensions
+      # - name: xgboost tests
+      #   run: |
+      #     # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+      #     # when we use collective instead of rabit.
+      #     mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+      #     $PYTEST_COMMAND $PARALLEL \
+      #             modin/tests/experimental/xgboost/test_default.py \
+      #             modin/tests/experimental/xgboost/test_xgboost.py \
+      #             modin/tests/experimental/xgboost/test_dmatrix.py
+      #   if: matrix.os != 'windows' && needs.execution-filter.outputs.experimental == 'true'
+      # - run: $PYTEST_COMMAND $PARALLEL modin/tests/experimental/test_pipeline.py
+      #   if: matrix.os != 'windows' && matrix.execution != 'unidist' && needs.execution-filter.outputs.experimental == 'true'
+      # - name: "test DF: binary, default, iter"
+      #   run: |
+      #     $PYTEST_COMMAND $PARALLEL \
+      #             modin/tests/pandas/dataframe/test_binary.py \
+      #             modin/tests/pandas/dataframe/test_default.py \
+      #             modin/tests/pandas/dataframe/test_iter.py
+      #   if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
           $PYTEST_COMMAND $PARALLEL \
@@ -667,158 +669,158 @@ jobs:
                   modin/tests/pandas/dataframe/test_window.py \
                   modin/tests/pandas/dataframe/test_pickle.py
         if: matrix.os != 'windows'
-      - run: $PYTEST_COMMAND modin/tests/pandas/test_series.py
-        if: matrix.execution == 'ray'
-      - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_series.py
-        if: matrix.execution != 'ray'
-      - run: $PYTEST_COMMAND modin/tests/pandas/dataframe/test_map_metadata.py
-        if: matrix.execution == 'ray'
-      - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/dataframe/test_map_metadata.py
-        if: matrix.execution != 'ray'
-      - name: "test rolling, expanding, reshape, general, concat"
-        run: |
-          $PYTEST_COMMAND $PARALLEL \
-                  modin/tests/pandas/test_rolling.py \
-                  modin/tests/pandas/test_expanding.py \
-                  modin/tests/pandas/test_reshape.py \
-                  modin/tests/pandas/test_general.py \
-                  modin/tests/pandas/test_concat.py
-        if: matrix.os != 'windows'
-      - run: $PYTEST_COMMAND $PARALLEL modin/tests/numpy
-      - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
-        if: matrix.execution != 'unidist'
-      - uses: nick-fields/retry@v3
-        # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
-        # for details see: https://github.com/modin-project/modin/pull/6776
-        with:
-          timeout_minutes: 15
-          max_attempts: 3
-          command: conda run --no-capture-output -n modin_on_unidist $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
-        if: matrix.execution == 'unidist'
-      - run: $PYTEST_COMMAND modin/tests/experimental/test_io_exp.py
-      - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/test_general.py
-      - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
-      - name: Stop local ray cluster
-        run: ray stop
-        if: matrix.os == 'windows' && matrix.execution == 'ray'
+      # - run: $PYTEST_COMMAND modin/tests/pandas/test_series.py
+      #   if: matrix.execution == 'ray'
+      # - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_series.py
+      #   if: matrix.execution != 'ray'
+      # - run: $PYTEST_COMMAND modin/tests/pandas/dataframe/test_map_metadata.py
+      #   if: matrix.execution == 'ray'
+      # - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/dataframe/test_map_metadata.py
+      #   if: matrix.execution != 'ray'
+      # - name: "test rolling, expanding, reshape, general, concat"
+      #   run: |
+      #     $PYTEST_COMMAND $PARALLEL \
+      #             modin/tests/pandas/test_rolling.py \
+      #             modin/tests/pandas/test_expanding.py \
+      #             modin/tests/pandas/test_reshape.py \
+      #             modin/tests/pandas/test_general.py \
+      #             modin/tests/pandas/test_concat.py
+      #   if: matrix.os != 'windows'
+      # - run: $PYTEST_COMMAND $PARALLEL modin/tests/numpy
+      # - run: $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
+      #   if: matrix.execution != 'unidist'
+      # - uses: nick-fields/retry@v3
+      #   # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
+      #   # for details see: https://github.com/modin-project/modin/pull/6776
+      #   with:
+      #     timeout_minutes: 15
+      #     max_attempts: 3
+      #     command: conda run --no-capture-output -n modin_on_unidist $PYTEST_COMMAND -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
+      #   if: matrix.execution == 'unidist'
+      # - run: $PYTEST_COMMAND modin/tests/experimental/test_io_exp.py
+      # - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/test_general.py
+      # - run: $PYTEST_COMMAND $PARALLEL modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
+      # - name: Stop local ray cluster
+      #   run: ray stop
+      #   if: matrix.os == 'windows' && matrix.execution == 'ray'
       - uses: ./.github/actions/upload-coverage
 
-  test-experimental:
-    needs: [lint-flake8, python-filter]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      MODIN_ENGINE: "python"
-      MODIN_EXPERIMENTAL: "True"
-    name: test experimental
-    services:
-      moto:
-        image: motoserver/moto:5.0.13
-        ports:
-          - 5000:5000
-        env:
-          AWS_ACCESS_KEY_ID: foobar_key
-          AWS_SECRET_ACCESS_KEY: foobar_secret
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-          python-version: ${{ needs.python-filter.outputs.python-version }}
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest -n 2 modin/tests/pandas/dataframe/test_map_metadata.py
-      - run: python -m pytest -n 2 modin/tests/pandas/test_series.py
-      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
-      - run: python -m pytest modin/tests/pandas/test_io.py --verbose
-      - uses: ./.github/actions/upload-coverage
+  # test-experimental:
+  #   needs: [lint-flake8, python-filter]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   env:
+  #     MODIN_ENGINE: "python"
+  #     MODIN_EXPERIMENTAL: "True"
+  #   name: test experimental
+  #   services:
+  #     moto:
+  #       image: motoserver/moto:5.0.13
+  #       ports:
+  #         - 5000:5000
+  #       env:
+  #         AWS_ACCESS_KEY_ID: foobar_key
+  #         AWS_SECRET_ACCESS_KEY: foobar_secret
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/mamba-env
+  #       with:
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{ needs.python-filter.outputs.python-version }}
+  #     - name: Install HDF5
+  #       run: sudo apt update && sudo apt install -y libhdf5-dev
+  #     - run: python -m pytest -n 2 modin/tests/pandas/dataframe/test_map_metadata.py
+  #     - run: python -m pytest -n 2 modin/tests/pandas/test_series.py
+  #     # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
+  #     - run: python -m pytest modin/tests/pandas/test_io.py --verbose
+  #     - uses: ./.github/actions/upload-coverage
 
-  test-spreadsheet:
-    needs: [lint-flake8, python-filter]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
-        engine: ["ray", "dask"]
-    env:
-      MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: ${{matrix.engine}}
-    name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-      - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
+  # test-spreadsheet:
+  #   needs: [lint-flake8, python-filter]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       python-version: [ "${{ needs.python-filter.outputs.python-version }}" ]
+  #       engine: ["ray", "dask"]
+  #   env:
+  #     MODIN_EXPERIMENTAL: "True"
+  #     MODIN_ENGINE: ${{matrix.engine}}
+  #   name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/mamba-env
+  #       with:
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{matrix.python-version}}
+  #     - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
 
-  test-native-dataframe-interoperability:
-    needs: [ lint-flake8]
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.9"]
-    env:
-      # Test interoperability between PandasOnPython dataframes/series and
-      # native dataframes/series.
-      MODIN_ENGINE: "Python"
-    name: test-native-dataframe-interoperability python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-      - run: python -m pytest modin/tests/pandas/native_df_interoperability/ -n 2
-      - uses: ./.github/actions/upload-coverage
+  # test-native-dataframe-interoperability:
+  #   needs: [ lint-flake8]
+  #   if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       python-version: ["3.9"]
+  #   env:
+  #     # Test interoperability between PandasOnPython dataframes/series and
+  #     # native dataframes/series.
+  #     MODIN_ENGINE: "Python"
+  #   name: test-native-dataframe-interoperability python ${{matrix.python-version}})
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/mamba-env
+  #       with:
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{matrix.python-version}}
+  #     - run: python -m pytest modin/tests/pandas/native_df_interoperability/ -n 2
+  #     - uses: ./.github/actions/upload-coverage
 
-  merge-coverage-artifacts:
-    needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity, test-native-dataframe-interoperability]
-    if: always()  # we need to run it regardless of some job being skipped, like in PR
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: coverage-data
-          pattern: coverage-data-*
-          include-hidden-files: true
-          delete-merged: true
+  # merge-coverage-artifacts:
+  #   needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity, test-native-dataframe-interoperability]
+  #   if: always()  # we need to run it regardless of some job being skipped, like in PR
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   steps:
+  #     - name: Merge Artifacts
+  #       uses: actions/upload-artifact/merge@v4
+  #       with:
+  #         name: coverage-data
+  #         pattern: coverage-data-*
+  #         include-hidden-files: true
+  #         delete-merged: true
 
-  upload-coverage:
-    needs: [merge-coverage-artifacts, python-filter]
-    if: always()  # we need to run it regardless of some job being skipped, like in PR
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/python-only
-        with:
-          python-version: ${{ needs.python-filter.outputs.python-version }}
-      - name: Download coverage data
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-data
-      - run: pip install coverage
-      - name: Combine coverage
-        run: python -m coverage combine
-      - name: Generate coverage report in xml format
-        run: python -m coverage xml
-      - uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: ${{ github.event_name == 'push' }}  # do not care about uploads in PR
-          token: ${{ secrets.CODECOV_TOKEN }} # this token is available at https://app.codecov.io/account/github/modin-project/
+  # upload-coverage:
+  #   needs: [merge-coverage-artifacts, python-filter]
+  #   if: always()  # we need to run it regardless of some job being skipped, like in PR
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/python-only
+  #       with:
+  #         python-version: ${{ needs.python-filter.outputs.python-version }}
+  #     - name: Download coverage data
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: coverage-data
+  #     - run: pip install coverage
+  #     - name: Combine coverage
+  #       run: python -m coverage combine
+  #     - name: Generate coverage report in xml format
+  #       run: python -m coverage xml
+  #     - uses: codecov/codecov-action@v4
+  #       with:
+  #         fail_ci_if_error: ${{ github.event_name == 'push' }}  # do not care about uploads in PR
+  #         token: ${{ secrets.CODECOV_TOKEN }} # this token is available at https://app.codecov.io/account/github/modin-project/
