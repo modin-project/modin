@@ -31,7 +31,7 @@ import pandas
 from pandas.core.indexes.frozen import FrozenList
 from typing_extensions import Self
 
-from modin.config import Backend
+from modin.config import Backend, AutoSwitchBackend
 from modin.config import context as config_context
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
@@ -67,6 +67,11 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "_query_compiler",
     "_get_query_compiler",
     "_copy_into",
+    "is_backend_pinned",
+    "set_backend_pinned",
+    "pin_backend",
+    "unpin_backend",
+    "__dict__",
 }
 
 BackendAndClassName = namedtuple("BackendAndClassName", ["backend", "class_name"])
@@ -117,6 +122,60 @@ class QueryCompilerCaster(ABC):
             Otherwise, None.
         """
         pass
+
+    @abstractmethod
+    def is_backend_pinned(self) -> bool:
+        """
+        Get whether this object's data is pinned to a particular backend.
+
+        Returns
+        -------
+        bool
+            True if the data is pinned.
+        """
+        pass
+
+    @abstractmethod
+    def set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:
+        """
+        Update whether this object's data is pinned to a particular backend.
+
+        Parameters
+        ----------
+        pinned : bool
+            Whether the data is pinned.
+
+        inplace : bool, default False
+            Whether to update the object in place.
+
+        Returns
+        -------
+        Optional[Self]
+            The object with the new pin state, if `inplace` is False. Otherwise, None.
+        """
+        pass
+
+    def pin_backend(self, inplace: bool = False) -> Optional[Self]:
+        """
+        Pin the object's underlying data, preventing modin from automatically moving it to another backend.
+
+        Returns
+        -------
+        Optional[Self]
+            The newly-pinned object, if `inplace` is False. Otherwise, None.
+        """
+        return self.set_backend_pinned(True, inplace)
+
+    def unpin_backend(self, inplace: bool = False) -> Optional[Self]:
+        """
+        Unpin the object's underlying data, allowing modin to automatically move it to another backend.
+
+        Returns
+        -------
+        Optional[Self]
+            The newly-unpinned object, if `inplace` is False. Otherwise, None.
+        """
+        return self.set_backend_pinned(False, inplace)
 
     @abstractmethod
     def get_backend(self) -> str:
@@ -318,6 +377,7 @@ def _maybe_switch_backend_pre_op(
     function_name: str,
     qc_list: list[BaseQueryCompiler],
     class_of_wrapped_fn: Optional[str],
+    pin_backend: bool,
 ) -> tuple[str, Callable[[Any], Any]]:
     """
     Possibly switch backend before a function.
@@ -331,6 +391,8 @@ def _maybe_switch_backend_pre_op(
     class_of_wrapped_fn : Optional[str]
         The name of the class that the function belongs to. `None` for functions
         in the modin.pandas module.
+    pin_backend : bool
+        Whether to pin the backend to the input's backend.
 
     Returns
     -------
@@ -351,8 +413,11 @@ def _maybe_switch_backend_pre_op(
         )
     else:
         input_qc = qc_list[0]
+    # If the input QC has its backend pinned, never switch.
     input_backend = Backend.get() if len(qc_list) == 0 else input_qc.get_backend()
-    if (
+    if pin_backend:
+        result_backend = input_backend
+    elif (
         function_name
         in _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS[
             BackendAndClassName(backend=input_backend, class_name=class_of_wrapped_fn)
@@ -385,6 +450,7 @@ def _maybe_switch_backend_post_op(
     qc_list: list[BaseQueryCompiler],
     starting_backend: str,
     class_of_wrapped_fn: Optional[str],
+    pin_backend: bool,
 ) -> Any:
     """
     Possibly switch the backend of the result of a function.
@@ -408,12 +474,19 @@ def _maybe_switch_backend_post_op(
     class_of_wrapped_fn : Optional[str]
         The name of the class that the function belongs to. `None` for functions
         in the modin.pandas module.
+    pin_backend : bool
+        Whether the result should have its backend pinned, and therefore not moved.
 
     Returns
     -------
     Any
         The result of the function, possibly with its backend switched.
     """
+    # If any input QC was pinned, then the output should be as well.
+    if pin_backend:
+        if isinstance(result, QueryCompilerCaster):
+            result.pin_backend(inplace=True)
+        return result
     if (
         # only apply post-operation switch to nullary and unary methods
         len(qc_list) in (0, 1)
@@ -534,6 +607,8 @@ def wrap_function_in_argument_caster(
     """
     Wrap a function so that it casts all castable arguments to a consistent query compiler, and uses the correct extension implementation for methods.
 
+    Also propagates pin behavior across operations.
+
     Parameters
     ----------
     klass : Optional[type]
@@ -603,6 +678,7 @@ def wrap_function_in_argument_caster(
                 isinstance(arg, QueryCompilerCaster)
                 and (qc := arg._get_query_compiler()) is not None
             ):
+                calculator.update_pin_status(arg)
                 calculator.add_query_compiler(qc)
             elif isinstance(arg, BaseQueryCompiler):
                 # We might get query compiler arguments in __init__()
@@ -612,9 +688,31 @@ def wrap_function_in_argument_caster(
         visit_nested_args(args, register_query_compilers)
         visit_nested_args(kwargs, register_query_compilers)
 
+        # Before determining any automatic switches, we perform the following checks:
+        # 1. If the global AutoSwitchBackend configuration variable is set to False, do not switch.
+        # 2. If there's only one query compiler and it's pinned, do not switch.
+        # TODO implement these two checks in the calculator:
+        # 3. If there are multiple query compilers, and at least one is pinned to a particular
+        #    backend, then switch to that backend.
+        # 4. If there are multiple query compilers, at least two of which are pinned to distinct
+        #    backends, raise a ValueError.
+
+        if not AutoSwitchBackend.get() or (
+            len(calculator._qc_list) == 1 and calculator._qc_list[0].pinned_backend
+        ):
+            result = f(*args, **kwargs)
+            if isinstance(result, QueryCompilerCaster):
+                result.set_backend_pinned(calculator.should_pin_result(), inplace=True)
+            return result
+
+        pin_backend = calculator.should_pin_result()
+
         if len(calculator._qc_list) < 2:
             result_backend, cast_to_qc = _maybe_switch_backend_pre_op(
-                name, calculator._qc_list, class_of_wrapped_fn=class_of_wrapped_fn
+                name,
+                calculator._qc_list,
+                class_of_wrapped_fn=class_of_wrapped_fn,
+                pin_backend=pin_backend,
             )
         else:
             result_backend = calculator.calculate()
@@ -674,6 +772,7 @@ def wrap_function_in_argument_caster(
             qc_list=calculator._qc_list,
             starting_backend=result_backend,
             class_of_wrapped_fn=class_of_wrapped_fn,
+            pin_backend=pin_backend,
         )
 
     f_with_argument_casting._wrapped_method_for_casting = f

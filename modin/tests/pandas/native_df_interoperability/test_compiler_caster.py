@@ -579,6 +579,46 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             assert df.get_backend() == "Big_Data_Cloud"
             assert df.sum().get_backend() == "Pandas"
 
+    def test_agg_pinned(self):
+        # The operation in test_agg would naturally cause an automatic switch, but the
+        # absence of AutoSwitchBackend or the presence of a pin on the frame prevent this
+        # switch from happening.
+        with config_context(Backend="Big_Data_Cloud"):
+            register_function_for_post_op_switch(
+                class_name="DataFrame", backend="Big_Data_Cloud", method="sum"
+            )
+            # No pin or config, should switch
+            df = pd.DataFrame([[1, 2], [3, 4]])
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Pandas"
+            # config set to false, should not switch
+            with config_context(AutoSwitchBackend=False):
+                df = pd.DataFrame([[1, 2], [3, 4]])
+                assert df.get_backend() == "Big_Data_Cloud"
+                assert df.sum().get_backend() == "Big_Data_Cloud"
+            # no config, but data is pinned
+            df = pd.DataFrame([[1, 2], [3, 4]]).pin_backend()
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Big_Data_Cloud"
+            # a frame-level pin remains valid across a transformation
+            df_copy = df + 1
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            assert df_copy.sum().get_backend() == "Big_Data_Cloud"
+            # unpinning df allows a switch again
+            df = df.unpin_backend()
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Pandas"
+            df_copy = df + 1
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            assert df_copy.sum().get_backend() == "Pandas"
+            # check in-place pin/unpin operations
+            df.pin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Big_Data_Cloud"
+            df.unpin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Pandas"
+
 
 class TestSwitchBackendPreOp:
     @pytest.mark.parametrize(
@@ -764,3 +804,67 @@ class TestSwitchBackendPreOp:
                 __inplace__=True,
             )
             assert md_df.get_backend() == expected_backend
+
+    def test_iloc_pinned(self):
+        # The operation in test_iloc would naturally cause an automatic switch, but the
+        # absence of AutoSwitchBackend or the presence of a pin on the frame prevent this
+        # switch from happening.
+        data_size = BIG_DATA_CLOUD_MIN_NUM_ROWS - 1
+        with config_context(Backend="Big_Data_Cloud"):
+            register_function_for_pre_op_switch(
+                class_name="_iLocIndexer",
+                backend="Big_Data_Cloud",
+                method="__setitem__",
+            )
+            # No pin or config, should switch
+            df = pd.DataFrame(list(range(data_size)))
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -1
+            assert df.get_backend() == "Pandas"
+            # config set to false, should not switch
+            with config_context(AutoSwitchBackend=False):
+                df = pd.DataFrame(list(range(data_size)))
+                assert df.get_backend() == "Big_Data_Cloud"
+                df.iloc[(0, 0)] = -2
+                assert df.get_backend() == "Big_Data_Cloud"
+            # no config, but data is pinned
+            df = pd.DataFrame(list(range(data_size))).pin_backend()
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -3
+            assert df.get_backend() == "Big_Data_Cloud"
+            # a frame-level pin remains valid across a transformation
+            df_copy = df + 1
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            df_copy.iloc[(0, 0)] = -4
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            # unpinning df allows a switch again
+            df.unpin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -5
+            assert df.get_backend() == "Pandas"
+            # An in-place set_backend operation clears the pin
+            df.move_to("Big_Data_Cloud", inplace=True)
+            # check in-place pin/unpin operations
+            df.pin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -6
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.unpin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -7
+            assert df.get_backend() == "Pandas"
+
+
+def test_move_to_clears_pin():
+    # Pin status is reset to false after a set_backend call
+    with config_context(Backend="Big_Data_Cloud"):
+        df = pd.DataFrame(list(range(10)))
+        # in-place
+        df.pin_backend(inplace=True)
+        assert df.is_backend_pinned()
+        df.move_to("Pandas", inplace=True)
+        assert not df.is_backend_pinned()
+        # not in-place
+        assert (
+            df.pin_backend().move_to("Big_Data_Cloud").pin_backend().is_backend_pinned()
+        )

@@ -113,6 +113,11 @@ _EXTENSION_NO_LOOKUP = {
     "_getattr__from_extension_impl",
     "_get_query_compiler",
     "set_backend",
+    "_pinned",
+    "is_backend_pinned",
+    "set_backend_pinned",
+    "pin_backend",
+    "unpin_backend",
 }
 
 # Do not lookup certain attributes in columns or index, as they're used for some
@@ -231,6 +236,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
     _siblings: list[BasePandasDataset]
 
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
+    _pinned: bool = False
 
     @cached_property
     def _is_dataframe(self) -> bool:
@@ -4445,6 +4451,24 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
     # namespace for additional Modin functions that are not available in Pandas
     modin: ModinAPI = CachedAccessor("modin", ModinAPI)
 
+    @disable_logging
+    def is_backend_pinned(self) -> bool:
+        return self._pinned
+
+    def set_backend_pinned(self, pinned: bool, inplace: bool = False) -> Optional[Self]:
+        change = (self.is_backend_pinned() and not pinned) or (
+            not self.is_backend_pinned() and pinned
+        )
+        if inplace:
+            self._pinned = pinned
+            return None
+        else:
+            if change:
+                new_obj = self.__constructor__(query_compiler=self._query_compiler)
+                new_obj._pinned = pinned
+                return new_obj
+            return self
+
     @doc(SET_BACKEND_DOC, class_name=__qualname__)
     def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
         # TODO(https://github.com/modin-project/modin/issues/7467): refactor
@@ -4481,6 +4505,8 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             pass
         if inplace:
             self._update_inplace(query_compiler)
+            # Always unpin after an explicit set_backend operation
+            self._pinned = False
             return None
         else:
             return self.__constructor__(query_compiler=query_compiler)

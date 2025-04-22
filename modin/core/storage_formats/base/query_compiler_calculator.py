@@ -20,12 +20,17 @@ all query compilers to determine the best query compiler to use.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
 )
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.query_compiler_caster import (
+        QueryCompilerCaster,
+    )
 
 
 class AggregatedBackendData:
@@ -70,6 +75,7 @@ class BackendCostCalculator:
         self._result_backend = None
         self._api_cls_name = api_cls_name
         self._op = operation
+        self._pin_result = False
 
     def add_query_compiler(self, query_compiler: BaseQueryCompiler):
         """
@@ -83,6 +89,24 @@ class BackendCostCalculator:
         backend = query_compiler.get_backend()
         backend_data = AggregatedBackendData(backend, query_compiler)
         self._backend_data[backend] = backend_data
+
+    def should_pin_result(self) -> bool:
+        """
+        Whether the result of the computation should be pinned to a backend.
+        """
+        return self._pin_result
+
+    def update_pin_status(self, arg: "QueryCompilerCaster"):
+        """
+        Update whether or not the result should be pinned to the input backend.
+
+        This currently is used independently of the `calculate` function.
+
+        Parameters
+        ----------
+        arg : QueryCompilerCaster
+        """
+        self._pin_result |= arg.is_backend_pinned()
 
     def calculate(self) -> str:
         """

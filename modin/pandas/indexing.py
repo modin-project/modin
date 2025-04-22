@@ -292,6 +292,21 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
     qc: BaseQueryCompiler
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
+    def is_backend_pinned(self) -> bool:
+        return self.df.is_backend_pinned()
+
+    def set_backend_pinned(self, pinned: bool, inplace: bool = False):
+        change = (self.is_backend_pinned() and not pinned) or (
+            not self.is_backend_pinned() and pinned
+        )
+        if not change:
+            return None if inplace else self
+        result = type(self)(self.df.set_backend_pinned(pinned))
+        if inplace:
+            result._copy_into(self)
+            return None
+        return result
+
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster.set_backend)
     def set_backend(self, backend, inplace: bool = False):
@@ -316,6 +331,7 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
     def _copy_into(self, other: Series):
         other.qc = self.df._query_compiler
         other.df._update_inplace(new_query_compiler=self.df._query_compiler)
+        other.df.set_backend_pinned(self.is_backend_pinned())
         return None
 
     def __init__(self, modin_df: Union[DataFrame, Series]):
