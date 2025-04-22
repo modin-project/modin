@@ -698,7 +698,7 @@ def wrap_function_in_argument_caster(
         #    backends, raise a ValueError.
 
         if not AutoSwitchBackend.get() or (
-            len(calculator._qc_list) == 1 and calculator._qc_list[0].pinned_backend
+            len(calculator._qc_list) == 1 and calculator.should_pin_result()
         ):
             result = f(*args, **kwargs)
             if isinstance(result, QueryCompilerCaster):

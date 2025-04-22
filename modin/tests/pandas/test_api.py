@@ -28,6 +28,11 @@ _MODIN_EXTRA_ATTRIBUTES = (
     "set_backend",
     # move_to - set storage and engine backend for the current DataFrame
     "move_to",
+    # is_backend_pinned, pin_backend, unpin_backend, set_backend_pinned - change automatic switching behavior
+    "is_backend_pinned",
+    "pin_backend",
+    "unpin_backend",
+    "set_backend_pinned",
 )
 
 
