@@ -31,11 +31,9 @@ import pandas
 from pandas.core.indexes.frozen import FrozenList
 from typing_extensions import Self
 
-from modin.config import Backend, AutoSwitchBackend
+from modin.config import AutoSwitchBackend, Backend
 from modin.config import context as config_context
-from modin.core.storage_formats.base.query_compiler import (
-    BaseQueryCompiler,
-)
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )

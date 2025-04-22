@@ -293,9 +293,33 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     def is_backend_pinned(self) -> bool:
+        """
+        Get whether this object's data is pinned to a particular backend.
+
+        Returns
+        -------
+        bool
+            True if the data is pinned.
+        """
         return self.df.is_backend_pinned()
 
     def set_backend_pinned(self, pinned: bool, inplace: bool = False):
+        """
+        Update whether this object's data is pinned to a particular backend.
+
+        Parameters
+        ----------
+        pinned : bool
+            Whether the data is pinned.
+
+        inplace : bool, default False
+            Whether to update the object in place.
+
+        Returns
+        -------
+        Optional[Self]
+            The object with the new pin state, if `inplace` is False. Otherwise, None.
+        """
         change = (self.is_backend_pinned() and not pinned) or (
             not self.is_backend_pinned() and pinned
         )

@@ -4453,9 +4453,33 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
 
     @disable_logging
     def is_backend_pinned(self) -> bool:
+        """
+        Get whether this object's data is pinned to a particular backend.
+
+        Returns
+        -------
+        bool
+            True if the data is pinned.
+        """
         return self._pinned
 
     def set_backend_pinned(self, pinned: bool, inplace: bool = False) -> Optional[Self]:
+        """
+        Update whether this object's data is pinned to a particular backend.
+
+        Parameters
+        ----------
+        pinned : bool
+            Whether the data is pinned.
+
+        inplace : bool, default False
+            Whether to update the object in place.
+
+        Returns
+        -------
+        Optional[Self]
+            The object with the new pin state, if `inplace` is False. Otherwise, None.
+        """
         change = (self.is_backend_pinned() and not pinned) or (
             not self.is_backend_pinned() and pinned
         )

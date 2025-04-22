@@ -20,7 +20,7 @@ all query compilers to determine the best query compiler to use.
 """
 
 import logging
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
