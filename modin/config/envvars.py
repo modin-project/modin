@@ -491,7 +491,7 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         )
 
     @classmethod
-    def set_active_backends(cls, new_choices: tuple[str, ...]):
+    def set_active_backends(cls, new_choices: tuple[str, ...]) -> NoReturn:
         """
         Sets the active backends available for manual and automatic switching.
 
@@ -515,7 +515,7 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         cls.choices = new_choices
 
     @classmethod
-    def get_active_backends(cls):
+    def get_active_backends(cls) -> tuple[str, ...]:
         """
         Gets the active backends available for manual and automatic switching.
 
