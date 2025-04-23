@@ -4474,7 +4474,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         pinned : bool
             Whether the data is pinned.
 
-        inplace : bool, default False
+        inplace : bool, default: False
             Whether to update the object in place.
 
         Returns
