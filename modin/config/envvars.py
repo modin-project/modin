@@ -491,32 +491,34 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         )
 
     @classmethod
-    def set_active_backends(cls, new_choices:tuple[str,...]):
+    def set_active_backends(cls, new_choices: tuple[str, ...]):
         """
         Sets the active backends available for manual and automatic switching.
-        
+
         Other backends may have been registered, and those backends remain registered, but the
         set of engines that can be used is dynamically modified.
-        
+
         Parameters
         ----------
         new_choices: tuple[str, ...]
             Choices to add.
-            
+
         Raises
         ------
         ValueError
             Raises a ValueError when the set of new_choices are not already registered
         """
         if not all(i in cls._BACKEND_TO_EXECUTION.keys() for i in new_choices):
-            raise ValueError("Active backend choices {new_choices} are not all registered." )
+            raise ValueError(
+                "Active backend choices {new_choices} are not all registered."
+            )
         cls.choices = new_choices
-        
+
     @classmethod
     def get_active_backends(cls):
         """
         Gets the active backends available for manual and automatic switching.
-                    
+
         Returns
         ------
         tuple[str, ...]

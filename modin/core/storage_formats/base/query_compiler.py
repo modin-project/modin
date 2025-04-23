@@ -321,7 +321,7 @@ class BaseQueryCompiler(
         This is called for forced casting and opportunistic switching
         decision points. Values returned must be within the acceptable
         range of QCCoercionCost
-        
+
         The question is: What are the transfer costs associated with
         moving this data to the other_qc_type?
 
@@ -362,7 +362,7 @@ class BaseQueryCompiler(
         move_to_cost may include the cost of network transmission to
         the other engine, where as the cost returned by 'stay_cost'
         may be simply the cost of running the operation locally.
-        
+
         The question is: What is the cost of running this operation on
         the current dataframe?
 
@@ -401,12 +401,12 @@ class BaseQueryCompiler(
         since this class is not yet instantiated it may have a different
         implementation. It may also include hidden transport or serialization
         costs.
-        
+
         Values returned must be within the acceptable range of QCCoercionCost.
-        
+
         The question is: What is the cost of executing this operation if it
         were to move to this query compiler?
-        
+
         Parameters
         ----------
         other_qc : BaseQueryCompiler

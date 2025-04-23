@@ -197,7 +197,7 @@ class DefaultQC2(NativeQueryCompiler):
 
 
 class BaseTestAutoMover(NativeQueryCompiler):
-    
+
     # four variables can handle reasonably
     # complex behavior, though the operation overhead
     # (both initial and per-row) values may vary
@@ -206,17 +206,21 @@ class BaseTestAutoMover(NativeQueryCompiler):
     _OPERATION_INITIALIZATION_OVERHEAD = 0
     _OPERATION_PER_ROW_OVERHEAD = 0
     _TRANSFER_THRESHOLD = 0
-    
+
     def __init__(self, pandas_frame):
         super().__init__(pandas_frame)
-        
+
     # transmission cost
     def move_to_cost(self, other_qc_type, api_cls_name, operation):
         if self._TRANSFER_THRESHOLD <= 0:
             return QCCoercionCost.COST_ZERO
         cost = int(
-            (QCCoercionCost.COST_IMPOSSIBLE * self.get_axis_len(axis=0) / self._TRANSFER_THRESHOLD)
+            (
+                QCCoercionCost.COST_IMPOSSIBLE
+                * self.get_axis_len(axis=0)
+                / self._TRANSFER_THRESHOLD
             )
+        )
         if cost > QCCoercionCost.COST_IMPOSSIBLE:
             return QCCoercionCost.COST_IMPOSSIBLE
         return cost
@@ -225,8 +229,10 @@ class BaseTestAutoMover(NativeQueryCompiler):
     def _stay_cost_rows(cls, rows, per_row_overhead, max_size, op_init_overhead):
         if rows > max_size:
             return QCCoercionCost.COST_IMPOSSIBLE
-        cost_all_rows = rows*per_row_overhead
-        normalized_cost_all_rows = cost_all_rows / max_size * QCCoercionCost.COST_IMPOSSIBLE
+        cost_all_rows = rows * per_row_overhead
+        normalized_cost_all_rows = (
+            cost_all_rows / max_size * QCCoercionCost.COST_IMPOSSIBLE
+        )
         total_cost = normalized_cost_all_rows + op_init_overhead
         if total_cost > QCCoercionCost.COST_IMPOSSIBLE:
             return QCCoercionCost.COST_IMPOSSIBLE
@@ -234,39 +240,47 @@ class BaseTestAutoMover(NativeQueryCompiler):
 
     # cost to execute current df locally "
     def stay_cost(self, api_cls_name, operation):
-        return self._stay_cost_rows(self.get_axis_len(axis=0), 
-                                    self._OPERATION_PER_ROW_OVERHEAD, 
-                                    self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE, 
-                                    self._OPERATION_INITIALIZATION_OVERHEAD)
-    
+        return self._stay_cost_rows(
+            self.get_axis_len(axis=0),
+            self._OPERATION_PER_ROW_OVERHEAD,
+            self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
+            self._OPERATION_INITIALIZATION_OVERHEAD,
+        )
+
     # cost to execute remote df locally if it were moved to me
     @classmethod
     def move_to_me_cost(cls, other_qc, api_cls_name, operation):
-        return cls._stay_cost_rows(other_qc.get_axis_len(axis=0), 
-                                cls._OPERATION_PER_ROW_OVERHEAD, 
-                                cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE, 
-                                cls._OPERATION_INITIALIZATION_OVERHEAD)
+        return cls._stay_cost_rows(
+            other_qc.get_axis_len(axis=0),
+            cls._OPERATION_PER_ROW_OVERHEAD,
+            cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
+            cls._OPERATION_INITIALIZATION_OVERHEAD,
+        )
+
 
 class CloudForBigDataQC(BaseTestAutoMover):
     """Represents a cloud-hosted query compiler that prefers to stay on the cloud only for big data"""
+
     # Operations are more costly on this engine, even though it can handle larger datasets
-    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = BIG_DATA_CLOUD_MIN_NUM_ROWS*10
+    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = BIG_DATA_CLOUD_MIN_NUM_ROWS * 10
     _OPERATION_INITIALIZATION_OVERHEAD = QCCoercionCost.COST_MEDIUM
     _OPERATION_PER_ROW_OVERHEAD = 10
 
     def __init__(self, pandas_frame):
         super().__init__(pandas_frame)
-        
+
     def stay_cost(self, api_cls_name, operation):
         if operation == "read_json":
             return QCCoercionCost.COST_IMPOSSIBLE
         return super().stay_cost(api_cls_name, operation)
-        
+
     def get_backend(self) -> str:
         return "Big_Data_Cloud"
-    
+
+
 class LocalForSmallDataQC(BaseTestAutoMover):
     """Represents a local query compiler that prefers small data."""
+
     # Operations are cheap on this engine for small data, but there is an upper bound
     _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = BIG_DATA_CLOUD_MIN_NUM_ROWS
     _OPERATION_PER_ROW_OVERHEAD = 1
@@ -276,6 +290,7 @@ class LocalForSmallDataQC(BaseTestAutoMover):
 
     def get_backend(self) -> str:
         return "Small_Data_Local"
+
 
 def register_backend(name, qc):
     class TestCasterIO(BaseIO):
@@ -306,6 +321,7 @@ register_backend("Test_Casting_Default", DefaultQC)
 register_backend("Test_Casting_Default_2", DefaultQC2)
 register_backend("Big_Data_Cloud", CloudForBigDataQC)
 register_backend("Small_Data_Local", LocalForSmallDataQC)
+
 
 @pytest.fixture()
 def cloud_df():
@@ -620,7 +636,7 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
 
 
 @contextlib.contextmanager
-def backend_test_context(test_backend:str, choices:set) -> Iterator[None]:
+def backend_test_context(test_backend: str, choices: set) -> Iterator[None]:
     import modin.config as cfg
 
     old_default_backend = Backend.get()
@@ -633,11 +649,13 @@ def backend_test_context(test_backend:str, choices:set) -> Iterator[None]:
         Backend.set_active_backends(old_backend_choices)
         Backend.put(old_default_backend)
 
-    
 
 class TestSwitchBackendPostOpDependingOnDataSize:
     def test_read_json(self):
-        with backend_test_context(test_backend="Big_Data_Cloud", choices=("Big_Data_Cloud", "Small_Data_Local")):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
             big_json = json.dumps({"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS))})
             small_json = json.dumps(
                 {"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1))}
@@ -648,10 +666,15 @@ class TestSwitchBackendPostOpDependingOnDataSize:
                 class_name=None, backend="Big_Data_Cloud", method="read_json"
             )
             assert pd.read_json(StringIO(big_json)).get_backend() == "Big_Data_Cloud"
-            assert pd.read_json(StringIO(small_json)).get_backend() == "Small_Data_Local"
+            assert (
+                pd.read_json(StringIO(small_json)).get_backend() == "Small_Data_Local"
+            )
 
     def test_agg(self):
-        with backend_test_context(test_backend="Big_Data_Cloud", choices=("Big_Data_Cloud", "Small_Data_Local")):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
             df = pd.DataFrame([[1, 2], [3, 4]])
             assert df.get_backend() == "Big_Data_Cloud"
             assert df.sum().get_backend() == "Big_Data_Cloud"
@@ -697,7 +720,10 @@ class TestSwitchBackendPreOp:
                 or mock.DEFAULT
             ),
         )
-        with backend_test_context(test_backend="Big_Data_Cloud", choices=("Big_Data_Cloud", "Small_Data_Local")):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
             df = pd.DataFrame(list(range(data_size)))
             with mock.patch.dict(
                 pd.DataFrame._extensions[None], {"describe": mock_describe}
@@ -751,7 +777,10 @@ class TestSwitchBackendPreOp:
         register_pd_accessor("read_json", backend="Small_Data_Local")(pandas_read_json)
         register_pd_accessor("read_json", backend="Big_Data_Cloud")(cloud_read_json)
 
-        with backend_test_context(test_backend="Big_Data_Cloud", choices=("Big_Data_Cloud", "Small_Data_Local")):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
             df = pd.read_json(StringIO(json_input))
             assert df.get_backend() == "Big_Data_Cloud"
             pandas_read_json.assert_not_called()
@@ -773,7 +802,10 @@ class TestSwitchBackendPreOp:
     def test_read_json_without_extensions(self):
         json_input = json.dumps({"col0": [1]})
 
-        with backend_test_context(test_backend="Big_Data_Cloud", choices=("Big_Data_Cloud", "Small_Data_Local")):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
             df = pd.read_json(StringIO(json_input))
             assert df.get_backend() == "Big_Data_Cloud"
 
@@ -803,7 +835,10 @@ class TestSwitchBackendPreOp:
     def test_iloc_setitem_switches_depending_on_data_size(
         self, data_size, expected_backend
     ):
-        with backend_test_context(test_backend="Big_Data_Cloud", choices=("Big_Data_Cloud", "Small_Data_Local")):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
             md_df, pd_df = create_test_dfs(list(range(data_size)))
             assert md_df.get_backend() == "Big_Data_Cloud"
             eval_general(

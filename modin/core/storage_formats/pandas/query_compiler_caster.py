@@ -504,11 +504,15 @@ def _get_backend_for_auto_switch(
             operation=function_name,
         )
         other_execute_cost = move_to_class.move_to_me_cost(
-            input_qc, 
-            api_cls_name=class_of_wrapped_fn, 
+            input_qc,
+            api_cls_name=class_of_wrapped_fn,
             operation=function_name,
         )
-        if move_to_cost is not None and stay_cost is not None and other_execute_cost is not None:
+        if (
+            move_to_cost is not None
+            and stay_cost is not None
+            and other_execute_cost is not None
+        ):
             if stay_cost >= QCCoercionCost.COST_IMPOSSIBLE:
                 # We cannot execute the workload on the current engine
                 # disregard the move_to_cost and just consider whether
