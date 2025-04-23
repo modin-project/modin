@@ -102,21 +102,21 @@ QCCoercionCost in the range of 0-1000.
 
 These functions have precise meanings:
 * `move_to_cost` is the transmission cost of moving the data, including known serialization costs
-   from the perspective of that particular compiler. Colloquially, the question being asked of the
-   query compiler is, "What is the normalized cost of moving my data to the other engine?"
+  from the perspective of that particular compiler. Colloquially, the question being asked of the
+  query compiler is, "What is the normalized cost of moving my data to the other engine?"
 * `move_to_me_cost` is the execution cost for the data and operation on the proposed *destination*
-   query compiler. Since this method is called before the data has been migrated this is a class
-   method and the destination query_compiler may have very limited information on the possible cost
-   after migration. Factors that may be considered here include available memory, cpu, and the
-   unique characteristics of the engine. The question being asked is, "If this data were moved to
-   me, what would be the normalized execution cost to perform that operation?"
+  query compiler. Since this method is called before the data has been migrated this is a class
+  method and the destination query_compiler may have very limited information on the possible cost
+  after migration. Factors that may be considered here include available memory, cpu, and the
+  unique characteristics of the engine. The question being asked is, "If this data were moved to
+  me, what would be the normalized execution cost to perform that operation?"
 * `stay_cost` is the execution cost on the current query compilier ( where the data is ). The question
-   asked of the query compiler is, "If I were to keep this data on my engine, what would the normalized
-   execution cost?"
+  asked of the query compiler is, "If I were to keep this data on my engine, what would the normalized
+  execution cost?"
 * `max_cost` is the maximum cost allowed by this query compiler across all data movements. This method
-   sets a normalized upper bound for situations where multiple data frames from different engines all
-   need to move to the same engine. The value returned by this method can exceed 
-   QCCoercionCost.COST_IMPOSSIBLE
+  sets a normalized upper bound for situations where multiple data frames from different engines all
+  need to move to the same engine. The value returned by this method can exceed 
+  QCCoercionCost.COST_IMPOSSIBLE
 
 There are generally two places where automatic casting is considered: When two or more DataFrames on
 different engines are participating in an operation ( such as pd.concat ) or at registered functions
