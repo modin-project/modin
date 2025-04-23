@@ -303,7 +303,7 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
         """
         return self.df.is_backend_pinned()
 
-    def set_backend_pinned(self, pinned: bool, inplace: bool = False):
+    def _set_backend_pinned(self, pinned: bool, inplace: bool = False):
         """
         Update whether this object's data is pinned to a particular backend.
 
@@ -325,7 +325,7 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
         )
         if not change:
             return None if inplace else self
-        result = type(self)(self.df.set_backend_pinned(pinned))
+        result = type(self)(self.df._set_backend_pinned(pinned))
         if inplace:
             result._copy_into(self)
             return None
@@ -355,7 +355,7 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
     def _copy_into(self, other: Series):
         other.qc = self.df._query_compiler
         other.df._update_inplace(new_query_compiler=self.df._query_compiler)
-        other.df.set_backend_pinned(self.is_backend_pinned())
+        other.df._set_backend_pinned(self.is_backend_pinned())
         return None
 
     def __init__(self, modin_df: Union[DataFrame, Series]):

@@ -92,9 +92,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
     _modin_frame: pandas.DataFrame
     _should_warn_on_default_to_pandas: bool = False
-    _pinned_backend: bool = False
 
-    def __init__(self, pandas_frame, pinned_backend: bool = False):
+    def __init__(self, pandas_frame):
         if hasattr(pandas_frame, "_to_pandas"):
             pandas_frame = pandas_frame._to_pandas()
         if is_scalar(pandas_frame):
@@ -109,32 +108,11 @@ class NativeQueryCompiler(BaseQueryCompiler):
             pandas_frame = pandas.DataFrame(pandas_frame)
 
         self._modin_frame = pandas_frame
-        self._pinned_backend = pinned_backend
 
     storage_format = property(
         lambda self: "Native", doc=BaseQueryCompiler.storage_format.__doc__
     )
     engine = property(lambda self: "Native", doc=BaseQueryCompiler.engine.__doc__)
-
-    @property
-    def pinned_backend(self):
-        return self._pinned_backend
-
-    def with_pinned_backend(self) -> "NativeQueryCompiler":
-        if self._pinned_backend:
-            return self
-        else:
-            new_qc = self.copy()
-            new_qc._pinned_backend = True
-            return new_qc
-
-    def with_unpinned_backend(self) -> "NativeQueryCompiler":
-        if self._pinned_backend:
-            new_qc = self.copy()
-            new_qc._pinned_backend = False
-            return new_qc
-        else:
-            return self
 
     def execute(self):
         pass
@@ -203,7 +181,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
         return True
 
     def copy(self):
-        return self.__constructor__(self._modin_frame, self._pinned_backend)
+        return self.__constructor__(self._modin_frame)
 
     def to_pandas(self):
         # NOTE we have to make a deep copy of the input pandas dataframe

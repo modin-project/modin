@@ -115,7 +115,7 @@ _EXTENSION_NO_LOOKUP = {
     "set_backend",
     "_pinned",
     "is_backend_pinned",
-    "set_backend_pinned",
+    "_set_backend_pinned",
     "pin_backend",
     "unpin_backend",
 }
@@ -4463,7 +4463,9 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         """
         return self._pinned
 
-    def set_backend_pinned(self, pinned: bool, inplace: bool = False) -> Optional[Self]:
+    def _set_backend_pinned(
+        self, pinned: bool, inplace: bool = False
+    ) -> Optional[Self]:
         """
         Update whether this object's data is pinned to a particular backend.
 

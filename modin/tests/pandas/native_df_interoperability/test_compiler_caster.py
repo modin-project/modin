@@ -865,6 +865,6 @@ def test_move_to_clears_pin():
         df.move_to("Pandas", inplace=True)
         assert not df.is_backend_pinned()
         # not in-place
-        assert (
-            df.pin_backend().move_to("Big_Data_Cloud").pin_backend().is_backend_pinned()
-        )
+        intermediate = df.pin_backend().move_to("Big_Data_Cloud")
+        assert not intermediate.is_backend_pinned()
+        assert intermediate.pin_backend().is_backend_pinned()

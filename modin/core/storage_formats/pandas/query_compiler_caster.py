@@ -66,7 +66,7 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "_get_query_compiler",
     "_copy_into",
     "is_backend_pinned",
-    "set_backend_pinned",
+    "_set_backend_pinned",
     "pin_backend",
     "unpin_backend",
     "__dict__",
@@ -134,7 +134,7 @@ class QueryCompilerCaster(ABC):
         pass
 
     @abstractmethod
-    def set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:
+    def _set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:
         """
         Update whether this object's data is pinned to a particular backend.
 
@@ -162,7 +162,7 @@ class QueryCompilerCaster(ABC):
         Optional[Self]
             The newly-pinned object, if `inplace` is False. Otherwise, None.
         """
-        return self.set_backend_pinned(True, inplace)
+        return self._set_backend_pinned(True, inplace)
 
     def unpin_backend(self, inplace: bool = False) -> Optional[Self]:
         """
@@ -173,7 +173,7 @@ class QueryCompilerCaster(ABC):
         Optional[Self]
             The newly-unpinned object, if `inplace` is False. Otherwise, None.
         """
-        return self.set_backend_pinned(False, inplace)
+        return self._set_backend_pinned(False, inplace)
 
     @abstractmethod
     def get_backend(self) -> str:
@@ -375,7 +375,6 @@ def _maybe_switch_backend_pre_op(
     function_name: str,
     qc_list: list[BaseQueryCompiler],
     class_of_wrapped_fn: Optional[str],
-    pin_backend: bool,
 ) -> tuple[str, Callable[[Any], Any]]:
     """
     Possibly switch backend before a function.
@@ -389,8 +388,6 @@ def _maybe_switch_backend_pre_op(
     class_of_wrapped_fn : Optional[str]
         The name of the class that the function belongs to. `None` for functions
         in the modin.pandas module.
-    pin_backend : bool
-        Whether to pin the backend to the input's backend.
 
     Returns
     -------
@@ -411,11 +408,8 @@ def _maybe_switch_backend_pre_op(
         )
     else:
         input_qc = qc_list[0]
-    # If the input QC has its backend pinned, never switch.
     input_backend = Backend.get() if len(qc_list) == 0 else input_qc.get_backend()
-    if pin_backend:
-        result_backend = input_backend
-    elif (
+    if (
         function_name
         in _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS[
             BackendAndClassName(backend=input_backend, class_name=class_of_wrapped_fn)
@@ -696,21 +690,19 @@ def wrap_function_in_argument_caster(
         #    backends, raise a ValueError.
 
         if not AutoSwitchBackend.get() or (
-            len(calculator._qc_list) == 1 and calculator.should_pin_result()
+            len(calculator._qc_list) < 2 and calculator.should_pin_result()
         ):
             result = f(*args, **kwargs)
             if isinstance(result, QueryCompilerCaster):
-                result.set_backend_pinned(calculator.should_pin_result(), inplace=True)
+                result._set_backend_pinned(calculator.should_pin_result(), inplace=True)
             return result
 
-        pin_backend = calculator.should_pin_result()
-
         if len(calculator._qc_list) < 2:
+            # No need to check should_pin_result() again, since we have already done so above.
             result_backend, cast_to_qc = _maybe_switch_backend_pre_op(
                 name,
                 calculator._qc_list,
                 class_of_wrapped_fn=class_of_wrapped_fn,
-                pin_backend=pin_backend,
             )
         else:
             result_backend = calculator.calculate()
@@ -770,7 +762,7 @@ def wrap_function_in_argument_caster(
             qc_list=calculator._qc_list,
             starting_backend=result_backend,
             class_of_wrapped_fn=class_of_wrapped_fn,
-            pin_backend=pin_backend,
+            pin_backend=calculator.should_pin_result(),
         )
 
     f_with_argument_casting._wrapped_method_for_casting = f
