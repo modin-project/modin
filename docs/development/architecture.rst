@@ -101,6 +101,7 @@ points in cost opimization. With the exception of `max_cost` these methods need 
 QCCoercionCost in the range of 0-1000.
 
 These functions have precise meanings:
+
 * `move_to_cost` is the transmission cost of moving the data, including known serialization costs
   from the perspective of that particular compiler. Colloquially, the question being asked of the
   query compiler is, "What is the normalized cost of moving my data to the other engine?"
