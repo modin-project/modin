@@ -201,7 +201,7 @@ class BaseTestAutoMover(NativeQueryCompiler):
     # four variables can handle reasonably
     # complex behavior, though the operation overhead
     # (both initial and per-row) values may vary
-    # by engine
+    # by engine of course
     _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = BIG_DATA_CLOUD_MIN_NUM_ROWS
     _OPERATION_INITIALIZATION_OVERHEAD = 0
     _OPERATION_PER_ROW_OVERHEAD = 0
@@ -210,7 +210,7 @@ class BaseTestAutoMover(NativeQueryCompiler):
     def __init__(self, pandas_frame):
         super().__init__(pandas_frame)
         
-        # transmission cost
+    # transmission cost
     def move_to_cost(self, other_qc_type, api_cls_name, operation):
         if self._TRANSFER_THRESHOLD <= 0:
             return QCCoercionCost.COST_ZERO
@@ -249,6 +249,7 @@ class BaseTestAutoMover(NativeQueryCompiler):
 
 class CloudForBigDataQC(BaseTestAutoMover):
     """Represents a cloud-hosted query compiler that prefers to stay on the cloud only for big data"""
+    # Operations are more costly on this engine, even though it can handle larger datasets
     _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = BIG_DATA_CLOUD_MIN_NUM_ROWS*10
     _OPERATION_INITIALIZATION_OVERHEAD = QCCoercionCost.COST_MEDIUM
     _OPERATION_PER_ROW_OVERHEAD = 10
@@ -266,6 +267,7 @@ class CloudForBigDataQC(BaseTestAutoMover):
     
 class LocalForSmallDataQC(BaseTestAutoMover):
     """Represents a local query compiler that prefers small data."""
+    # Operations are cheap on this engine for small data, but there is an upper bound
     _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = BIG_DATA_CLOUD_MIN_NUM_ROWS
     _OPERATION_PER_ROW_OVERHEAD = 1
 
