@@ -491,16 +491,16 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         )
 
     @classmethod
-    def set_active_backends(cls, new_choices : tuple) -> None:
+    def set_active_backends(cls, new_choices: tuple) -> None:
         """
-        Sets the active backends available for manual and automatic switching.
+        Set the active backends available for manual and automatic switching.
 
         Other backends may have been registered, and those backends remain registered, but the
         set of engines that can be used is dynamically modified.
 
         Parameters
         ----------
-        new_choices: tuple
+        new_choices : tuple
             Choices to add.
 
         Raises
@@ -517,10 +517,10 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
     @classmethod
     def get_active_backends(cls) -> tuple[str, ...]:
         """
-        Gets the active backends available for manual and automatic switching.
+        Get the active backends available for manual and automatic switching.
 
         Returns
-        ------
+        -------
         tuple[str, ...]
             returns the active set of backends for switching
         """
