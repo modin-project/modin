@@ -22,7 +22,6 @@ import pytest
 from pytest import param
 
 import modin.pandas as pd
-from modin.config import context as config_context
 from modin.config.envvars import Backend, Engine, Execution
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory
@@ -637,7 +636,6 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
 
 @contextlib.contextmanager
 def backend_test_context(test_backend: str, choices: set) -> Iterator[None]:
-    import modin.config as cfg
 
     old_default_backend = Backend.get()
     old_backend_choices = Backend.get_active_backends()
