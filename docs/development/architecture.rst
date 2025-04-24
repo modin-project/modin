@@ -112,7 +112,7 @@ These functions have precise meanings:
   unique characteristics of the engine. The question being asked is, "If this data were moved to
   me, what would be the normalized execution cost to perform that operation?"
 * `stay_cost` is the execution cost on the current query compilier ( where the data is ). The question
-  asked of the query compiler is, "If I were to keep this data on my engine, what would the normalized
+  asked of the query compiler is, "If I were to keep this data on my engine, what would be the normalized
   execution cost?"
 * `max_cost` is the maximum cost allowed by this query compiler across all data movements. This method
   sets a normalized upper bound for situations where multiple data frames from different engines all
