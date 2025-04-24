@@ -98,15 +98,30 @@ class BackendCostCalculator:
 
     def update_pin_status(self, arg: "QueryCompilerCaster"):
         """
-        Update whether or not the result should be pinned to the input backend.
+        Update whether or not the result should be pinned to an input's backend.
 
-        This currently is used independently of the `calculate` function.
+        If an argument is pinned to a backend, then that backend will always be used as the result
+        of ``calculate``. If multiple arguments would pin to conflicting backends, then this function
+        raises an error.
 
         Parameters
         ----------
         arg : QueryCompilerCaster
+
+        Raises
+        ------
+        ValueError
+            If ``arg`` is pinned, but a previous argument was pinned to a different backend.
         """
-        self._pin_result |= arg.is_backend_pinned()
+        arg_backend = arg.get_backend()
+        if self._pin_result:
+            if arg.is_backend_pinned() and arg_backend != self._result_backend:
+                raise ValueError(
+                    f"Cannot combine arguments that are pinned to conflicting backends ({self._result_backend}, {arg_backend})"
+                )
+        elif arg.is_backend_pinned():
+            self._result_backend = arg_backend
+            self._pin_result = True
 
     def calculate(self) -> str:
         """

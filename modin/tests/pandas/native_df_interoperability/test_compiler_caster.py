@@ -522,12 +522,15 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
     assert cloud_df.get_backend() == "Cloud"
 
 
-def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df):
+@pytest.mark.parametrize("pin_local", [True, False], ids=["pinned", "unpinned"])
+def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_local):
+    if pin_local:
+        local_df = local_df.pin_backend()
     local_df.iloc[:, 0] = cloud_df.iloc[:, 0] + 1
     expected_pandas = local_df._to_pandas()
     expected_pandas.iloc[:, 0] = cloud_df._to_pandas().iloc[:, 0] + 1
     df_equals(local_df, expected_pandas)
-    assert local_df.get_backend() == "Cloud"
+    assert local_df.get_backend() == "Local_machine" if pin_local else "Cloud"
 
 
 # Outlines a future generic function for determining when to stay
@@ -868,3 +871,45 @@ def test_move_to_clears_pin():
         intermediate = df.pin_backend().move_to("Big_Data_Cloud")
         assert not intermediate.is_backend_pinned()
         assert intermediate.pin_backend().is_backend_pinned()
+
+
+@pytest.mark.parametrize(
+    "pin_backends, expected_backend",
+    [
+        param(
+            [("Pandas", False), ("Big_Data_Cloud", False)], "Pandas", id="no_pin"
+        ),  # no backend pinned
+        param(
+            [("Pandas", True), ("Big_Data_Cloud", False)], "Pandas", id="one_pin"
+        ),  # one backend is pinned, so move there
+        param(
+            [("Big_Data_Cloud", False), ("Pandas", True), ("Pandas", True)],
+            "Pandas",
+            id="two_pin",
+        ),  # two identical pinned backends
+        param(
+            [("Pandas", True), ("Big_Data_Cloud", True)], None, id="conflict_pin"
+        ),  # conflicting pins raises ValueError
+    ],
+)
+def test_concat_with_pin(pin_backends, expected_backend):
+    with config_context(Backend="Big_Data_Cloud"):
+        dfs = [
+            pd.DataFrame([1] * 10).move_to(backend)._set_backend_pinned(should_pin)
+            for backend, should_pin in pin_backends
+        ]
+        if expected_backend is None:
+            with pytest.raises(
+                ValueError,
+                match="Cannot combine arguments that are pinned to conflicting backends",
+            ):
+                pd.concat(dfs)
+        else:
+            result = pd.concat(dfs)
+            assert result.is_backend_pinned() == any(
+                df.is_backend_pinned() for df in dfs
+            )
+            assert result.get_backend() == expected_backend
+            df_equals(
+                result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
+            )

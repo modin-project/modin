@@ -683,7 +683,6 @@ def wrap_function_in_argument_caster(
         # Before determining any automatic switches, we perform the following checks:
         # 1. If the global AutoSwitchBackend configuration variable is set to False, do not switch.
         # 2. If there's only one query compiler and it's pinned, do not switch.
-        # TODO implement these two checks in the calculator:
         # 3. If there are multiple query compilers, and at least one is pinned to a particular
         #    backend, then switch to that backend.
         # 4. If there are multiple query compilers, at least two of which are pinned to distinct
