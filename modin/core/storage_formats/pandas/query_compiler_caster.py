@@ -33,7 +33,10 @@ from typing_extensions import Self
 
 from modin.config import AutoSwitchBackend, Backend
 from modin.config import context as config_context
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.base.query_compiler import (
+    BaseQueryCompiler,
+    QCCoercionCost,
+)
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
@@ -549,7 +552,7 @@ def _get_backend_for_auto_switch(
         api_cls_name=class_of_wrapped_fn,
         operation=function_name,
     )
-    for backend in Backend._BACKEND_TO_EXECUTION:
+    for backend in Backend.get_active_backends():
         if backend in ("Ray", "Unidist", "Dask"):
             # Disable automatically switching to these engines for now, because
             # 1) _get_prepared_factory_for_backend() currently calls
@@ -567,8 +570,25 @@ def _get_backend_for_auto_switch(
             api_cls_name=class_of_wrapped_fn,
             operation=function_name,
         )
-        if move_to_cost is not None and stay_cost is not None:
-            move_stay_delta = move_to_cost - stay_cost
+        other_execute_cost = move_to_class.move_to_me_cost(
+            input_qc,
+            api_cls_name=class_of_wrapped_fn,
+            operation=function_name,
+        )
+        if (
+            move_to_cost is not None
+            and stay_cost is not None
+            and other_execute_cost is not None
+        ):
+            if stay_cost >= QCCoercionCost.COST_IMPOSSIBLE:
+                # We cannot execute the workload on the current engine
+                # disregard the move_to_cost and just consider whether
+                # the other engine can execute the workload
+                move_stay_delta = other_execute_cost - stay_cost
+            else:
+                # We can execute this workload if we need to, consider
+                # move_to_cost/transfer time in our decision
+                move_stay_delta = (move_to_cost + other_execute_cost) - stay_cost
             if move_stay_delta < 0 and (
                 min_move_stay_delta is None or move_stay_delta < min_move_stay_delta
             ):
@@ -576,8 +596,9 @@ def _get_backend_for_auto_switch(
                 best_backend = backend
             logging.info(
                 f"After {class_of_wrapped_fn} function {function_name}, "
-                + f"considered moving to backend {backend} with move_to_cost "
-                + f"{move_to_cost}, stay_cost {stay_cost}, and move-stay delta "
+                + f"considered moving to backend {backend} with "
+                + f"(transfer_cost {move_to_cost} + other_execution_cost {other_execute_cost}) "
+                + f", stay_cost {stay_cost}, and move-stay delta "
                 + f"{move_stay_delta}"
             )
     if best_backend == starting_backend:

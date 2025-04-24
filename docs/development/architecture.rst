@@ -89,12 +89,40 @@ Dataframe.
 In the interest of reducing the pandas API, the Query Compiler layer closely follows the
 pandas API, but cuts out a large majority of the repetition.
 
+Automatic Engine Switching and Casting
+""""""""""""""""""""""""""""""""""""""
+
 QueryCompilers which are derived from QueryCompilerCaster can participate in automatic casting when
 different query compilers, representing different underlying engines, are used together in a
 function. A relative "cost" of casting is used to determine which query compiler everything should
 be moved to. Each query compiler must implement the functions, `move_to_cost`, `move_to_me_cost`, 
 `max_cost` and `stay_cost` to provide information and query costs associated with different decision
-points in cost opimization.
+points in cost opimization. With the exception of `max_cost` these methods need to return a 
+QCCoercionCost in the range of 0-1000.
+
+These functions have precise meanings:
+
+* `move_to_cost` is the transmission cost of moving the data, including known serialization costs
+  from the perspective of that particular compiler. Colloquially, the question being asked of the
+  query compiler is, "What is the normalized cost of moving my data to the other engine?"
+* `move_to_me_cost` is the execution cost for the data and operation on the proposed *destination*
+  query compiler. Since this method is called before the data has been migrated this is a class
+  method and the destination query_compiler may have very limited information on the possible cost
+  after migration. Factors that may be considered here include available memory, cpu, and the
+  unique characteristics of the engine. The question being asked is, "If this data were moved to
+  me, what would be the normalized execution cost to perform that operation?"
+* `stay_cost` is the execution cost on the current query compilier ( where the data is ). The question
+  asked of the query compiler is, "If I were to keep this data on my engine, what would be the normalized
+  execution cost?"
+* `max_cost` is the maximum cost allowed by this query compiler across all data movements. This method
+  sets a normalized upper bound for situations where multiple data frames from different engines all
+  need to move to the same engine. The value returned by this method can exceed 
+  QCCoercionCost.COST_IMPOSSIBLE
+
+There are generally two places where automatic casting is considered: When two or more DataFrames on
+different engines are participating in an operation ( such as pd.concat ) or at registered functions
+for particular engines through the `register_function_for_pre_op_switch` and 
+`register_function_for_post_op_switch` methods.
 
 Core Modin Dataframe
 """"""""""""""""""""

@@ -322,6 +322,9 @@ class BaseQueryCompiler(
         decision points. Values returned must be within the acceptable
         range of QCCoercionCost
 
+        The question is: What are the transfer costs associated with
+        moving this data to the other_qc_type?
+
         Parameters
         ----------
         other_qc_type : QueryCompiler Class
@@ -360,6 +363,9 @@ class BaseQueryCompiler(
         the other engine, where as the cost returned by 'stay_cost'
         may be simply the cost of running the operation locally.
 
+        The question is: What is the cost of running this operation on
+        the current dataframe?
+
         Values returned must be within the acceptable range of
         QCCoercionCost
 
@@ -389,11 +395,17 @@ class BaseQueryCompiler(
         operation: Optional[str] = None,
     ) -> Optional[int]:
         """
-        Return the coercion costs from other_qc to this qc type.
+        Return the execution and hidden coercion costs from other_qc.
 
-        This is called for forced casting decision points, where one or more
-        DataFrames from different engines must interoperate. Values returned
-        must be within the acceptable range of QCCoercionCost
+        This can be implemented as a class method version of stay_cost, though
+        since this class is not yet instantiated it may have a different
+        implementation. It may also include hidden transport or serialization
+        costs.
+
+        Values returned must be within the acceptable range of QCCoercionCost.
+
+        The question is: What is the cost of executing this operation if it
+        were to move to this query compiler?
 
         Parameters
         ----------
