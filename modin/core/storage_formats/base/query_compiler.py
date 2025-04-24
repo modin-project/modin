@@ -23,7 +23,8 @@ import abc
 import warnings
 from enum import IntEnum
 from functools import cached_property
-from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
@@ -314,6 +315,7 @@ class BaseQueryCompiler(
         other_qc_type: type,
         api_cls_name: Optional[str] = None,
         operation: Optional[str] = None,
+        arguments: Optional[MappingProxyType[str, Any]] = None,
     ) -> int:
         """
         Return the coercion costs of this qc to other_qc type.
@@ -335,6 +337,8 @@ class BaseQueryCompiler(
         operation : str, default: None
             The operation being performed which can be used as a consideration
             for the costing analysis.
+        arguments : Optional[MappingProxyType[str, Any]], default: None
+            Mapping from operation argument names to their values.
 
         Returns
         -------

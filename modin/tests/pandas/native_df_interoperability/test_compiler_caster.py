@@ -14,6 +14,7 @@
 import contextlib
 import json
 from io import StringIO
+from types import MappingProxyType
 from typing import Iterator
 from unittest import mock
 
@@ -22,6 +23,7 @@ import pytest
 from pytest import param
 
 import modin.pandas as pd
+from modin.config import context as config_context
 from modin.config.envvars import Backend, Engine, Execution
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory
@@ -52,7 +54,7 @@ class CloudQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE
 
-    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         assert op is not None
         assert api_cls_name in [
             None,
@@ -85,7 +87,7 @@ class ClusterQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_HIGH
 
-    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
@@ -104,7 +106,7 @@ class LocalMachineQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_MEDIUM
 
-    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -122,7 +124,7 @@ class PicoQC(NativeQueryCompiler):
     def max_cost(self):
         return QCCoercionCost.COST_LOW
 
-    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_LOW,
@@ -137,7 +139,7 @@ class AdversarialQC(NativeQueryCompiler):
     def get_backend(self):
         return "Adversarial"
 
-    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: -1000,
             ClusterQC: 10000,
@@ -152,7 +154,7 @@ class OmniscientEagerQC(NativeQueryCompiler):
         return "Eager"
 
     # keep other workloads from getting my workload
-    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         if OmniscientEagerQC is other_qc_cls:
             return QCCoercionCost.COST_ZERO
         return QCCoercionCost.COST_IMPOSSIBLE
@@ -170,7 +172,7 @@ class OmniscientLazyQC(NativeQueryCompiler):
         return "Lazy"
 
     # encorage other engines to take my workload
-    def move_to_cost(self, other_qc_cls, api_cls_name, op):
+    def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return QCCoercionCost.COST_ZERO
 
     # try to keep other workloads from getting my workload
@@ -210,7 +212,7 @@ class BaseTestAutoMover(NativeQueryCompiler):
         super().__init__(pandas_frame)
 
     # transmission cost
-    def move_to_cost(self, other_qc_type, api_cls_name, operation):
+    def move_to_cost(self, other_qc_type, api_cls_name, operation, arguments):
         if self._TRANSFER_THRESHOLD <= 0:
             return QCCoercionCost.COST_ZERO
         cost = int(
@@ -531,7 +533,7 @@ def test_default_to_caller(default_df, default2_df):
 
 
 def test_no_qc_to_calculate():
-    calculator = BackendCostCalculator()
+    calculator = BackendCostCalculator(operation_arguments=MappingProxyType({}))
     with pytest.raises(ValueError):
         calculator.calculate()
 
@@ -620,7 +622,10 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
 
     stay_cost = cloud_df._get_query_compiler().stay_cost("Series", "myop")
     move_cost = cloud_df._get_query_compiler().move_to_cost(
-        default_cls, "Series", "myop"
+        default_cls,
+        "Series",
+        "myop",
+        arguments=MappingProxyType({}),
     )
     df = cloud_df
     if stay_cost > move_cost:
@@ -629,7 +634,9 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
         assert False
 
     stay_cost = df._get_query_compiler().stay_cost("Series", "myop")
-    move_cost = df._get_query_compiler().move_to_cost(cloud_cls, "Series", "myop")
+    move_cost = df._get_query_compiler().move_to_cost(
+        cloud_cls, "Series", "myop", arguments=MappingProxyType({})
+    )
     assert stay_cost is None
     assert move_cost is None
 
@@ -859,3 +866,41 @@ class TestSwitchBackendPreOp:
                 __inplace__=True,
             )
             assert md_df.get_backend() == expected_backend
+
+    @pytest.mark.parametrize(
+        "args, kwargs, expected_backend",
+        (
+            param((), {}, "Pandas", id="no_args_or_kwargs"),
+            param(([1],), {}, "Pandas", id="list_data_in_arg"),
+            param((), {"data": [1]}, "Pandas", id="list_data_in_kwarg"),
+            param(
+                (),
+                {"data": pandas.Series([1])},
+                "Pandas",
+                id="series_data_in_kwarg",
+            ),
+            param(
+                (),
+                {"query_compiler": CloudForBigDataQC(pandas.DataFrame([0, 1, 2]))},
+                "Big_Data_Cloud",
+                id="cloud_query_compiler_in_kwarg",
+            ),
+            param(
+                (),
+                {"query_compiler": PicoQC(pandas.DataFrame([0, 1, 2]))},
+                "Pico",
+                id="pico_query_compiler_in_kwarg",
+            ),
+        ),
+    )
+    @pytest.mark.parametrize("klass", [pd.DataFrame, pd.Series])
+    def test___init___with_in_memory_data_uses_native_query_compiler(
+        self, args, kwargs, expected_backend, klass
+    ):
+        register_function_for_pre_op_switch(
+            class_name=klass.__name__,
+            method="__init__",
+            backend="Big_Data_Cloud",
+        )
+        with config_context(Backend="Big_Data_Cloud"):
+            assert klass(*args, **kwargs).get_backend() == expected_backend

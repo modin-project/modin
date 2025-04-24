@@ -81,7 +81,7 @@ def test_dataframe_extension_overrides_pow_github_issue_7495(method_name):
     register_dataframe_accessor(method_name, backend="Pandas")(
         lambda *args, **kwargs: 4
     )
-    assert getattr(pd.DataFrame([1]).set_backend("Pandas"), method_name)() == 4
+    assert getattr(pd.DataFrame([1]).set_backend("Pandas"), method_name)(7) == 4
 
 
 def test_override_pow_and__pow__to_different_implementations():

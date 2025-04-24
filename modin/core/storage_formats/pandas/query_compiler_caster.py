@@ -24,7 +24,7 @@ import inspect
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
-from types import FunctionType, MethodType
+from types import FunctionType, MappingProxyType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, ValuesView
 
 import pandas
@@ -317,8 +317,9 @@ def apply_argument_cast_to_class(klass: type) -> type:
 
 def _maybe_switch_backend_pre_op(
     function_name: str,
-    qc_list: list[BaseQueryCompiler],
+    input_qc: BaseQueryCompiler,
     class_of_wrapped_fn: Optional[str],
+    arguments: MappingProxyType[str, Any],
 ) -> tuple[str, Callable[[Any], Any]]:
     """
     Possibly switch backend before a function.
@@ -327,11 +328,13 @@ def _maybe_switch_backend_pre_op(
     ----------
     function_name : str
         The name of the function.
-    qc_list : list[BaseQueryCompiler]
-        The list of query compilers that are arguments to the function.
+    input_qc : BaseQueryCompiler
+        The input query compiler.
     class_of_wrapped_fn : Optional[str]
         The name of the class that the function belongs to. `None` for functions
         in the modin.pandas module.
+    arguments : MappingProxyType[str, Any]
+        Mapping from operation argument names to their values.
 
     Returns
     -------
@@ -339,30 +342,20 @@ def _maybe_switch_backend_pre_op(
         A tuple of the new backend and a function that casts all castable arguments
         to the new query compiler type.
     """
-    assert len(qc_list) in (0, 1)
-    if len(qc_list) == 0:
-        # For nullary functions, we need to create a dummy query compiler
-        # to calculate the cost of switching backends.
-        from modin.core.execution.dispatching.factories.dispatcher import (
-            FactoryDispatcher,
-        )
-
-        input_qc = FactoryDispatcher.get_factory().io_cls.from_pandas(
-            pandas.DataFrame()
-        )
-    else:
-        input_qc = qc_list[0]
-    input_backend = Backend.get() if len(qc_list) == 0 else input_qc.get_backend()
+    input_backend = input_qc.get_backend()
     if (
         function_name
         in _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS[
-            BackendAndClassName(backend=input_backend, class_name=class_of_wrapped_fn)
+            BackendAndClassName(
+                backend=input_qc.get_backend(), class_name=class_of_wrapped_fn
+            )
         ]
     ):
         result_backend = _get_backend_for_auto_switch(
             input_qc=input_qc,
             class_of_wrapped_fn=class_of_wrapped_fn,
             function_name=function_name,
+            arguments=arguments,
         )
     else:
         result_backend = input_backend
@@ -386,6 +379,7 @@ def _maybe_switch_backend_post_op(
     qc_list: list[BaseQueryCompiler],
     starting_backend: str,
     class_of_wrapped_fn: Optional[str],
+    arguments: MappingProxyType[str, Any],
 ) -> Any:
     """
     Possibly switch the backend of the result of a function.
@@ -409,6 +403,8 @@ def _maybe_switch_backend_post_op(
     class_of_wrapped_fn : Optional[str]
         The name of the class that the function belongs to. `None` for functions
         in the modin.pandas module.
+    arguments : MappingProxyType[str, Any]
+        Mapping from operation argument names to their values.
 
     Returns
     -------
@@ -437,6 +433,7 @@ def _maybe_switch_backend_post_op(
                 input_qc=input_qc,
                 class_of_wrapped_fn=class_of_wrapped_fn,
                 function_name=function_name,
+                arguments=arguments,
             )
         )
     return result
@@ -446,6 +443,7 @@ def _get_backend_for_auto_switch(
     input_qc: BaseQueryCompiler,
     class_of_wrapped_fn: str,
     function_name: str,
+    arguments: MappingProxyType[str, Any],
 ) -> str:
     """
     Get the best backend to switch to.
@@ -464,6 +462,8 @@ def _get_backend_for_auto_switch(
         in the modin.pandas module.
     function_name : str
         The name of the function.
+    arguments : MappingProxyType[str, Any]
+        Mapping from operation argument names to their values.
 
     Returns
     -------
@@ -502,6 +502,7 @@ def _get_backend_for_auto_switch(
             move_to_class,
             api_cls_name=class_of_wrapped_fn,
             operation=function_name,
+            arguments=arguments,
         )
         other_execute_cost = move_to_class.move_to_me_cost(
             input_qc,
@@ -539,6 +540,61 @@ def _get_backend_for_auto_switch(
     else:
         logging.info(f"Chose to move to backend {best_backend}")
     return best_backend
+
+
+def _get_extension_for_method(
+    name: str,
+    extensions: EXTENSION_DICT_TYPE,
+    backend: str,
+    args: tuple,
+    wrapping_function_type: Optional[
+        Union[type[classmethod], type[staticmethod], type[MethodType]]
+    ],
+) -> callable:
+    """
+    Get the extension implementation for a method.
+
+    Parameters
+    ----------
+    name : str
+        The name of the method.
+    extensions : EXTENSION_DICT_TYPE
+        The extension dictionary for the modin-API-level object (e.g. class
+        DataFrame or module modin.pandas) that the method belongs to.
+    backend : str
+        The backend to use for this method call.
+    args : tuple
+        The arguments to the method.
+    wrapping_function_type : Union[type[classmethod], type[staticmethod], type[MethodType]]
+        The type of the original function that `f` implements.
+        - `None` means we are wrapping a free function, e.g. pd.concat()
+        - `classmethod` means we are wrapping a classmethod.
+        - `staticmethod` means we are wrapping a staticmethod.
+        - `MethodType` means we are wrapping a regular method of a class.
+
+    Returns
+    -------
+    callable
+        The implementation of the method for the given backend.
+    """
+    if name in extensions[backend]:
+        f_to_apply = extensions[backend][name]
+    else:
+        if name not in extensions[None]:
+            raise AttributeError(
+                (
+                    # When python invokes a method on an object, it passes the object as
+                    # the first positional argument.
+                    (
+                        f"{(type(args[0]).__name__)} object"
+                        if wrapping_function_type is MethodType
+                        else "module 'modin.pandas'"
+                    )
+                    + f" has no attribute {name}"
+                )
+            )
+        f_to_apply = extensions[None][name]
+    return f_to_apply
 
 
 def wrap_function_in_argument_caster(
@@ -613,29 +669,70 @@ def wrap_function_in_argument_caster(
         inplace_update_trackers: list[InplaceUpdateTracker] = []
         # The function name and class name of the function are passed to the calculator as strings
         class_of_wrapped_fn = klass.__name__ if klass is not None else None
-        calculator: BackendCostCalculator = BackendCostCalculator(
-            class_of_wrapped_fn, f.__name__
-        )
+
+        input_query_compilers: list[BaseQueryCompiler] = []
 
         def register_query_compilers(arg):
             if (
                 isinstance(arg, QueryCompilerCaster)
                 and (qc := arg._get_query_compiler()) is not None
             ):
-                calculator.add_query_compiler(qc)
+                input_query_compilers.append(qc)
             elif isinstance(arg, BaseQueryCompiler):
                 # We might get query compiler arguments in __init__()
-                calculator.add_query_compiler(arg)
+                input_query_compilers.append(arg)
             return arg
 
         visit_nested_args(args, register_query_compilers)
         visit_nested_args(kwargs, register_query_compilers)
 
-        if len(calculator._qc_list) < 2:
+        if len(input_query_compilers) == 0:
+            # For nullary functions, we need to create a dummy query compiler
+            # to calculate the cost of switching backends.
+            from modin.core.execution.dispatching.factories.dispatcher import (
+                FactoryDispatcher,
+            )
+
+            input_qc_for_pre_op_switch = (
+                FactoryDispatcher.get_factory().io_cls.from_pandas(pandas.DataFrame())
+            )
+            input_backend = Backend.get()
+        else:
+            input_qc_for_pre_op_switch = input_query_compilers[0]
+            input_backend = input_qc_for_pre_op_switch.get_backend()
+
+        # Bind the arguments using the function implementation for the input
+        # backend. TODO(https://github.com/modin-project/modin/issues/7525):
+        # Ideally every implementation would have the same signature.
+        bound_arguments = inspect.signature(
+            _get_extension_for_method(
+                name=name,
+                extensions=extensions,
+                backend=input_backend,
+                args=args,
+                wrapping_function_type=wrapping_function_type,
+            ),
+        ).bind(*args, **kwargs)
+        bound_arguments.apply_defaults()
+        args_dict = MappingProxyType(bound_arguments.arguments)
+
+        if len(input_query_compilers) < 2:
             result_backend, cast_to_qc = _maybe_switch_backend_pre_op(
-                name, calculator._qc_list, class_of_wrapped_fn=class_of_wrapped_fn
+                name,
+                input_qc=input_qc_for_pre_op_switch,
+                class_of_wrapped_fn=class_of_wrapped_fn,
+                arguments=args_dict,
             )
         else:
+            calculator: BackendCostCalculator = BackendCostCalculator(
+                operation_arguments=args_dict,
+                api_cls_name=class_of_wrapped_fn,
+                operation=name,
+            )
+
+            for qc in input_query_compilers:
+                calculator.add_query_compiler(qc)
+
             result_backend = calculator.calculate()
 
             def cast_to_qc(arg):
@@ -657,23 +754,17 @@ def wrap_function_in_argument_caster(
 
         args = visit_nested_args(args, cast_to_qc)
         kwargs = visit_nested_args(kwargs, cast_to_qc)
-        if name in extensions[result_backend]:
-            f_to_apply = extensions[result_backend][name]
-        else:
-            if name not in extensions[None]:
-                raise AttributeError(
-                    (
-                        # When python invokes a method on an object, it passes the object as
-                        # the first positional argument.
-                        (
-                            f"{(type(args[0]).__name__)} object"
-                            if wrapping_function_type is MethodType
-                            else "module 'modin.pandas'"
-                        )
-                        + f" has no attribute {name}"
-                    )
-                )
-            f_to_apply = extensions[None][name]
+
+        # `result_backend` may be different from `input_backend`, so we have to
+        # look up the correct implementation based on `result_backend`.
+        f_to_apply = _get_extension_for_method(
+            name=name,
+            extensions=extensions,
+            backend=result_backend,
+            args=args,
+            wrapping_function_type=wrapping_function_type,
+        )
+
         # We have to set the global Backend correctly for I/O methods like
         # read_json() to use the correct backend.
         with config_context(Backend=result_backend):
@@ -690,9 +781,10 @@ def wrap_function_in_argument_caster(
         return _maybe_switch_backend_post_op(
             result,
             function_name=name,
-            qc_list=calculator._qc_list,
+            qc_list=input_query_compilers,
             starting_backend=result_backend,
             class_of_wrapped_fn=class_of_wrapped_fn,
+            arguments=args_dict,
         )
 
     f_with_argument_casting._wrapped_method_for_casting = f
