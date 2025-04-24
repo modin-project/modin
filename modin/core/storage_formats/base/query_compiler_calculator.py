@@ -93,6 +93,11 @@ class BackendCostCalculator:
     def should_pin_result(self) -> bool:
         """
         Whether the result of the computation should be pinned to a backend.
+
+        Returns
+        -------
+        bool
+            True if the result of the computation should be pinned to a backend.
         """
         return self._pin_result
 
