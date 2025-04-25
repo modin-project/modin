@@ -127,14 +127,14 @@ class BackendCostCalculator:
                 min_value = v.cost
                 self._result_backend = k
 
-        if self._result_backend is None:
-            raise ValueError(
-                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
-            )
-
         if len(self._backend_data) > 1:
             logging.info(
                 f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
+            )
+
+        if self._result_backend is None:
+            raise ValueError(
+                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
             )
 
         return self._result_backend
