@@ -82,7 +82,7 @@ class BaseIO:
         return None
 
     @classmethod
-    def from_pandas(cls, df):
+    def from_pandas(cls, df) -> BaseQueryCompiler:
         """
         Create a Modin `query_compiler` from a `pandas.DataFrame`.
 
