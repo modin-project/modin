@@ -249,11 +249,16 @@ class CloudForBigDataQC(BaseTestAutoMover):
     def move_to_me_cost(cls, other_qc, api_cls_name, operation, arguments):
         if api_cls_name in ("DataFrame", "Series") and operation == "__init__":
             if (query_compiler := arguments.get("query_compiler")) is not None:
-                if isinstance(query_compiler, cls):
-                    return QCCoercionCost.COST_ZERO
-                else:
-                    return QCCoercionCost.COST_IMPOSSIBLE
+                # When we create a dataframe or series with a query compiler
+                # input, we should not switch the resulting dataframe or series
+                # to a different backend.
+                return (
+                    QCCoercionCost.COST_ZERO
+                    if isinstance(query_compiler, cls)
+                    else QCCoercionCost.COST_IMPOSSIBLE
+                )
             else:
+                # Moving the in-memory __init__ inputs to the cloud is expensive.
                 return QCCoercionCost.COST_HIGH
         return super().move_to_me_cost(
             cls, other_qc, api_cls_name, operation, arguments
