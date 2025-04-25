@@ -35,6 +35,7 @@ del version
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import inspect
+
     from modin.core.storage_formats.pandas.query_compiler_caster import (
         wrap_free_function_in_argument_caster,
     )
@@ -208,7 +209,6 @@ from .io import (
 )
 from .plotting import Plotting as plotting
 from .series import Series
-
 
 __getattr__ = __getattr___impl
 
