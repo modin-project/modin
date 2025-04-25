@@ -158,7 +158,12 @@ class QueryCompilerCaster(ABC):
 
     def pin_backend(self, inplace: bool = False) -> Optional[Self]:
         """
-        Pin the object's underlying data, preventing modin from automatically moving it to another backend.
+        Pin the object's underlying data, preventing Modin from automatically moving it to another backend.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            Whether to update the object in place.
 
         Returns
         -------
@@ -169,7 +174,12 @@ class QueryCompilerCaster(ABC):
 
     def unpin_backend(self, inplace: bool = False) -> Optional[Self]:
         """
-        Unpin the object's underlying data, allowing modin to automatically move it to another backend.
+        Unpin the object's underlying data, allowing Modin to automatically move it to another backend.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            Whether to update the object in place.
 
         Returns
         -------
