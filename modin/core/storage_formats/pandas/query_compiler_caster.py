@@ -146,7 +146,7 @@ class QueryCompilerCaster(ABC):
         pinned : bool
             Whether the data is pinned.
 
-        inplace : bool, default False
+        inplace : bool, default: False
             Whether to update the object in place.
 
         Returns
@@ -162,7 +162,7 @@ class QueryCompilerCaster(ABC):
 
         Parameters
         ----------
-        inplace : bool, default False
+        inplace : bool, default: False
             Whether to update the object in place.
 
         Returns
@@ -178,7 +178,7 @@ class QueryCompilerCaster(ABC):
 
         Parameters
         ----------
-        inplace : bool, default False
+        inplace : bool, default: False
             Whether to update the object in place.
 
         Returns
