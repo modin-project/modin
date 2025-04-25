@@ -12,8 +12,9 @@
 # governing permissions and limitations under the License.
 
 from collections import defaultdict
+import inspect
 from types import MethodType, ModuleType
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Dict
 
 import modin.pandas as pd
 from modin.config import Backend
@@ -26,12 +27,18 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
 
 _attrs_to_delete_on_test = defaultdict(list)
 
+# Track a dict of module-level classes that are re-exported from pandas that may need to dynamically
+# change when overridden by the extensions system, such as pd.Index.
+# See register_pd_accessor for details.
+_reexport_classes: Dict[str, Any] = {}
+
 
 def _set_attribute_on_obj(
     name: str,
     extensions: EXTENSION_DICT_TYPE,
     backend: Optional[str],
     obj: Union[type, ModuleType],
+    set_reexport: bool = False,
 ):
     """
     Create a new or override existing attribute on obj.
@@ -47,6 +54,8 @@ def _set_attribute_on_obj(
         will become the default for all backends.
     obj : DataFrame, Series, or modin.pandas
         The object we are assigning the new attribute to.
+    set_reexport : bool, default False
+        If True, register the original property in `_reexport_classes`.
 
     Returns
     -------
@@ -70,12 +79,33 @@ def _set_attribute_on_obj(
         new_attr
             Unmodified new_attr is return from the decorator.
         """
+        # Module-level functions are resolved by `wrap_free_function_in_argument_caster`, which dynamically
+        # identifies the appropriate backend to use. We cannot apply this wrapper to classes in order
+        # to preserve the vailidity of `isinstance` checks, and instead must force __getattr__ to directly
+        # return the correct class.
+        # Because the module-level __getattr__ function is not called if the object is found in the namespace,
+        # any overrides from the extensions system must `delattr` the attribute to force any future lookups
+        # to hit this code path.
+        # We cannot do this by omitting those exports at module initialization time because the
+        # __getattr__ codepath performs a call to Backend.get() that assumes the presence of an engine;
+        # in an extensions system that may reference types like pd.Timestamp/pd.Index before registering
+        # itself as an engine, this will cause errors.
+        if set_reexport:
+            original_attr = getattr(pd, name)
+            _reexport_classes[name] = original_attr
+            delattr(pd, name)
         extensions[None if backend is None else Backend.normalize(backend)][
             name
         ] = new_attr
-        if callable(new_attr) and name not in dir(obj):
+        if (
+            callable(new_attr)
+            and name not in dir(obj)
+            and not inspect.isclass(new_attr)
+        ):
             # For callable extensions, we add a method to `obj`'s namespace that
             # dispatches to the correct implementation.
+            # If the extension is a class like pd.Index, do not add a wrapper and let
+            # the getattr dispatcher choose the correct item.
             setattr(
                 obj,
                 name,
@@ -97,7 +127,7 @@ def _set_attribute_on_obj(
 
 def register_dataframe_accessor(name: str, *, backend: Optional[str] = None):
     """
-    Registers a dataframe attribute with the name provided.
+    Register a dataframe attribute with the name provided.
 
     This is a decorator that assigns a new attribute to DataFrame. It can be used
     with the following syntax:
@@ -135,7 +165,7 @@ def register_dataframe_accessor(name: str, *, backend: Optional[str] = None):
 
 def register_series_accessor(name: str, *, backend: Optional[str] = None):
     """
-    Registers a series attribute with the name provided.
+    Register a series attribute with the name provided.
 
     This is a decorator that assigns a new attribute to Series. It can be used
     with the following syntax:
@@ -216,7 +246,7 @@ def register_base_accessor(name: str, *, backend: Optional[str] = None):
 
 def register_pd_accessor(name: str, *, backend: Optional[str] = None):
     """
-    Registers a pd namespace attribute with the name provided.
+    Register a pd namespace attribute with the name provided.
 
     This is a decorator that assigns a new attribute to modin.pandas. It can be used
     with the following syntax:
@@ -250,14 +280,19 @@ def register_pd_accessor(name: str, *, backend: Optional[str] = None):
     decorator
         Returns the decorator function.
     """
+    set_reexport = name not in _GENERAL_EXTENSIONS[backend] and name in dir(pd)
     return _set_attribute_on_obj(
-        name=name, extensions=_GENERAL_EXTENSIONS, backend=backend, obj=pd
+        name=name,
+        extensions=_GENERAL_EXTENSIONS,
+        backend=backend,
+        obj=pd,
+        set_reexport=set_reexport,
     )
 
 
 def __getattr___impl(name: str):
     """
-    Override __getatttr__ on the modin.pandas module to enable extensions.
+    Override __getattr__ on the modin.pandas module to enable extensions.
 
     Note that python only falls back to this function if the attribute is not
     found in this module's namespace.
@@ -273,7 +308,6 @@ def __getattr___impl(name: str):
         Returns the extension attribute, if it exists, otherwise returns the attribute
         imported in this file.
     """
-
     from modin.config import Backend
 
     backend = Backend.get()
@@ -281,5 +315,7 @@ def __getattr___impl(name: str):
         return _GENERAL_EXTENSIONS[backend][name]
     elif name in _GENERAL_EXTENSIONS[None]:
         return _GENERAL_EXTENSIONS[None][name]
+    elif name in _reexport_classes:
+        return _reexport_classes[name]
     else:
         raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
