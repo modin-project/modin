@@ -743,6 +743,13 @@ def clean_up_extensions():
     _GENERAL_EXTENSIONS.clear()
     _GENERAL_EXTENSIONS.update(original_general_extensions)
 
+    from modin.pandas.api.extensions.extensions import _attrs_to_delete_on_test
+
+    for k, v in _attrs_to_delete_on_test.items():
+        for obj in v:
+            delattr(k, obj)
+    _attrs_to_delete_on_test.clear()
+
 
 @pytest.fixture(autouse=True)
 def clean_up_auto_backend_switching():

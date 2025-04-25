@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import inspect
+from collections import defaultdict
 from types import MethodType, ModuleType
 from typing import Any, Dict, Optional, Union
 
@@ -23,6 +24,8 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     EXTENSION_DICT_TYPE,
     wrap_function_in_argument_caster,
 )
+
+_attrs_to_delete_on_test = defaultdict(set)
 
 # Track a dict of module-level classes that are re-exported from pandas that may need to dynamically
 # change when overridden by the extensions system, such as pd.Index.
@@ -116,6 +119,9 @@ def _set_attribute_on_obj(
                     name=name,
                 ),
             )
+            # "Free" functions are permanently kept in the wrapper, so no need to clear them in tests.
+            if obj is not pd:
+                _attrs_to_delete_on_test[obj].add(name)
         return new_attr
 
     return decorator
