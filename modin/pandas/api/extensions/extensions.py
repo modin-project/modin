@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import inspect
-from collections import defaultdict
 from types import MethodType, ModuleType
 from typing import Any, Dict, Optional, Union
 
