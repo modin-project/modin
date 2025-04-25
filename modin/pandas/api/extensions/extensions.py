@@ -25,7 +25,7 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     wrap_function_in_argument_caster,
 )
 
-_attrs_to_delete_on_test = defaultdict(list)
+_attrs_to_delete_on_test = defaultdict(set)
 
 # Track a dict of module-level classes that are re-exported from pandas that may need to dynamically
 # change when overridden by the extensions system, such as pd.Index.
@@ -119,7 +119,7 @@ def _set_attribute_on_obj(
                     name=name,
                 ),
             )
-            _attrs_to_delete_on_test[obj].append(name)
+            _attrs_to_delete_on_test[obj].add(name)
         return new_attr
 
     return decorator
