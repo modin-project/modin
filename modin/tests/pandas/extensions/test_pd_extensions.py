@@ -167,3 +167,21 @@ class TestRegisterForOneBackend:
             pd.concat([modin_on_python_df, modin_on_pandas_df])
             == "python_concat_result"
         )
+
+    def test_index_class_override(self):
+        class FakeIndex:
+            def __init__(self, _values):
+                pass
+
+            def fake_method(self) -> str:
+                return "python_fake_index"
+
+        register_pd_accessor("Index", backend="Python_Test")(FakeIndex)
+
+        with config_context(Backend="Pandas"):
+            # Should return an actual native pandas index object
+            df_equals(pd.Index([1]).to_series(), pd.Series([1], index=[1]))
+
+        with config_context(Backend="Python_Test"):
+            # Should just return a string
+            assert pd.Index([1]).fake_method() == "python_fake_index"
