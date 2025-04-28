@@ -20,7 +20,8 @@ all query compilers to determine the best query compiler to use.
 """
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Optional
 
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
@@ -62,13 +63,18 @@ class BackendCostCalculator:
 
     Parameters
     ----------
+    operation_arguments : MappingProxyType[str, Any]
+        Mapping from operation argument names to their values.
     api_cls_name : str or None
         Representing the class name of the function being called.
-    operation : str or None representing the operation being performed
+    operation : str representing the operation being performed
     """
 
     def __init__(
-        self, api_cls_name: Optional[str] = None, operation: Optional[str] = None
+        self,
+        operation_arguments: MappingProxyType[str, Any],
+        api_cls_name: Optional[str],
+        operation: str,
     ):
         self._backend_data: dict[str, AggregatedBackendData] = {}
         self._qc_list: list[BaseQueryCompiler] = []
@@ -76,6 +82,7 @@ class BackendCostCalculator:
         self._api_cls_name = api_cls_name
         self._op = operation
         self._pin_result = False
+        self._operation_arguments = operation_arguments
 
     def add_query_compiler(self, query_compiler: BaseQueryCompiler):
         """
@@ -150,7 +157,12 @@ class BackendCostCalculator:
                 if qc_cls_to not in qc_to_cls_costed:
                     qc_to_cls_costed.add(qc_cls_to)
                     backend_to = qc_to.get_backend()
-                    cost = qc_from.move_to_cost(qc_cls_to, self._api_cls_name, self._op)
+                    cost = qc_from.move_to_cost(
+                        qc_cls_to,
+                        self._api_cls_name,
+                        self._op,
+                        self._operation_arguments,
+                    )
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
                     else:
@@ -158,7 +170,10 @@ class BackendCostCalculator:
                         # qc_from does not know about qc_to types so we instead
                         # ask the same question but of qc_to.
                         cost = qc_cls_to.move_to_me_cost(
-                            qc_from, self._api_cls_name, self._op
+                            qc_from,
+                            self._api_cls_name,
+                            self._op,
+                            self._operation_arguments,
                         )
                         if cost is not None:
                             self._add_cost_data(backend_to, cost)
@@ -171,14 +186,14 @@ class BackendCostCalculator:
                 min_value = v.cost
                 self._result_backend = k
 
-        if self._result_backend is None:
-            raise ValueError(
-                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
-            )
-
         if len(self._backend_data) > 1:
             logging.info(
                 f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
+            )
+
+        if self._result_backend is None:
+            raise ValueError(
+                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
             )
 
         return self._result_backend

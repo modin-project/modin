@@ -23,7 +23,8 @@ import abc
 import warnings
 from enum import IntEnum
 from functools import cached_property
-from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
@@ -191,6 +192,14 @@ class BaseQueryCompiler(
     for a list of requirements for subclassing this object.
     """
 
+    # four variables can handle reasonably complex automatic engine-switching
+    # behavior, though the operation overhead (both initial and per-row)
+    # values may vary by engine.
+    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE: int = 1
+    _OPERATION_INITIALIZATION_OVERHEAD: int = 0
+    _OPERATION_PER_ROW_OVERHEAD: int = 0
+    _TRANSFER_THRESHOLD: int = 0
+
     _modin_frame: PandasDataframe
     _shape_hint: Optional[str]
     _should_warn_on_default_to_pandas: bool = True
@@ -312,8 +321,9 @@ class BaseQueryCompiler(
     def move_to_cost(
         self,
         other_qc_type: type,
-        api_cls_name: Optional[str] = None,
-        operation: Optional[str] = None,
+        api_cls_name: Optional[str],
+        operation: str,
+        arguments: MappingProxyType[str, Any],
     ) -> int:
         """
         Return the coercion costs of this qc to other_qc type.
@@ -329,12 +339,14 @@ class BaseQueryCompiler(
         ----------
         other_qc_type : QueryCompiler Class
             The query compiler class to which we should return the cost of switching.
-        api_cls_name : str, default: None
+        api_cls_name : Optional[str]
             The name of the class performing the operation which can be used as a
             consideration for the costing analysis. `None` means the function does not belong to a class.
-        operation : str, default: None
+        operation : str
             The operation being performed which can be used as a consideration
             for the costing analysis.
+        arguments : MappingProxyType[str, Any]
+            The arguments to the operation.
 
         Returns
         -------
@@ -344,13 +356,59 @@ class BaseQueryCompiler(
         """
         if isinstance(self, other_qc_type):
             return QCCoercionCost.COST_ZERO
-        return None
+        if self._TRANSFER_THRESHOLD <= 0:
+            return QCCoercionCost.COST_ZERO
+        cost = int(
+            (
+                QCCoercionCost.COST_IMPOSSIBLE
+                * self.get_axis_len(axis=0)
+                / self._TRANSFER_THRESHOLD
+            )
+        )
+        if cost > QCCoercionCost.COST_IMPOSSIBLE:
+            return QCCoercionCost.COST_IMPOSSIBLE
+        return cost
+
+    @classmethod
+    def _stay_cost_rows(
+        cls, rows: int, per_row_overhead: int, max_size: int, op_init_overhead: int
+    ) -> int:
+        """
+        Get the cost of staying on this query compiler for an operation.
+
+        Parameters
+        ----------
+        rows : int
+            The number of input rows.
+        per_row_overhead : int
+            Per-row cost of this operation.
+        max_size : int
+            Max rows for this query compiler.
+        op_init_overhead : int
+            Overhead cost of this operation.
+
+        Returns
+        -------
+        int
+            Cost of staying on this query compiler.
+        """
+        if rows > max_size:
+            return QCCoercionCost.COST_IMPOSSIBLE
+        cost_all_rows = rows * per_row_overhead
+        normalized_cost_all_rows = (
+            cost_all_rows / max_size * QCCoercionCost.COST_IMPOSSIBLE
+        )
+        total_cost = normalized_cost_all_rows + op_init_overhead
+        if total_cost > QCCoercionCost.COST_IMPOSSIBLE:
+            return QCCoercionCost.COST_IMPOSSIBLE
+        return int(total_cost)
 
     @disable_logging
     def stay_cost(
         self,
-        api_cls_name: Optional[str] = None,
-        operation: Optional[str] = None,
+        api_cls_name: Optional[str],
+        operation: str,
+        arguments: MappingProxyType[str, Any],
     ) -> Optional[int]:
         """
         Return the "opportunity cost" of not moving the data.
@@ -371,28 +429,36 @@ class BaseQueryCompiler(
 
         Parameters
         ----------
-        api_cls_name : str, default: None
+        api_cls_name : str
             The class name performing the operation which can be used as a
             consideration for the costing analysis. `None` means the function is
             not associated with a class.
         operation : str, default: None
             The operation being performed which can be used as a consideration
             for the costing analysis.
+        arguments : MappingProxyType[str, Any]
+            The arguments to the operation.
 
         Returns
         -------
         Optional[int]
             Cost of doing this operation on the current backend.
         """
-        return None
+        return self._stay_cost_rows(
+            self.get_axis_len(axis=0),
+            self._OPERATION_PER_ROW_OVERHEAD,
+            self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
+            self._OPERATION_INITIALIZATION_OVERHEAD,
+        )
 
     @disable_logging
     @classmethod
     def move_to_me_cost(
         cls,
         other_qc: BaseQueryCompiler,
-        api_cls_name: Optional[str] = None,
-        operation: Optional[str] = None,
+        api_cls_name: Optional[str],
+        operation: str,
+        arguments: MappingProxyType[str, Any],
     ) -> Optional[int]:
         """
         Return the execution and hidden coercion costs from other_qc.
@@ -411,13 +477,15 @@ class BaseQueryCompiler(
         ----------
         other_qc : BaseQueryCompiler
             The query compiler from which we should return the cost of switching.
-        api_cls_name : str, default: None
+        api_cls_name : Optional[str]
             The class name performing the operation which can be used as a
             consideration for the costing analysis. `None` means the function
             is not associated with a class.
-        operation : str, default: None
+        operation : str
             The operation being performed which can be used as a consideration
             for the costing analysis.
+        arguments : MappingProxyType[str, Any]
+            The arguments to the operation.
 
         Returns
         -------
@@ -425,9 +493,12 @@ class BaseQueryCompiler(
             Cost of migrating the data from other_qc to this qc or
             None if the cost cannot be determined.
         """
-        if isinstance(other_qc, cls):
-            return QCCoercionCost.COST_ZERO
-        return None
+        return cls._stay_cost_rows(
+            other_qc.get_axis_len(axis=0),
+            cls._OPERATION_PER_ROW_OVERHEAD,
+            cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
+            cls._OPERATION_INITIALIZATION_OVERHEAD,
+        )
 
     @disable_logging
     def max_cost(self) -> int:
