@@ -361,7 +361,7 @@ class BaseQueryCompiler(
         cost = int(
             (
                 QCCoercionCost.COST_IMPOSSIBLE
-                * self.get_axis_len(axis=0)
+                * self._estimated_row_count()
                 / self._TRANSFER_THRESHOLD
             )
         )
@@ -445,7 +445,7 @@ class BaseQueryCompiler(
             Cost of doing this operation on the current backend.
         """
         return self._stay_cost_rows(
-            self.get_axis_len(axis=0),
+            self._estimated_row_count(),
             self._OPERATION_PER_ROW_OVERHEAD,
             self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
             self._OPERATION_INITIALIZATION_OVERHEAD,
@@ -493,8 +493,13 @@ class BaseQueryCompiler(
             Cost of migrating the data from other_qc to this qc or
             None if the cost cannot be determined.
         """
+        if hasattr(other_qc, "_estimated_row_count"):
+            row_count = other_qc._estimated_row_count()
+        else:
+            row_count = other_qc.get_axis_len(axis=0)
+
         return cls._stay_cost_rows(
-            other_qc.get_axis_len(axis=0),
+            row_count,
             cls._OPERATION_PER_ROW_OVERHEAD,
             cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
             cls._OPERATION_INITIALIZATION_OVERHEAD,
@@ -522,6 +527,16 @@ class BaseQueryCompiler(
     lazy_column_types = False
     lazy_column_labels = False
     lazy_column_count = False
+
+    def _estimated_row_count(self):
+        """
+        Returns the estimated row count.
+
+        For lazily evaluated engines the row count may not be known exactly. This method provides a way
+        to get an estimated row count, the default implementation of which is to eagerly evaluate the
+        row count.
+        """
+        return self.get_axis_len(axis=0)
 
     @property
     def lazy_shape(self):
