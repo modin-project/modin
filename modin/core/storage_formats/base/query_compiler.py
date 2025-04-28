@@ -528,13 +528,18 @@ class BaseQueryCompiler(
     lazy_column_labels = False
     lazy_column_count = False
 
-    def _estimated_row_count(self):
+    def _estimated_row_count(self) -> int:
         """
-        Returns the estimated row count.
+        Return the estimated row count.
 
         For lazily evaluated engines the row count may not be known exactly. This method provides a way
         to get an estimated row count, the default implementation of which is to eagerly evaluate the
         row count.
+
+        Returns
+        -------
+        int
+            An estimate of the row count or the actual row count from get_axis_len(axis=0).
         """
         return self.get_axis_len(axis=0)
 
