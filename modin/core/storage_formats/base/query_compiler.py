@@ -23,7 +23,8 @@ import abc
 import warnings
 from enum import IntEnum
 from functools import cached_property
-from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Hashable, List, Literal, Optional
 
 import numpy as np
 import pandas
@@ -318,7 +319,11 @@ class BaseQueryCompiler(
 
     @disable_logging
     def move_to_cost(
-        self, other_qc_type: type, api_cls_name: Optional[str], operation: str
+        self,
+        other_qc_type: type,
+        api_cls_name: Optional[str],
+        operation: str,
+        arguments: MappingProxyType[str, Any],
     ) -> int:
         """
         Return the coercion costs of this qc to other_qc type.
@@ -340,6 +345,8 @@ class BaseQueryCompiler(
         operation : str
             The operation being performed which can be used as a consideration
             for the costing analysis.
+        arguments : MappingProxyType[str, Any]
+            The arguments to the operation.
 
         Returns
         -------
@@ -397,7 +404,12 @@ class BaseQueryCompiler(
         return int(total_cost)
 
     @disable_logging
-    def stay_cost(self, api_cls_name: Optional[str], operation: str) -> Optional[int]:
+    def stay_cost(
+        self,
+        api_cls_name: Optional[str],
+        operation: str,
+        arguments: MappingProxyType[str, Any],
+    ) -> Optional[int]:
         """
         Return the "opportunity cost" of not moving the data.
 
@@ -424,6 +436,8 @@ class BaseQueryCompiler(
         operation : str, default: None
             The operation being performed which can be used as a consideration
             for the costing analysis.
+        arguments : MappingProxyType[str, Any]
+            The arguments to the operation.
 
         Returns
         -------
@@ -440,7 +454,11 @@ class BaseQueryCompiler(
     @disable_logging
     @classmethod
     def move_to_me_cost(
-        cls, other_qc: BaseQueryCompiler, api_cls_name: Optional[str], operation: str
+        cls,
+        other_qc: BaseQueryCompiler,
+        api_cls_name: Optional[str],
+        operation: str,
+        arguments: MappingProxyType[str, Any],
     ) -> Optional[int]:
         """
         Return the execution and hidden coercion costs from other_qc.
@@ -466,6 +484,8 @@ class BaseQueryCompiler(
         operation : str
             The operation being performed which can be used as a consideration
             for the costing analysis.
+        arguments : MappingProxyType[str, Any]
+            The arguments to the operation.
 
         Returns
         -------
