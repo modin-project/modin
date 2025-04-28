@@ -607,7 +607,7 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
 
 
 @pytest.mark.parametrize("pin_local", [True, False], ids=["pinned", "unpinned"])
-def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df):
+def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_local):
     if pin_local:
         local_df = local_df.pin_backend()
     local_df.iloc[:, 0] = cloud_df.iloc[:, 0] + 1

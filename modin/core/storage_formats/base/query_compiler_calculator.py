@@ -21,17 +21,12 @@ all query compilers to determine the best query compiler to use.
 
 import logging
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
 )
-
-if TYPE_CHECKING:
-    from modin.core.storage_formats.pandas.query_compiler_caster import (
-        QueryCompilerCaster,
-    )
 
 
 class AggregatedBackendData:
@@ -81,7 +76,6 @@ class BackendCostCalculator:
         self._result_backend = None
         self._api_cls_name = api_cls_name
         self._op = operation
-        self._pin_result = False
         self._operation_arguments = operation_arguments
 
     def add_query_compiler(self, query_compiler: BaseQueryCompiler):
@@ -96,44 +90,6 @@ class BackendCostCalculator:
         backend = query_compiler.get_backend()
         backend_data = AggregatedBackendData(backend, query_compiler)
         self._backend_data[backend] = backend_data
-
-    def should_pin_result(self) -> bool:
-        """
-        Whether the result of the computation should be pinned to a backend.
-
-        Returns
-        -------
-        bool
-            True if the result of the computation should be pinned to a backend.
-        """
-        return self._pin_result
-
-    def update_pin_status(self, arg: "QueryCompilerCaster"):
-        """
-        Update whether or not the result should be pinned to an input's backend.
-
-        If an argument is pinned to a backend, then that backend will always be used as the result
-        of ``calculate``. If multiple arguments would pin to conflicting backends, then this function
-        raises an error.
-
-        Parameters
-        ----------
-        arg : QueryCompilerCaster
-
-        Raises
-        ------
-        ValueError
-            If ``arg`` is pinned, but a previous argument was pinned to a different backend.
-        """
-        arg_backend = arg.get_backend()
-        if self._pin_result:
-            if arg.is_backend_pinned() and arg_backend != self._result_backend:
-                raise ValueError(
-                    f"Cannot combine arguments that are pinned to conflicting backends ({self._result_backend}, {arg_backend})"
-                )
-        elif arg.is_backend_pinned():
-            self._result_backend = arg_backend
-            self._pin_result = True
 
     def calculate(self) -> str:
         """

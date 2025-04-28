@@ -753,12 +753,22 @@ def wrap_function_in_argument_caster(
 
         input_query_compilers: list[BaseQueryCompiler] = []
 
+        pin_target_backend = None
+
         def register_query_compilers(arg):
+            nonlocal pin_target_backend
             if (
                 isinstance(arg, QueryCompilerCaster)
                 and (qc := arg._get_query_compiler()) is not None
             ):
-                calculator.update_pin_status(arg)
+                arg_backend = arg.get_backend()
+                if pin_target_backend is not None:
+                    if arg.is_backend_pinned() and arg_backend != pin_target_backend:
+                        raise ValueError(
+                            f"Cannot combine arguments that are pinned to conflicting backends ({pin_target_backend}, {arg_backend})"
+                        )
+                elif arg.is_backend_pinned():
+                    pin_target_backend = arg_backend
                 input_query_compilers.append(qc)
             elif isinstance(arg, BaseQueryCompiler):
                 # We might get query compiler arguments in __init__()
@@ -777,11 +787,11 @@ def wrap_function_in_argument_caster(
         #    backends, raise a ValueError.
 
         if not AutoSwitchBackend.get() or (
-            len(calculator._qc_list) < 2 and calculator.should_pin_result()
+            len(input_query_compilers) < 2 and pin_target_backend is not None
         ):
             result = f(*args, **kwargs)
             if isinstance(result, QueryCompilerCaster):
-                result._set_backend_pinned(calculator.should_pin_result(), inplace=True)
+                result._set_backend_pinned(True, inplace=True)
             return result
 
         if len(input_query_compilers) == 0:
@@ -832,7 +842,10 @@ def wrap_function_in_argument_caster(
             for qc in input_query_compilers:
                 calculator.add_query_compiler(qc)
 
-            result_backend = calculator.calculate()
+            if pin_target_backend is None:
+                result_backend = calculator.calculate()
+            else:
+                result_backend = pin_target_backend
 
             def cast_to_qc(arg):
                 if not (
@@ -883,7 +896,7 @@ def wrap_function_in_argument_caster(
             qc_list=input_query_compilers,
             starting_backend=result_backend,
             class_of_wrapped_fn=class_of_wrapped_fn,
-            pin_backend=calculator.should_pin_result(),
+            pin_backend=pin_target_backend is not None,
             arguments=args_dict,
         )
 
