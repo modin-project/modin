@@ -6,7 +6,6 @@ packaging>=21.0
 psutil>=5.8.0
 
 ## optional dependencies
-setup
 ray>=2.10.0,<3
 pyarrow>=10.0.1
 dask[complete]>=2.22.0
