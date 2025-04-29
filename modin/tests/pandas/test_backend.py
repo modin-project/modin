@@ -162,8 +162,6 @@ def test_set_nonexistent_backend():
         pd.DataFrame([1]).set_backend("does_not_exist")
 
 
-
-
 @pytest.mark.parametrize("backend", [None, 1, [], {}])
 def test_wrong_backend_type(backend):
     with pytest.raises(
