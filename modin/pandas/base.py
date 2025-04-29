@@ -4470,7 +4470,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 # Iterate over blank range(2) if tqdm is not installed
                 pass
         else:
-            return self
+            return None if inplace else Self
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
         next(progress_iter)
         pandas_self = self._query_compiler.to_pandas()
