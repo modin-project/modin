@@ -120,4 +120,7 @@ __all__ = [
     "MetricsMode",
     # Plugin settings
     "DocModule",
+    # Native Pandas Config
+    "NativePandasMaxRows",
+    "NativePandasTransferThreshold",
 ]
