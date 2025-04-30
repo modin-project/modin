@@ -14,8 +14,7 @@ dependencies:
   # optional dependencies
   # NOTE Keep the ray and dask dependencies in sync with the Linux and Windows
   # Unidist environment dependencies.
-  # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
-  - ray-core>=2.1.0,!=2.5.0
+  - ray-core>=2.10.0,<3
   - pyarrow>=10.0.1
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*

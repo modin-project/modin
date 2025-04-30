@@ -510,7 +510,7 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         """
         if not all(i in cls._BACKEND_TO_EXECUTION for i in new_choices):
             raise ValueError(
-                "Active backend choices {new_choices} are not all registered."
+                f"Active backend choices {new_choices} are not all registered."
             )
         cls.choices = new_choices
 
