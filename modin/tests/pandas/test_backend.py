@@ -155,8 +155,12 @@ def test_same_backend():
         tqdm.auto, "trange", return_value=range(2)
     ) as mock_trange, config_context(Backend="Python_Test"):
         df = pd.DataFrame([1])
-        df.set_backend("Python_Test")
+        new_df = df.set_backend("Python_Test")
         mock_trange.assert_not_called()
+        assert new_df.get_backend() == "Python_Test"
+        new_df = df.set_backend("Python_Test", inplace=True)
+        mock_trange.assert_not_called()
+        assert new_df is None
         assert df.get_backend() == "Python_Test"
 
 
