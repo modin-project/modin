@@ -160,17 +160,15 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
-    def _get_query_compiler(self):
+    def _get_query_compiler(self) -> Optional[BaseQueryCompiler]:
         if hasattr(self, "_df"):
             return self._df._query_compiler
         return None
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
-    def get_backend(self):
-        if hasattr(self, "_df"):
-            return self._df.get_backend()
-        return None
+    def get_backend(self) -> str:
+        return self._df.get_backend()
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
