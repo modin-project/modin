@@ -150,6 +150,16 @@ def test_set_valid_backend(
             mock_trange.assert_called_once()
 
 
+def test_same_backend():
+    with patch.object(
+        tqdm.auto, "trange", return_value=range(2)
+    ) as mock_trange, config_context(Backend="Python_Test"):
+        df = pd.DataFrame([1])
+        df.set_backend("Python_Test")
+        mock_trange.assert_not_called()
+        assert df.get_backend() == "Python_Test"
+
+
 def test_set_nonexistent_backend():
     backend_choice_string = ", ".join(f"'{choice}'" for choice in Backend.choices)
     with pytest.raises(
