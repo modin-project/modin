@@ -23,6 +23,7 @@ import pytest
 from pytest import param
 
 import modin.pandas as pd
+from modin.config import context as config_context
 from modin.config.envvars import Backend, Engine, Execution
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory
@@ -605,12 +606,15 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
     assert cloud_df.get_backend() == "Cloud"
 
 
-def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df):
+@pytest.mark.parametrize("pin_local", [True, False], ids=["pinned", "unpinned"])
+def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_local):
+    if pin_local:
+        local_df = local_df.pin_backend()
     local_df.iloc[:, 0] = cloud_df.iloc[:, 0] + 1
     expected_pandas = local_df._to_pandas()
     expected_pandas.iloc[:, 0] = cloud_df._to_pandas().iloc[:, 0] + 1
     df_equals(local_df, expected_pandas)
-    assert local_df.get_backend() == "Cloud"
+    assert local_df.get_backend() == "Local_machine" if pin_local else "Cloud"
 
 
 # Outlines a future generic function for determining when to stay
@@ -688,6 +692,49 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             register_function_for_post_op_switch(
                 class_name="DataFrame", backend="Big_Data_Cloud", method="sum"
             )
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Small_Data_Local"
+
+    def test_agg_pinned(self):
+        # The operation in test_agg would naturally cause an automatic switch, but the
+        # absence of AutoSwitchBackend or the presence of a pin on the frame prevent this
+        # switch from happening.
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            register_function_for_post_op_switch(
+                class_name="DataFrame", backend="Big_Data_Cloud", method="sum"
+            )
+            # No pin or config, should switch
+            df = pd.DataFrame([[1, 2], [3, 4]])
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Small_Data_Local"
+            # config set to false, should not switch
+            with config_context(AutoSwitchBackend=False):
+                df = pd.DataFrame([[1, 2], [3, 4]])
+                assert df.get_backend() == "Big_Data_Cloud"
+                assert df.sum().get_backend() == "Big_Data_Cloud"
+            # no config, but data is pinned
+            df = pd.DataFrame([[1, 2], [3, 4]]).pin_backend()
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Big_Data_Cloud"
+            # a frame-level pin remains valid across a transformation
+            df_copy = df + 1
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            assert df_copy.sum().get_backend() == "Big_Data_Cloud"
+            # unpinning df allows a switch again
+            df = df.unpin_backend()
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Small_Data_Local"
+            df_copy = df + 1
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            assert df_copy.sum().get_backend() == "Small_Data_Local"
+            # check in-place pin/unpin operations
+            df.pin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            assert df.sum().get_backend() == "Big_Data_Cloud"
+            df.unpin_backend(inplace=True)
             assert df.get_backend() == "Big_Data_Cloud"
             assert df.sum().get_backend() == "Small_Data_Local"
 
@@ -869,6 +916,58 @@ class TestSwitchBackendPreOp:
             )
             assert md_df.get_backend() == expected_backend
 
+    def test_iloc_pinned(self):
+        # The operation in test_iloc would naturally cause an automatic switch, but the
+        # absence of AutoSwitchBackend or the presence of a pin on the frame prevent this
+        # switch from happening.
+        data_size = BIG_DATA_CLOUD_MIN_NUM_ROWS - 1
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            register_function_for_pre_op_switch(
+                class_name="_iLocIndexer",
+                backend="Big_Data_Cloud",
+                method="__setitem__",
+            )
+            # No pin or config, should switch
+            df = pd.DataFrame(list(range(data_size)))
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -1
+            assert df.get_backend() == "Small_Data_Local"
+            # config set to false, should not switch
+            with config_context(AutoSwitchBackend=False):
+                df = pd.DataFrame(list(range(data_size)))
+                assert df.get_backend() == "Big_Data_Cloud"
+                df.iloc[(0, 0)] = -2
+                assert df.get_backend() == "Big_Data_Cloud"
+            # no config, but data is pinned
+            df = pd.DataFrame(list(range(data_size))).pin_backend()
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -3
+            assert df.get_backend() == "Big_Data_Cloud"
+            # a frame-level pin remains valid across a transformation
+            df_copy = df + 1
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            df_copy.iloc[(0, 0)] = -4
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            # unpinning df allows a switch again
+            df.unpin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -5
+            assert df.get_backend() == "Small_Data_Local"
+            # An in-place set_backend operation clears the pin
+            df.move_to("Big_Data_Cloud", inplace=True)
+            # check in-place pin/unpin operations
+            df.pin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -6
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.unpin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -7
+            assert df.get_backend() == "Small_Data_Local"
+
     @pytest.mark.parametrize(
         "args, kwargs, expected_backend",
         (
@@ -915,3 +1014,76 @@ class TestSwitchBackendPreOp:
             choices=("Big_Data_Cloud", "Small_Data_Local"),
         ):
             assert data_class(*args, **kwargs).get_backend() == expected_backend
+
+
+def test_move_to_clears_pin():
+    # Pin status is reset to false after a set_backend call
+    with backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    ):
+        df = pd.DataFrame(list(range(10)))
+        # in-place
+        df.pin_backend(inplace=True)
+        assert df.is_backend_pinned()
+        df.move_to("Small_Data_Local", inplace=True)
+        assert not df.is_backend_pinned()
+        # not in-place
+        intermediate = df.pin_backend().move_to("Big_Data_Cloud")
+        assert not intermediate.is_backend_pinned()
+        assert intermediate.pin_backend().is_backend_pinned()
+
+
+@pytest.mark.parametrize(
+    "pin_backends, expected_backend",
+    [
+        param(
+            [("Small_Data_Local", False), ("Big_Data_Cloud", False)],
+            "Small_Data_Local",
+            id="no_pin",
+        ),  # no backend pinned
+        param(
+            [("Small_Data_Local", True), ("Big_Data_Cloud", False)],
+            "Small_Data_Local",
+            id="one_pin",
+        ),  # one backend is pinned, so move there
+        param(
+            [
+                ("Big_Data_Cloud", False),
+                ("Small_Data_Local", True),
+                ("Small_Data_Local", True),
+            ],
+            "Small_Data_Local",
+            id="two_pin",
+        ),  # two identical pinned backends
+        param(
+            [("Small_Data_Local", True), ("Big_Data_Cloud", True)],
+            None,
+            id="conflict_pin",
+        ),  # conflicting pins raises ValueError
+    ],
+)
+def test_concat_with_pin(pin_backends, expected_backend):
+    with backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    ):
+        dfs = [
+            pd.DataFrame([1] * 10).move_to(backend)._set_backend_pinned(should_pin)
+            for backend, should_pin in pin_backends
+        ]
+        if expected_backend is None:
+            with pytest.raises(
+                ValueError,
+                match="Cannot combine arguments that are pinned to conflicting backends",
+            ):
+                pd.concat(dfs)
+        else:
+            result = pd.concat(dfs)
+            assert result.is_backend_pinned() == any(
+                df.is_backend_pinned() for df in dfs
+            )
+            assert result.get_backend() == expected_backend
+            df_equals(
+                result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
+            )
