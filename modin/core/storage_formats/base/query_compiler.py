@@ -536,7 +536,7 @@ class BaseQueryCompiler(
         Returns
         -------
         Tuple
-            Maximum shape of the dataframe (height, width)
+            Maximum shape of the dataframe (height, width).
         """
         return self.get_axis_len(axis=0), self.get_axis_len(axis=1)
 
