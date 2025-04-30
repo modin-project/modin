@@ -361,7 +361,7 @@ class BaseQueryCompiler(
         cost = int(
             (
                 QCCoercionCost.COST_IMPOSSIBLE
-                * self._estimated_row_count()
+                * self._max_shape()[0]
                 / self._TRANSFER_THRESHOLD
             )
         )
@@ -445,7 +445,7 @@ class BaseQueryCompiler(
             Cost of doing this operation on the current backend.
         """
         return self._stay_cost_rows(
-            self._estimated_row_count(),
+            self._max_shape()[0],
             self._OPERATION_PER_ROW_OVERHEAD,
             self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
             self._OPERATION_INITIALIZATION_OVERHEAD,
@@ -493,10 +493,7 @@ class BaseQueryCompiler(
             Cost of migrating the data from other_qc to this qc or
             None if the cost cannot be determined.
         """
-        if hasattr(other_qc, "_estimated_row_count"):
-            row_count = other_qc._estimated_row_count()
-        else:
-            row_count = other_qc.get_axis_len(axis=0)
+        row_count = other_qc._max_shape()[0]
 
         return cls._stay_cost_rows(
             row_count,
@@ -528,20 +525,20 @@ class BaseQueryCompiler(
     lazy_column_labels = False
     lazy_column_count = False
 
-    def _estimated_row_count(self) -> int:
+    def _max_shape(self) -> tuple[int, int]:
         """
-        Return the estimated row count.
+        Return the maximum dimensions of the frame.
 
-        For lazily evaluated engines the row count may not be known exactly. This method provides a way
-        to get an estimated row count, the default implementation of which is to eagerly evaluate the
-        row count.
+        For lazily evaluated engines the shape of the dataset may be expensive to
+        determine (see lazy_shape), but the maximum shape can be calculated
+        inexpensively.
 
         Returns
         -------
-        int
-            An estimate of the row count or the actual row count from get_axis_len(axis=0).
+        Tuple
+            Maximum shape of the dataframe (height, width)
         """
-        return self.get_axis_len(axis=0)
+        return self.get_axis_len(axis=0), self.get_axis_len(axis=1)
 
     @property
     def lazy_shape(self):
