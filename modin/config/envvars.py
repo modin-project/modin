@@ -1309,7 +1309,7 @@ class NativePandasMaxRows(EnvironmentVariable, type=int):
     """
     Maximum number of rows which can be processed using local, native, pandas.
 
-    This must be set before modin dataframes in pandas have been created.
+    This must be set before Modin dataframes in pandas have been created.
     """
 
     varname = "MODIN_NATIVE_MAX_ROWS"
@@ -1321,7 +1321,7 @@ class NativePandasTransferThreshold(EnvironmentVariable, type=int):
     Targeted max number of dataframe rows which should be transferred between engines.
 
     This is often the same value as MODIN_NATIVE_MAX_ROWS but it can be independently
-    set to change how transfer costs are considered. This must be set before modin
+    set to change how transfer costs are considered. This must be set before Modin
     dataframes in pandas have been created.
     """
 
