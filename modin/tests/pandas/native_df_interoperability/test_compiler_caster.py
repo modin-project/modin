@@ -1102,7 +1102,6 @@ def test_native_config():
 
         class AClass(NativeQueryCompiler):
             _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
-            pass
 
         qc = AClass(pandas.DataFrame([0, 1, 2]))
         assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
@@ -1112,7 +1111,6 @@ def test_native_config():
 
         class BClass(NativeQueryCompiler):
             _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
-            pass
 
         qc = BClass(pandas.DataFrame([0, 1, 2]))
         assert qc._TRANSFER_THRESHOLD == 321
