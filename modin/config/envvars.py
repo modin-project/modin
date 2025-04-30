@@ -1307,9 +1307,7 @@ class DaskThreadsPerWorker(EnvironmentVariable, type=int):
 
 class NativePandasMaxRows(EnvironmentVariable, type=int):
     """
-    Maximum number of rows which can be processed using local native pandas.
-
-    This must be set before Modin dataframes in pandas have been created.
+    Maximum number of rows which can be processed using local, native, pandas.
     """
 
     varname = "MODIN_NATIVE_MAX_ROWS"
@@ -1321,8 +1319,7 @@ class NativePandasTransferThreshold(EnvironmentVariable, type=int):
     Targeted max number of dataframe rows which should be transferred between engines.
 
     This is often the same value as MODIN_NATIVE_MAX_ROWS but it can be independently
-    set to change how transfer costs are considered. This must be set before Modin
-    dataframes in pandas have been created.
+    set to change how transfer costs are considered.
     """
 
     varname = "MODIN_NATIVE_MAX_XFER_ROWS"
