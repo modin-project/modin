@@ -647,6 +647,11 @@ def test_stay_or_move_evaluation(cloud_df, default_df):
     assert move_cost is None
 
 
+def test_max_shape(cloud_df):
+    # default implementation matches df.shape
+    assert cloud_df.shape == cloud_df._query_compiler._max_shape()
+
+
 @contextlib.contextmanager
 def backend_test_context(test_backend: str, choices: set) -> Iterator[None]:
 
