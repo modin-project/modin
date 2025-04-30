@@ -361,7 +361,7 @@ class BaseQueryCompiler(
         cost = int(
             (
                 QCCoercionCost.COST_IMPOSSIBLE
-                * self.get_axis_len(axis=0)
+                * self._max_shape()[0]
                 / self._TRANSFER_THRESHOLD
             )
         )
@@ -445,7 +445,7 @@ class BaseQueryCompiler(
             Cost of doing this operation on the current backend.
         """
         return self._stay_cost_rows(
-            self.get_axis_len(axis=0),
+            self._max_shape()[0],
             self._OPERATION_PER_ROW_OVERHEAD,
             self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
             self._OPERATION_INITIALIZATION_OVERHEAD,
@@ -493,8 +493,10 @@ class BaseQueryCompiler(
             Cost of migrating the data from other_qc to this qc or
             None if the cost cannot be determined.
         """
+        row_count = other_qc._max_shape()[0]
+
         return cls._stay_cost_rows(
-            other_qc.get_axis_len(axis=0),
+            row_count,
             cls._OPERATION_PER_ROW_OVERHEAD,
             cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
             cls._OPERATION_INITIALIZATION_OVERHEAD,
@@ -522,6 +524,21 @@ class BaseQueryCompiler(
     lazy_column_types = False
     lazy_column_labels = False
     lazy_column_count = False
+
+    def _max_shape(self) -> tuple[int, int]:
+        """
+        Return the maximum dimensions of the frame.
+
+        For lazily evaluated engines the shape of the dataset may be expensive to
+        determine (see lazy_shape), but the maximum shape can be calculated
+        inexpensively.
+
+        Returns
+        -------
+        Tuple
+            Maximum shape of the dataframe (height, width).
+        """
+        return self.get_axis_len(axis=0), self.get_axis_len(axis=1)
 
     @property
     def lazy_shape(self):

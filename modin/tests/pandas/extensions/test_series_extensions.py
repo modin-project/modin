@@ -255,3 +255,22 @@ def test_disallowed_extensions(Backend1, non_extendable_attribute_name):
         register_series_accessor(name=non_extendable_attribute_name, backend=Backend1)(
             "unused_value"
         )
+
+
+def test_wrapped_extension(Backend1):
+    """
+    Tests using the extensions system to overwrite a method with a wrapped version of the original method
+    obtained via getattr.
+    Because the QueryCompilerCaster ABC automatically wraps all methods with a dispatch to the appropriate
+    backend, we must use the __wrapped__ property of the originally-defined attribute to avoid
+    infinite recursion.
+    """
+    original_item = pd.Series.item.__wrapped__
+
+    @register_series_accessor(name="item", backend=Backend1)
+    def item_implementation(self):
+        return (original_item(self) + 2) * 5
+
+    series = pd.Series([3])
+    assert series.item() == 3
+    assert series.set_backend(Backend1).item() == 25

@@ -6,8 +6,7 @@ packaging>=21.0
 psutil>=5.8.0
 
 ## optional dependencies
-# ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
-ray>=2.1.0,!=2.5.0
+ray>=2.10.0,<3
 pyarrow>=10.0.1
 dask[complete]>=2.22.0
 distributed>=2.22.0

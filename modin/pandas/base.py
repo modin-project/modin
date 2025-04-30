@@ -113,6 +113,11 @@ _EXTENSION_NO_LOOKUP = {
     "_getattr__from_extension_impl",
     "_get_query_compiler",
     "set_backend",
+    "_pinned",
+    "is_backend_pinned",
+    "_set_backend_pinned",
+    "pin_backend",
+    "unpin_backend",
 }
 
 # Do not lookup certain attributes in columns or index, as they're used for some
@@ -231,6 +236,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
     _siblings: list[BasePandasDataset]
 
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
+    _pinned: bool = False
 
     @cached_property
     def _is_dataframe(self) -> bool:
@@ -4445,6 +4451,50 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
     # namespace for additional Modin functions that are not available in Pandas
     modin: ModinAPI = CachedAccessor("modin", ModinAPI)
 
+    @disable_logging
+    def is_backend_pinned(self) -> bool:
+        """
+        Get whether this object's data is pinned to a particular backend.
+
+        Returns
+        -------
+        bool
+            True if the data is pinned.
+        """
+        return self._pinned
+
+    def _set_backend_pinned(
+        self, pinned: bool, inplace: bool = False
+    ) -> Optional[Self]:
+        """
+        Update whether this object's data is pinned to a particular backend.
+
+        Parameters
+        ----------
+        pinned : bool
+            Whether the data is pinned.
+
+        inplace : bool, default: False
+            Whether to update the object in place.
+
+        Returns
+        -------
+        Optional[Self]
+            The object with the new pin state, if `inplace` is False. Otherwise, None.
+        """
+        change = (self.is_backend_pinned() and not pinned) or (
+            not self.is_backend_pinned() and pinned
+        )
+        if inplace:
+            self._pinned = pinned
+            return None
+        else:
+            if change:
+                new_obj = self.__constructor__(query_compiler=self._query_compiler)
+                new_obj._pinned = pinned
+                return new_obj
+            return self
+
     @doc(SET_BACKEND_DOC, class_name=__qualname__)
     def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
         # TODO(https://github.com/modin-project/modin/issues/7467): refactor
@@ -4469,6 +4519,8 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             except ImportError:
                 # Iterate over blank range(2) if tqdm is not installed
                 pass
+        else:
+            return None if inplace else self
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
         next(progress_iter)
         pandas_self = self._query_compiler.to_pandas()
@@ -4481,6 +4533,8 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             pass
         if inplace:
             self._update_inplace(query_compiler)
+            # Always unpin after an explicit set_backend operation
+            self._pinned = False
             return None
         else:
             return self.__constructor__(query_compiler=query_compiler)
