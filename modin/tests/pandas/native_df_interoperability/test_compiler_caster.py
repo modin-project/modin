@@ -829,6 +829,7 @@ class TestSwitchBackendPreOp:
                 ).move_to("Small_Data_Local")
             )
         )
+        pandas_read_json.__name__ = "read_json"
         cloud_read_json = mock.Mock(
             wraps=(
                 lambda *args, **kwargs: _GENERAL_EXTENSIONS[None]["read_json"](
@@ -836,6 +837,7 @@ class TestSwitchBackendPreOp:
                 ).move_to("Big_Data_Cloud")
             )
         )
+        cloud_read_json.__name__ = "read_json"
 
         register_pd_accessor("read_json", backend="Small_Data_Local")(pandas_read_json)
         register_pd_accessor("read_json", backend="Big_Data_Cloud")(cloud_read_json)

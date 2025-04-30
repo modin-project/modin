@@ -36,6 +36,7 @@ from typing import (
 
 import numpy as np
 import pandas
+from pandas import Categorical
 from pandas._libs import lib
 from pandas._typing import (
     CompressionOptions,
@@ -62,7 +63,6 @@ from modin.config import PersistentPickle
 from modin.core.storage_formats.pandas.query_compiler_caster import EXTENSION_DICT_TYPE
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
-from modin.pandas import Categorical
 from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
