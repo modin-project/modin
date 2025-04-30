@@ -691,6 +691,56 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             assert df.get_backend() == "Big_Data_Cloud"
             assert df.sum().get_backend() == "Small_Data_Local"
 
+    @pytest.mark.parametrize(
+        "num_groups, expected_backend",
+        [
+            (BIG_DATA_CLOUD_MIN_NUM_ROWS - 1, "Small_Data_Local"),
+            (BIG_DATA_CLOUD_MIN_NUM_ROWS, "Big_Data_Cloud"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "groupby_class,operation",
+        [
+            param(
+                "DataFrameGroupBy",
+                lambda df: df.groupby("col0").sum(),
+                id="DataFrameGroupBy",
+            ),
+            param(
+                "SeriesGroupBy",
+                lambda df: df.groupby("col0")["col1"].sum(),
+                id="SeriesGroupBy",
+            ),
+        ],
+    )
+    def test_dataframe_groupby_agg_switches_for_small_result(
+        self, num_groups, expected_backend, operation, groupby_class
+    ):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            modin_df, pandas_df = create_test_dfs(
+                {
+                    "col0": list(range(num_groups)),
+                    "col1": list(range(1, num_groups + 1)),
+                }
+            )
+
+            assert modin_df.get_backend() == "Big_Data_Cloud"
+            assert operation(modin_df).get_backend() == "Big_Data_Cloud"
+
+            register_function_for_post_op_switch(
+                class_name=groupby_class, backend="Big_Data_Cloud", method="sum"
+            )
+
+            assert modin_df.get_backend() == "Big_Data_Cloud"
+            modin_result = operation(modin_df)
+            pandas_result = operation(pandas_df)
+            df_equals(modin_result, pandas_result)
+            assert modin_result.get_backend() == expected_backend
+            assert modin_df.get_backend() == "Big_Data_Cloud"
+
 
 class TestSwitchBackendPreOp:
     @pytest.mark.parametrize(
@@ -915,3 +965,59 @@ class TestSwitchBackendPreOp:
             choices=("Big_Data_Cloud", "Small_Data_Local"),
         ):
             assert data_class(*args, **kwargs).get_backend() == expected_backend
+
+    @pytest.mark.parametrize(
+        "num_input_rows, expected_backend",
+        [
+            param(
+                BIG_DATA_CLOUD_MIN_NUM_ROWS - 1,
+                "Small_Data_Local",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    raises=NotImplementedError,
+                    reason="https://github.com/modin-project/modin/issues/7542",
+                ),
+            ),
+            (BIG_DATA_CLOUD_MIN_NUM_ROWS, "Big_Data_Cloud"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "groupby_class,operation",
+        [
+            param(
+                "DataFrameGroupBy",
+                lambda df: df.groupby("col0").apply(lambda x: x + 1),
+                id="DataFrameGroupBy",
+            ),
+            param(
+                "SeriesGroupBy",
+                lambda df: df.groupby("col0")["col1"].apply(lambda x: x + 1),
+                id="SeriesGroupBy",
+            ),
+        ],
+    )
+    def test_groupby_apply_switches_for_small_input(
+        self, num_input_rows, expected_backend, operation, groupby_class
+    ):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            modin_df, pandas_df = create_test_dfs(
+                {
+                    "col0": list(range(num_input_rows)),
+                    "col1": list(range(1, num_input_rows + 1)),
+                }
+            )
+            assert modin_df.get_backend() == "Big_Data_Cloud"
+            assert operation(modin_df).get_backend() == "Big_Data_Cloud"
+
+            register_function_for_pre_op_switch(
+                class_name=groupby_class, backend="Big_Data_Cloud", method="apply"
+            )
+
+            modin_result = operation(modin_df)
+            pandas_result = operation(pandas_df)
+            df_equals(modin_result, pandas_result)
+            assert modin_result.get_backend() == expected_backend
+            assert modin_df.get_backend() == expected_backend
