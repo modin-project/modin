@@ -24,7 +24,13 @@ from pytest import param
 
 import modin.pandas as pd
 from modin.config import context as config_context
-from modin.config.envvars import Backend, Engine, Execution
+from modin.config.envvars import (
+    Backend,
+    Engine,
+    Execution,
+    NativePandasMaxRows,
+    NativePandasTransferThreshold,
+)
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory
 from modin.core.io.io import BaseIO
@@ -220,8 +226,6 @@ class DefaultQC2(CalculatorTestQc):
 
 
 class BaseTestAutoMover(NativeQueryCompiler):
-
-    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = BIG_DATA_CLOUD_MIN_NUM_ROWS
 
     def __init__(self, pandas_frame):
         super().__init__(pandas_frame)
@@ -1087,3 +1091,29 @@ def test_concat_with_pin(pin_backends, expected_backend):
             df_equals(
                 result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
             )
+
+
+def test_native_config():
+    qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
+    assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
+    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
+
+    with config_context(NativePandasMaxRows=123):
+
+        class AClass(NativeQueryCompiler):
+            _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
+            pass
+
+        qc = AClass(pandas.DataFrame([0, 1, 2]))
+        assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
+        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
+
+    with config_context(NativePandasTransferThreshold=321):
+
+        class BClass(NativeQueryCompiler):
+            _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
+            pass
+
+        qc = BClass(pandas.DataFrame([0, 1, 2]))
+        assert qc._TRANSFER_THRESHOLD == 321
+        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()

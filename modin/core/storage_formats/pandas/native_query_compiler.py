@@ -23,6 +23,7 @@ from typing import Optional
 import pandas
 from pandas.core.dtypes.common import is_scalar
 
+from modin.config import NativePandasMaxRows, NativePandasTransferThreshold
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
@@ -93,10 +94,10 @@ class NativeQueryCompiler(BaseQueryCompiler):
         The pandas frame to query with the compiled queries.
     """
 
-    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = 10_000_000
+    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
     _OPERATION_INITIALIZATION_OVERHEAD = 0
     _OPERATION_PER_ROW_OVERHEAD = 0
-    _TRANSFER_THRESHOLD = 10_000_000
+    _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
 
     _modin_frame: pandas.DataFrame
     _should_warn_on_default_to_pandas: bool = False
