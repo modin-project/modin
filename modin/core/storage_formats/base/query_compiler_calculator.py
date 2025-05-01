@@ -157,9 +157,10 @@ class BackendCostCalculator:
             raise ValueError(
                 f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
             )
+        DECIDED_TO_SWITCH = 1
         emit_metric(
             f"hybrid.cast.{hybrid_metrics_calc_group}.decision.{self._result_backend}",
-            1,
+            DECIDED_TO_SWITCH,
         )
         return self._result_backend
 

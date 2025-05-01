@@ -629,17 +629,24 @@ def _get_backend_for_auto_switch(
                 f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.delta",
                 move_stay_delta,
             )
+            SINGLE_EVENT = 1
+            DECIDED_TO_SWITCH = 1
+            DECIDED_NOT_TO_SWITCH = 0
             emit_metric(
                 f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.decision.{best_backend}",
-                1 if starting_backend != backend else 0,
+                (
+                    DECIDED_TO_SWITCH
+                    if starting_backend != backend
+                    else DECIDED_NOT_TO_SWITCH
+                ),
             )
             emit_metric(
                 f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.api_cls_name.{class_of_wrapped_fn}",
-                1,
+                SINGLE_EVENT,
             )
             emit_metric(
                 f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.function_name.{function_name}",
-                1,
+                SINGLE_EVENT,
             )
             hybrid_metrics_group += 1
             logging.info(
