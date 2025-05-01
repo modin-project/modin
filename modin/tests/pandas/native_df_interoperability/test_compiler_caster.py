@@ -22,7 +22,10 @@ import pandas
 import pytest
 from pytest import param
 
-from modin.logging.metrics import add_metric_handler, clear_metric_handler
+from modin.logging.metrics import (
+    add_metric_handler,
+    clear_metric_handler,
+)
 import modin.pandas as pd
 from modin.config import context as config_context
 from modin.config.envvars import (
