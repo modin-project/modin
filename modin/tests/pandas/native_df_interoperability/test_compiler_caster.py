@@ -22,10 +22,6 @@ import pandas
 import pytest
 from pytest import param
 
-from modin.logging.metrics import (
-    add_metric_handler,
-    clear_metric_handler,
-)
 import modin.pandas as pd
 from modin.config import context as config_context
 from modin.config.envvars import (
@@ -48,6 +44,7 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     register_function_for_post_op_switch,
     register_function_for_pre_op_switch,
 )
+from modin.logging.metrics import add_metric_handler, clear_metric_handler
 from modin.pandas.api.extensions import register_pd_accessor
 from modin.tests.pandas.utils import create_test_dfs, df_equals, eval_general
 
