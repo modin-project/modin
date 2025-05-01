@@ -141,7 +141,7 @@ class BackendCostCalculator:
 
         min_value = None
         for k, v in self._backend_data.items():
-            emit_metric(f"hybrid.cast.{hybrid_metrics_calc_group}.to.{k}.cost", v.cost)
+            emit_metric(f"hybrid.cast.to.{k}.cost.{hybrid_metrics_calc_group}", v.cost)
             if v.cost > v.max_cost:
                 continue
             if min_value is None or min_value > v.cost:
@@ -159,7 +159,7 @@ class BackendCostCalculator:
             )
         DECIDED_TO_SWITCH = 1
         emit_metric(
-            f"hybrid.cast.{hybrid_metrics_calc_group}.decision.{self._result_backend}",
+            f"hybrid.cast.decision.{self._result_backend}.{hybrid_metrics_calc_group}",
             DECIDED_TO_SWITCH,
         )
         return self._result_backend

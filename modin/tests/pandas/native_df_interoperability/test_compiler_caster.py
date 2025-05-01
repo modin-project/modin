@@ -1099,25 +1099,24 @@ def test_concat_with_pin(pin_backends, expected_backend):
 
 def test_cast_metrics(pico_df, cluster_df):
     try:
+        errors = 0
 
         def test_handler(metric: str, value) -> None:
+            nonlocal errors
             if metric.startswith("modin.hybrid.cast"):
                 tokens = metric.split(".")
-                if tokens[5] == "Pico":
-                    assert value == 750
+                if tokens[4] == "Pico" and value == 750:
                     return
-                if tokens[5] == "Cluster":
-                    assert value == 250
+                if tokens[4] == "Cluster" and value == 250:
                     return
-                if tokens[4] == "decision":
-                    assert tokens[5] == "Cluster"
-                    assert value == 1
+                if tokens[3] == "decision" and tokens[4] == "Cluster" and value == 1:
                     return
-                assert False
+                errors += 1
 
         add_metric_handler(test_handler)
         df3 = pd.concat([pico_df, cluster_df], axis=1)
         assert df3.get_backend() == "Cluster"  # result should be on cluster
+        assert errors == 0
     finally:
         clear_metric_handler(test_handler)
 
@@ -1128,36 +1127,43 @@ def test_switch_metrics(pico_df, cluster_df):
         choices=("Big_Data_Cloud", "Small_Data_Local"),
     ):
         try:
+            errors = 0
 
             def test_handler(metric: str, value) -> None:
+                nonlocal errors
                 if metric.startswith("modin.hybrid.auto"):
                     tokens = metric.split(".")
                     assert "from.Big_Data_Cloud.to.Small_Data_Local" in metric
-                    if tokens[8] == "stay_cost":
-                        assert value == QCCoercionCost.COST_IMPOSSIBLE
+                    if (
+                        tokens[7] == "stay_cost"
+                        and value == QCCoercionCost.COST_IMPOSSIBLE
+                    ):
                         return
-                    if tokens[8] == "other_execute_cost":
-                        assert value == 1000
+                    if tokens[7] == "other_execute_cost" and value == 1000:
                         return
-                    if tokens[8] == "move_to_cost":
-                        assert value == 0
+                    if tokens[7] == "move_to_cost" and value == 0:
                         return
-                    if tokens[8] == "delta":
-                        assert value == 0
+                    if tokens[7] == "delta" and value == 0:
                         return
-                    if tokens[8] == "delta":
-                        assert tokens[9] == "Big_Data_Cloud"
-                        assert value == 1
+                    if (
+                        tokens[7] == "decision"
+                        and tokens[8] == "Big_Data_Cloud"
+                        and value == 1
+                    ):
                         return
-                    if tokens[8] == "api_cls_name":
-                        assert tokens[9] == "DataFrame"
-                        assert value == 1
+                    if (
+                        tokens[7] == "api_cls_name"
+                        and tokens[8] == "DataFrame"
+                        and value == 1
+                    ):
                         return
-                    if tokens[8] == "function_name":
-                        assert tokens[9] == "describe"
-                        assert value == 1
+                    if (
+                        tokens[7] == "function_name"
+                        and tokens[8] == "describe"
+                        and value == 1
+                    ):
                         return
-                    assert False
+                    errors += 1
 
             add_metric_handler(test_handler)
 
@@ -1169,5 +1175,6 @@ def test_switch_metrics(pico_df, cluster_df):
             df = pd.DataFrame([1] * 10)
             assert df.get_backend() == "Big_Data_Cloud"
             df.describe()
+            assert errors == 0
         finally:
             clear_metric_handler(test_handler)

@@ -614,26 +614,26 @@ def _get_backend_for_auto_switch(
                 best_backend = backend
             global hybrid_metrics_group
             emit_metric(
-                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.move_to_cost",
+                f"hybrid.auto.from.{starting_backend}.to.{backend}.move_to_cost.{hybrid_metrics_group}",
                 move_to_cost,
             )
             emit_metric(
-                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.stay_cost",
+                f"hybrid.auto.from.{starting_backend}.to.{backend}.stay_cost.{hybrid_metrics_group}",
                 stay_cost,
             )
             emit_metric(
-                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.other_execute_cost",
+                f"hybrid.auto.from.{starting_backend}.to.{backend}.other_execute_cost.{hybrid_metrics_group}",
                 other_execute_cost,
             )
             emit_metric(
-                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.delta",
+                f"hybrid.auto.from.{starting_backend}.to.{backend}.delta.{hybrid_metrics_group}",
                 move_stay_delta,
             )
             SINGLE_EVENT = 1
             DECIDED_TO_SWITCH = 1
             DECIDED_NOT_TO_SWITCH = 0
             emit_metric(
-                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.decision.{best_backend}",
+                f"hybrid.auto.from.{starting_backend}.to.{backend}.decision.{best_backend}.{hybrid_metrics_group}",
                 (
                     DECIDED_TO_SWITCH
                     if starting_backend != backend
@@ -641,11 +641,11 @@ def _get_backend_for_auto_switch(
                 ),
             )
             emit_metric(
-                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.api_cls_name.{class_of_wrapped_fn}",
+                f"hybrid.auto.from.{starting_backend}.to.{backend}.api_cls_name.{class_of_wrapped_fn}.{hybrid_metrics_group}",
                 SINGLE_EVENT,
             )
             emit_metric(
-                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.function_name.{function_name}",
+                f"hybrid.auto.from.{starting_backend}.to.{backend}.function_name.{function_name}.{hybrid_metrics_group}",
                 SINGLE_EVENT,
             )
             hybrid_metrics_group += 1
