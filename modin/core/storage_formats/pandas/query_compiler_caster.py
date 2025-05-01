@@ -42,6 +42,7 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
 )
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
+from modin.logging.metrics import emit_metric
 from modin.utils import sentinel
 
 Fn = TypeVar("Fn", bound=Any)
@@ -687,6 +688,10 @@ def _maybe_switch_backend_post_op(
     return result
 
 
+# Global Variable Used to track groups of metrics
+hybrid_metrics_group = 0
+
+
 def _get_backend_for_auto_switch(
     input_qc: BaseQueryCompiler,
     class_of_wrapped_fn: str,
@@ -778,6 +783,36 @@ def _get_backend_for_auto_switch(
             ):
                 min_move_stay_delta = move_stay_delta
                 best_backend = backend
+            global hybrid_metrics_group
+            emit_metric(
+                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.move_to_cost",
+                move_to_cost,
+            )
+            emit_metric(
+                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.stay_cost",
+                stay_cost,
+            )
+            emit_metric(
+                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.other_execute_cost",
+                other_execute_cost,
+            )
+            emit_metric(
+                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.delta",
+                move_stay_delta,
+            )
+            emit_metric(
+                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.decision.{best_backend}",
+                1 if starting_backend != backend else 0,
+            )
+            emit_metric(
+                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.api_cls_name.{class_of_wrapped_fn}",
+                1,
+            )
+            emit_metric(
+                f"hybrid.auto.{hybrid_metrics_group}.from.{starting_backend}.to.{backend}.function_name.{function_name}",
+                1,
+            )
+            hybrid_metrics_group += 1
             logging.info(
                 f"After {class_of_wrapped_fn} function {function_name}, "
                 + f"considered moving to backend {backend} with "

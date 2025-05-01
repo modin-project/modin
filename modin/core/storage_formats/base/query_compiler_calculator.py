@@ -27,6 +27,7 @@ from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
 )
+from modin.logging.metrics import emit_metric
 
 
 class AggregatedBackendData:
@@ -45,6 +46,10 @@ class AggregatedBackendData:
         self.qc_cls = type(query_compiler)
         self.cost = 0
         self.max_cost = query_compiler.max_cost()
+
+
+# Global Variable Used to track groups of metrics
+hybrid_metrics_calc_group = 0
 
 
 class BackendCostCalculator:
@@ -136,6 +141,7 @@ class BackendCostCalculator:
 
         min_value = None
         for k, v in self._backend_data.items():
+            emit_metric(f"hybrid.cast.{hybrid_metrics_calc_group}.to.{k}.cost", v.cost)
             if v.cost > v.max_cost:
                 continue
             if min_value is None or min_value > v.cost:
@@ -151,7 +157,10 @@ class BackendCostCalculator:
             raise ValueError(
                 f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
             )
-
+        emit_metric(
+            f"hybrid.cast.{hybrid_metrics_calc_group}.decision.{self._result_backend}",
+            1,
+        )
         return self._result_backend
 
     def _add_cost_data(self, backend, cost):
