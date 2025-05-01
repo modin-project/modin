@@ -1781,6 +1781,12 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
     _pandas_class = pandas.core.groupby.SeriesGroupBy
 
+    # TODO(https://github.com/modin-project/modin/issues/7543):
+    # Currently this _extensions dict doesn't do anything, but we should
+    # add methods to register groupby accessors and make the groupby classes
+    # use this _extensions dict.
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
+
     @property
     def ndim(self):
         """
