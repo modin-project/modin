@@ -32,6 +32,9 @@ from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _assert_casting_functions_wrap_same_implementation,
+)
 from modin.pandas.io import from_pandas
 from modin.pandas.utils import is_scalar
 from modin.tests.test_utils import (
@@ -431,8 +434,12 @@ def test_aggregate_alias():
     # It's optimization. If failed, groupby().aggregate should be tested explicitly
     from modin.pandas.groupby import DataFrameGroupBy, SeriesGroupBy
 
-    assert DataFrameGroupBy.aggregate == DataFrameGroupBy.agg
-    assert SeriesGroupBy.aggregate == SeriesGroupBy.agg
+    _assert_casting_functions_wrap_same_implementation(
+        DataFrameGroupBy.aggregate, DataFrameGroupBy.agg
+    )
+    _assert_casting_functions_wrap_same_implementation(
+        SeriesGroupBy.aggregate, SeriesGroupBy.agg
+    )
 
 
 @pytest.mark.parametrize(
