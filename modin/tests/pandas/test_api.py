@@ -260,9 +260,11 @@ def test_groupby_api_equality(obj):
     )
     # FIXME: wrong inheritance
     ignore = (
-        ["boxplot", "corrwith", "dtypes"] if obj == "SeriesGroupBy" else ["boxplot"]
+        {"boxplot", "corrwith", "dtypes"} if obj == "SeriesGroupBy" else {"boxplot"}
+    ) | set(_MODIN_EXTRA_ATTRIBUTES)
+    extra_in_modin = (
+        set(modin_dir) - set(pandas_dir) - set(ignore) - set(_MODIN_EXTRA_ATTRIBUTES)
     )
-    extra_in_modin = set(modin_dir) - set(pandas_dir) - set(ignore)
     assert not len(extra_in_modin), "Differences found in API: {}".format(
         extra_in_modin
     )
