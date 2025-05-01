@@ -789,7 +789,18 @@ def wrap_function_in_argument_caster(
         if not AutoSwitchBackend.get() or (
             len(input_query_compilers) < 2 and pin_target_backend is not None
         ):
-            result = f(*args, **kwargs)
+            f_to_apply = _get_extension_for_method(
+                name=name,
+                extensions=extensions,
+                backend=(
+                    pin_target_backend
+                    if pin_target_backend is not None
+                    else Backend.get()
+                ),
+                args=args,
+                wrapping_function_type=wrapping_function_type,
+            )
+            result = f_to_apply(*args, **kwargs)
             if isinstance(result, QueryCompilerCaster):
                 result._set_backend_pinned(True, inplace=True)
             return result

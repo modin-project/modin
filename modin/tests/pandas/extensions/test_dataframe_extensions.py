@@ -14,6 +14,7 @@
 import re
 from unittest import mock
 
+import pandas
 import pytest
 
 import modin.pandas as pd
@@ -311,3 +312,22 @@ def test_disallowed_extensions(Backend1, non_extendable_attribute_name):
         register_dataframe_accessor(
             name=non_extendable_attribute_name, backend=Backend1
         )("unused_value")
+
+
+def test_correct_backend_with_pin(Backend1):
+    # Ensures that the correct implementation is used when dispatching an operation on a pinned
+    # frame, as an earlier implementation used the wrong extension method while preserving the
+    # correct backend.
+
+    @register_dataframe_accessor(name="__repr__", backend=Backend1)
+    def my_repr(self):
+        return "fake_repr"
+
+    with config_context(AutoSwitchBackend=False, Backend="Python_Test"):
+        df = pd.DataFrame([1])
+        assert df.get_backend() == "Python_Test"
+        assert repr(df) == repr(pandas.DataFrame([1]))
+        df.set_backend(Backend1, inplace=True)
+        df.pin_backend(inplace=True)
+        assert df.get_backend() == Backend1
+        assert repr(df) == "fake_repr"
