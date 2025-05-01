@@ -1332,8 +1332,6 @@ def test_cast_metrics(pico_df, cluster_df):
         add_metric_handler(test_handler)
         df3 = pd.concat([pico_df, cluster_df], axis=1)
         assert df3.get_backend() == "Cluster"  # result should be on cluster
-    except:
-        assert False
     finally:
         clear_metric_handler(test_handler)
 
@@ -1346,7 +1344,6 @@ def test_switch_metrics(pico_df, cluster_df):
         try:
 
             def test_handler(metric: str, value) -> None:
-                global metrics_intercept
                 if metric.startswith("modin.hybrid.auto"):
                     tokens = metric.split(".")
                     assert "from.Big_Data_Cloud.to.Small_Data_Local" in metric
@@ -1385,8 +1382,6 @@ def test_switch_metrics(pico_df, cluster_df):
             )
             df = pd.DataFrame([1] * 10)
             assert df.get_backend() == "Big_Data_Cloud"
-            out = df.describe()
-        except:
-            assert False
+            df.describe()
         finally:
             clear_metric_handler(test_handler)
