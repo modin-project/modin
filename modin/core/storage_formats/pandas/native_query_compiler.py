@@ -28,7 +28,6 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 )
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
-    QCCoercionCost,
 )
 from modin.utils import _inherit_docstrings
 
@@ -259,22 +258,3 @@ class NativeQueryCompiler(BaseQueryCompiler):
     @_inherit_docstrings(BaseQueryCompiler.repartition)
     def repartition(self, axis=None):
         raise Exception(_NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE)
-
-    @classmethod
-    def move_to_me_cost(cls, other_qc, api_cls_name, operation, arguments):
-        if api_cls_name in ("DataFrame", "Series") and operation == "__init__":
-            if (query_compiler := arguments.get("query_compiler")) is not None:
-                # When we create a dataframe or series with a query compiler
-                # input, we should not switch the resulting dataframe or series
-                # to a different backend.
-                return (
-                    QCCoercionCost.COST_ZERO
-                    if isinstance(query_compiler, cls)
-                    else QCCoercionCost.COST_IMPOSSIBLE
-                )
-            else:
-                # Otherwise we're constructing a dataframe or series from
-                # local data, which we assume is easy to store using the native
-                # backend.
-                return QCCoercionCost.COST_LOW
-        return super().move_to_me_cost(other_qc, api_cls_name, operation, arguments)
