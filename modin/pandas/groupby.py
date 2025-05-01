@@ -180,7 +180,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 
     @_inherit_docstrings(QueryCompilerCaster.is_backend_pinned)
     def is_backend_pinned(self) -> bool:
-        return False
+        ErrorMessage.not_implemented()
 
     @_inherit_docstrings(QueryCompilerCaster._set_backend_pinned)
     def _set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:

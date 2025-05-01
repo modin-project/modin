@@ -1202,9 +1202,9 @@ def test_concat_with_pin(pin_backends, expected_backend):
             )
 
 
+@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_groupby_pinned():
-    groupby = pd.DataFrame([1, 2]).groupby(0)
-    assert not groupby.is_backend_pinned()
+    pd.DataFrame([1, 2]).groupby(0).is_backend_pinned()
 
 
 @pytest.mark.xfail(strict=True, raises=NotImplementedError)
