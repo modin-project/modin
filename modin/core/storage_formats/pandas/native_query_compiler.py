@@ -28,7 +28,6 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 )
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
-    QCCoercionCost,
 )
 from modin.utils import _inherit_docstrings
 
@@ -259,4 +258,3 @@ class NativeQueryCompiler(BaseQueryCompiler):
     @_inherit_docstrings(BaseQueryCompiler.repartition)
     def repartition(self, axis=None):
         raise Exception(_NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE)
-
