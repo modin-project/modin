@@ -22,6 +22,7 @@ import pandas
 import pytest
 from pytest import param
 
+from modin.logging.metrics import add_metric_handler, clear_metric_handler
 import modin.pandas as pd
 from modin.config import context as config_context
 from modin.config.envvars import Backend, Engine, Execution
@@ -1094,3 +1095,84 @@ def test_concat_with_pin(pin_backends, expected_backend):
             df_equals(
                 result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
             )
+
+
+def test_cast_metrics(pico_df, cluster_df):
+    try:
+
+        def test_handler(metric: str, value) -> None:
+            if metric.startswith("modin.hybrid.cast"):
+                tokens = metric.split(".")
+                if tokens[5] == "Pico":
+                    assert value == 750
+                    return
+                if tokens[5] == "Cluster":
+                    assert value == 250
+                    return
+                if tokens[4] == "decision":
+                    assert tokens[5] == "Cluster"
+                    assert value == 1
+                    return
+                assert False
+
+        add_metric_handler(test_handler)
+        df3 = pd.concat([pico_df, cluster_df], axis=1)
+        assert df3.get_backend() == "Cluster"  # result should be on cluster
+    except:
+        assert False
+    finally:
+        clear_metric_handler(test_handler)
+
+
+def test_switch_metrics(pico_df, cluster_df):
+    with backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    ):
+        try:
+
+            def test_handler(metric: str, value) -> None:
+                global metrics_intercept
+                if metric.startswith("modin.hybrid.auto"):
+                    tokens = metric.split(".")
+                    assert "from.Big_Data_Cloud.to.Small_Data_Local" in metric
+                    if tokens[8] == "stay_cost":
+                        assert value == QCCoercionCost.COST_IMPOSSIBLE
+                        return
+                    if tokens[8] == "other_execute_cost":
+                        assert value == 1000
+                        return
+                    if tokens[8] == "move_to_cost":
+                        assert value == 0
+                        return
+                    if tokens[8] == "delta":
+                        assert value == 0
+                        return
+                    if tokens[8] == "delta":
+                        assert tokens[9] == "Big_Data_Cloud"
+                        assert value == 1
+                        return
+                    if tokens[8] == "api_cls_name":
+                        assert tokens[9] == "DataFrame"
+                        assert value == 1
+                        return
+                    if tokens[8] == "function_name":
+                        assert tokens[9] == "describe"
+                        assert value == 1
+                        return
+                    assert False
+
+            add_metric_handler(test_handler)
+
+            register_function_for_pre_op_switch(
+                class_name="DataFrame",
+                backend="Big_Data_Cloud",
+                method="describe",
+            )
+            df = pd.DataFrame([1] * 10)
+            assert df.get_backend() == "Big_Data_Cloud"
+            out = df.describe()
+        except:
+            assert False
+        finally:
+            clear_metric_handler(test_handler)
