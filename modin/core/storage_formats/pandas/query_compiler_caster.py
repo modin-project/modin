@@ -792,26 +792,6 @@ def wrap_function_in_argument_caster(
         # 4. If there are multiple query compilers, at least two of which are pinned to distinct
         #    backends, raise a ValueError.
 
-        inputs_pinned = (
-            len(input_query_compilers) < 2 and pin_target_backend is not None
-        )
-        if not AutoSwitchBackend.get() or inputs_pinned:
-            f_to_apply = _get_extension_for_method(
-                name=name,
-                extensions=extensions,
-                backend=(
-                    pin_target_backend
-                    if pin_target_backend is not None
-                    else Backend.get()
-                ),
-                args=args,
-                wrapping_function_type=wrapping_function_type,
-            )
-            result = f_to_apply(*args, **kwargs)
-            if isinstance(result, QueryCompilerCaster) and inputs_pinned:
-                result._set_backend_pinned(True, inplace=True)
-            return result
-
         if len(input_query_compilers) == 0:
             # For nullary functions, we need to create a dummy query compiler
             # to calculate the cost of switching backends.
@@ -826,6 +806,26 @@ def wrap_function_in_argument_caster(
         else:
             input_qc_for_pre_op_switch = input_query_compilers[0]
             input_backend = input_qc_for_pre_op_switch.get_backend()
+
+        inputs_pinned = (
+            len(input_query_compilers) < 2 and pin_target_backend is not None
+        )
+        if not AutoSwitchBackend.get() or inputs_pinned:
+            f_to_apply = _get_extension_for_method(
+                name=name,
+                extensions=extensions,
+                backend=(
+                    pin_target_backend
+                    if pin_target_backend is not None
+                    else input_backend
+                ),
+                args=args,
+                wrapping_function_type=wrapping_function_type,
+            )
+            result = f_to_apply(*args, **kwargs)
+            if isinstance(result, QueryCompilerCaster) and inputs_pinned:
+                result._set_backend_pinned(True, inplace=True)
+            return result
 
         # Bind the arguments using the function implementation for the input
         # backend. TODO(https://github.com/modin-project/modin/issues/7525):
