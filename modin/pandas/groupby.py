@@ -101,6 +101,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
     # add methods to register groupby accessors and make the groupby classes
     # use this _extensions dict.
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
+    _pinned: bool = False
 
     def __init__(
         self,
