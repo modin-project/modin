@@ -19,7 +19,7 @@ import warnings
 from collections.abc import Iterable
 from functools import cached_property
 from types import BuiltinFunctionType
-from typing import TYPE_CHECKING, Hashable, Union
+from typing import TYPE_CHECKING, Hashable, Optional, Union
 
 import numpy as np
 import pandas
@@ -35,9 +35,14 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
 )
 from pandas.errors import SpecificationError
+from typing_extensions import Self
 
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    EXTENSION_DICT_TYPE,
+    QueryCompilerCaster,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.utils import cast_function_modin2pandas
@@ -86,11 +91,16 @@ _DEFAULT_BEHAVIOUR = {
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(ClassLogger):  # noqa: GL08
+class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
     _return_tuple_when_iterating = False
     _df: Union[DataFrame, Series]
     _query_compiler: BaseQueryCompiler
+    # TODO(https://github.com/modin-project/modin/issues/7543):
+    # Currently this _extensions dict doesn't do anything, but we should
+    # add methods to register groupby accessors and make the groupby classes
+    # use this _extensions dict.
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     def __init__(
         self,
@@ -148,6 +158,46 @@ class DataFrameGroupBy(ClassLogger):  # noqa: GL08
         }
         self._kwargs.update(kwargs)
 
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
+    def _get_query_compiler(self) -> Optional[BaseQueryCompiler]:
+        if hasattr(self, "_df"):
+            return self._df._query_compiler
+        return None
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
+    def get_backend(self) -> str:
+        return self._df.get_backend()
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
+    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
+        # TODO(https://github.com/modin-project/modin/issues/7544): implement
+        # this method to support automatic pre-operation backend switch for
+        # groupby methods.
+        ErrorMessage.not_implemented()
+
+    @_inherit_docstrings(QueryCompilerCaster.is_backend_pinned)
+    def is_backend_pinned(self) -> bool:
+        return False
+
+    @_inherit_docstrings(QueryCompilerCaster._set_backend_pinned)
+    def _set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:
+        ErrorMessage.not_implemented()
+
+    @_inherit_docstrings(QueryCompilerCaster.pin_backend)
+    def pin_backend(self, inplace: bool = False) -> Optional[Self]:
+        ErrorMessage.not_implemented()
+
+    @disable_logging
+    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
+    def _copy_into(self, other: Self) -> None:
+        # TODO(https://github.com/modin-project/modin/issues/7544): implement
+        # this method to support automatic pre-operation backend switch for
+        # groupby methods.
+        ErrorMessage.not_implemented()
+
     def _override(self, **kwargs):
         """
         Override groupby parameters.
@@ -190,7 +240,7 @@ class DataFrameGroupBy(ClassLogger):  # noqa: GL08
         try:
             return object.__getattribute__(self, key)
         except AttributeError as err:
-            if key in self._columns:
+            if key != "_columns" and key in self._columns:
                 return self.__getitem__(key)
             raise err
 
@@ -1730,6 +1780,12 @@ class DataFrameGroupBy(ClassLogger):  # noqa: GL08
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
     _pandas_class = pandas.core.groupby.SeriesGroupBy
+
+    # TODO(https://github.com/modin-project/modin/issues/7543):
+    # Currently this _extensions dict doesn't do anything, but we should
+    # add methods to register groupby accessors and make the groupby classes
+    # use this _extensions dict.
+    _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     @property
     def ndim(self):
