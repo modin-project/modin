@@ -107,6 +107,8 @@ class BackendCostCalculator:
         """
         if self._result_backend is not None:
             return self._result_backend
+        if len(self._qc_list) == 1:
+            return self._qc_list[0].get_backend()
         if len(self._qc_list) == 0:
             raise ValueError("No query compilers registered")
 
@@ -152,16 +154,16 @@ class BackendCostCalculator:
             logging.info(
                 f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
             )
+            DECIDED_TO_SWITCH = 1
+            emit_metric(
+                f"hybrid.cast.decision.{self._result_backend}.{hybrid_metrics_calc_group}",
+                DECIDED_TO_SWITCH,
+            )
 
         if self._result_backend is None:
             raise ValueError(
                 f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
             )
-        DECIDED_TO_SWITCH = 1
-        emit_metric(
-            f"hybrid.cast.decision.{self._result_backend}.{hybrid_metrics_calc_group}",
-            DECIDED_TO_SWITCH,
-        )
         return self._result_backend
 
     def _add_cost_data(self, backend, cost):
