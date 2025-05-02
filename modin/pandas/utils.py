@@ -64,6 +64,9 @@ backend : str
     The name of the backend to set.
 inplace : bool, default: False
     Whether to modify this ``{class_name}`` in place.
+switch_operation : Optional[str], default: None
+    The name of the operation that triggered the set_backend call.
+    Internal argument used for displaying progress bar information.
 
 Returns
 -------

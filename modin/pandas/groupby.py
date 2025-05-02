@@ -166,13 +166,19 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         return None
 
     @disable_logging
-    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
+    @_inherit_docstrings(QueryCompilerCaster.get_backend)
     def get_backend(self) -> str:
         return self._df.get_backend()
 
     @disable_logging
-    @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
-    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
+    @_inherit_docstrings(QueryCompilerCaster.set_backend)
+    def set_backend(
+        self,
+        backend: str,
+        inplace: bool = False,
+        *,
+        switch_operation: Optional[str] = None,
+    ) -> Optional[Self]:
         # TODO(https://github.com/modin-project/modin/issues/7544): implement
         # this method to support automatic pre-operation backend switch for
         # groupby methods.

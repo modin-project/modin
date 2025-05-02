@@ -4496,7 +4496,9 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             return self
 
     @doc(SET_BACKEND_DOC, class_name=__qualname__)
-    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
+    def set_backend(
+        self, backend: str, inplace: bool = False, *, switch_operation: str = None
+    ) -> Optional[Self]:
         # TODO(https://github.com/modin-project/modin/issues/7467): refactor
         # to avoid this cyclic import in most places we do I/O, e.g. in
         # modin/pandas/io.py
@@ -4510,12 +4512,18 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             try:
                 from tqdm.auto import trange
 
-                progress_iter = iter(
-                    trange(
-                        progress_split_count,
-                        desc=f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} ...",
+                max_rows, max_cols = self._query_compiler._max_shape()
+                if switch_operation is None:
+                    desc = (
+                        f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)}"
+                        + f" with max estimated shape {max_rows}x{max_cols}"
                     )
-                )
+                else:
+                    desc = (
+                        f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} for"
+                        + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
+                    )
+                progress_iter = iter(trange(progress_split_count, desc=desc))
             except ImportError:
                 # Iterate over blank range(2) if tqdm is not installed
                 pass
