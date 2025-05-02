@@ -32,7 +32,7 @@ https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Optional, Self, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import pandas
@@ -53,6 +53,8 @@ from .series import Series
 from .utils import is_scalar
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from modin.core.storage_formats import BaseQueryCompiler
 
 
