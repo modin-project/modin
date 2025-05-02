@@ -452,7 +452,7 @@ def _maybe_switch_backend_pre_op(
         arg.set_backend(
             result_backend,
             inplace=True,
-            switch_oepration=f"{class_of_wrapped_fn}.{function_name}",
+            switch_operation=f"{class_of_wrapped_fn}.{function_name}",
         )
         return arg
 
