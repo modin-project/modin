@@ -3360,8 +3360,16 @@ class DataFrame(BasePandasDataset):
     # Persistance support methods - END
 
     @doc(SET_BACKEND_DOC, class_name=__qualname__)
-    def set_backend(self, backend: str, inplace: bool = False) -> Optional[Self]:
-        return super().set_backend(backend=backend, inplace=inplace)
+    def set_backend(
+        self,
+        backend: str,
+        inplace: bool = False,
+        *,
+        switch_operation: Optional[str] = None,
+    ) -> Optional[Self]:
+        return super().set_backend(
+            backend=backend, inplace=inplace, switch_operation=switch_operation
+        )
 
     move_to = set_backend
 

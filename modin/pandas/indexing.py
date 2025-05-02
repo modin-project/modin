@@ -32,7 +32,7 @@ https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Self, Union
 
 import numpy as np
 import pandas
@@ -333,8 +333,12 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster.set_backend)
-    def set_backend(self, backend, inplace: bool = False):
-        result = type(self)(self.df.set_backend(backend))
+    def set_backend(
+        self, backend, inplace: bool = False, *, switch_operation: Optional[str] = None
+    ) -> Optional[Self]:
+        result = type(self)(
+            self.df.set_backend(backend, switch_operation=switch_operation)
+        )
         if inplace:
             result._copy_into(self)
             return None
