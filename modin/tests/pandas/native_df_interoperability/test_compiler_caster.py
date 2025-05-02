@@ -1344,3 +1344,18 @@ def test_native_config():
         qc = BClass(pandas.DataFrame([0, 1, 2]))
         assert qc._TRANSFER_THRESHOLD == 321
         assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
+
+def test_groupby_pinned():
+    groupby = pd.DataFrame([1, 2]).groupby(0)
+    assert not groupby.is_backend_pinned()
+
+
+@pytest.mark.xfail(strict=True, raises=NotImplementedError)
+def test_groupby_pin_backend():
+    groupby = pd.DataFrame([1, 2]).groupby(0)
+    groupby.pin_backend()
+
+
+@pytest.mark.xfail(strict=True, raises=NotImplementedError)
+def test_groupby_set_backend_pinned():
+    pd.DataFrame([1, 2]).groupby(0)._set_backend_pinned(inplace=False, pinned=True)
