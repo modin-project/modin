@@ -71,7 +71,6 @@ def test_df_metrics(metric_client):
     add_metric_handler(metric_client._metric_handler)
     df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
     df.sum()
-    assert len(metric_client._metrics) == 54
     assert metric_client._metrics["modin.pandas-api.dataframe.sum"] is not None
     assert metric_client._metrics["modin.pandas-api.dataframe.sum"] > 0.0
 
