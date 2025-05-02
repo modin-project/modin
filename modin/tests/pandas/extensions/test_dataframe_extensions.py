@@ -331,3 +331,14 @@ def test_correct_backend_with_pin(Backend1):
         df.pin_backend(inplace=True)
         assert df.get_backend() == Backend1
         assert repr(df) == "fake_repr"
+
+
+def test_get_extension_from_dataframe_that_is_on_non_default_backend_when_auto_switch_is_false(
+    Backend1,
+):
+    with config_context(AutoSwitchBackend=False, Backend=Backend1):
+        pandas_df = pd.DataFrame([1, 2]).move_to("Pandas")
+        register_dataframe_accessor("sum", backend="Pandas")(
+            lambda df: "small_sum_result"
+        )
+        assert pandas_df.sum() == "small_sum_result"
