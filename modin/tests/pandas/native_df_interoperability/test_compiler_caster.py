@@ -38,7 +38,10 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     register_function_for_post_op_switch,
     register_function_for_pre_op_switch,
 )
-from modin.pandas.api.extensions import register_pd_accessor
+from modin.pandas.api.extensions import (
+    register_pd_accessor,
+    register_dataframe_accessor,
+)
 from modin.tests.pandas.utils import create_test_dfs, df_equals, eval_general
 
 BIG_DATA_CLOUD_MIN_NUM_ROWS = 10
@@ -1216,3 +1219,16 @@ def test_groupby_pin_backend():
 @pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_groupby_set_backend_pinned():
     pd.DataFrame([1, 2]).groupby(0)._set_backend_pinned(inplace=False, pinned=True)
+
+
+def test_get_extension_from_dataframe_that_is_on_non_default_backend_when_auto_switch_is_false():
+    with backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    ), config_context(AutoSwitchBackend=False):
+        big_df = pd.DataFrame([1, 2])
+        small_df = big_df.move_to("Small_Data_Local")
+        register_dataframe_accessor("sum", backend="Small_Data_Local")(
+            lambda df: "small_sum_result"
+        )
+        assert small_df.sum() == "small_sum_result"
