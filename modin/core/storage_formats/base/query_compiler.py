@@ -356,13 +356,18 @@ class BaseQueryCompiler(
         """
         if isinstance(self, other_qc_type):
             return QCCoercionCost.COST_ZERO
-        if self._TRANSFER_THRESHOLD <= 0:
+        if type(self)._TRANSFER_THRESHOLD <= 0:
             return QCCoercionCost.COST_ZERO
         cost = int(
             (
                 QCCoercionCost.COST_IMPOSSIBLE
+<<<<<<< HEAD
                 * self._max_shape()[0]
                 / self._TRANSFER_THRESHOLD
+=======
+                * self.get_axis_len(axis=0)
+                / type(self)._TRANSFER_THRESHOLD
+>>>>>>> efd69cf3 (More dynamic envs)
             )
         )
         if cost > QCCoercionCost.COST_IMPOSSIBLE:
@@ -445,10 +450,10 @@ class BaseQueryCompiler(
             Cost of doing this operation on the current backend.
         """
         return self._stay_cost_rows(
-            self._max_shape()[0],
-            self._OPERATION_PER_ROW_OVERHEAD,
-            self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
-            self._OPERATION_INITIALIZATION_OVERHEAD,
+            self.get_axis_len(axis=0),
+            type(self)._OPERATION_PER_ROW_OVERHEAD,
+            type(self)._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
+            type(self)._OPERATION_INITIALIZATION_OVERHEAD,
         )
 
     @disable_logging

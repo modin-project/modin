@@ -93,11 +93,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
         The pandas frame to query with the compiled queries.
     """
 
-    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
-    _OPERATION_INITIALIZATION_OVERHEAD = 0
-    _OPERATION_PER_ROW_OVERHEAD = 0
-    _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
-
     _modin_frame: pandas.DataFrame
     _should_warn_on_default_to_pandas: bool = False
 
@@ -116,6 +111,11 @@ class NativeQueryCompiler(BaseQueryCompiler):
             pandas_frame = pandas.DataFrame(pandas_frame)
 
         self._modin_frame = pandas_frame
+        print(f"Setting max rows to {NativePandasMaxRows.get()} from {NativeQueryCompiler._MAX_SIZE_THIS_ENGINE_CAN_HANDLE}")
+        NativeQueryCompiler._MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
+        NativeQueryCompiler._OPERATION_INITIALIZATION_OVERHEAD = 0
+        NativeQueryCompiler._OPERATION_PER_ROW_OVERHEAD = 0
+        NativeQueryCompiler._TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
 
     storage_format = property(
         lambda self: "Native", doc=BaseQueryCompiler.storage_format.__doc__
