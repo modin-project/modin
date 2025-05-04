@@ -226,7 +226,6 @@ class DefaultQC2(CalculatorTestQc):
 
 
 class BaseTestAutoMover(NativeQueryCompiler):
-
     def __init__(self, pandas_frame):
         super().__init__(pandas_frame)
 
@@ -1324,26 +1323,11 @@ def test_native_config():
     qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
     assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
     assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
-
-    with config_context(NativePandasMaxRows=123):
-
-        class AClass(NativeQueryCompiler):
-            _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
-            pass
-
-        qc = AClass(pandas.DataFrame([0, 1, 2]))
-        assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
+    with config_context(NativePandasMaxRows=123, NativePandasTransferThreshold=321):
+        qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
+        assert qc._TRANSFER_THRESHOLD == 321
         assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
 
-    with config_context(NativePandasTransferThreshold=321):
-
-        class BClass(NativeQueryCompiler):
-            _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
-            pass
-
-        qc = BClass(pandas.DataFrame([0, 1, 2]))
-        assert qc._TRANSFER_THRESHOLD == 321
-        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
 
 def test_groupby_pinned():
     groupby = pd.DataFrame([1, 2]).groupby(0)
