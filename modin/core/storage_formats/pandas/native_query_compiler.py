@@ -111,7 +111,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
             pandas_frame = pandas.DataFrame(pandas_frame)
 
         self._modin_frame = pandas_frame
-        print(f"Setting max rows to {NativePandasMaxRows.get()} from {NativeQueryCompiler._MAX_SIZE_THIS_ENGINE_CAN_HANDLE}")
         NativeQueryCompiler._MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
         NativeQueryCompiler._OPERATION_INITIALIZATION_OVERHEAD = 0
         NativeQueryCompiler._OPERATION_PER_ROW_OVERHEAD = 0

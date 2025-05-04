@@ -361,13 +361,9 @@ class BaseQueryCompiler(
         cost = int(
             (
                 QCCoercionCost.COST_IMPOSSIBLE
-<<<<<<< HEAD
                 * self._max_shape()[0]
                 / self._TRANSFER_THRESHOLD
-=======
-                * self.get_axis_len(axis=0)
                 / type(self)._TRANSFER_THRESHOLD
->>>>>>> efd69cf3 (More dynamic envs)
             )
         )
         if cost > QCCoercionCost.COST_IMPOSSIBLE:
