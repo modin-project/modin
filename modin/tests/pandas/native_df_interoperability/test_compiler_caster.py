@@ -226,7 +226,6 @@ class DefaultQC2(CalculatorTestQc):
 
 
 class BaseTestAutoMover(NativeQueryCompiler):
-
     def __init__(self, pandas_frame):
         super().__init__(pandas_frame)
 
@@ -658,7 +657,6 @@ def test_max_shape(cloud_df):
 
 @contextlib.contextmanager
 def backend_test_context(test_backend: str, choices: set) -> Iterator[None]:
-
     old_default_backend = Backend.get()
     old_backend_choices = Backend.get_active_backends()
     try:
@@ -1262,6 +1260,7 @@ def test_concat_with_pin(pin_backends, expected_backend):
                 result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
             )
 
+
 def test_native_config():
     qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
     assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
@@ -1278,9 +1277,10 @@ def test_native_config():
         assert qc2._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
         assert qc2._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
         assert NativeQueryCompiler._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == old_max
-        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE== old_max
+        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == old_max
 
     with config_context(NativePandasTransferThreshold=321):
+
         class BClass(NativeQueryCompiler):
             _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
 
@@ -1288,7 +1288,8 @@ def test_native_config():
         assert qc3._TRANSFER_THRESHOLD == 321
         assert qc3._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
         assert NativeQueryCompiler._TRANSFER_THRESHOLD == old_thresh
-        assert qc._TRANSFER_THRESHOLD== old_thresh
+        assert qc._TRANSFER_THRESHOLD == old_thresh
+
 
 def test_groupby_pinned():
     groupby = pd.DataFrame([1, 2]).groupby(0)
