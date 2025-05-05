@@ -1305,3 +1305,15 @@ def test_groupby_pin_backend():
 @pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_groupby_set_backend_pinned():
     pd.DataFrame([1, 2]).groupby(0)._set_backend_pinned(inplace=False, pinned=True)
+def test_second_init_only_calls_from_pandas_once_github_issue_7559():
+    with config_context(Backend="Big_Data_Cloud"):
+        # Create a dataframe once first so that we can initialize the dummy
+        # query compiler for the Big_Data_Cloud backend.
+        pd.DataFrame([1])
+        with mock.patch.object(
+            factories.Big_Data_CloudOnNativeFactory.io_cls.query_compiler_cls,
+            "from_pandas",
+            wraps=factories.Big_Data_CloudOnNativeFactory.io_cls.query_compiler_cls.from_pandas,
+        ) as mock_from_pandas:
+            pd.DataFrame([1])
+            mock_from_pandas.assert_called_once()
