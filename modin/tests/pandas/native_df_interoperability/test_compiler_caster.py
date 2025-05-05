@@ -1257,3 +1257,17 @@ def test_concat_with_pin(pin_backends, expected_backend):
             df_equals(
                 result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
             )
+
+
+def test_second_init_only_calls_from_pandas_once_github_issue_7559():
+    with config_context(Backend="Big_Data_Cloud"):
+        # Create a dataframe once first so that we can initialize the dummy
+        # query compiler for the Big_Data_Cloud backend.
+        pd.DataFrame([1])
+        with mock.patch.object(
+            factories.Big_Data_CloudOnNativeFactory.io_cls.query_compiler_cls,
+            "from_pandas",
+            wraps=factories.Big_Data_CloudOnNativeFactory.io_cls.query_compiler_cls.from_pandas,
+        ) as mock_from_pandas:
+            pd.DataFrame([1])
+            mock_from_pandas.assert_called_once()
