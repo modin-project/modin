@@ -1298,6 +1298,6 @@ def test_native_config():
     # back and forth frequently
     assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
     assert qc._TRANSFER_THRESHOLD == 321
-    qc3 = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
+    NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
     assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == oldmax
     assert qc._TRANSFER_THRESHOLD == oldthresh
