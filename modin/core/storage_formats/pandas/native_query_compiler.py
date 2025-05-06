@@ -23,14 +23,11 @@ from typing import Optional
 import pandas
 from pandas.core.dtypes.common import is_scalar
 
-from modin.config.envvars import NativePandasMaxRows
-from modin.config.envvars import NativePandasTransferThreshold
+from modin.config.envvars import NativePandasMaxRows, NativePandasTransferThreshold
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
-from modin.core.storage_formats.base.query_compiler import (
-    BaseQueryCompiler,
-)
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
 
 _NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE = (
