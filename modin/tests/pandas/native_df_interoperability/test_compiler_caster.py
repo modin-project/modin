@@ -1261,36 +1261,6 @@ def test_concat_with_pin(pin_backends, expected_backend):
             )
 
 
-def test_native_config():
-    qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
-    assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
-    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
-    old_thresh = NativePandasTransferThreshold.get()
-    old_max = NativePandasMaxRows.get()
-
-    with config_context(NativePandasMaxRows=123):
-
-        class AClass(NativeQueryCompiler):
-            _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
-
-        qc2 = AClass(pandas.DataFrame([0, 1, 2]))
-        assert qc2._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
-        assert qc2._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
-        assert NativeQueryCompiler._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == old_max
-        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == old_max
-
-    with config_context(NativePandasTransferThreshold=321):
-
-        class BClass(NativeQueryCompiler):
-            _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
-
-        qc3 = BClass(pandas.DataFrame([0, 1, 2]))
-        assert qc3._TRANSFER_THRESHOLD == 321
-        assert qc3._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
-        assert NativeQueryCompiler._TRANSFER_THRESHOLD == old_thresh
-        assert qc._TRANSFER_THRESHOLD == old_thresh
-
-
 def test_groupby_pinned():
     groupby = pd.DataFrame([1, 2]).groupby(0)
     assert not groupby.is_backend_pinned()
@@ -1305,6 +1275,8 @@ def test_groupby_pin_backend():
 @pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_groupby_set_backend_pinned():
     pd.DataFrame([1, 2]).groupby(0)._set_backend_pinned(inplace=False, pinned=True)
+
+
 def test_second_init_only_calls_from_pandas_once_github_issue_7559():
     with config_context(Backend="Big_Data_Cloud"):
         # Create a dataframe once first so that we can initialize the dummy
@@ -1327,19 +1299,3 @@ def test_native_config():
         qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
         assert qc._TRANSFER_THRESHOLD == 321
         assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
-
-
-def test_groupby_pinned():
-    groupby = pd.DataFrame([1, 2]).groupby(0)
-    assert not groupby.is_backend_pinned()
-
-
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
-def test_groupby_pin_backend():
-    groupby = pd.DataFrame([1, 2]).groupby(0)
-    groupby.pin_backend()
-
-
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
-def test_groupby_set_backend_pinned():
-    pd.DataFrame([1, 2]).groupby(0)._set_backend_pinned(inplace=False, pinned=True)
