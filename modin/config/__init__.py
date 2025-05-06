@@ -44,6 +44,8 @@ from modin.config.envvars import (
     MinPartitionSize,
     MinRowPartitionSize,
     ModinNumpy,
+    NativePandasMaxRows,
+    NativePandasTransferThreshold,
     NPartitions,
     PersistentPickle,
     ProgressBar,
@@ -85,6 +87,9 @@ __all__ = [
     "LazyExecution",
     # Dask specific
     "DaskThreadsPerWorker",
+    # Native Pandas Specific
+    "NativePandasMaxRows",
+    "NativePandasTransferThreshold",
     # Partitioning
     "NPartitions",
     "MinPartitionSize",

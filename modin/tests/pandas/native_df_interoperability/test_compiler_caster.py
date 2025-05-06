@@ -24,7 +24,13 @@ from pytest import param
 
 import modin.pandas as pd
 from modin.config import context as config_context
-from modin.config.envvars import Backend, Engine, Execution
+from modin.config.envvars import (
+    Backend,
+    Engine,
+    Execution,
+    NativePandasMaxRows,
+    NativePandasTransferThreshold,
+)
 from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.factories import BaseFactory
 from modin.core.io.io import BaseIO
@@ -1271,3 +1277,27 @@ def test_second_init_only_calls_from_pandas_once_github_issue_7559():
         ) as mock_from_pandas:
             pd.DataFrame([1])
             mock_from_pandas.assert_called_once()
+
+
+def test_native_config():
+    qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
+    assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
+    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
+    oldmax = qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE
+    oldthresh = qc._TRANSFER_THRESHOLD
+
+    with config_context(NativePandasMaxRows=123, NativePandasTransferThreshold=321):
+        qc2 = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
+        assert qc2._TRANSFER_THRESHOLD == 321
+        assert qc2._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
+        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
+        assert qc._TRANSFER_THRESHOLD == 321
+
+    # The setting does not get reset until a new NativeQueryCompiler is
+    # created, which should be OK because we do not expect people to switch this
+    # back and forth frequently
+    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
+    assert qc._TRANSFER_THRESHOLD == 321
+    qc3 = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
+    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == oldmax
+    assert qc._TRANSFER_THRESHOLD == oldthresh

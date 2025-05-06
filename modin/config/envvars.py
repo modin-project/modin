@@ -1305,6 +1305,27 @@ class DaskThreadsPerWorker(EnvironmentVariable, type=int):
     default = 1
 
 
+class NativePandasMaxRows(EnvironmentVariable, type=int):
+    """
+    Maximum number of rows which can be processed using local, native, pandas.
+    """
+
+    varname = "MODIN_NATIVE_MAX_ROWS"
+    default = 10_000_000
+
+
+class NativePandasTransferThreshold(EnvironmentVariable, type=int):
+    """
+    Targeted max number of dataframe rows which should be transferred between engines.
+
+    This is often the same value as MODIN_NATIVE_MAX_ROWS but it can be independently
+    set to change how transfer costs are considered.
+    """
+
+    varname = "MODIN_NATIVE_MAX_XFER_ROWS"
+    default = 10_000_000
+
+
 class DynamicPartitioning(EnvironmentVariable, type=bool):
     """
     Set to true to use Modin's dynamic-partitioning implementation where possible.
