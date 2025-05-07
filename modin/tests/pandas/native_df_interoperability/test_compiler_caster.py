@@ -793,6 +793,63 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             assert modin_result.get_backend() == expected_backend
             assert modin_df.get_backend() == "Big_Data_Cloud"
 
+    @pytest.mark.parametrize(
+        "groupby_class,operation",
+        [
+            param(
+                "DataFrameGroupBy",
+                lambda groupby: groupby.sum(),
+                id="DataFrameGroupBy",
+            ),
+            param(
+                "SeriesGroupBy",
+                lambda groupby: groupby["col1"].sum(),
+                id="SeriesGroupBy",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "auto_switch_backend",
+        [True, False],
+        ids=lambda param: f"auto_switch_backend_{param}",
+    )
+    def test_auto_switch_config_can_disable_groupby_agg_auto_switch(
+        self,
+        operation,
+        groupby_class,
+        auto_switch_backend,
+    ):
+        num_groups = BIG_DATA_CLOUD_MIN_NUM_ROWS - 1
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ), config_context(AutoSwitchBackend=auto_switch_backend):
+            modin_groupby, pandas_groupby = (
+                df.groupby("col0")
+                for df in create_test_dfs(
+                    {
+                        "col0": list(range(num_groups)),
+                        "col1": list(range(1, num_groups + 1)),
+                    }
+                )
+            )
+
+            assert modin_groupby.get_backend() == "Big_Data_Cloud"
+            assert operation(modin_groupby).get_backend() == "Big_Data_Cloud"
+
+            register_function_for_post_op_switch(
+                class_name=groupby_class, backend="Big_Data_Cloud", method="sum"
+            )
+
+            assert modin_groupby.get_backend() == "Big_Data_Cloud"
+            modin_result = operation(modin_groupby)
+            pandas_result = operation(pandas_groupby)
+            df_equals(modin_result, pandas_result)
+            assert modin_result.get_backend() == (
+                "Small_Data_Local" if auto_switch_backend else "Big_Data_Cloud"
+            )
+            assert modin_groupby.get_backend() == "Big_Data_Cloud"
+
 
 class TestSwitchBackendPreOp:
     @pytest.mark.parametrize(
@@ -1202,17 +1259,15 @@ def test_concat_with_pin(pin_backends, expected_backend):
             )
 
 
-def test_groupby_pinned():
-    groupby = pd.DataFrame([1, 2]).groupby(0)
-    assert not groupby.is_backend_pinned()
-
-
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
-def test_groupby_pin_backend():
-    groupby = pd.DataFrame([1, 2]).groupby(0)
-    groupby.pin_backend()
-
-
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
-def test_groupby_set_backend_pinned():
-    pd.DataFrame([1, 2]).groupby(0)._set_backend_pinned(inplace=False, pinned=True)
+def test_second_init_only_calls_from_pandas_once_github_issue_7559():
+    with config_context(Backend="Big_Data_Cloud"):
+        # Create a dataframe once first so that we can initialize the dummy
+        # query compiler for the Big_Data_Cloud backend.
+        pd.DataFrame([1])
+        with mock.patch.object(
+            factories.Big_Data_CloudOnNativeFactory.io_cls.query_compiler_cls,
+            "from_pandas",
+            wraps=factories.Big_Data_CloudOnNativeFactory.io_cls.query_compiler_cls.from_pandas,
+        ) as mock_from_pandas:
+            pd.DataFrame([1])
+            mock_from_pandas.assert_called_once()

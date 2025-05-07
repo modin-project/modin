@@ -88,6 +88,25 @@ _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS: _AUTO_SWITCH_CLASS = _AUTO_SWITCH_C
 )
 
 
+def _get_empty_qc_for_default_backend() -> BaseQueryCompiler:
+    """
+    Get an empty query compiler for the default backend.
+
+    Returns
+    -------
+    BaseQueryCompiler
+        An empty query compiler for the default backend.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return FactoryDispatcher.get_factory().io_cls.from_pandas(pandas.DataFrame())
+
+
+_BACKEND_TO_EMPTY_QC: defaultdict[str, BaseQueryCompiler] = defaultdict(
+    _get_empty_qc_for_default_backend
+)
+
+
 class QueryCompilerCaster(ABC):
     """Cast all query compiler arguments of the member function to current query compiler."""
 
@@ -803,39 +822,35 @@ def wrap_function_in_argument_caster(
         # 4. If there are multiple query compilers, at least two of which are pinned to distinct
         #    backends, raise a ValueError.
 
-        if not AutoSwitchBackend.get() or (
+        if len(input_query_compilers) == 0:
+            input_backend = Backend.get()
+            # For nullary functions, we need to create a dummy query compiler
+            # to calculate the cost of switching backends. We should only
+            # create the dummy query compiler once per backend.
+            input_qc_for_pre_op_switch = _BACKEND_TO_EMPTY_QC[input_backend]
+        else:
+            input_qc_for_pre_op_switch = input_query_compilers[0]
+            input_backend = input_qc_for_pre_op_switch.get_backend()
+
+        inputs_pinned = (
             len(input_query_compilers) < 2 and pin_target_backend is not None
-        ):
+        )
+        if not AutoSwitchBackend.get() or inputs_pinned:
             f_to_apply = _get_extension_for_method(
                 name=name,
                 extensions=extensions,
                 backend=(
                     pin_target_backend
                     if pin_target_backend is not None
-                    else Backend.get()
+                    else input_backend
                 ),
                 args=args,
                 wrapping_function_type=wrapping_function_type,
             )
             result = f_to_apply(*args, **kwargs)
-            if isinstance(result, QueryCompilerCaster):
+            if isinstance(result, QueryCompilerCaster) and inputs_pinned:
                 result._set_backend_pinned(True, inplace=True)
             return result
-
-        if len(input_query_compilers) == 0:
-            # For nullary functions, we need to create a dummy query compiler
-            # to calculate the cost of switching backends.
-            from modin.core.execution.dispatching.factories.dispatcher import (
-                FactoryDispatcher,
-            )
-
-            input_qc_for_pre_op_switch = (
-                FactoryDispatcher.get_factory().io_cls.from_pandas(pandas.DataFrame())
-            )
-            input_backend = Backend.get()
-        else:
-            input_qc_for_pre_op_switch = input_query_compilers[0]
-            input_backend = input_qc_for_pre_op_switch.get_backend()
 
         # Bind the arguments using the function implementation for the input
         # backend. TODO(https://github.com/modin-project/modin/issues/7525):
