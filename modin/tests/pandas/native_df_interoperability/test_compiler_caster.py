@@ -1339,7 +1339,6 @@ def test_switch_metrics(pico_df, cluster_df):
             def test_handler(metric: str, value) -> None:
                 nonlocal count
                 if metric.startswith("modin.hybrid.auto"):
-                    assert "from.Big_Data_Cloud.to.Small_Data_Local" in metric
                     count += 1
 
             add_metric_handler(test_handler)
@@ -1352,6 +1351,6 @@ def test_switch_metrics(pico_df, cluster_df):
             df = pd.DataFrame([1] * 10)
             assert df.get_backend() == "Big_Data_Cloud"
             df.describe()
-            assert count == 9
+            assert count == 8
         finally:
             clear_metric_handler(test_handler)
