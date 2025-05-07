@@ -4508,19 +4508,21 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
 
         progress_split_count = 2
         progress_iter = iter(range(progress_split_count))
-        if Backend.normalize(backend) != self.get_backend():
+        self_backend = self.get_backend()
+        normalized_backend = Backend.normalize(backend)
+        if normalized_backend != self_backend:
             try:
                 from tqdm.auto import trange
 
                 max_rows, max_cols = self._query_compiler._max_shape()
                 if switch_operation is None:
                     desc = (
-                        f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)}"
+                        f"Transferring data from {self_backend} to {normalized_backend}"
                         + f" with max estimated shape {max_rows}x{max_cols}"
                     )
                 else:
                     desc = (
-                        f"Transferring data from {self.get_backend()} to {Backend.normalize(backend)} for"
+                        f"Transferring data from {self_backend} to {normalized_backend} for"
                         + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
                     )
                 progress_iter = iter(trange(progress_split_count, desc=desc))

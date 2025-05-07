@@ -212,7 +212,7 @@ class QueryCompilerCaster(ABC):
         backend : str
             The new backend.
 
-        inplace : bool, default False
+        inplace : bool, default: False
             Whether to update the object in place.
 
         switch_operation : Optional[str], default None
