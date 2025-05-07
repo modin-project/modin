@@ -91,10 +91,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
         The pandas frame to query with the compiled queries.
     """
 
-    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
     _OPERATION_INITIALIZATION_OVERHEAD = 0
     _OPERATION_PER_ROW_OVERHEAD = 0
-    _TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
 
     _modin_frame: pandas.DataFrame
     _should_warn_on_default_to_pandas: bool = False
@@ -114,8 +112,6 @@ class NativeQueryCompiler(BaseQueryCompiler):
             pandas_frame = pandas.DataFrame(pandas_frame)
 
         self._modin_frame = pandas_frame
-        NativeQueryCompiler._MAX_SIZE_THIS_ENGINE_CAN_HANDLE = NativePandasMaxRows.get()
-        NativeQueryCompiler._TRANSFER_THRESHOLD = NativePandasTransferThreshold.get()
 
     storage_format = property(
         lambda self: "Native", doc=BaseQueryCompiler.storage_format.__doc__
@@ -213,8 +209,21 @@ class NativeQueryCompiler(BaseQueryCompiler):
     def finalize(self):
         return
 
-    # Dataframe interchange protocol
+    @classmethod
+    def _engine_max_size(cls):
+        # do not return the custom configuration for sub-classes
+        if cls == NativeQueryCompiler:
+            return NativePandasMaxRows.get()
+        return cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE
 
+    @classmethod
+    def _transfer_threshold(cls):
+        # do not return the custom configuration for sub-classes
+        if cls == NativeQueryCompiler:
+            return NativePandasTransferThreshold.get()
+        return cls._TRANSFER_THRESHOLD
+
+    # Dataframe interchange protocol
     def to_interchange_dataframe(
         self, nan_as_null: bool = False, allow_copy: bool = True
     ):

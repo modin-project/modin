@@ -1281,23 +1281,30 @@ def test_second_init_only_calls_from_pandas_once_github_issue_7559():
 
 def test_native_config():
     qc = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
-    assert qc._TRANSFER_THRESHOLD == NativePandasTransferThreshold.get()
-    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == NativePandasMaxRows.get()
-    oldmax = qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE
-    oldthresh = qc._TRANSFER_THRESHOLD
+
+    # Native Query Compiler gets a special configuration
+    assert qc._TRANSFER_THRESHOLD == 0
+    assert qc._transfer_threshold() == NativePandasTransferThreshold.get()
+    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 1
+    assert qc._engine_max_size() == NativePandasMaxRows.get()
+
+    oldmax = qc._engine_max_size()
+    oldthresh = qc._transfer_threshold()
 
     with config_context(NativePandasMaxRows=123, NativePandasTransferThreshold=321):
         qc2 = NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
-        assert qc2._TRANSFER_THRESHOLD == 321
-        assert qc2._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
-        assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
-        assert qc._TRANSFER_THRESHOLD == 321
+        assert qc2._transfer_threshold() == 321
+        assert qc2._engine_max_size() == 123
+        assert qc._engine_max_size() == 123
+        assert qc._transfer_threshold() == 321
 
-    # The setting does not get reset until a new NativeQueryCompiler is
-    # created, which should be OK because we do not expect people to switch this
-    # back and forth frequently
-    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 123
-    assert qc._TRANSFER_THRESHOLD == 321
-    NativeQueryCompiler(pandas.DataFrame([0, 1, 2]))
-    assert qc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == oldmax
-    assert qc._TRANSFER_THRESHOLD == oldthresh
+        # sub class configuration is unchanged
+        class AQC(NativeQueryCompiler):
+            pass
+
+        subqc = AQC(pandas.DataFrame([0, 1, 2]))
+        assert subqc._TRANSFER_THRESHOLD == 0
+        assert subqc._MAX_SIZE_THIS_ENGINE_CAN_HANDLE == 1
+
+    assert qc._engine_max_size() == oldmax
+    assert qc._transfer_threshold() == oldthresh

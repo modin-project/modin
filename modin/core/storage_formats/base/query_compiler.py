@@ -356,13 +356,13 @@ class BaseQueryCompiler(
         """
         if isinstance(self, other_qc_type):
             return QCCoercionCost.COST_ZERO
-        if self._TRANSFER_THRESHOLD <= 0:
+        if self.__class__._transfer_threshold() <= 0:
             return QCCoercionCost.COST_ZERO
         cost = int(
             (
                 QCCoercionCost.COST_IMPOSSIBLE
                 * self._max_shape()[0]
-                / self._TRANSFER_THRESHOLD
+                / self.__class__._transfer_threshold()
             )
         )
         if cost > QCCoercionCost.COST_IMPOSSIBLE:
@@ -447,7 +447,7 @@ class BaseQueryCompiler(
         return self._stay_cost_rows(
             self._max_shape()[0],
             self._OPERATION_PER_ROW_OVERHEAD,
-            self._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
+            self.__class__._engine_max_size(),
             self._OPERATION_INITIALIZATION_OVERHEAD,
         )
 
@@ -498,9 +498,17 @@ class BaseQueryCompiler(
         return cls._stay_cost_rows(
             row_count,
             cls._OPERATION_PER_ROW_OVERHEAD,
-            cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE,
+            cls._engine_max_size(),
             cls._OPERATION_INITIALIZATION_OVERHEAD,
         )
+
+    @classmethod
+    def _engine_max_size(cls):
+        return cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE
+
+    @classmethod
+    def _transfer_threshold(cls):
+        return cls._TRANSFER_THRESHOLD
 
     @disable_logging
     def max_cost(self) -> int:
