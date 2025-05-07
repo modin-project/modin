@@ -20,6 +20,7 @@ all query compilers to determine the best query compiler to use.
 """
 
 import logging
+import random
 from types import MappingProxyType
 from typing import Any, Optional
 
@@ -46,10 +47,6 @@ class AggregatedBackendData:
         self.qc_cls = type(query_compiler)
         self.cost = 0
         self.max_cost = query_compiler.max_cost()
-
-
-# Global Variable Used to track groups of metrics
-hybrid_metrics_calc_group = 0
 
 
 class BackendCostCalculator:
@@ -143,7 +140,6 @@ class BackendCostCalculator:
 
         min_value = None
         for k, v in self._backend_data.items():
-            emit_metric(f"hybrid.cast.to.{k}.cost.{hybrid_metrics_calc_group}", v.cost)
             if v.cost > v.max_cost:
                 continue
             if min_value is None or min_value > v.cost:
@@ -154,10 +150,26 @@ class BackendCostCalculator:
             logging.info(
                 f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
             )
-            DECIDED_TO_SWITCH = 1
+            # Does not need to be secure, should not use system entropy
+            metrics_group = "%04x" % random.randrange(16**4)
+            for qc in self._qc_list:
+                max_shape = qc._max_shape()
+                backend = qc.get_backend()
+                emit_metric(
+                    f"hybrid.merge.candidate.{backend}.group.{metrics_group}.rows",
+                    max_shape[0],
+                )
+                emit_metric(
+                    f"hybrid.merge.candidate.{backend}.group.{metrics_group}.cols",
+                    max_shape[1],
+                )
+            for k, v in self._backend_data.items():
+                emit_metric(
+                    f"hybrid.merge.candidate.{k}.group.{metrics_group}.cost", v.cost
+                )
             emit_metric(
-                f"hybrid.cast.decision.{self._result_backend}.{hybrid_metrics_calc_group}",
-                DECIDED_TO_SWITCH,
+                f"hybrid.merge.decision.{self._result_backend}.group.{metrics_group}",
+                1,
             )
 
         if self._result_backend is None:

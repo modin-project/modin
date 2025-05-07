@@ -24,6 +24,7 @@ import inspect
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
+import random
 from types import FunctionType, MappingProxyType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, ValuesView
 
@@ -688,10 +689,6 @@ def _maybe_switch_backend_post_op(
     return result
 
 
-# Global Variable Used to track groups of metrics
-hybrid_metrics_group = 0
-
-
 def _get_backend_for_auto_switch(
     input_qc: BaseQueryCompiler,
     class_of_wrapped_fn: str,
@@ -729,6 +726,8 @@ def _get_backend_for_auto_switch(
     # backend.
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
+    # Does not need to be secure, should not use system entropy
+    metrics_group = "%04x" % random.randrange(16**4)
     starting_backend = input_qc.get_backend()
 
     min_move_stay_delta = None
@@ -738,6 +737,23 @@ def _get_backend_for_auto_switch(
         api_cls_name=class_of_wrapped_fn,
         operation=function_name,
         arguments=arguments,
+    )
+    data_max_shape = input_qc._max_shape()
+    emit_metric(
+        f"hybrid.auto.api.{class_of_wrapped_fn}.{function_name}.group.{metrics_group}",
+        1,
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.stay_cost",
+        stay_cost,
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.rows",
+        data_max_shape[0],
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.cols",
+        data_max_shape[1],
     )
     for backend in Backend.get_active_backends():
         if backend in ("Ray", "Unidist", "Dask"):
@@ -783,43 +799,19 @@ def _get_backend_for_auto_switch(
             ):
                 min_move_stay_delta = move_stay_delta
                 best_backend = backend
-            global hybrid_metrics_group
             emit_metric(
-                f"hybrid.auto.from.{starting_backend}.to.{backend}.move_to_cost.{hybrid_metrics_group}",
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.move_to_cost",
                 move_to_cost,
             )
             emit_metric(
-                f"hybrid.auto.from.{starting_backend}.to.{backend}.stay_cost.{hybrid_metrics_group}",
-                stay_cost,
-            )
-            emit_metric(
-                f"hybrid.auto.from.{starting_backend}.to.{backend}.other_execute_cost.{hybrid_metrics_group}",
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.other_execute_cost",
                 other_execute_cost,
             )
             emit_metric(
-                f"hybrid.auto.from.{starting_backend}.to.{backend}.delta.{hybrid_metrics_group}",
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.delta",
                 move_stay_delta,
             )
-            SINGLE_EVENT = 1
-            DECIDED_TO_SWITCH = 1
-            DECIDED_NOT_TO_SWITCH = 0
-            emit_metric(
-                f"hybrid.auto.from.{starting_backend}.to.{backend}.decision.{best_backend}.{hybrid_metrics_group}",
-                (
-                    DECIDED_TO_SWITCH
-                    if starting_backend != backend
-                    else DECIDED_NOT_TO_SWITCH
-                ),
-            )
-            emit_metric(
-                f"hybrid.auto.from.{starting_backend}.to.{backend}.api_cls_name.{class_of_wrapped_fn}.{hybrid_metrics_group}",
-                SINGLE_EVENT,
-            )
-            emit_metric(
-                f"hybrid.auto.from.{starting_backend}.to.{backend}.function_name.{function_name}.{hybrid_metrics_group}",
-                SINGLE_EVENT,
-            )
-            hybrid_metrics_group += 1
+
             logging.info(
                 f"After {class_of_wrapped_fn} function {function_name}, "
                 + f"considered moving to backend {backend} with "
@@ -827,9 +819,12 @@ def _get_backend_for_auto_switch(
                 + f", stay_cost {stay_cost}, and move-stay delta "
                 + f"{move_stay_delta}"
             )
+
     if best_backend == starting_backend:
+        emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 0)
         logging.info(f"Chose not to switch backends after operation {function_name}")
     else:
+        emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 1)
         logging.info(f"Chose to move to backend {best_backend}")
     return best_backend
 

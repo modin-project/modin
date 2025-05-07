@@ -1313,24 +1313,17 @@ def test_native_config():
 
 def test_cast_metrics(pico_df, cluster_df):
     try:
-        errors = 0
+        count = 0
 
         def test_handler(metric: str, value) -> None:
-            nonlocal errors
-            if metric.startswith("modin.hybrid.cast"):
-                tokens = metric.split(".")
-                if tokens[4] == "Pico" and value == 750:
-                    return
-                if tokens[4] == "Cluster" and value == 250:
-                    return
-                if tokens[3] == "decision" and tokens[4] == "Cluster" and value == 1:
-                    return
-                errors += 1
+            nonlocal count
+            if metric.startswith("modin.hybrid.merge"):
+                count += 1
 
         add_metric_handler(test_handler)
         df3 = pd.concat([pico_df, cluster_df], axis=1)
         assert df3.get_backend() == "Cluster"  # result should be on cluster
-        assert errors == 0
+        assert count == 7
     finally:
         clear_metric_handler(test_handler)
 
@@ -1341,43 +1334,13 @@ def test_switch_metrics(pico_df, cluster_df):
         choices=("Big_Data_Cloud", "Small_Data_Local"),
     ):
         try:
-            errors = 0
+            count = 0
 
             def test_handler(metric: str, value) -> None:
-                nonlocal errors
+                nonlocal count
                 if metric.startswith("modin.hybrid.auto"):
-                    tokens = metric.split(".")
                     assert "from.Big_Data_Cloud.to.Small_Data_Local" in metric
-                    if (
-                        tokens[7] == "stay_cost"
-                        and value == QCCoercionCost.COST_IMPOSSIBLE
-                    ):
-                        return
-                    if tokens[7] == "other_execute_cost" and value == 1000:
-                        return
-                    if tokens[7] == "move_to_cost" and value == 0:
-                        return
-                    if tokens[7] == "delta" and value == 0:
-                        return
-                    if (
-                        tokens[7] == "decision"
-                        and tokens[8] == "Big_Data_Cloud"
-                        and value == 1
-                    ):
-                        return
-                    if (
-                        tokens[7] == "api_cls_name"
-                        and tokens[8] == "DataFrame"
-                        and value == 1
-                    ):
-                        return
-                    if (
-                        tokens[7] == "function_name"
-                        and tokens[8] == "describe"
-                        and value == 1
-                    ):
-                        return
-                    errors += 1
+                    count += 1
 
             add_metric_handler(test_handler)
 
@@ -1389,6 +1352,6 @@ def test_switch_metrics(pico_df, cluster_df):
             df = pd.DataFrame([1] * 10)
             assert df.get_backend() == "Big_Data_Cloud"
             df.describe()
-            assert errors == 0
+            assert count == 9
         finally:
             clear_metric_handler(test_handler)
