@@ -2644,11 +2644,6 @@ class DataFrame(BasePandasDataset):
         """
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
-
-        if key not in _EXTENSION_NO_LOOKUP:
-            extension = self._getattr__from_extension_impl(key, __class__._extensions)
-            if extension is not sentinel:
-                return extension
         try:
             return super().__getattr__(key)
         except AttributeError as err:
