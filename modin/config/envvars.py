@@ -1306,9 +1306,7 @@ class DaskThreadsPerWorker(EnvironmentVariable, type=int):
 
 
 class NativePandasMaxRows(EnvironmentVariable, type=int):
-    """
-    Maximum number of rows which can be processed using local, native, pandas.
-    """
+    """Maximum number of rows which can be processed using local, native, pandas."""
 
     varname = "MODIN_NATIVE_MAX_ROWS"
     default = 10_000_000
