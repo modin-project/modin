@@ -23,12 +23,11 @@ from typing import Optional
 import pandas
 from pandas.core.dtypes.common import is_scalar
 
+from modin.config.envvars import NativePandasMaxRows, NativePandasTransferThreshold
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
-from modin.core.storage_formats.base.query_compiler import (
-    BaseQueryCompiler,
-)
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
 
 _NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE = (
@@ -92,10 +91,8 @@ class NativeQueryCompiler(BaseQueryCompiler):
         The pandas frame to query with the compiled queries.
     """
 
-    _MAX_SIZE_THIS_ENGINE_CAN_HANDLE = 10_000_000
     _OPERATION_INITIALIZATION_OVERHEAD = 0
     _OPERATION_PER_ROW_OVERHEAD = 0
-    _TRANSFER_THRESHOLD = 10_000_000
 
     _modin_frame: pandas.DataFrame
     _should_warn_on_default_to_pandas: bool = False
@@ -212,8 +209,21 @@ class NativeQueryCompiler(BaseQueryCompiler):
     def finalize(self):
         return
 
-    # Dataframe interchange protocol
+    @classmethod
+    def _engine_max_size(cls):
+        # do not return the custom configuration for sub-classes
+        if cls == NativeQueryCompiler:
+            return NativePandasMaxRows.get()
+        return cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE
 
+    @classmethod
+    def _transfer_threshold(cls):
+        # do not return the custom configuration for sub-classes
+        if cls == NativeQueryCompiler:
+            return NativePandasTransferThreshold.get()
+        return cls._TRANSFER_THRESHOLD
+
+    # Dataframe interchange protocol
     def to_interchange_dataframe(
         self, nan_as_null: bool = False, allow_copy: bool = True
     ):
