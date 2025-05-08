@@ -59,7 +59,6 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "__delattr__",
     "__getattr__",
     "_getattribute__from_extension_impl",
-    "_getattr__from_extension_impl",
     "get_backend",
     "move_to",
     "_update_inplace",
