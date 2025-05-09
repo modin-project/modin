@@ -337,7 +337,6 @@ Here is an example of using the pandas backend.
 .. code-block:: python
 
   import modin.pandas as pd
-  from modin import set_execution
   from modin.config import Backend
 
   # This dataframe will use Modin's default, distributed execution.
@@ -379,6 +378,57 @@ Here's an example of switching the backend for an individual dataframe.
 
   new_df.set_backend("Pandas", inplace=True)
   assert new_df.get_backend() == "Pandas"
+
+
+Automatic backend switching
+"""""""""""""""""""""""""""
+
+*This feature is under active development, and the API is subject to change.*
+
+Modin's backends may define heuristics for whether to automatically move data to another backend
+for more efficient computation of certain operations. Modin does not currently define these heuristics
+for any of its default backends, but any backends that wish to do so should implement the query
+compiler methods discussed in
+:ref:`the architecture document<auto-switch architecture>`.
+
+After implementing the relevant query compiler methods, the following APIs can be used to control
+when automatic switching occurs:
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  from modin.core.storage_formats.pandas.query_compiler_caster import (
+    register_function_for_post_op_switch,
+    register_function_for_pre_op_switch,
+  )
+  from modin.config import AutoSwitchBackend
+
+  # Enable automatic switching BEFORE computation for DataFrame.apply
+  # when the DataFrame's backend is Pandas
+  register_function_for_pre_op_switch(
+    class_name="DataFrame",
+    method="apply",
+    backend="Pandas",
+  )
+
+  # Enable automatic switching AFTER computation for Series.max
+  # when the Series's backend is Pandas
+  register_function_for_post_op_switch(
+    class_name="Series",
+    method="max",
+    backend="Pandas",
+  )
+
+  # Enable automatic switching globally (use .disable() to turn off)
+  AutoSwitchBackend.enable()
+
+  df = pd.DataFrame([[1, 2, 3]])
+  # "pin" a single DataFrame/Series, preventing it from
+  # automatically switching backends
+  df.pin_backend(inplace=True)
+  # "unpin" it to re-enable automatic switching
+  df.unpin_backend(inplace=True)
+
 
 Operation-specific optimizations
 """"""""""""""""""""""""""""""""
