@@ -503,11 +503,13 @@ class BaseQueryCompiler(
         )
 
     @classmethod
-    def _engine_max_size(cls):
+    def _engine_max_size(cls) -> int:
+        """Maximum number of rows this engine can handle."""
         return cls._MAX_SIZE_THIS_ENGINE_CAN_HANDLE
 
     @classmethod
-    def _transfer_threshold(cls):
+    def _transfer_threshold(cls) -> int:
+        """Maximum number of rows this backend can handle before transferring data to another backend."""
         return cls._TRANSFER_THRESHOLD
 
     @disable_logging
