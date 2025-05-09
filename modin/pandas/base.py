@@ -110,7 +110,6 @@ _EXTENSION_NO_LOOKUP = {
     "_query_compiler",
     "get_backend",
     "_getattribute__from_extension_impl",
-    "_getattr__from_extension_impl",
     "_get_query_compiler",
     "set_backend",
     "_pinned",
@@ -4376,29 +4375,6 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 return default_handler
         return attr
 
-    @disable_logging
-    def __getattr__(self, item) -> Any:
-        """
-        Return attribute from this `BasePandasDataset`.
-
-        Parameters
-        ----------
-        item : str
-            Item to get.
-
-        Returns
-        -------
-        Any
-            The attribute from this `BasePandasDataset`.
-        """
-        # NOTE that to get an attribute, python calls __getattribute__() first and
-        # then falls back to __getattr__() if the former raises an AttributeError.
-        if item not in _EXTENSION_NO_LOOKUP:
-            extension = self._getattr__from_extension_impl(item, __class__._extensions)
-            if extension is not sentinel:
-                return extension
-        return object.__getattribute__(self, item)
-
     def __array_ufunc__(
         self, ufunc: np.ufunc, method: str, *inputs: Any, **kwargs: Any
     ) -> DataFrame | Series | Any:
@@ -4662,36 +4638,6 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             return (
                 extension.__get__(self) if hasattr(extension, "__get__") else extension
             )
-        return sentinel
-
-    @disable_logging
-    def _getattr__from_extension_impl(self, item, extensions: EXTENSION_DICT_TYPE):
-        """
-        __getattr__() an extension with the given name from the given set of extensions.
-
-        Implement __getattr__() for extensions. python falls back to
-        __getattr__() if __getattribute__() raises an AttributeError.
-
-        Parameters
-        ----------
-        item : str
-            The name of the attribute to get.
-        extensions : EXTENSION_DICT_TYPE
-            The set of extensions.
-
-        Returns
-        -------
-        Any
-            The attribute from the extension, or `sentinel` if the attribute is
-            not found.
-        """
-        extension = self._get_extension(item, extensions)
-        if extension is not sentinel:
-            # We need to implement callable extensions before we fall back
-            # to __getattr__(), because they need to dispatch to the
-            # appropriate backend.
-            assert not callable(extension)
-            return extension
         return sentinel
 
     @disable_logging

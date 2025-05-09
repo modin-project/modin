@@ -217,12 +217,22 @@ class TestProperty:
         )
 
         modin_object = data_class({"a": [1, 2, 3], "b": [4, 5, 6]}).set_backend(backend)
-        assert hasattr(modin_object, public_property_name)
         setattr(modin_object, public_property_name, "value")
         assert getattr(modin_object, public_property_name) == "value"
         delattr(modin_object, public_property_name)
         # check that the deletion works.
         assert not hasattr(modin_object, private_property_name)
+
+    def test_get_property_that_raises_attribute_error_on_get_modin_issue_7562(
+        self, data_class
+    ):
+        def get_property(self):
+            raise AttributeError
+
+        register_base_accessor(name="extension_property")(property(fget=get_property))
+        modin_object = data_class()
+        with pytest.raises(AttributeError):
+            getattr(modin_object, "extension_property")
 
     def test_non_settable_extension_property(self, Backend1, data_class):
         modin_object = data_class([0])
