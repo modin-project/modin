@@ -22,9 +22,9 @@ This ensures compatibility between different query compiler classes.
 import functools
 import inspect
 import logging
+import random
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
-import random
 from types import FunctionType, MappingProxyType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, ValuesView
 
