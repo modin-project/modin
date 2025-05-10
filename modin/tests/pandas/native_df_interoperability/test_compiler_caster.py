@@ -44,6 +44,7 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     register_function_for_post_op_switch,
     register_function_for_pre_op_switch,
 )
+from modin.logging.metrics import add_metric_handler, clear_metric_handler
 from modin.pandas.api.extensions import register_pd_accessor
 from modin.tests.pandas.utils import create_test_dfs, df_equals, eval_general
 
@@ -1263,6 +1264,51 @@ def test_concat_with_pin(pin_backends, expected_backend):
             df_equals(
                 result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
             )
+
+
+def test_cast_metrics(pico_df, cluster_df):
+    try:
+        count = 0
+
+        def test_handler(metric: str, value) -> None:
+            nonlocal count
+            if metric.startswith("modin.hybrid.merge"):
+                count += 1
+
+        add_metric_handler(test_handler)
+        df3 = pd.concat([pico_df, cluster_df], axis=1)
+        assert df3.get_backend() == "Cluster"  # result should be on cluster
+        assert count == 7
+    finally:
+        clear_metric_handler(test_handler)
+
+
+def test_switch_metrics(pico_df, cluster_df):
+    with backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    ):
+        try:
+            count = 0
+
+            def test_handler(metric: str, value) -> None:
+                nonlocal count
+                if metric.startswith("modin.hybrid.auto"):
+                    count += 1
+
+            add_metric_handler(test_handler)
+
+            register_function_for_pre_op_switch(
+                class_name="DataFrame",
+                backend="Big_Data_Cloud",
+                method="describe",
+            )
+            df = pd.DataFrame([1] * 10)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.describe()
+            assert count == 8
+        finally:
+            clear_metric_handler(test_handler)
 
 
 def test_second_init_only_calls_from_pandas_once_github_issue_7559():
