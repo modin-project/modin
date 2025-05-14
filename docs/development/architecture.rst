@@ -89,6 +89,8 @@ Dataframe.
 In the interest of reducing the pandas API, the Query Compiler layer closely follows the
 pandas API, but cuts out a large majority of the repetition.
 
+.. _auto-switch architecture:
+
 Automatic Engine Switching and Casting
 """"""""""""""""""""""""""""""""""""""
 
@@ -258,6 +260,10 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
+- pandas on Snowflake
+    - Uses the Snowpark Python library to transpile pandas API calls to SQL queries.
+    - The storage format is the custom-defined `Snowflake` format; data remains within Snowflake warehouses until retrieved by pandas API calls.
+    - For more information on pandas on Snowflake, refer to Snowflake's `documentation <https://docs.snowflake.com/en/developer-guide/snowpark/python/pandas-on-snowflake>`_ (external link).
 
 .. _directory-tree:
 
