@@ -18,6 +18,7 @@ import matplotlib
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
+import pyarrow as pa
 import pytest
 from numpy.testing import assert_array_equal
 
@@ -1533,3 +1534,9 @@ def test_series_does_not_warn_distributing_takes_time():
     with warnings.catch_warnings():
         warnings.filterwarnings("error", regex, UserWarning)
         pd.Series(np.random.randint(1_000_000, size=(2_400_000)))
+
+
+@pytest.mark.parametrize("dtype", [np.int64, pd.ArrowDtype(pa.int64())])
+def test_empty_df_dtypes(dtype):
+    df = pd.DataFrame({"A": []}, dtype=dtype)
+    assert df.dtypes["A"] == dtype
