@@ -20,6 +20,7 @@ all query compilers to determine the best query compiler to use.
 """
 
 import logging
+import random
 from types import MappingProxyType
 from typing import Any, Optional
 
@@ -27,6 +28,7 @@ from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
 )
+from modin.logging.metrics import emit_metric
 
 
 class AggregatedBackendData:
@@ -102,6 +104,8 @@ class BackendCostCalculator:
         """
         if self._result_backend is not None:
             return self._result_backend
+        if len(self._qc_list) == 1:
+            return self._qc_list[0].get_backend()
         if len(self._qc_list) == 0:
             raise ValueError("No query compilers registered")
 
@@ -146,12 +150,32 @@ class BackendCostCalculator:
             logging.info(
                 f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
             )
+            # Does not need to be secure, should not use system entropy
+            metrics_group = "%04x" % random.randrange(16**4)
+            for qc in self._qc_list:
+                max_shape = qc._max_shape()
+                backend = qc.get_backend()
+                emit_metric(
+                    f"hybrid.merge.candidate.{backend}.group.{metrics_group}.rows",
+                    max_shape[0],
+                )
+                emit_metric(
+                    f"hybrid.merge.candidate.{backend}.group.{metrics_group}.cols",
+                    max_shape[1],
+                )
+            for k, v in self._backend_data.items():
+                emit_metric(
+                    f"hybrid.merge.candidate.{k}.group.{metrics_group}.cost", v.cost
+                )
+            emit_metric(
+                f"hybrid.merge.decision.{self._result_backend}.group.{metrics_group}",
+                1,
+            )
 
         if self._result_backend is None:
             raise ValueError(
                 f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
             )
-
         return self._result_backend
 
     def _add_cost_data(self, backend, cost):
