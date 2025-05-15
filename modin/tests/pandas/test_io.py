@@ -983,6 +983,9 @@ class TestCsv:
             storage_options=storage_options,
         )
 
+    @pytest.mark.xfail(
+        reason="S3 file gone missing, see https://github.com/modin-project/modin/issues/7571"
+    )
     def test_read_csv_s3_issue4658(self):
         eval_io(
             fn_name="read_csv",
