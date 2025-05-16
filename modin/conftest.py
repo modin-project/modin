@@ -21,7 +21,9 @@ import shutil
 import subprocess
 import sys
 import time
-from typing import Optional
+from collections import defaultdict
+from contextlib import contextmanager
+from typing import Iterable, Optional
 
 import boto3
 import numpy as np
@@ -76,6 +78,8 @@ from modin.core.storage_formats import (  # noqa: E402
     PandasQueryCompiler,
 )
 from modin.core.storage_formats.pandas.query_compiler_caster import (  # noqa: E402
+    _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS,
+    _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS,
     _GENERAL_EXTENSIONS,
 )
 from modin.tests.pandas.utils import (  # noqa: E402
@@ -726,22 +730,50 @@ def modify_config(request):
                 raise e
 
 
+@contextmanager
+def copy_and_restore(
+    objects: Iterable[defaultdict],
+) -> None:
+    """
+    Make deep copies of defaultdicts and restore them upon exiting this context.
+
+    Ideally this function would be a fixture, but we want to pass it parameters
+    and use it in other fixtures, and it does not seem to be possible to pass
+    parameters from one fixture to another.
+
+    Parameters
+    ----------
+    objects : Iterable[defaultdict]
+        The objects to copy and restore.
+    """
+    try:
+        # Use a tuples of tuples instead of a dict mapping the original object
+        # to its copy, because the original object may not be hashable.
+        original_object_to_copy = tuple(
+            (original_object, copy.deepcopy(original_object))
+            for original_object in objects
+        )
+        yield
+    finally:
+        for original_object, object_copy in original_object_to_copy:
+            original_object.clear()
+            original_object.update(object_copy)
+
+
 @pytest.fixture(autouse=True)
 def clean_up_extensions():
 
-    original_dataframe_extensions = copy.deepcopy(pd.dataframe.DataFrame._extensions)
-    original_series_extensions = copy.deepcopy(pd.Series._extensions)
-    original_base_extensions = copy.deepcopy(pd.base.BasePandasDataset._extensions)
-    original_general_extensions = copy.deepcopy(_GENERAL_EXTENSIONS)
-    yield
-    pd.dataframe.DataFrame._extensions.clear()
-    pd.dataframe.DataFrame._extensions.update(original_dataframe_extensions)
-    pd.Series._extensions.clear()
-    pd.Series._extensions.update(original_series_extensions)
-    pd.base.BasePandasDataset._extensions.clear()
-    pd.base.BasePandasDataset._extensions.update(original_base_extensions)
-    _GENERAL_EXTENSIONS.clear()
-    _GENERAL_EXTENSIONS.update(original_general_extensions)
+    with copy_and_restore(
+        (
+            pd.dataframe.DataFrame._extensions,
+            pd.Series._extensions,
+            pd.base.BasePandasDataset._extensions,
+            _GENERAL_EXTENSIONS,
+            pd.groupby.DataFrameGroupBy._extensions,
+            pd.groupby.SeriesGroupBy._extensions,
+        )
+    ):
+        yield
 
     from modin.pandas.api.extensions.extensions import _attrs_to_delete_on_test
 
@@ -754,25 +786,10 @@ def clean_up_extensions():
 @pytest.fixture(autouse=True)
 def clean_up_auto_backend_switching():
 
-    # We have to do cyclic imports here because of this import order assertion:
-    # https://github.com/modin-project/modin/blob/735735ed98f81f5ad92a1bc93df5a4287379141a/modin/conftest.py#L36
-    from modin.core.storage_formats.pandas.query_compiler_caster import (
-        _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS,
-        _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS,
-    )
-
-    auto_switch_dict_to_original = tuple(
-        # Use a tuples of tuples instead of a dict because dict is not
-        # hashable.
-        (each_dict, copy.deepcopy(each_dict))
-        for each_dict in (
+    with copy_and_restore(
+        (
             _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS,
             _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS,
         )
-    )
-
-    yield
-
-    for each_dict, each_dict_original in auto_switch_dict_to_original:
-        each_dict.clear()
-        each_dict.update(each_dict_original)
+    ):
+        yield

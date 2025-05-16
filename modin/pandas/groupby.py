@@ -19,7 +19,7 @@ import warnings
 from collections.abc import Iterable
 from functools import cached_property
 from types import BuiltinFunctionType
-from typing import TYPE_CHECKING, Hashable, Optional, Union
+from typing import TYPE_CHECKING, Any, Hashable, Optional, Union
 
 import numpy as np
 import pandas
@@ -40,6 +40,7 @@ from typing_extensions import Self
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _EXTENSION_NO_LOOKUP,
     EXTENSION_DICT_TYPE,
     QueryCompilerCaster,
 )
@@ -50,6 +51,7 @@ from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
     hashable,
+    sentinel,
     try_cast_to_pandas,
     wrap_into_list,
     wrap_udf_function,
@@ -62,7 +64,7 @@ from .window import RollingGroupby
 if TYPE_CHECKING:
     from modin.pandas import DataFrame
 
-_DEFAULT_BEHAVIOUR = {
+_DEFAULT_BEHAVIOUR = _EXTENSION_NO_LOOKUP | {
     "__class__",
     "__getitem__",
     "__init__",
@@ -243,6 +245,12 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         -------
         The value of the attribute.
         """
+        if key not in _DEFAULT_BEHAVIOUR:
+            extensions_result = self._getattribute__from_extension_impl(
+                key, __class__._extensions
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
         try:
             return object.__getattribute__(self, key)
         except AttributeError as err:
@@ -250,7 +258,33 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
                 return self.__getitem__(key)
             raise err
 
-    def __getattribute__(self, item):
+    @disable_logging
+    def __getattribute__(self, item: str) -> Any:
+        """
+        Override __getattribute__, which python calls to access any attribute of an object of this class.
+
+        We override this method
+            1) to default to pandas for empty dataframes on non-lazy engines.
+            2) to get non-method extensions (e.g. properties)
+
+
+        Parameters
+        ----------
+        item : str
+            The name of the attribute to access.
+
+        Returns
+        -------
+        Any
+            The value of the attribute.
+        """
+        if item not in _DEFAULT_BEHAVIOUR:
+            extensions_result = self._getattribute__from_extension_impl(
+                item, __class__._extensions
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
+
         attr = super().__getattribute__(item)
         if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_shape:
             # We default to pandas on empty DataFrames. This avoids a large amount of
@@ -263,6 +297,44 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 
                 return default_handler
         return attr
+
+    @disable_logging
+    def __setattr__(self, key: str, value) -> None:
+        """
+        Set an attribute on the object.
+
+        We override this method to set extension properties.
+
+        Parameters
+        ----------
+        key : str
+            The name of the attribute to set.
+        value : Any
+            The value to set the attribute to.
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(key, __class__._extensions)
+        if extension is not sentinel and hasattr(extension, "__set__"):
+            return extension.__set__(self, value)
+        return super().__setattr__(key, value)
+
+    @disable_logging
+    def __delattr__(self, name: str) -> None:
+        """
+        Delete an attribute on the object.
+
+        We override this method to delete extension properties.
+
+        Parameters
+        ----------
+        name : str
+            The name of the attribute to delete.
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(name, __class__._extensions)
+        if extension is not sentinel and hasattr(extension, "__delete__"):
+            return extension.__delete__(self)
+        return super().__delattr__(name)
 
     @property
     def ngroups(self):  # noqa: GL08
@@ -1792,6 +1864,96 @@ class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
     # add methods to register groupby accessors and make the groupby classes
     # use this _extensions dict.
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
+
+    @disable_logging
+    def __getattribute__(self, item: str) -> Any:
+        """
+        Get an attribute of the object.
+
+        Python calls this method for every attribute access. We override it to
+        get extension attributes.
+
+        Parameters
+        ----------
+        item : str
+            Attribute name.
+
+        Returns
+        -------
+        Any
+            The value of the attribute.
+        """
+        if item not in _DEFAULT_BEHAVIOUR:
+            extensions_result = self._getattribute__from_extension_impl(
+                item, __class__._extensions
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
+
+        return super().__getattribute__(item)
+
+    def __getattr__(self, key: str) -> Any:
+        """
+        Fall back to this method to get an attribute of the object if __getattribute__ raises AttributeError.
+
+        We override this method to make sure we try to get the extension
+        attributes for `key`, even if this class's superclass has a different
+        attribute for `key`.
+
+        Parameters
+        ----------
+        key : str
+            Attribute name.
+
+        Returns
+        -------
+        The value of the attribute.
+        """
+        if key not in _DEFAULT_BEHAVIOUR:
+            extensions_result = self._getattribute__from_extension_impl(
+                key, __class__._extensions
+            )
+            if extensions_result is not sentinel:
+                return extensions_result
+        return object.__getattribute__(self, key)
+
+    @disable_logging
+    def __setattr__(self, key: str, value: Any) -> None:
+        """
+        Set an attribute of the object.
+
+        We override this method to support settable extension attributes.
+
+        Parameters
+        ----------
+        key : str
+            Attribute name.
+        value : Any
+            Value to set the attribute to.
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(key, __class__._extensions)
+        if extension is not sentinel and hasattr(extension, "__set__"):
+            return extension.__set__(self, value)
+        return super().__setattr__(key, value)
+
+    @disable_logging
+    def __delattr__(self, name: str) -> None:
+        """
+        Delete an attribute of the object.
+
+        We override this method to support deletable extension attributes.
+
+        Parameters
+        ----------
+        name : str
+            Attribute name.
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(name, __class__._extensions)
+        if extension is not sentinel and hasattr(extension, "__delete__"):
+            return extension.__delete__(self)
+        return super().__delattr__(name)
 
     @property
     def ndim(self):
