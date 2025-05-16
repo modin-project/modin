@@ -174,7 +174,9 @@ class PandasDataframe(
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._pandas_backend = pandas_backend
-        if pandas_backend != "pyarrow":
+        if pandas_backend != "pyarrow" or len(partitions) == 0:
+            # If the backend is pyarrow and there are no partitions, the computed dtype otherwise becomes NaN,
+            # which means we lost the dtype, so actually set it in that case
             self.set_dtypes_cache(dtypes)
         else:
             # In this case, the type precomputation may be incorrect; we need
