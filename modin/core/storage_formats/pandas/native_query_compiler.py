@@ -18,8 +18,9 @@ Module contains ``NativeQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
+import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_scalar
 
@@ -28,7 +29,11 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, try_cast_to_pandas
+
+if TYPE_CHECKING:
+    from modin.pandas import DataFrame, Series
+    from modin.pandas.base import BasePandasDataset
 
 _NO_REPARTITION_ON_NATIVE_EXECUTION_EXCEPTION_MESSAGE = (
     "Modin dataframes and series using native execution do not have partitions."
@@ -222,6 +227,40 @@ class NativeQueryCompiler(BaseQueryCompiler):
         if cls == NativeQueryCompiler:
             return NativePandasTransferThreshold.get()
         return cls._TRANSFER_THRESHOLD
+
+    def do_array_ufunc_implementation(
+        self,
+        frame: "BasePandasDataset",
+        ufunc: np.ufunc,
+        method: str,
+        *inputs: Any,
+        **kwargs: Any
+    ) -> Union["DataFrame", "Series", Any]:
+        assert (
+            self is frame._query_compiler
+        ), "array ufunc called with mismatched query compiler and input frame"
+        pandas_frame = self._modin_frame
+        if not frame._is_dataframe:
+            pandas_frame = pandas_frame.iloc[:, 0]
+        pandas_result = pandas_frame.__array_ufunc__(
+            ufunc,
+            method,
+            *(
+                pandas_frame if each_input is frame else try_cast_to_pandas(each_input)
+                for each_input in inputs
+            ),
+            **try_cast_to_pandas(kwargs),
+        )
+        if isinstance(pandas_result, pandas.DataFrame):
+            from modin.pandas import DataFrame
+
+            return DataFrame(pandas_result)
+        elif isinstance(pandas_result, pandas.Series):
+            from modin.pandas import Series
+
+            return Series(pandas_result)
+        # ufuncs are required to be one-to-one mappings, so this branch should never be hit
+        return pandas_result  # pragma: no cover
 
     # Dataframe interchange protocol
     def to_interchange_dataframe(
