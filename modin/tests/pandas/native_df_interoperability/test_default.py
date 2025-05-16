@@ -122,7 +122,6 @@ def test_array_ufunc():
     )
     df_equals(np.sqrt(modin_ser), np.sqrt(pandas_ser))
 
-
 def test_asfreq(df_mode_pair):
     index = pd.date_range("1/1/2000", periods=4, freq="min")
     series, _ = create_test_series_in_defined_mode(

@@ -1545,6 +1545,6 @@ def test_empty_df_dtypes(dtype):
 
 def test_array_ufunc():
     modin_df, pandas_df = create_test_dfs([[1, 2], [3, 4]])
-    eval_general(modin_df, pandas_df, lambda df: np.sqrt(df))
+    eval_general(modin_df, pandas_df, np.sqrt)
     modin_ser, pandas_ser = create_test_series([1, 2, 3, 4, 9])
-    eval_general(modin_ser, pandas_ser, lambda ser: np.sqrt(ser))
+    eval_general(modin_ser, pandas_ser, np.sqrt)
