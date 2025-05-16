@@ -816,7 +816,7 @@ class BaseQueryCompiler(
         **kwargs: Any,
     ) -> Union["DataFrame", "Series", Any]:
         """
-        Apply the provided numpy ufunc to the underlying data.
+        Apply the provided NumPy ufunc to the underlying data.
 
         This method is called by the ``__array_ufunc__`` dispatcher on BasePandasDataset.
 
@@ -824,7 +824,7 @@ class BaseQueryCompiler(
         to allow for easier argument processing. The default implementation defaults to pandas, but
         a query compiler sub-class may override this method to provide a distributed implementation.
 
-        See numpy docs: https://numpy.org/doc/stable/user/basics.subclassing.html#array-ufunc-for-ufuncs
+        See NumPy docs: https://numpy.org/doc/stable/user/basics.subclassing.html#array-ufunc-for-ufuncs
 
         Parameters
         ----------
@@ -842,6 +842,11 @@ class BaseQueryCompiler(
 
         **kwargs : Any
             Keyword arguments to pass to ``ufunc``.
+
+        Returns
+        -------
+        DataFrame, Series, or Any
+            The result of applying the ufunc to ``frame``.
         """
         assert (
             self is frame._query_compiler
