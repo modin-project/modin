@@ -321,3 +321,81 @@ def __getattr___impl(name: str):
         return _reexport_classes[name]
     else:
         raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
+
+
+def register_dataframe_groupby_accessor(name: str, *, backend: Optional[str] = None):
+    """
+    Register a dataframe groupby attribute with the name provided.
+
+    This is a decorator that assigns a new attribute to DataFrameGroupBy. It can be used
+    with the following syntax:
+
+    ```
+    @register_dataframe_groupby_accessor("new_method")
+    def my_new_dataframe_groupby_method(*args, **kwargs):
+        # logic goes here
+        return
+    ```
+    The new attribute can then be accessed with the name provided:
+
+    ```
+    df.groupby("col").new_method(*my_args, **my_kwargs)
+    ```
+
+    Parameters
+    ----------
+    name : str
+        The name of the attribute to assign to DataFrameGroupBy.
+    backend : Optional[str]
+        The backend to which the accessor applies. If ``None``, this accessor
+        will become the default for all backends.
+
+    Returns
+    -------
+    decorator
+        Returns the decorator function.
+    """
+    return _set_attribute_on_obj(
+        name,
+        pd.groupby.DataFrameGroupBy._extensions,
+        backend=backend,
+        obj=pd.groupby.DataFrameGroupBy,
+    )
+
+
+def register_series_groupby_accessor(name: str, *, backend: Optional[str] = None):
+    """
+    Register a series groupby attribute with the name provided.
+
+    This is a decorator that assigns a new attribute to SeriesGroupBy. It can be used
+    with the following syntax:
+
+    ```
+    @register_series_groupby_accessor("new_method")
+    def my_new_series_groupby_method(*args, **kwargs):
+        # logic goes here
+        return
+    ```
+    The new attribute can then be accessed with the name provided:
+    ```
+    df.groupby("col0")["col1"].new_method(*my_args, **my_kwargs)
+    ```
+    Parameters
+    ----------
+    name : str
+        The name of the attribute to assign to SeriesGroupBy.
+    backend : Optional[str]
+        The backend to which the accessor applies. If ``None``, this accessor
+        will become the default for all backends.
+
+    Returns
+    -------
+    decorator
+        Returns the decorator function.
+    """
+    return _set_attribute_on_obj(
+        name,
+        pd.groupby.SeriesGroupBy._extensions,
+        backend=backend,
+        obj=pd.groupby.SeriesGroupBy,
+    )
