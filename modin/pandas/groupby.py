@@ -267,7 +267,6 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             1) to default to pandas for empty dataframes on non-lazy engines.
             2) to get non-method extensions (e.g. properties)
 
-
         Parameters
         ----------
         item : str
@@ -311,6 +310,10 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             The name of the attribute to set.
         value : Any
             The value to set the attribute to.
+
+        Returns
+        -------
+        None
         """
         # An extension property is only accessible if the backend supports it.
         extension = self._get_extension(key, __class__._extensions)
@@ -329,6 +332,10 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         ----------
         name : str
             The name of the attribute to delete.
+
+        Returns
+        -------
+        None
         """
         # An extension property is only accessible if the backend supports it.
         extension = self._get_extension(name, __class__._extensions)
@@ -1930,6 +1937,10 @@ class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
             Attribute name.
         value : Any
             Value to set the attribute to.
+
+        Returns
+        -------
+        None
         """
         # An extension property is only accessible if the backend supports it.
         extension = self._get_extension(key, __class__._extensions)
@@ -1948,6 +1959,10 @@ class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
         ----------
         name : str
             Attribute name.
+
+        Returns
+        -------
+        None
         """
         # An extension property is only accessible if the backend supports it.
         extension = self._get_extension(name, __class__._extensions)
