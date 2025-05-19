@@ -40,8 +40,8 @@ from typing_extensions import Self
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.pandas.query_compiler_caster import (
-    _EXTENSION_NO_LOOKUP,
     EXTENSION_DICT_TYPE,
+    EXTENSION_NO_LOOKUP,
     QueryCompilerCaster,
 )
 from modin.error_message import ErrorMessage
@@ -64,7 +64,7 @@ from .window import RollingGroupby
 if TYPE_CHECKING:
     from modin.pandas import DataFrame
 
-_DEFAULT_BEHAVIOUR = _EXTENSION_NO_LOOKUP | {
+_DEFAULT_BEHAVIOUR = EXTENSION_NO_LOOKUP | {
     "__class__",
     "__getitem__",
     "__init__",
@@ -93,7 +93,7 @@ _DEFAULT_BEHAVIOUR = _EXTENSION_NO_LOOKUP | {
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
+class DataFrameGroupBy(QueryCompilerCaster, ClassLogger):  # noqa: GL08
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
     _return_tuple_when_iterating = False
     _df: Union[DataFrame, Series]
@@ -245,14 +245,12 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         -------
         The value of the attribute.
         """
-        if key not in _DEFAULT_BEHAVIOUR:
-            extensions_result = self._getattribute__from_extension_impl(
-                key, __class__._extensions
-            )
-            if extensions_result is not sentinel:
-                return extensions_result
         try:
-            return object.__getattribute__(self, key)
+            return self._getattr__from_extension_impl(
+                key=key,
+                default_behavior_attributes=_DEFAULT_BEHAVIOUR,
+                extensions=__class__._extensions,
+            )
         except AttributeError as err:
             if key != "_columns" and key in self._columns:
                 return self.__getitem__(key)
@@ -1899,30 +1897,13 @@ class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
 
         return super().__getattribute__(item)
 
+    @_inherit_docstrings(QueryCompilerCaster._getattr__from_extension_impl)
     def __getattr__(self, key: str) -> Any:
-        """
-        Fall back to this method to get an attribute of the object if __getattribute__ raises AttributeError.
-
-        We override this method to make sure we try to get the extension
-        attributes for `key`, even if this class's superclass has a different
-        attribute for `key`.
-
-        Parameters
-        ----------
-        key : str
-            Attribute name.
-
-        Returns
-        -------
-        The value of the attribute.
-        """
-        if key not in _DEFAULT_BEHAVIOUR:
-            extensions_result = self._getattribute__from_extension_impl(
-                key, __class__._extensions
-            )
-            if extensions_result is not sentinel:
-                return extensions_result
-        return object.__getattribute__(self, key)
+        return self._getattr__from_extension_impl(
+            key=key,
+            default_behavior_attributes=_DEFAULT_BEHAVIOUR,
+            extensions=__class__._extensions,
+        )
 
     @disable_logging
     def __setattr__(self, key: str, value: Any) -> None:

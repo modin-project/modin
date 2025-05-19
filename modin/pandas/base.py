@@ -77,7 +77,7 @@ from pandas.util._validators import (
 from modin import pandas as pd
 from modin.config import Backend
 from modin.core.storage_formats.pandas.query_compiler_caster import (
-    _EXTENSION_NO_LOOKUP,
+    EXTENSION_NO_LOOKUP,
     QueryCompilerCaster,
 )
 from modin.error_message import ErrorMessage
@@ -116,7 +116,7 @@ _ATTRS_NO_LOOKUP = {
     "_repr_mimebundle_",
     # Also avoid looking up the attributes that we use to implement the
     # extension system.
-} | _EXTENSION_NO_LOOKUP
+} | EXTENSION_NO_LOOKUP
 
 
 _DEFAULT_BEHAVIOUR = {
@@ -4342,7 +4342,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
 
-        if item not in _EXTENSION_NO_LOOKUP:
+        if item not in EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
                 item, __class__._extensions
             )

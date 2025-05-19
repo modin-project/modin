@@ -61,8 +61,8 @@ from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
 from modin.core.storage_formats.pandas.query_compiler_caster import (
-    _EXTENSION_NO_LOOKUP,
     EXTENSION_DICT_TYPE,
+    EXTENSION_NO_LOOKUP,
 )
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
@@ -2618,7 +2618,7 @@ class DataFrame(BasePandasDataset):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
 
-        if item not in _EXTENSION_NO_LOOKUP:
+        if item not in EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
                 item, __class__._extensions
             )

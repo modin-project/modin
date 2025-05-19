@@ -40,6 +40,7 @@ from modin.core.storage_formats.base.query_compiler import (
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
+from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.utils import sentinel
 
@@ -61,6 +62,7 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "__delattr__",
     "__getattr__",
     "_getattribute__from_extension_impl",
+    "_getattr__from_extension_impl",
     "get_backend",
     "move_to",
     "_update_inplace",
@@ -79,11 +81,12 @@ _NON_EXTENDABLE_ATTRIBUTES = {
 
 # Do not look up these attributes when searching for extensions. We use them
 # to implement the extension lookup itself.
-_EXTENSION_NO_LOOKUP = {
+EXTENSION_NO_LOOKUP = {
     "_get_extension",
     "_query_compiler",
     "get_backend",
     "_getattribute__from_extension_impl",
+    "_getattr__from_extension_impl",
     "_get_query_compiler",
     "set_backend",
     "_pinned",
@@ -341,6 +344,48 @@ class QueryCompilerCaster(ABC):
                 extension.__get__(self) if hasattr(extension, "__get__") else extension
             )
         return sentinel
+
+    @disable_logging
+    def _getattr__from_extension_impl(
+        self,
+        key: str,
+        default_behavior_attributes: set[str],
+        extensions: EXTENSION_DICT_TYPE,
+    ) -> Any:
+        """
+        Implement __getattr__, which the python interpreter falls back to if __getattribute__ raises AttributeError.
+
+        We override this method to make sure we try to get the extension
+        attribute for `key`, even if this class has a different
+        attribute for `key`.
+
+        Parameters
+        ----------
+        key : str
+            Attribute name.
+
+        Returns
+        -------
+        The value of the attribute.
+        """
+        if key not in default_behavior_attributes:
+            # If this class has a an extension for `key`, but __getattribute__()
+            # for the extension raises an AttributeError, we end up in this
+            # method, which should try getting the extension again (and
+            # probably raise the AttributeError that
+            # _getattribute__from_extension_impl() originally raised), rather
+            # than following back to object.__getattribute__().
+            extensions_result = self._getattribute__from_extension_impl(key, extensions)
+            # If extensions_result is not `sentinel`, __getattribute__() should have
+            # returned it first.
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=extensions_result is not sentinel,
+                extra_log=(
+                    "This object should return extensions via "
+                    + "__getattribute__ rather than __getattr__"
+                ),
+            )
+        return object.__getattribute__(self, key)
 
 
 def visit_nested_args(arguments, fn: callable):
