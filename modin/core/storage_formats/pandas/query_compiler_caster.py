@@ -363,6 +363,11 @@ class QueryCompilerCaster(ABC):
         ----------
         key : str
             Attribute name.
+        default_behavior_attributes : set[str]
+            The set of attributes for which we should follow the default
+            __getattr__ behavior and not try to get the extension.
+        extensions : EXTENSION_DICT_TYPE
+            The set of extensions.
 
         Returns
         -------
