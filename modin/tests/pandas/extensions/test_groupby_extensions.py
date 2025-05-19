@@ -54,7 +54,8 @@ def test_dataframe_accessor_for_method_that_series_groupby_does_not_override():
     """
     Test sum(), a DataFrameGroupBy method that SeriesGroupBy inherits without overriding.
 
-    Registering an extension method for DataFrameGroupBy should
+    Registering an extension method for DataFrameGroupBy should override sum()
+    behavior for both DataFrameGroupBy and SeriesGroupBy.
     """
     # Check that SeriesGroupBy inherits sum() from DataFrameGroupBy, with the only
     # difference being that SeriesGroupBy's sum() is wrapped in a method for handling

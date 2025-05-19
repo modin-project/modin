@@ -93,7 +93,7 @@ _DEFAULT_BEHAVIOUR = EXTENSION_NO_LOOKUP | {
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(QueryCompilerCaster, ClassLogger):  # noqa: GL08
+class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
     _return_tuple_when_iterating = False
     _df: Union[DataFrame, Series]

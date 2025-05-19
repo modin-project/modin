@@ -732,7 +732,7 @@ def modify_config(request):
 
 @contextmanager
 def copy_and_restore(
-    objects: Iterable[defaultdict],
+    dicts: Iterable[defaultdict],
 ) -> None:
     """
     Make deep copies of defaultdicts and restore them upon exiting this context.
@@ -743,21 +743,20 @@ def copy_and_restore(
 
     Parameters
     ----------
-    objects : Iterable[defaultdict]
-        The objects to copy and restore.
+    dicts : Iterable[defaultdict]
+        The dicts to copy and restore.
     """
     try:
-        # Use a tuples of tuples instead of a dict mapping the original object
-        # to its copy, because the original object may not be hashable.
-        original_object_to_copy = tuple(
-            (original_object, copy.deepcopy(original_object))
-            for original_object in objects
+        # Use a tuples of tuples instead of a dict mapping each original dict
+        # to its copy, because the original dict is not hashable.
+        original_dict_to_copy = tuple(
+            (original_dict, copy.deepcopy(original_dict)) for original_dict in dicts
         )
         yield
     finally:
-        for original_object, object_copy in original_object_to_copy:
-            original_object.clear()
-            original_object.update(object_copy)
+        for original_dict, dict_copy in original_dict_to_copy:
+            original_dict.clear()
+            original_dict.update(dict_copy)
 
 
 @pytest.fixture(autouse=True)
