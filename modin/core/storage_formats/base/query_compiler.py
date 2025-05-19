@@ -857,7 +857,7 @@ class BaseQueryCompiler(
         # as well as on self, but that gives inputs[0] a different identity from self.
         #
         # [1] https://github.com/pandas-dev/pandas/blob/2c4c072ade78b96a9eb05097a5fcf4347a3768f3/pandas/_libs/ops_dispatch.pyx#L99-L109
-        ErrorMessage.default_to_pandas(message="__array_ufunc__")
+        self._maybe_warn_on_default(message="__array_ufunc__")
         pandas_self = frame._to_pandas()
         pandas_result = pandas_self.__array_ufunc__(
             ufunc,
