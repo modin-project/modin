@@ -29,6 +29,7 @@ from modin.tests.pandas.utils import (
     axis_keys,
     axis_values,
     create_test_dfs,
+    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
@@ -1540,3 +1541,10 @@ def test_series_does_not_warn_distributing_takes_time():
 def test_empty_df_dtypes(dtype):
     df = pd.DataFrame({"A": []}, dtype=dtype)
     assert df.dtypes["A"] == dtype
+
+
+def test_array_ufunc():
+    modin_df, pandas_df = create_test_dfs([[1, 2], [3, 4]])
+    eval_general(modin_df, pandas_df, np.sqrt)
+    modin_ser, pandas_ser = create_test_series([1, 2, 3, 4, 9])
+    eval_general(modin_ser, pandas_ser, np.sqrt)

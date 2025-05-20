@@ -4397,32 +4397,9 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         BasePandasDataset
             The result of the ufunc applied to the `BasePandasDataset`.
         """
-        # we can't use the regular default_to_pandas() method because self is one of the
-        # `inputs` to __array_ufunc__, and pandas has some checks on the identity of the
-        # inputs [1]. The usual default to pandas will call _to_pandas() on the inputs
-        # as well as on self, but that gives inputs[0] a different identity from self.
-        #
-        # [1] https://github.com/pandas-dev/pandas/blob/2c4c072ade78b96a9eb05097a5fcf4347a3768f3/pandas/_libs/ops_dispatch.pyx#L99-L109
-        ErrorMessage.default_to_pandas(message="__array_ufunc__")
-        pandas_self = self._to_pandas()
-        pandas_result = pandas_self.__array_ufunc__(
-            ufunc,
-            method,
-            *(
-                pandas_self if each_input is self else try_cast_to_pandas(each_input)
-                for each_input in inputs
-            ),
-            **try_cast_to_pandas(kwargs),
+        return self._query_compiler.do_array_ufunc_implementation(
+            self, ufunc, method, *inputs, **kwargs
         )
-        if isinstance(pandas_result, pandas.DataFrame):
-            from .dataframe import DataFrame
-
-            return DataFrame(pandas_result)
-        elif isinstance(pandas_result, pandas.Series):
-            from .series import Series
-
-            return Series(pandas_result)
-        return pandas_result
 
     # namespace for additional Modin functions that are not available in Pandas
     modin: ModinAPI = CachedAccessor("modin", ModinAPI)

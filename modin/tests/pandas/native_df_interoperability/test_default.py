@@ -114,6 +114,15 @@ def test_to_numpy(data):
     assert_array_equal(modin_df.values, pandas_df.values)
 
 
+def test_array_ufunc():
+    modin_df, pandas_df = create_test_df_in_defined_mode([[1, 2], [3, 4]], native=True)
+    df_equals(np.sqrt(modin_df), np.sqrt(pandas_df))
+    modin_ser, pandas_ser = create_test_series_in_defined_mode(
+        [1, 2, 3, 4, 9], native=True
+    )
+    df_equals(np.sqrt(modin_ser), np.sqrt(pandas_ser))
+
+
 def test_asfreq(df_mode_pair):
     index = pd.date_range("1/1/2000", periods=4, freq="min")
     series, _ = create_test_series_in_defined_mode(

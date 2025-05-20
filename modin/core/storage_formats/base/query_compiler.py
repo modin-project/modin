@@ -24,7 +24,7 @@ import warnings
 from enum import IntEnum
 from functools import cached_property
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Hashable, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, Hashable, List, Literal, Optional, Union
 
 import numpy as np
 import pandas
@@ -65,6 +65,8 @@ if TYPE_CHECKING:
     # TODO: should be ModinDataframe
     # https://github.com/modin-project/modin/issues/7244
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+    from modin.pandas import DataFrame, Series
+    from modin.pandas.base import BasePandasDataset
 
 
 def _get_axis(axis):
@@ -804,6 +806,78 @@ class BaseQueryCompiler(
         return DataFrameDefault.register(pandas.DataFrame.to_numpy)(self, **kwargs)
 
     # END To NumPy
+
+    def do_array_ufunc_implementation(
+        self,
+        frame: BasePandasDataset,
+        ufunc: np.ufunc,
+        method: str,
+        *inputs: Any,
+        **kwargs: Any,
+    ) -> Union["DataFrame", "Series", Any]:
+        """
+        Apply the provided NumPy ufunc to the underlying data.
+
+        This method is called by the ``__array_ufunc__`` dispatcher on BasePandasDataset.
+
+        Unlike other query compiler methods, this function directly operates on the input DataFrame/Series
+        to allow for easier argument processing. The default implementation defaults to pandas, but
+        a query compiler sub-class may override this method to provide a distributed implementation.
+
+        See NumPy docs: https://numpy.org/doc/stable/user/basics.subclassing.html#array-ufunc-for-ufuncs
+
+        Parameters
+        ----------
+        frame : BasePandasDataset
+            The DataFrame or Series on which the ufunc was called. Its query compiler must match ``self``.
+
+        ufunc : np.ufunc
+            The function to apply.
+
+        method : str
+            The name of the function to apply.
+
+        *inputs : Any
+            Positional arguments to pass to ``ufunc``.
+
+        **kwargs : Any
+            Keyword arguments to pass to ``ufunc``.
+
+        Returns
+        -------
+        DataFrame, Series, or Any
+            The result of applying the ufunc to ``frame``.
+        """
+        assert (
+            self is frame._query_compiler
+        ), "array ufunc called with mismatched query compiler and input frame"
+        # we can't use the regular default_to_pandas() method because self is one of the
+        # `inputs` to __array_ufunc__, and pandas has some checks on the identity of the
+        # inputs [1]. The usual default to pandas will call _to_pandas() on the inputs
+        # as well as on self, but that gives inputs[0] a different identity from self.
+        #
+        # [1] https://github.com/pandas-dev/pandas/blob/2c4c072ade78b96a9eb05097a5fcf4347a3768f3/pandas/_libs/ops_dispatch.pyx#L99-L109
+        self._maybe_warn_on_default(message="__array_ufunc__")
+        pandas_self = frame._to_pandas()
+        pandas_result = pandas_self.__array_ufunc__(
+            ufunc,
+            method,
+            *(
+                pandas_self if each_input is frame else try_cast_to_pandas(each_input)
+                for each_input in inputs
+            ),
+            **try_cast_to_pandas(kwargs),
+        )
+        if isinstance(pandas_result, pandas.DataFrame):
+            from modin.pandas import DataFrame
+
+            return DataFrame(pandas_result)
+        elif isinstance(pandas_result, pandas.Series):
+            from modin.pandas import Series
+
+            return Series(pandas_result)
+        # ufuncs are required to be one-to-one mappings, so this branch should never be hit
+        return pandas_result  # pragma: no cover
 
     # Dataframe exchange protocol
 
