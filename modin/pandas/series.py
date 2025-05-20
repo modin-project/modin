@@ -390,12 +390,9 @@ class Series(BasePandasDataset):
         """
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
-        try:
-            return super().__getattr__(key)
-        except AttributeError as err:
-            if key not in _ATTRS_NO_LOOKUP and key in self._query_compiler.index:
-                return self[key]
-            raise err
+        if key not in _ATTRS_NO_LOOKUP and key in self._query_compiler.index:
+            return self[key]
+        raise AttributeError(f"'Series' object has no attribute '{key}'")
 
     __float__ = _coerce_method(float)
     __int__ = _coerce_method(int)

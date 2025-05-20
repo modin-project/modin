@@ -224,7 +224,9 @@ class TestProperty:
 
         df = pd.DataFrame({column_name: ["a"]}).set_backend(Backend1)
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(
+            AttributeError, match="'DataFrame' has no attribute 'non_existent_column'"
+        ):
             getattr(df, "non_existent_column")
         column_getter.assert_called_once_with(df)
 
