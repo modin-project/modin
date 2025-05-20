@@ -40,6 +40,9 @@ from modin.core.storage_formats.base.query_compiler import (
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
+from modin.error_message import ErrorMessage
+from modin.logging import disable_logging
+from modin.utils import sentinel
 
 Fn = TypeVar("Fn", bound=Any)
 
@@ -59,6 +62,7 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "__delattr__",
     "__getattr__",
     "_getattribute__from_extension_impl",
+    "_getattr__from_extension_impl",
     "get_backend",
     "move_to",
     "_update_inplace",
@@ -73,6 +77,25 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "unpin_backend",
     "__dict__",
 }
+
+
+# Do not look up these attributes when searching for extensions. We use them
+# to implement the extension lookup itself.
+EXTENSION_NO_LOOKUP = {
+    "_get_extension",
+    "_query_compiler",
+    "get_backend",
+    "_getattribute__from_extension_impl",
+    "_getattr__from_extension_impl",
+    "_get_query_compiler",
+    "set_backend",
+    "_pinned",
+    "is_backend_pinned",
+    "_set_backend_pinned",
+    "pin_backend",
+    "unpin_backend",
+}
+
 
 BackendAndClassName = namedtuple("BackendAndClassName", ["backend", "class_name"])
 
@@ -255,6 +278,119 @@ class QueryCompilerCaster(ABC):
             The object to copy data into.
         """
         pass
+
+    @disable_logging
+    def _get_extension(self, name: str, extensions: EXTENSION_DICT_TYPE) -> Any:
+        """
+        Get an extension with the given name from the given set of extensions.
+
+        Parameters
+        ----------
+        name : str
+            The name of the extension.
+        extensions : EXTENSION_DICT_TYPE
+            The set of extensions.
+
+        Returns
+        -------
+        Any
+            The extension with the given name, or `sentinel` if the extension is not found.
+        """
+        if self._get_query_compiler() is not None:
+            extensions_for_backend = extensions[self.get_backend()]
+            if name in extensions_for_backend:
+                return extensions_for_backend[name]
+            if name in extensions[None]:
+                return extensions[None][name]
+        return sentinel
+
+    @disable_logging
+    def _getattribute__from_extension_impl(
+        self, item: str, extensions: EXTENSION_DICT_TYPE
+    ):
+        """
+        __getatttribute__() an extension with the given name from the given set of extensions.
+
+        Implement __getattribute__() for extensions. Python calls
+        __getattribute_() every time you access an attribute of an object.
+
+        Parameters
+        ----------
+        item : str
+            The name of the attribute to get.
+        extensions : EXTENSION_DICT_TYPE
+            The set of extensions.
+
+        Returns
+        -------
+        Any
+            The attribute from the extension, or `sentinel` if the attribute is
+            not found.
+        """
+        # An extension property is only accessible if the backend supports it.
+        extension = self._get_extension(item, extensions)
+        if (
+            extension is not sentinel
+            # We should implement callable extensions by wrapping them in
+            # methods that dispatch to the corrrect backend. We should get the
+            # wrapped method with the usual object.__getattribute__() method
+            # lookup rather than by getting a particular extension when we call
+            # __getattribute__(). For example, if we've extended sort_values(),
+            # then __getattribute__('sort_values') should return a wrapper that
+            # calls the correct extension once it's invoked.
+            and not callable(extension)
+        ):
+            return (
+                extension.__get__(self) if hasattr(extension, "__get__") else extension
+            )
+        return sentinel
+
+    @disable_logging
+    def _getattr__from_extension_impl(
+        self,
+        key: str,
+        default_behavior_attributes: set[str],
+        extensions: EXTENSION_DICT_TYPE,
+    ) -> Any:
+        """
+        Implement __getattr__, which the python interpreter falls back to if __getattribute__ raises AttributeError.
+
+        We override this method to make sure we try to get the extension
+        attribute for `key`, even if this class has a different
+        attribute for `key`.
+
+        Parameters
+        ----------
+        key : str
+            Attribute name.
+        default_behavior_attributes : set[str]
+            The set of attributes for which we should follow the default
+            __getattr__ behavior and not try to get the extension.
+        extensions : EXTENSION_DICT_TYPE
+            The set of extensions.
+
+        Returns
+        -------
+        The value of the attribute.
+        """
+        if key not in default_behavior_attributes:
+            # If this class has a an extension for `key`, but __getattribute__()
+            # for the extension raises an AttributeError, we end up in this
+            # method, which should try getting the extension again (and
+            # probably raise the AttributeError that
+            # _getattribute__from_extension_impl() originally raised), rather
+            # than following back to object.__getattribute__().
+            extensions_result = self._getattribute__from_extension_impl(key, extensions)
+            # If extensions_result is not `sentinel`, __getattribute__() should have
+            # returned it first.
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=extensions_result is not sentinel,
+                extra_log=(
+                    "This object should return extensions via "
+                    + "__getattribute__ rather than __getattr__"
+                ),
+            )
+        return object.__getattribute__(self, key)
 
 
 def visit_nested_args(arguments, fn: callable):

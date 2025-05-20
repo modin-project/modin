@@ -33,7 +33,10 @@ from pandas.util._decorators import doc
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
-from modin.core.storage_formats.pandas.query_compiler_caster import EXTENSION_DICT_TYPE
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    EXTENSION_DICT_TYPE,
+    EXTENSION_NO_LOOKUP,
+)
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import (
@@ -44,7 +47,7 @@ from modin.utils import (
 )
 
 from .accessor import CachedAccessor, SparseAccessor
-from .base import _ATTRS_NO_LOOKUP, _EXTENSION_NO_LOOKUP, BasePandasDataset
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .iterator import PartitionIterator
 from .series_utils import (
     CategoryMethods,
@@ -357,7 +360,7 @@ class Series(BasePandasDataset):
         """
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
-        if key not in _EXTENSION_NO_LOOKUP:
+        if key not in EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
                 key, __class__._extensions
             )

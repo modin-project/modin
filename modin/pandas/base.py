@@ -76,7 +76,10 @@ from pandas.util._validators import (
 
 from modin import pandas as pd
 from modin.config import Backend
-from modin.core.storage_formats.pandas.query_compiler_caster import QueryCompilerCaster
+from modin.core.storage_formats.pandas.query_compiler_caster import (
+    EXTENSION_NO_LOOKUP,
+    QueryCompilerCaster,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
 from modin.pandas.accessor import CachedAccessor, ModinAPI
@@ -103,22 +106,6 @@ if TYPE_CHECKING:
     from .window import Expanding, Rolling, Window
 
 
-# Do not look up these attributes when searching for extensions. We use them
-# to implement the extension lookup itself.
-_EXTENSION_NO_LOOKUP = {
-    "_get_extension",
-    "_query_compiler",
-    "get_backend",
-    "_getattribute__from_extension_impl",
-    "_get_query_compiler",
-    "set_backend",
-    "_pinned",
-    "is_backend_pinned",
-    "_set_backend_pinned",
-    "pin_backend",
-    "unpin_backend",
-}
-
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
 _ATTRS_NO_LOOKUP = {
@@ -129,7 +116,7 @@ _ATTRS_NO_LOOKUP = {
     "_repr_mimebundle_",
     # Also avoid looking up the attributes that we use to implement the
     # extension system.
-} | _EXTENSION_NO_LOOKUP
+} | EXTENSION_NO_LOOKUP
 
 
 _DEFAULT_BEHAVIOUR = {
@@ -4355,7 +4342,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
 
-        if item not in _EXTENSION_NO_LOOKUP:
+        if item not in EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
                 item, __class__._extensions
             )
@@ -4504,31 +4491,6 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
 
     move_to = set_backend
 
-    @disable_logging
-    def _get_extension(self, name: str, extensions: EXTENSION_DICT_TYPE) -> Any:
-        """
-        Get an extension with the given name from the given set of extensions.
-
-        Parameters
-        ----------
-        name : str
-            The name of the extension.
-        extensions : EXTENSION_DICT_TYPE
-            The set of extensions.
-
-        Returns
-        -------
-        Any
-            The extension with the given name, or `sentinel` if the extension is not found.
-        """
-        if hasattr(self, "_query_compiler"):
-            extensions_for_backend = extensions[self.get_backend()]
-            if name in extensions_for_backend:
-                return extensions_for_backend[name]
-            if name in extensions[None]:
-                return extensions[None][name]
-        return sentinel
-
     @doc(GET_BACKEND_DOC, class_name=__qualname__)
     @disable_logging
     def get_backend(self) -> str:
@@ -4575,47 +4537,6 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         if extension is not sentinel and hasattr(extension, "__delete__"):
             return extension.__delete__(self)
         return super().__delattr__(name)
-
-    @disable_logging
-    def _getattribute__from_extension_impl(
-        self, item: str, extensions: EXTENSION_DICT_TYPE
-    ):
-        """
-        __getatttribute__() an extension with the given name from the given set of extensions.
-
-        Implement __getattribute__() for extensions. Python calls
-        __getattribute_() every time you access an attribute of an object.
-
-        Parameters
-        ----------
-        item : str
-            The name of the attribute to get.
-        extensions : EXTENSION_DICT_TYPE
-            The set of extensions.
-
-        Returns
-        -------
-        Any
-            The attribute from the extension, or `sentinel` if the attribute is
-            not found.
-        """
-        # An extension property is only accessible if the backend supports it.
-        extension = self._get_extension(item, extensions)
-        if (
-            extension is not sentinel
-            # We should implement callable extensions by wrapping them in
-            # methods that dispatch to the corrrect backend. We should get the
-            # wrapped method with the usual object.__getattribute__() method
-            # lookup rather than by getting a particular extension when we call
-            # __getattribute__(). For example, if we've extended sort_values(),
-            # then __getattribute__('sort_values') should return a wrapper that
-            # calls the correct extension once it's invoked.
-            and not callable(extension)
-        ):
-            return (
-                extension.__get__(self) if hasattr(extension, "__get__") else extension
-            )
-        return sentinel
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
