@@ -2647,12 +2647,9 @@ class DataFrame(BasePandasDataset):
         """
         # NOTE that to get an attribute, python calls __getattribute__() first and
         # then falls back to __getattr__() if the former raises an AttributeError.
-        try:
-            return super().__getattr__(key)
-        except AttributeError as err:
-            if key not in _ATTRS_NO_LOOKUP and key in self.columns:
-                return self[key]
-            raise err
+        if key not in _ATTRS_NO_LOOKUP and key in self.columns:
+            return self[key]
+        raise AttributeError(f"'DataFrame' object has no attribute '{key}'")
 
     def __setattr__(self, key, value) -> None:
         """
