@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from functools import cached_property
+
 import pytest
 
 import modin.pandas as pd
@@ -240,6 +242,17 @@ class TestProperty:
         assert getattr(pandas_groupby, public_property_name) == "value"
         delattr(pandas_groupby, public_property_name)
         assert not hasattr(pandas_groupby, private_property_name)
+
+    @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+    def test_override_cached_property(self, get_groupby, register_accessor):
+        @cached_property
+        def groups(self):
+            return {"group": pd.Index(["test"])}
+
+        register_accessor("groups", backend="Pandas")(groups)
+        pd.DataFrame({"col0": [1], "col1": [2]})
+        pandas_df = pd.DataFrame({"col0": [1], "col1": [2]}).move_to("pandas")
+        assert get_groupby(pandas_df).groups == {"group": pd.Index(["test"])}
 
 
 def test_deleting_extension_that_is_not_property_raises_attribute_error():
