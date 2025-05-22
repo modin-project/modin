@@ -250,7 +250,6 @@ class TestProperty:
             return {"group": pd.Index(["test"])}
 
         register_accessor("groups", backend="Pandas")(groups)
-        pd.DataFrame({"col0": [1], "col1": [2]})
         pandas_df = pd.DataFrame({"col0": [1], "col1": [2]}).move_to("pandas")
         assert get_groupby(pandas_df).groups == {"group": pd.Index(["test"])}
 
