@@ -91,6 +91,21 @@ _DEFAULT_BEHAVIOUR = EXTENSION_NO_LOOKUP | {
     "_wrap_aggregation",
 }
 
+GROUPBY_EXTENSION_NO_LOOKUP = EXTENSION_NO_LOOKUP | {
+    "_axis",
+    "_idx_name",
+    "_df",
+    "_query_compiler",
+    "_columns",
+    "_by",
+    "_drop",
+    "_return_tuple_when_iterating",
+    "_is_multi_by",
+    "_level",
+    "_kwargs",
+    "_get_query_compiler",
+}
+
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
 class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
@@ -98,10 +113,6 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
     _return_tuple_when_iterating = False
     _df: Union[DataFrame, Series]
     _query_compiler: BaseQueryCompiler
-    # TODO(https://github.com/modin-project/modin/issues/7543):
-    # Currently this _extensions dict doesn't do anything, but we should
-    # add methods to register groupby accessors and make the groupby classes
-    # use this _extensions dict.
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     def __init__(
@@ -248,7 +259,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         try:
             return self._getattr__from_extension_impl(
                 key=key,
-                default_behavior_attributes=_DEFAULT_BEHAVIOUR,
+                default_behavior_attributes=GROUPBY_EXTENSION_NO_LOOKUP,
                 extensions=__class__._extensions,
             )
         except AttributeError as err:
@@ -275,7 +286,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         Any
             The value of the attribute.
         """
-        if item not in _DEFAULT_BEHAVIOUR:
+        if item not in GROUPBY_EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
                 item, __class__._extensions
             )
@@ -1863,11 +1874,6 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
     _pandas_class = pandas.core.groupby.SeriesGroupBy
-
-    # TODO(https://github.com/modin-project/modin/issues/7543):
-    # Currently this _extensions dict doesn't do anything, but we should
-    # add methods to register groupby accessors and make the groupby classes
-    # use this _extensions dict.
     _extensions: EXTENSION_DICT_TYPE = EXTENSION_DICT_TYPE(dict)
 
     @disable_logging
@@ -1888,7 +1894,7 @@ class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
         Any
             The value of the attribute.
         """
-        if item not in _DEFAULT_BEHAVIOUR:
+        if item not in GROUPBY_EXTENSION_NO_LOOKUP:
             extensions_result = self._getattribute__from_extension_impl(
                 item, __class__._extensions
             )
@@ -1901,7 +1907,7 @@ class SeriesGroupBy(DataFrameGroupBy):  # noqa: GL08
     def __getattr__(self, key: str) -> Any:
         return self._getattr__from_extension_impl(
             key=key,
-            default_behavior_attributes=_DEFAULT_BEHAVIOUR,
+            default_behavior_attributes=GROUPBY_EXTENSION_NO_LOOKUP,
             extensions=__class__._extensions,
         )
 

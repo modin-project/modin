@@ -13,6 +13,7 @@
 
 import inspect
 from collections import defaultdict
+from functools import cached_property
 from types import MethodType, ModuleType
 from typing import Any, Dict, Optional, Union
 
@@ -94,6 +95,10 @@ def _set_attribute_on_obj(
             original_attr = getattr(pd, name)
             _reexport_classes[name] = original_attr
             delattr(pd, name)
+        # If the attribute is an instance of functools.cached_property, we must manually call __set_name__ on it.
+        # https://stackoverflow.com/a/62161136
+        if isinstance(new_attr, cached_property):
+            new_attr.__set_name__(obj, name)
         extensions[None if backend is None else Backend.normalize(backend)][
             name
         ] = new_attr
