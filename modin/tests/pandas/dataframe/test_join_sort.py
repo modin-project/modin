@@ -19,7 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import Engine, NPartitions, StorageFormat, Backend
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     arg_keys,
@@ -1012,3 +1012,35 @@ def test_compare(align_axis, keep_shape, keep_equal):
     modin_result = modin_series2.compare(modin_series1, **kwargs)
     pandas_result = pandas_series2.compare(pandas_series1, **kwargs)
     assert to_pandas(modin_result).equals(pandas_result)
+
+
+@pytest.mark.parametrize("backend", ["Pandas", "Ray"])
+def test_df_value_counts(backend):
+    Backend.put(backend)
+    df = pd.DataFrame([[4, 1, 3, 2], [2, 5, 6, 5], [4, 3, 3, 5]], columns=["a", "b", "c", "d"])
+
+    result = df["a"].value_counts()
+    expected = df._to_pandas()["a"].value_counts()
+    df_equals(result, expected)
+
+
+@pytest.mark.parametrize("backend", ["Pandas", "Ray"])
+def test_df_value_counts_with_nulls(backend):
+    Backend.put(backend)
+    df = pd.DataFrame([[5, 6, None, 7, 7, None, None, 5, 8]])
+
+    result = df[0].value_counts(dropna=False)
+    expected = df[0]._to_pandas().value_counts(dropna=False)
+    df_equals(result, expected)
+
+
+@pytest.mark.parametrize("backend", ["Pandas", "Ray"])
+def test_df_value_counts_with_multiindex(backend):
+    Backend.put(backend)
+    arrays = [["a", "a", "b", "b"], [1, 2, 1, 2]]
+    index = pd.MultiIndex.from_arrays(arrays, names=("l1", "l2"))
+    df = pd.DataFrame([[1, 2, 2, 4]], index=index)
+
+    result = df[0].value_counts()
+    expected = df[0]._to_pandas().value_counts()
+    df_equals(result, expected)
