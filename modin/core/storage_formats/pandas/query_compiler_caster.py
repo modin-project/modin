@@ -22,6 +22,7 @@ This ensures compatibility between different query compiler classes.
 import functools
 import inspect
 import logging
+import random
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
 from types import FunctionType, MappingProxyType, MethodType
@@ -42,6 +43,7 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
 )
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
+from modin.logging.metrics import emit_metric
 from modin.utils import sentinel
 
 Fn = TypeVar("Fn", bound=Any)
@@ -724,6 +726,8 @@ def _get_backend_for_auto_switch(
     # backend.
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
+    # Does not need to be secure, should not use system entropy
+    metrics_group = "%04x" % random.randrange(16**4)
     starting_backend = input_qc.get_backend()
 
     min_move_stay_delta = None
@@ -733,6 +737,23 @@ def _get_backend_for_auto_switch(
         api_cls_name=class_of_wrapped_fn,
         operation=function_name,
         arguments=arguments,
+    )
+    data_max_shape = input_qc._max_shape()
+    emit_metric(
+        f"hybrid.auto.api.{class_of_wrapped_fn}.{function_name}.group.{metrics_group}",
+        1,
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.stay_cost",
+        stay_cost,
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.rows",
+        data_max_shape[0],
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.cols",
+        data_max_shape[1],
     )
     for backend in Backend.get_active_backends():
         if backend in ("Ray", "Unidist", "Dask"):
@@ -778,6 +799,19 @@ def _get_backend_for_auto_switch(
             ):
                 min_move_stay_delta = move_stay_delta
                 best_backend = backend
+            emit_metric(
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.move_to_cost",
+                move_to_cost,
+            )
+            emit_metric(
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.other_execute_cost",
+                other_execute_cost,
+            )
+            emit_metric(
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.delta",
+                move_stay_delta,
+            )
+
             logging.info(
                 f"After {class_of_wrapped_fn} function {function_name}, "
                 + f"considered moving to backend {backend} with "
@@ -785,9 +819,12 @@ def _get_backend_for_auto_switch(
                 + f", stay_cost {stay_cost}, and move-stay delta "
                 + f"{move_stay_delta}"
             )
+
     if best_backend == starting_backend:
+        emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 0)
         logging.info(f"Chose not to switch backends after operation {function_name}")
     else:
+        emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 1)
         logging.info(f"Chose to move to backend {best_backend}")
     return best_backend
 
