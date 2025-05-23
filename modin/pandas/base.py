@@ -3159,7 +3159,13 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         ascending = validate_ascending(ascending)
+        # Avoid index/column name collisions by renaming and restoring after sorting
+        index_renaming = None
+        column_renaming = None
         if axis == 0:
+            if any(name in self.columns for name in self.index.names):
+                index_renaming = self.index.names
+                self.index = self.index.set_names([None] * len(self.index.names))
             result = self._query_compiler.sort_rows_by_column_values(
                 by,
                 ascending=ascending,
@@ -3168,7 +3174,12 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 ignore_index=ignore_index,
                 key=key,
             )
+            if index_renaming is not None:
+                result.index = result.index.set_names(index_renaming)
         else:
+            if any(name in self.index for name in self.columns.names):
+                column_renaming = self.columns.names
+                self.columns = self.columns.set_names([None] * len(self.columns.names))
             result = self._query_compiler.sort_columns_by_row_values(
                 by,
                 ascending=ascending,
@@ -3177,6 +3188,8 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 ignore_index=ignore_index,
                 key=key,
             )
+            if column_renaming is not None:
+                result.columns = result.columns.set_names(column_renaming)
         return self._create_or_update_from_compiler(result, inplace)
 
     def std(
