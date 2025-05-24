@@ -1444,11 +1444,15 @@ def test_unstack_multiindex_types(multi_col, multi_idx):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("copy_kwargs", ({"copy": True}, {"copy": None}, {}))
-def test___array__(data, copy_kwargs):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    assert_array_equal(
-        modin_df.__array__(**copy_kwargs), pandas_df.__array__(**copy_kwargs)
-    )
+@pytest.mark.parametrize(
+    "get_array",
+    (
+        lambda df, copy_kwargs: df.__array__(**copy_kwargs),
+        lambda df, copy_kwargs: np.array(df, **copy_kwargs),
+    ),
+)
+def test___array__(data, copy_kwargs, get_array):
+    assert_array_equal(*(get_array(df, copy_kwargs) for df in create_test_dfs(data)))
 
 
 @pytest.mark.xfail(
