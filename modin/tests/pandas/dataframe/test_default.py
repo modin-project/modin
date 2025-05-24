@@ -1443,9 +1443,29 @@ def test_unstack_multiindex_types(multi_col, multi_idx):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___array__(data):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    assert_array_equal(modin_df.__array__(), pandas_df.__array__())
+@pytest.mark.parametrize("copy_kwargs", ({"copy": True}, {"copy": None}, {}))
+@pytest.mark.parametrize(
+    "get_array",
+    (
+        lambda df, copy_kwargs: df.__array__(**copy_kwargs),
+        lambda df, copy_kwargs: np.array(df, **copy_kwargs),
+    ),
+)
+def test___array__(data, copy_kwargs, get_array):
+    assert_array_equal(*(get_array(df, copy_kwargs) for df in create_test_dfs(data)))
+
+
+@pytest.mark.xfail(
+    raises=AssertionError, reason="https://github.com/modin-project/modin/issues/4650"
+)
+def test___array__copy_false_creates_view():
+    def do_in_place_update_via_copy(df):
+        array = np.array(df, copy=False)
+        array[0, 0] += 1
+
+    eval_general(
+        *create_test_dfs([[11]]), do_in_place_update_via_copy, __inplace__=True
+    )
 
 
 @pytest.mark.parametrize("data", [[False], [True], [1, 2]])
