@@ -1017,7 +1017,9 @@ def test_compare(align_axis, keep_shape, keep_equal):
 @pytest.mark.parametrize("backend", ["Pandas", "Ray"])
 def test_df_value_counts(backend):
     Backend.put(backend)
-    df = pd.DataFrame([[4, 1, 3, 2], [2, 5, 6, 5], [4, 3, 3, 5]], columns=["a", "b", "c", "d"])
+    df = pd.DataFrame(
+        [[4, 1, 3, 2], [2, 5, 6, 5], [4, 3, 3, 5]], columns=["a", "b", "c", "d"]
+    )
 
     result = df["a"].value_counts()
     expected = df._to_pandas()["a"].value_counts()
