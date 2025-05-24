@@ -313,10 +313,24 @@ def test___and__(data, request):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___array__(data):
+@pytest.mark.parametrize("copy_kwargs", ({"copy": True}, {"copy": None}, {}))
+def test___array__(data, copy_kwargs):
     modin_series, pandas_series = create_test_series(data)
-    modin_result = modin_series.__array__()
-    assert_array_equal(modin_result, pandas_series.__array__())
+    modin_result = modin_series.__array__(**copy_kwargs)
+    assert_array_equal(modin_result, pandas_series.__array__(**copy_kwargs))
+
+
+@pytest.mark.xfail(
+    raises=AssertionError, reason="https://github.com/modin-project/modin/issues/4650"
+)
+def test___array__copy_false_creates_view():
+    def do_in_place_update_via_copy(series):
+        array = np.array(series, copy=False)
+        array[0] += 1
+
+    eval_general(
+        *create_test_series([11]), do_in_place_update_via_copy, __inplace__=True
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

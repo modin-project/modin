@@ -3884,7 +3884,9 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
     def __rand__(self, other) -> Self:
         return self._binary_op("__rand__", other, axis=0)
 
-    def __array__(self, dtype=None) -> np.ndarray:
+    def __array__(
+        self, dtype: npt.DTypeLike | None = None, copy: bool | None = None
+    ) -> np.ndarray:
         """
         Return the values as a NumPy array.
 
@@ -3892,6 +3894,9 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         ----------
         dtype : str or np.dtype, optional
             The dtype of returned array.
+        copy : bool, default: None
+            This parameter has no effect; the method always returns a copy of
+            the data.
 
         Returns
         -------

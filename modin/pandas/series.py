@@ -238,10 +238,9 @@ class Series(BasePandasDataset):
 
     # add `_inherit_docstrings` decorator to force method link addition.
     @_inherit_docstrings(pandas.Series.__array__, apilink="pandas.Series.__array__")
-    def __array__(self, dtype=None) -> np.ndarray:  # noqa: PR01, RT01, D200
-        """
-        Return the values as a NumPy array.
-        """
+    def __array__(
+        self, dtype: npt.DTypeLike | None = None, copy: bool | None = None
+    ) -> np.ndarray:
         return super(Series, self).__array__(dtype).flatten()
 
     def __column_consortium_standard__(
