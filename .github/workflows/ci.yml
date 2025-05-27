@@ -36,7 +36,7 @@ jobs:
     steps:
     - id: choose
       run: |
-        if true
+        if [[ "${{ github.event.schedule }}" = "30 2 * * WED" ]]
         then
           echo "python-version=3.10" >> "$GITHUB_OUTPUT"
         elif [[ "${{ github.event.schedule }}" = "30 2 * * THU" ]]
