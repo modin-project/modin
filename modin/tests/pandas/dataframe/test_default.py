@@ -21,6 +21,7 @@ import pandas._libs.lib as lib
 import pyarrow as pa
 import pytest
 from numpy.testing import assert_array_equal
+from packaging.version import Version
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
@@ -1445,13 +1446,20 @@ def test_unstack_multiindex_types(multi_col, multi_idx):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("copy_kwargs", ({"copy": True}, {"copy": None}, {}))
 @pytest.mark.parametrize(
-    "get_array",
+    "get_array, get_array_name",
     (
-        lambda df, copy_kwargs: df.__array__(**copy_kwargs),
-        lambda df, copy_kwargs: np.array(df, **copy_kwargs),
+        (lambda df, copy_kwargs: df.__array__(**copy_kwargs), "__array__"),
+        (lambda df, copy_kwargs: np.array(df, **copy_kwargs), "np.array"),
     ),
 )
-def test___array__(data, copy_kwargs, get_array):
+def test___array__(data, copy_kwargs, get_array, get_array_name):
+    if (
+        get_array_name == "np.array"
+        and Version(np.__version__) < Version("2")
+        and "copy" in copy_kwargs
+        and copy_kwargs["copy"] is None
+    ):
+        pytest.skip(reason="np.array does not support copy=None before numpy 2.0")
     assert_array_equal(*(get_array(df, copy_kwargs) for df in create_test_dfs(data)))
 
 
