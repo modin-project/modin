@@ -19,7 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat, Backend
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     arg_keys,
@@ -1014,21 +1014,25 @@ def test_compare(align_axis, keep_shape, keep_equal):
     assert to_pandas(modin_result).equals(pandas_result)
 
 
-@pytest.mark.parametrize("backend", ["Pandas", "Ray"])
-def test_df_value_counts(backend):
-    Backend.put(backend)
+def test_df_value_counts():
     df = pd.DataFrame(
         [[4, 1, 3, 2], [2, 5, 6, 5], [4, 3, 3, 5]], columns=["a", "b", "c", "d"]
     )
 
-    result = df["a"].value_counts()
-    expected = df._to_pandas()["a"].value_counts()
-    df_equals(result, expected)
+    result_descending = df["a"].value_counts()
+    expected_descending = df._to_pandas()["a"].value_counts()
+    df_equals(result_descending, expected_descending)
+
+    result_ascending = df["a"].value_counts(ascending=True)
+    expected_ascending = df._to_pandas()["a"].value_counts(ascending=True)
+    df_equals(result_ascending, expected_ascending)
+
+    result_no_sort = df["a"].value_counts(sort=False)
+    expected_no_sort = df._to_pandas()["a"].value_counts(sort=False)
+    df_equals(result_no_sort, expected_no_sort)
 
 
-@pytest.mark.parametrize("backend", ["Pandas", "Ray"])
-def test_df_value_counts_with_nulls(backend):
-    Backend.put(backend)
+def test_df_value_counts_with_nulls():
     df = pd.DataFrame([[5, 6, None, 7, 7, None, None, 5, 8]])
 
     result = df[0].value_counts(dropna=False)
@@ -1036,9 +1040,7 @@ def test_df_value_counts_with_nulls(backend):
     df_equals(result, expected)
 
 
-@pytest.mark.parametrize("backend", ["Pandas", "Ray"])
-def test_df_value_counts_with_multiindex(backend):
-    Backend.put(backend)
+def test_df_value_counts_with_multiindex():
     arrays = [["a", "a", "b", "b"], [1, 2, 1, 2]]
     index = pd.MultiIndex.from_arrays(arrays, names=("l1", "l2"))
     df = pd.DataFrame([[1, 2, 2, 4]], index=index)
