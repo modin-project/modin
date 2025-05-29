@@ -3081,7 +3081,7 @@ class BaseQueryCompiler(
         """
         # Avoid index/column name collisions by renaming and restoring after sorting
         index_renaming = None
-        if not isinstance(columns, list):
+        if is_scalar(columns):
             columns = [columns]
         if any(name in columns for name in self.index.names):
             index_renaming = self.index.names
