@@ -65,17 +65,13 @@ For the purpose of demonstration, we will load in modin as ``pd`` and pandas as
   ray.init()
   #############################################
 
-..
-  TODO(https://github.com/modin-project/modin/issues/7451): Use https once we
-  fix the certificate for modin-datasets.intel.com
-
-In this toy example, we look at the NYC taxi dataset, which is around 200MB in size. You can download `this dataset <http://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv>`_ to run the example locally.
+In this toy example, we look at the NYC taxi dataset, which is around 200MB in size. You can download `this dataset <https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv>`_ to run the example locally.
 
 .. code-block:: python
 
   # This may take a few minutes to download
   import urllib.request
-  dataset_url = "http://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv"
+  dataset_url = "https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv"
   urllib.request.urlretrieve(dataset_url, "taxi.csv")  
 
 Faster Data Loading with ``read_csv``
