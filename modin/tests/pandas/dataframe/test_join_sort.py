@@ -1014,23 +1014,30 @@ def test_compare(align_axis, keep_shape, keep_equal):
     assert to_pandas(modin_result).equals(pandas_result)
 
 
-def test_df_value_counts():
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"ascending": True},
+        {"sort": False},
+        {"normalize": True},
+    ],
+)
+def test_value_counts1(params):
     data = [[4, 1, 3, 2], [2, 5, 6, 5], [4, 3, 3, 5]]
     columns = ["col1", "col2", "col3", "col4"]
 
-    for kwargs in [{}, {"ascending": True}, {"sort": False}, {"normalize": True}]:
-        eval_general(
-            *create_test_dfs(data, columns=columns),
-            lambda df: df["col1"].value_counts(**kwargs),
-        )
+    eval_general(
+        *create_test_dfs(data, columns=columns),
+        lambda df: df["col1"].value_counts(**params),
+    )
 
 
-def test_df_value_counts_with_nulls():
+def test_value_counts_with_nulls():
     data = [[5, 6, None, 7, 7], [None, None, 5, 8]]
     eval_general(*create_test_dfs(data), lambda df: df[0].value_counts(dropna=False))
 
 
-def test_df_value_counts_with_multiindex():
+def test_value_counts_with_multiindex():
     data = [[1, 2, 2, 4]]
     index = pd.MultiIndex.from_arrays(
         arrays=[["a", "a", "b", "b"], [1, 2, 1, 2]], names=("l1", "l2")
