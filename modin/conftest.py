@@ -15,6 +15,7 @@
 # type: ignore
 
 import copy
+import logging
 import os
 import platform
 import shutil
@@ -792,3 +793,17 @@ def clean_up_auto_backend_switching():
         )
     ):
         yield
+
+
+@pytest.fixture(autouse=True)
+def assert_no_root_logging(caplog):
+    root_logger = logging.getLogger()
+    # Capture logs at any level, i.e. at level >= logging.NOTSET.
+    with caplog.at_level(logging.NOTSET):
+        yield
+    # Note that because this code is in a fixture, we have to use
+    # caplog.get_records(when="call") instead of caplog.records:
+    # https://github.com/pytest-dev/pytest/issues/4033
+    assert not any(
+        record.name == root_logger.name for record in caplog.get_records(when="call")
+    )
