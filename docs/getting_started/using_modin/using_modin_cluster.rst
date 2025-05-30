@@ -119,13 +119,9 @@ Now that we have finished the computation, we need to shut down the cluster with
 
    ray down modin-cluster.yaml
 
-..
-  TODO(https://github.com/modin-project/modin/issues/7451): Use https once we
-  fix the certificate for modin-datasets.intel.com
-
 .. _`Ray's autoscaler options`: https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-config
 .. _`Ray's cluster docs`: https://docs.ray.io/en/latest/cluster/getting-started.html
-.. _`NYC Taxi dataset`: http://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
+.. _`NYC Taxi dataset`: https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
 .. _`Modin's Ray cluster setup config`: https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml
 .. _`Amazon EC2 pricing`: https://aws.amazon.com/ec2/pricing/on-demand/
 .. _`exercise_5.py`: https://github.com/modin-project/modin/blob/main/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.py
