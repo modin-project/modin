@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 from .class_logger import ClassLogger  # noqa: F401
-from .config import get_logger  # noqa: F401
+from .config import DEFAULT_LOGGER_NAME, get_logger  # noqa: F401
 from .logger_decorator import disable_logging, enable_logging  # noqa: F401
 from .metrics import add_metric_handler, clear_metric_handler, emit_metric
 
@@ -24,4 +24,5 @@ __all__ = [
     "emit_metric",
     "add_metric_handler",
     "clear_metric_handler",
+    "DEFAULT_LOGGER_NAME",
 ]

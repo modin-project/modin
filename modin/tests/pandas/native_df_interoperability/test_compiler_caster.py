@@ -13,6 +13,7 @@
 
 import contextlib
 import json
+import logging
 from io import StringIO
 from types import MappingProxyType
 from typing import Iterator
@@ -44,6 +45,7 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     register_function_for_post_op_switch,
     register_function_for_pre_op_switch,
 )
+from modin.logging import DEFAULT_LOGGER_NAME
 from modin.logging.metrics import add_metric_handler, clear_metric_handler
 from modin.pandas.api.extensions import register_pd_accessor
 from modin.tests.pandas.utils import create_test_dfs, df_equals, eval_general
@@ -369,11 +371,18 @@ def test_two_same_backend(pico_df):
     assert df3.get_backend() == "Pico"
 
 
-def test_cast_to_second_backend_with_concat(pico_df, cluster_df):
-    df3 = pd.concat([pico_df, cluster_df], axis=1)
+def test_cast_to_second_backend_with_concat(pico_df, cluster_df, caplog):
+    with caplog.at_level(level=logging.INFO, logger=DEFAULT_LOGGER_NAME):
+        df3 = pd.concat([pico_df, cluster_df], axis=1)
     assert pico_df.get_backend() == "Pico"
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
+
+    log_records = caplog.records
+    assert len(log_records) == 1
+    assert log_records[0].name == DEFAULT_LOGGER_NAME
+    assert log_records[0].levelno == logging.INFO
+    assert log_records[0].message.startswith("BackendCostCalculator Results: ")
 
 
 def test_cast_to_second_backend_with_concat_uses_second_backend_api_override(
@@ -692,6 +701,72 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             assert (
                 pd.read_json(StringIO(small_json)).get_backend() == "Small_Data_Local"
             )
+
+    @backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    )
+    def test_read_json_logging_for_post_op_switch(self, caplog):
+        register_function_for_post_op_switch(
+            class_name=None, backend="Big_Data_Cloud", method="read_json"
+        )
+        with caplog.at_level(level=logging.INFO, logger=DEFAULT_LOGGER_NAME):
+            assert (
+                pd.read_json(
+                    StringIO(
+                        json.dumps(
+                            {"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1))}
+                        )
+                    )
+                ).get_backend()
+                == "Small_Data_Local"
+            )
+        log_records = caplog.records
+        assert len(log_records) == 2
+
+        assert log_records[0].name == DEFAULT_LOGGER_NAME
+        assert log_records[0].levelno == logging.INFO
+        assert log_records[0].message.startswith(
+            "After None function read_json, considered moving to backend Small_Data_Local with"
+        )
+
+        assert log_records[1].name == DEFAULT_LOGGER_NAME
+        assert log_records[1].levelno == logging.INFO
+        assert log_records[1].message.startswith(
+            "Chose to move to backend Small_Data_Local"
+        )
+
+    @backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    )
+    def test_read_json_logging_for_post_op_not_switch(self, caplog):
+        register_function_for_post_op_switch(
+            class_name=None, backend="Big_Data_Cloud", method="read_json"
+        )
+        with caplog.at_level(level=logging.INFO, logger=DEFAULT_LOGGER_NAME):
+            assert (
+                pd.read_json(
+                    StringIO(
+                        json.dumps({"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS))})
+                    )
+                ).get_backend()
+                == "Big_Data_Cloud"
+            )
+        log_records = caplog.records
+        assert len(log_records) == 2
+
+        assert log_records[0].name == DEFAULT_LOGGER_NAME
+        assert log_records[0].levelno == logging.INFO
+        assert log_records[0].message.startswith(
+            "After None function read_json, considered moving to backend Small_Data_Local with"
+        )
+
+        assert log_records[1].name == DEFAULT_LOGGER_NAME
+        assert log_records[1].levelno == logging.INFO
+        assert log_records[1].message.startswith(
+            "Chose not to switch backends after operation read_json"
+        )
 
     def test_agg(self):
         with backend_test_context(

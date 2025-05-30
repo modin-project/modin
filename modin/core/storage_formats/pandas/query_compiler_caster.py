@@ -21,7 +21,6 @@ This ensures compatibility between different query compiler classes.
 
 import functools
 import inspect
-import logging
 import random
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
@@ -42,7 +41,7 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
 )
 from modin.error_message import ErrorMessage
-from modin.logging import disable_logging
+from modin.logging import disable_logging, get_logger
 from modin.logging.metrics import emit_metric
 from modin.utils import sentinel
 
@@ -812,7 +811,7 @@ def _get_backend_for_auto_switch(
                 move_stay_delta,
             )
 
-            logging.info(
+            get_logger().info(
                 f"After {class_of_wrapped_fn} function {function_name}, "
                 + f"considered moving to backend {backend} with "
                 + f"(transfer_cost {move_to_cost} + other_execution_cost {other_execute_cost}) "
@@ -822,10 +821,12 @@ def _get_backend_for_auto_switch(
 
     if best_backend == starting_backend:
         emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 0)
-        logging.info(f"Chose not to switch backends after operation {function_name}")
+        get_logger().info(
+            f"Chose not to switch backends after operation {function_name}"
+        )
     else:
         emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 1)
-        logging.info(f"Chose to move to backend {best_backend}")
+        get_logger().info(f"Chose to move to backend {best_backend}")
     return best_backend
 
 
