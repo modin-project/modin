@@ -34,6 +34,8 @@ import psutil
 import modin
 from modin.config import LogFileSize, LogMemoryInterval, LogMode
 
+DEFAULT_LOGGER_NAME = "modin.logger.default"
+
 __LOGGER_CONFIGURED__: bool = False
 
 
@@ -166,7 +168,7 @@ def configure_logging() -> None:
     job_id = f"{current_timestamp}_{uuid.uuid4().hex}"
 
     logger = _create_logger(
-        "modin.logger.default",
+        DEFAULT_LOGGER_NAME,
         job_id,
         "trace",
         LogLevel.INFO,

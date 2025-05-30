@@ -19,7 +19,6 @@ between a set of different backends. It aggregates the cost across
 all query compilers to determine the best query compiler to use.
 """
 
-import logging
 import random
 from types import MappingProxyType
 from typing import Any, Optional
@@ -28,6 +27,7 @@ from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
 )
+from modin.logging import get_logger
 from modin.logging.metrics import emit_metric
 
 
@@ -147,7 +147,7 @@ class BackendCostCalculator:
                 self._result_backend = k
 
         if len(self._backend_data) > 1:
-            logging.info(
+            get_logger().info(
                 f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
             )
             # Does not need to be secure, should not use system entropy
