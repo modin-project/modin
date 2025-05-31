@@ -797,6 +797,12 @@ def clean_up_auto_backend_switching():
 
 @pytest.fixture(autouse=True)
 def assert_no_root_logging(caplog):
+    try:
+        import xgboost
+    except ImportError:
+        xgboost_path = None
+    else:
+        xgboost_path = os.path.dirname(xgboost.__file__)
     root_logger = logging.getLogger()
     # Capture logs at any level, i.e. at level >= logging.NOTSET.
     with caplog.at_level(logging.NOTSET):
@@ -805,5 +811,11 @@ def assert_no_root_logging(caplog):
     # caplog.get_records(when="call") instead of caplog.records:
     # https://github.com/pytest-dev/pytest/issues/4033
     assert not any(
-        record.name == root_logger.name for record in caplog.get_records(when="call")
+        record.name == root_logger.name
+        # Allow xgboost to log to root.
+        # TODO(https://github.com/modin-project/modin/issues/5194): Check
+        # whether we can remove this exception once we use a newer version of
+        # xgboost.
+        and not (xgboost_path is not None and record.pathname.startswith(xgboost_path))
+        for record in caplog.get_records(when="call")
     )
