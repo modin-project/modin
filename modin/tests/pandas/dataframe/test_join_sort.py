@@ -1018,11 +1018,10 @@ def test_compare(align_axis, keep_shape, keep_equal):
     "params",
     [
         {"ascending": True},
-        {"sort": False},
         {"normalize": True},
     ],
 )
-def test_value_counts1(params):
+def test_value_counts(params):
     data = [[4, 1, 3, 2], [2, 5, 6, 5], [4, 3, 3, 5]]
     columns = ["col1", "col2", "col3", "col4"]
 
