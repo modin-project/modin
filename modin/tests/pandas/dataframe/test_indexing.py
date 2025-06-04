@@ -29,6 +29,7 @@ from modin.tests.pandas.utils import (
     RAND_HIGH,
     RAND_LOW,
     arg_keys,
+    assert_dtypes_equal,
     axis_keys,
     axis_values,
     create_test_dfs,
@@ -2321,12 +2322,12 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         modin_df,
         pandas_df,
         applyier,
-        # https://github.com/modin-project/modin/issues/5961
-        comparator_kwargs={
-            "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
-        },
         expected_exception=expected_exception,
+        __inplace__=True,
     )
+    # Because of https://github.com/modin-project/modin/issues/7600,
+    # df_equals does not check dtypes equality for empty frames.
+    assert_dtypes_equal(modin_df, pandas_df)
 
 
 def test_setitem_on_empty_df_4407():
@@ -2341,6 +2342,19 @@ def test_setitem_on_empty_df_4407():
 
     df_equals(modin_df, pandas_df)
     assert modin_df.columns.freq == pandas_df.columns.freq
+
+
+def test_setitem_on_empty_df_does_not_change_other_dtypes_5961():
+    def _do_setitem(df):
+        df["col0"] = df["col0"].astype(float)
+
+    modin_df, pandas_df = create_test_dfs(pandas.DataFrame(columns=["col0", "col1"]))
+
+    _do_setitem(modin_df)
+    _do_setitem(pandas_df)
+    # Because of  https://github.com/modin-project/modin/issues/7600, we cannot
+    # use df_equals to check dtypes equality.
+    assert_dtypes_equal(modin_df, pandas_df)
 
 
 def test___setitem__unhashable_list():
