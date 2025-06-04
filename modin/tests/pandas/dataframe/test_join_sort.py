@@ -1022,9 +1022,9 @@ def test_compare(align_axis, keep_shape, keep_equal):
         pytest.param(
             {"sort": False},
             marks=pytest.mark.xfail(
-                reason="Known issue with sort=False in `groupby()` \
-                    (https://github.com/modin-project/modin/issues/3571)",
-                strict=False,
+                reason="Known issue with sort=False in `groupby()` "
+                + "(https://github.com/modin-project/modin/issues/3571)",
+                strict=Engine.get() in ("Ray", "Dask", "Unidist"),
             ),
         ),
     ],
