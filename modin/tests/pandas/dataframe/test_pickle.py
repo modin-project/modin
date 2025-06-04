@@ -22,13 +22,18 @@ from modin.tests.pandas.utils import create_test_dfs, df_equals
 
 
 @pytest.fixture
-def modin_df():
+def modin_df_non_empty():
     return pd.DataFrame({"col1": np.arange(1000), "col2": np.arange(2000, 3000)})
 
 
 @pytest.fixture
-def modin_column(modin_df):
-    return modin_df["col1"]
+def modin_df_empty():
+    return pd.DataFrame()
+
+
+@pytest.fixture
+def modin_column(modin_df_non_empty):
+    return modin_df_non_empty["col1"]
 
 
 @pytest.fixture(params=[True, False])
@@ -39,10 +44,9 @@ def persistent(request):
     PersistentPickle.put(old)
 
 
-@pytest.mark.parametrize(
-    "modin_df", [pytest.param(modin_df), pytest.param(pd.DataFrame(), id="empty_df")]
-)
-def test_dataframe_pickle(modin_df, persistent):
+@pytest.mark.parametrize("modin_df_name", ["modin_df_non_empty", "modin_df_empty"])
+def test_dataframe_pickle(request, modin_df_name):
+    modin_df = request.getfixturevalue(modin_df_name)
     other = pickle.loads(pickle.dumps(modin_df))
     df_equals(modin_df, other)
 
@@ -73,11 +77,11 @@ def test__reduce__():
     df_equals(result_md, result_pd)
 
 
-def test_column_pickle(modin_column, modin_df, persistent):
+def test_column_pickle(modin_column, modin_df_non_empty, persistent):
     dmp = pickle.dumps(modin_column)
     other = pickle.loads(dmp)
     df_equals(modin_column.to_frame(), other.to_frame())
 
     # make sure we don't pickle the whole frame if doing persistent storage
     if persistent:
-        assert len(dmp) < len(pickle.dumps(modin_df))
+        assert len(dmp) < len(pickle.dumps(modin_df_non_empty))
