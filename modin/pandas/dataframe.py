@@ -2830,8 +2830,7 @@ class DataFrame(BasePandasDataset):
                 value = list(value)
 
         if not self._query_compiler.lazy_row_count and len(self) == 0:
-            new_self = self.__constructor__({key: value}, columns=self.columns)
-            self._update_inplace(new_self._query_compiler)
+            self._default_to_pandas(pandas.DataFrame.__setitem__, key, value)
         else:
             if isinstance(value, Series):
                 value = value._query_compiler
