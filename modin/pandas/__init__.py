@@ -16,17 +16,18 @@ import warnings
 import pandas
 from packaging import version
 
-__pandas_version__ = "2.2"
+__min_pandas_version__ = "2.2"
+__max_pandas_version__ = "2.4"
 
+pandas_version = version.parse(pandas.__version__)
 if (
-    version.parse(pandas.__version__).release[:2]
-    != version.parse(__pandas_version__).release[:2]
+    pandas_version < version.parse(__min_pandas_version__)
+    or pandas_version >= version.parse(__max_pandas_version__)
 ):
     warnings.warn(
-        f"The pandas version installed ({pandas.__version__}) does not match the supported pandas version in"
-        + f" Modin ({__pandas_version__}.X). This may cause undesired side effects!"
+        f"The pandas version installed ({pandas.__version__}) is outside the supported range in Modin"
+        + f" ({__min_pandas_version__} to {__max_pandas_version__}). This may cause undesired side effects!"
     )
-
 
 # to not pollute namespace
 del version

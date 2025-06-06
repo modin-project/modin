@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas
+from pandas._libs import lib
 
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
@@ -226,9 +227,9 @@ class StringMethods(ClassLogger):
             else self._Series(query_compiler=compiler_result)
         )
 
-    def decode(self, encoding, errors="strict"):
+    def decode(self, encoding, errors="strict", dtype=None):
         return self._Series(
-            query_compiler=self._query_compiler.str_decode(encoding, errors)
+            query_compiler=self._query_compiler.str_decode(encoding, errors, dtype)
         )
 
     def split(self, pat=None, *, n=-1, expand=False, regex=None):
@@ -277,9 +278,11 @@ class StringMethods(ClassLogger):
     def get_dummies(self, sep="|"):
         return self._Series(query_compiler=self._query_compiler.str_get_dummies(sep))
 
-    def contains(self, pat, case=True, flags=0, na=None, regex=True):
+    def contains(self, pat, case=True, flags=0, na=lib.no_default, regex=True):
         if pat is None and not case:
             raise AttributeError("'NoneType' object has no attribute 'upper'")
+        if na is lib.no_default:
+            na = None
         return self._Series(
             query_compiler=self._query_compiler.str_contains(
                 pat, case=case, flags=flags, na=na, regex=regex
@@ -358,7 +361,9 @@ class StringMethods(ClassLogger):
             query_compiler=self._query_compiler.str_count(pat, flags=flags)
         )
 
-    def startswith(self, pat, na=None):
+    def startswith(self, pat, na=lib.no_default):
+        if na is lib.no_default:
+            na = None
         return self._Series(
             query_compiler=self._query_compiler.str_startswith(pat, na=na)
         )
@@ -368,7 +373,9 @@ class StringMethods(ClassLogger):
             query_compiler=self._query_compiler.str_encode(encoding, errors)
         )
 
-    def endswith(self, pat, na=None):
+    def endswith(self, pat, na=lib.no_default):
+        if na is lib.no_default:
+            na = None
         return self._Series(
             query_compiler=self._query_compiler.str_endswith(pat, na=na)
         )
@@ -380,18 +387,22 @@ class StringMethods(ClassLogger):
             query_compiler=self._query_compiler.str_findall(pat, flags=flags)
         )
 
-    def fullmatch(self, pat, case=True, flags=0, na=None):
+    def fullmatch(self, pat, case=True, flags=0, na=lib.no_default):
         if not isinstance(pat, (str, re.Pattern)):
             raise TypeError("first argument must be string or compiled pattern")
+        if na is lib.no_default:
+            na = None
         return self._Series(
             query_compiler=self._query_compiler.str_fullmatch(
                 pat, case=case, flags=flags, na=na
             )
         )
 
-    def match(self, pat, case=True, flags=0, na=None):
+    def match(self, pat, case=True, flags=0, na=lib.no_default):
         if not isinstance(pat, (str, re.Pattern)):
             raise TypeError("first argument must be string or compiled pattern")
+        if na is lib.no_default:
+            na = None
         return self._Series(
             query_compiler=self._query_compiler.str_match(
                 pat, case=case, flags=flags, na=na

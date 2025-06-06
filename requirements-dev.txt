@@ -1,5 +1,5 @@
 ## required dependencies
-pandas>=2.2,<2.3
+pandas>=2.2,<2.4
 numpy>=1.22.4
 fsspec>=2022.11.0
 packaging>=21.0

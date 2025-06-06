@@ -123,6 +123,9 @@ pytestmark = [
     pytest.mark.filterwarnings(
         "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
     ),
+    pytest.mark.filterwarnings(
+        "ignore:(DataFrameGroupBy|SeriesGroupBy).apply operated on the grouping columns:FutureWarning"
+    ),
 ]
 
 
@@ -2166,7 +2169,10 @@ def test_mixed_columns(columns, drop_from_original_df, as_index):
 
     df_equals(md_grp.size(), pd_grp.size())
     df_equals(md_grp.sum(), pd_grp.sum())
-    df_equals(md_grp.apply(lambda df: df.sum()), pd_grp.apply(lambda df: df.sum()))
+    df_equals(
+        md_grp.apply(lambda df: df.sum(), include_groups=False),
+        pd_grp.apply(lambda df: df.sum(), include_groups=False),
+    )
 
 
 @pytest.mark.parametrize("as_index", [True, False])
@@ -2263,7 +2269,9 @@ def test_mixed_columns_not_from_df(columns, as_index):
 
     modin_groupby_equals_pandas(md_grp, pd_grp)
     eval_general(md_grp, pd_grp, lambda grp: grp.size())
-    eval_general(md_grp, pd_grp, lambda grp: grp.apply(lambda df: df.sum()))
+    eval_general(
+        md_grp, pd_grp, lambda grp: grp.apply(lambda df: df.sum(), include_groups=False)
+    )
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
@@ -3277,9 +3285,12 @@ def test_groupby_apply_series_result(modify_config):
     )
     df["group"] = [1, 1, 2, 2, 3]
 
-    # res = df.groupby('group').apply(lambda x: x.name+2)
     eval_general(
-        df, df._to_pandas(), lambda df: df.groupby("group").apply(lambda x: x.name + 2)
+        df,
+        df._to_pandas(),
+        lambda df: df.groupby("group").apply(
+            lambda x: x.name + 2, include_groups=False
+        ),
     )
 
 
