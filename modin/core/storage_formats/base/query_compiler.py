@@ -3079,9 +3079,21 @@ class BaseQueryCompiler(
         BaseQueryCompiler
             New QueryCompiler that contains result of the sort.
         """
-        return DataFrameDefault.register(pandas.DataFrame.sort_values)(
+        # Avoid index/column name collisions by renaming and restoring after sorting
+        index_renaming = None
+        if is_scalar(columns):
+            columns = [columns]
+        if any(name in columns for name in self.index.names):
+            index_renaming = self.index.names
+            self.index = self.index.set_names([None] * len(self.index.names))
+        new_query_compiler = DataFrameDefault.register(pandas.DataFrame.sort_values)(
             self, by=columns, axis=0, ascending=ascending, **kwargs
         )
+        if index_renaming is not None:
+            new_query_compiler.index = new_query_compiler.index.set_names(
+                index_renaming
+            )
+        return new_query_compiler
 
     # END Abstract map across rows/columns
 

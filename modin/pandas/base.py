@@ -3833,7 +3833,16 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 by=subset, dropna=dropna, observed=True, sort=False
             ).size()
         if sort:
-            counted_values.sort_values(ascending=ascending, inplace=True)
+            if counted_values.name is None:
+                counted_values.name = 0
+            by = counted_values.name
+            result = counted_values._query_compiler.sort_rows_by_column_values(
+                columns=by,
+                ascending=ascending,
+            )
+            counted_values = self._create_or_update_from_compiler(result)
+            if isinstance(counted_values, pd.DataFrame):
+                counted_values = counted_values.squeeze(axis=1)
         if normalize:
             counted_values = counted_values / counted_values.sum()
         # TODO: uncomment when strict compability mode will be implemented:
