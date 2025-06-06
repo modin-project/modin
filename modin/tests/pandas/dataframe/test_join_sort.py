@@ -1027,7 +1027,7 @@ def test_compare(align_axis, keep_shape, keep_equal):
                     + "(https://github.com/modin-project/modin/issues/3571)",
                     strict=True,
                 )
-                if Engine.get() in ("Ray", "Dask", "Unidist")
+                if Engine.get() in ("Python", "Ray", "Dask", "Unidist")
                 else []
             ),
         ),
