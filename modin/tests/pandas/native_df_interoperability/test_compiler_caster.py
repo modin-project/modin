@@ -109,12 +109,14 @@ class CloudQC(CalculatorTestQc):
     def stay_cost(self, api_cls_name, op, arguments):
         return QCCoercionCost.COST_ZERO
 
+
 class CloudQCHighSelf(CloudQC):
     def get_backend(self):
         return "Cloud_High_Self"
-    
+
     def stay_cost(self, api_cls_name, op, arguments):
         return QCCoercionCost.COST_HIGH
+
 
 class ClusterQC(CalculatorTestQc):
     "Represents a local network cluster query compiler"
@@ -265,7 +267,7 @@ class CloudForBigDataQC(BaseTestAutoMover):
 
     def get_backend(self) -> str:
         return "Big_Data_Cloud"
-    
+
     def max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE * 10
 
@@ -301,7 +303,7 @@ class LocalForSmallDataQC(BaseTestAutoMover):
 
     def get_backend(self) -> str:
         return "Small_Data_Local"
-    
+
     def max_cost(self):
         return QCCoercionCost.COST_IMPOSSIBLE * 10
 
@@ -342,9 +344,11 @@ register_backend("Small_Data_Local", LocalForSmallDataQC)
 def cloud_df():
     return pd.DataFrame(query_compiler=CloudQC(pandas.DataFrame([0, 1, 2])))
 
+
 @pytest.fixture()
 def cloud_high_self_df():
     return pd.DataFrame(query_compiler=CloudQCHighSelf(pandas.DataFrame([0, 1, 2])))
+
 
 @pytest.fixture()
 def cluster_df():
