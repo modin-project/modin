@@ -97,6 +97,7 @@ class CloudQC(CalculatorTestQc):
         ]
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
+            CloudQCHighSelf: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
             DefaultQC: QCCoercionCost.COST_MEDIUM,
             LocalMachineQC: QCCoercionCost.COST_HIGH,
@@ -127,6 +128,7 @@ class ClusterQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
+            CloudQCHighSelf: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
             DefaultQC: None,  # cluster qc knows nothing about default qc
             LocalMachineQC: QCCoercionCost.COST_MEDIUM,
@@ -146,6 +148,7 @@ class LocalMachineQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
+            CloudQCHighSelf: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_ZERO,
             PicoQC: QCCoercionCost.COST_MEDIUM,
@@ -164,6 +167,7 @@ class PicoQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_LOW,
+            CloudQCHighSelf: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_LOW,
             PicoQC: QCCoercionCost.COST_ZERO,
@@ -179,6 +183,7 @@ class AdversarialQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: -1000,
+            CloudQCHighSelf: -1000,
             ClusterQC: 10000,
             AdversarialQC: QCCoercionCost.COST_ZERO,
         }[other_qc_cls]
@@ -463,6 +468,30 @@ def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
 def test_no_solution(pico_df, local_df, cluster_df, cloud_df):
     with pytest.raises(ValueError, match=r"Pico,Local_machine,Cluster,Cloud"):
         pd.concat(axis=1, objs=[pico_df, local_df, cluster_df, cloud_df])
+
+
+def test_self_cost_causes_move(cloud_high_self_df, cluster_df):
+    """
+    Test that ``self_cost`` is being properly considered.
+
+    Cost to stay on cloud_high_self is HIGH, but moving to cluster is MEDIUM.
+    Cost to stay on cluster is ZERO, and moving to cloud_high_self is MEDIUM.
+
+    With two dataframes, one on each backend, the total cost of using
+    ``cloud_high_self`` as the final backend is:
+    ``stay_cost(cloud_high_self) + move_cost(cluster->cloud_high_self)``
+    which is ``HIGH + MEDIUM``.
+    The total cost of using ``cluster`` as the final backend is:
+    ``stay_cost(cluster) + move_cost(cloud_high_self->cluster)``
+    which is ``ZERO + MEDIUM``.
+
+    So we should select ``cluster``.
+    """
+    result = pd.concat([cloud_high_self_df, cluster_df])
+    assert result.get_backend() == "Cluster"
+
+    result = pd.concat([cluster_df, cloud_high_self_df])
+    assert result.get_backend() == "Cluster"
 
 
 @pytest.mark.parametrize(
