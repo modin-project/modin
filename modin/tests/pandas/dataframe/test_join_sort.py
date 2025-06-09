@@ -1028,6 +1028,7 @@ def test_compare(align_axis, keep_shape, keep_equal):
                     strict=True,
                 )
                 if Engine.get() in ("Python", "Ray", "Dask", "Unidist")
+                and StorageFormat.get() != "Base"
                 else []
             ),
         ),
