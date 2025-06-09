@@ -689,7 +689,6 @@ def test_stay_or_move_evaluation(cloud_high_self_df, default_df):
     move_cost = cloud_high_self_df._get_query_compiler().move_to_cost(
         default_cls, "Series", "myop", arguments=empty_arguments
     )
-    df = cloud_high_self_df
     if stay_cost > move_cost:
         df = cloud_high_self_df.move_to("Test_casting_default")
     else:
