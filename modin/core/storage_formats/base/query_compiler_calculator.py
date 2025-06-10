@@ -108,9 +108,20 @@ class BackendCostCalculator:
             return self._qc_list[0].get_backend()
         if len(self._qc_list) == 0:
             raise ValueError("No query compilers registered")
-
+        qc_from_cls_costed = set()
         # instance selection
         for qc_from in self._qc_list:
+
+            # Add self cost for the current query compiler
+            if type(qc_from) not in qc_from_cls_costed:
+                self_cost = qc_from.stay_cost(
+                    self._api_cls_name, self._op, self._operation_arguments
+                )
+                backend_from = qc_from.get_backend()
+                if self_cost is not None:
+                    self._add_cost_data(backend_from, self_cost)
+                qc_from_cls_costed.add(type(qc_from))
+
             qc_to_cls_costed = set()
             for qc_to in self._qc_list:
                 qc_cls_to = type(qc_to)

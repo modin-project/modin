@@ -97,6 +97,7 @@ class CloudQC(CalculatorTestQc):
         ]
         return {
             CloudQC: QCCoercionCost.COST_ZERO,
+            CloudQCHighSelf: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_MEDIUM,
             DefaultQC: QCCoercionCost.COST_MEDIUM,
             LocalMachineQC: QCCoercionCost.COST_HIGH,
@@ -104,6 +105,14 @@ class CloudQC(CalculatorTestQc):
             OmniscientEagerQC: None,
             OmniscientLazyQC: None,
         }[other_qc_cls]
+
+    def stay_cost(self, api_cls_name, op, arguments):
+        return QCCoercionCost.COST_ZERO
+
+
+class CloudQCHighSelf(CloudQC):
+    def get_backend(self):
+        return "Cloud_High_Self"
 
     def stay_cost(self, api_cls_name, op, arguments):
         return QCCoercionCost.COST_HIGH
@@ -121,6 +130,7 @@ class ClusterQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
+            CloudQCHighSelf: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_ZERO,
             DefaultQC: None,  # cluster qc knows nothing about default qc
             LocalMachineQC: QCCoercionCost.COST_MEDIUM,
@@ -140,6 +150,7 @@ class LocalMachineQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_MEDIUM,
+            CloudQCHighSelf: QCCoercionCost.COST_MEDIUM,
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_ZERO,
             PicoQC: QCCoercionCost.COST_MEDIUM,
@@ -158,6 +169,7 @@ class PicoQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: QCCoercionCost.COST_LOW,
+            CloudQCHighSelf: QCCoercionCost.COST_LOW,
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_LOW,
             PicoQC: QCCoercionCost.COST_ZERO,
@@ -173,6 +185,7 @@ class AdversarialQC(CalculatorTestQc):
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
         return {
             CloudQC: -1000,
+            CloudQCHighSelf: -1000,
             ClusterQC: 10000,
             AdversarialQC: QCCoercionCost.COST_ZERO,
         }[other_qc_cls]
@@ -255,6 +268,9 @@ class CloudForBigDataQC(BaseTestAutoMover):
     def get_backend(self) -> str:
         return "Big_Data_Cloud"
 
+    def max_cost(self):
+        return QCCoercionCost.COST_IMPOSSIBLE * 10
+
     @classmethod
     def move_to_me_cost(cls, other_qc, api_cls_name, operation, arguments):
         if api_cls_name in ("DataFrame", "Series") and operation == "__init__":
@@ -288,6 +304,9 @@ class LocalForSmallDataQC(BaseTestAutoMover):
     def get_backend(self) -> str:
         return "Small_Data_Local"
 
+    def max_cost(self):
+        return QCCoercionCost.COST_IMPOSSIBLE * 10
+
 
 def register_backend(name, qc):
     class TestCasterIO(BaseIO):
@@ -310,6 +329,7 @@ def register_backend(name, qc):
 register_backend("Pico", PicoQC)
 register_backend("Cluster", ClusterQC)
 register_backend("Cloud", CloudQC)
+register_backend("Cloud_High_Self", CloudQCHighSelf)
 register_backend("Local_Machine", LocalMachineQC)
 register_backend("Adversarial", AdversarialQC)
 register_backend("Eager", OmniscientEagerQC)
@@ -323,6 +343,11 @@ register_backend("Small_Data_Local", LocalForSmallDataQC)
 @pytest.fixture()
 def cloud_df():
     return pd.DataFrame(query_compiler=CloudQC(pandas.DataFrame([0, 1, 2])))
+
+
+@pytest.fixture()
+def cloud_high_self_df():
+    return pd.DataFrame(query_compiler=CloudQCHighSelf(pandas.DataFrame([0, 1, 2])))
 
 
 @pytest.fixture()
@@ -447,6 +472,30 @@ def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
 def test_no_solution(pico_df, local_df, cluster_df, cloud_df):
     with pytest.raises(ValueError, match=r"Pico,Local_machine,Cluster,Cloud"):
         pd.concat(axis=1, objs=[pico_df, local_df, cluster_df, cloud_df])
+
+
+def test_self_cost_causes_move(cloud_high_self_df, cluster_df):
+    """
+    Test that ``self_cost`` is being properly considered.
+
+    Cost to stay on cloud_high_self is HIGH, but moving to cluster is MEDIUM.
+    Cost to stay on cluster is ZERO, and moving to cloud_high_self is MEDIUM.
+
+    With two dataframes, one on each backend, the total cost of using
+    ``cloud_high_self`` as the final backend is:
+    ``stay_cost(cloud_high_self) + move_cost(cluster->cloud_high_self)``
+    which is ``HIGH + MEDIUM``.
+    The total cost of using ``cluster`` as the final backend is:
+    ``stay_cost(cluster) + move_cost(cloud_high_self->cluster)``
+    which is ``ZERO + MEDIUM``.
+
+    So we should select ``cluster``.
+    """
+    result = pd.concat([cloud_high_self_df, cluster_df])
+    assert result.get_backend() == "Cluster"
+
+    result = pd.concat([cluster_df, cloud_high_self_df])
+    assert result.get_backend() == "Cluster"
 
 
 @pytest.mark.parametrize(
@@ -633,23 +682,19 @@ def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_loc
     assert local_df.get_backend() == "Local_machine" if pin_local else "Cloud"
 
 
-# Outlines a future generic function for determining when to stay
-# or move to different engines. In the current state it is pretty
-# trivial, but added for completeness
-def test_stay_or_move_evaluation(cloud_df, default_df):
+def test_stay_or_move_evaluation(cloud_high_self_df, default_df):
     default_cls = type(default_df._get_query_compiler())
-    cloud_cls = type(cloud_df._get_query_compiler())
+    cloud_cls = type(cloud_high_self_df._get_query_compiler())
     empty_arguments = MappingProxyType({})
 
-    stay_cost = cloud_df._get_query_compiler().stay_cost(
+    stay_cost = cloud_high_self_df._get_query_compiler().stay_cost(
         "Series", "myop", arguments=empty_arguments
     )
-    move_cost = cloud_df._get_query_compiler().move_to_cost(
+    move_cost = cloud_high_self_df._get_query_compiler().move_to_cost(
         default_cls, "Series", "myop", arguments=empty_arguments
     )
-    df = cloud_df
     if stay_cost > move_cost:
-        df = cloud_df.move_to("Test_casting_default")
+        df = cloud_high_self_df.move_to("Test_casting_default")
     else:
         assert False
 
