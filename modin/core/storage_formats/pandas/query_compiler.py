@@ -366,6 +366,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return not self.frame_has_materialized_columns
 
+    # The default implementation of stay_cost will cache some information
+    # which will violate some assumptions in test_internals. Since this class
+    # is only used for non-hybrid operations we simply return 0 here for now.
+    def stay_cost(self, api_cls_name, operation, arguments):
+        return 0
+
     def finalize(self):
         self._modin_frame.finalize()
 
