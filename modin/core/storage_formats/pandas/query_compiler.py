@@ -3115,6 +3115,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def setitem(self, axis, key, value):
+        # Default to pandas for empty frames to avoid complex partitioning issues
+        if axis == 0 and len(self.index) == 0:
+
+            def do_setitem(df: pandas.DataFrame, key, value) -> pandas.DataFrame:
+                df[key] = value
+                return df
+
+            return self.default_to_pandas(do_setitem, key=key, value=value)
+
         if axis == 0:
             value = self._wrap_column_data(value)
         return self._setitem(axis=axis, key=key, value=value, how=None)
