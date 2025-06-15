@@ -3116,7 +3116,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def setitem(self, axis, key, value):
         # Default to pandas for empty frames to avoid complex partitioning issues
-        if axis == 0 and len(self.index) == 0:
+        if axis == 0 and not self.lazy_row_count and self.get_axis_len(0) == 0:
 
             def do_setitem(df: pandas.DataFrame, key, value) -> pandas.DataFrame:
                 df[key] = value
