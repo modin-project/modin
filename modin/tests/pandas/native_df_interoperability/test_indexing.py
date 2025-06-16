@@ -27,6 +27,7 @@ from modin.tests.pandas.native_df_interoperability.utils import (
 from modin.tests.pandas.utils import (
     RAND_HIGH,
     RAND_LOW,
+    assert_dtypes_equal,
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
@@ -390,16 +391,16 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id, df_mode
         modin_df,
         pandas_df,
         applyier,
-        # https://github.com/modin-project/modin/issues/5961
-        comparator_kwargs={
-            "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
-        },
         expected_exception=expected_exception,
         check_for_execution_propagation=False,
         no_check_for_execution_propagation_reason=(
             "https://github.com/modin-project/modin/issues/7428"
         ),
+        __inplace__=True,
     )
+    # Because of https://github.com/modin-project/modin/issues/7600,
+    # df_equals does not check dtypes equality for empty frames.
+    assert_dtypes_equal(modin_df, pandas_df)
 
 
 def test_setitem_on_empty_df_4407(df_mode_pair):

@@ -2829,13 +2829,9 @@ class DataFrame(BasePandasDataset):
             if not isinstance(value, (Series, Categorical, np.ndarray, list, range)):
                 value = list(value)
 
-        if not self._query_compiler.lazy_row_count and len(self) == 0:
-            new_self = self.__constructor__({key: value}, columns=self.columns)
-            self._update_inplace(new_self._query_compiler)
-        else:
-            if isinstance(value, Series):
-                value = value._query_compiler
-            self._update_inplace(self._query_compiler.setitem(0, key, value))
+        if isinstance(value, Series):
+            value = value._query_compiler
+        self._update_inplace(self._query_compiler.setitem(axis=0, key=key, value=value))
 
     def __iter__(self) -> Iterable[Hashable]:
         """
