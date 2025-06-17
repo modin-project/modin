@@ -135,6 +135,8 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         self._columns = self._query_compiler.columns
         self._by = by
         self._drop = drop
+        # Backend pinning state for this groupby object - inherit from DataFrame
+        self._backend_pinned = df.is_backend_pinned()
         # When providing a list of columns of length one to DataFrame.groupby(),
         # the keys that are returned by iterating over the resulting DataFrameGroupBy
         # object will now be tuples of length one (pandas#GH47761)
@@ -199,15 +201,26 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 
     @_inherit_docstrings(QueryCompilerCaster.is_backend_pinned)
     def is_backend_pinned(self) -> bool:
-        return False
+        return self._backend_pinned
 
     @_inherit_docstrings(QueryCompilerCaster._set_backend_pinned)
     def _set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:
-        ErrorMessage.not_implemented()
+        if not inplace:
+            ErrorMessage.not_implemented(
+                "Only inplace=True is supported for groupby pinning"
+            )
+
+        self._backend_pinned = pinned
+        return None
 
     @_inherit_docstrings(QueryCompilerCaster.pin_backend)
     def pin_backend(self, inplace: bool = False) -> Optional[Self]:
-        ErrorMessage.not_implemented()
+        if not inplace:
+            ErrorMessage.not_implemented(
+                "Only inplace=True is supported for groupby pinning"
+            )
+
+        return self._set_backend_pinned(True, inplace=True)
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
@@ -240,7 +253,10 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             **self._kwargs,
         )
         new_kw.update(kwargs)
-        return type(self)(**new_kw)
+        new_groupby = type(self)(**new_kw)
+        # Preserve the pinning state
+        new_groupby._backend_pinned = self._backend_pinned
+        return new_groupby
 
     @disable_logging
     def __getattr__(self, key):
@@ -922,11 +938,14 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             cols_to_grab = dict.fromkeys(self._internal_by)
             cols_to_grab.update(dict.fromkeys(key))
             key = [col for col in cols_to_grab.keys() if col in self._df.columns]
-            return DataFrameGroupBy(
+            new_groupby = DataFrameGroupBy(
                 self._df[key],
                 drop=self._drop,
                 **kwargs,
             )
+            # Preserve the pinning state
+            new_groupby._backend_pinned = self._backend_pinned
+            return new_groupby
         if (
             self._is_multi_by
             and isinstance(self._by, list)
@@ -936,11 +955,14 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
                 "Column lookups on GroupBy with arbitrary Series in by"
                 + " is not yet supported."
             )
-        return SeriesGroupBy(
+        new_series_groupby = SeriesGroupBy(
             self._df[key],
             drop=False,
             **kwargs,
         )
+        # Preserve the pinning state
+        new_series_groupby._backend_pinned = self._backend_pinned
+        return new_series_groupby
 
     def cummin(self, axis=lib.no_default, numeric_only=False, **kwargs):
         if axis is not lib.no_default:
