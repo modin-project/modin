@@ -1240,6 +1240,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
+                backend_pinned=self._backend_pinned,
                 **self._kwargs,
             ).size()
         result = self._wrap_aggregation(
@@ -1439,6 +1440,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             axis=self._axis,
             idx_name=self._idx_name,
             drop=self._drop,
+            backend_pinned=self._backend_pinned,
             **new_groupby_kwargs,
         )
         return work_object._wrap_aggregation(
