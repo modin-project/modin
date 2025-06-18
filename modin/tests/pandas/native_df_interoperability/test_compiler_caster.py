@@ -977,6 +977,111 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             )
             assert modin_groupby.get_backend() == "Big_Data_Cloud"
 
+    @pytest.mark.parametrize(
+        "groupby_class,groupby_operation,agg_operation",
+        [
+            param(
+                "DataFrameGroupBy",
+                lambda df: df.groupby("col0"),
+                lambda groupby: groupby.sum(),
+                id="DataFrameGroupBy",
+            ),
+            param(
+                "SeriesGroupBy",
+                lambda df: df.groupby("col0")["col1"],
+                lambda groupby: groupby.sum(),
+                id="SeriesGroupBy",
+            ),
+        ],
+    )
+    @backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    )
+    def test_pinned_dataframe_prevents_groupby_backend_switch(
+        self, groupby_class, groupby_operation, agg_operation
+    ):
+        """Test that pinning a DataFrame prevents groupby operations from switching backends."""
+        modin_df, pandas_df = create_test_dfs(
+            {
+                "col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+                "col1": list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)),
+            }
+        )
+
+        assert modin_df.get_backend() == "Big_Data_Cloud"
+
+        # Pin the DataFrame
+        modin_df.pin_backend(inplace=True)
+        assert modin_df.is_backend_pinned()
+
+        # Create groupby object - should inherit pin status from dataframe
+        modin_groupby = groupby_operation(modin_df)
+        pandas_groupby = groupby_operation(pandas_df)
+        assert modin_groupby.is_backend_pinned()  # Inherited from DataFrame
+
+        # Register a post-op switch that would normally move to Small_Data_Local
+        register_function_for_post_op_switch(
+            class_name=groupby_class, backend="Big_Data_Cloud", method="sum"
+        )
+
+        # The operation should stay on Big_Data_Cloud due to inherited pinning
+        modin_result = agg_operation(modin_groupby)
+        pandas_result = agg_operation(pandas_groupby)
+        df_equals(modin_result, pandas_result)
+        assert modin_result.get_backend() == "Big_Data_Cloud"
+
+    @pytest.mark.parametrize(
+        "groupby_class,groupby_operation,agg_operation",
+        [
+            param(
+                "DataFrameGroupBy",
+                lambda df: df.groupby("col0"),
+                lambda groupby: groupby.sum(),
+                id="DataFrameGroupBy",
+            ),
+            param(
+                "SeriesGroupBy",
+                lambda df: df.groupby("col0")["col1"],
+                lambda groupby: groupby.sum(),
+                id="SeriesGroupBy",
+            ),
+        ],
+    )
+    @backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    )
+    def test_pinned_groupby_prevents_backend_switch(
+        self, groupby_class, groupby_operation, agg_operation
+    ):
+        """Test that pinning a GroupBy object prevents operations from switching backends."""
+        modin_df, pandas_df = create_test_dfs(
+            {
+                "col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+                "col1": list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)),
+            }
+        )
+
+        assert modin_df.get_backend() == "Big_Data_Cloud"
+
+        # Create groupby object and pin it directly
+        modin_groupby = groupby_operation(modin_df)
+        pandas_groupby = groupby_operation(pandas_df)
+        modin_groupby.pin_backend(inplace=True)
+        assert modin_groupby.is_backend_pinned()
+
+        # Register a post-op switch that would normally move to Small_Data_Local
+        register_function_for_post_op_switch(
+            class_name=groupby_class, backend="Big_Data_Cloud", method="sum"
+        )
+
+        # The operation should stay on Big_Data_Cloud due to pinning
+        modin_result = agg_operation(modin_groupby)
+        pandas_result = agg_operation(pandas_groupby)
+        df_equals(modin_result, pandas_result)
+        assert modin_result.get_backend() == "Big_Data_Cloud"
+
 
 class TestSwitchBackendPreOp:
     @pytest.mark.parametrize(
@@ -1384,6 +1489,125 @@ def test_concat_with_pin(pin_backends, expected_backend):
             df_equals(
                 result, pandas.concat([pandas.DataFrame([1] * 10)] * len(pin_backends))
             )
+
+
+@pytest.mark.parametrize(
+    "groupby_operation",
+    [
+        param(
+            lambda df: df.groupby("col0"),
+            id="DataFrameGroupBy",
+        ),
+        param(
+            lambda df: df.groupby("col0")["col1"],
+            id="SeriesGroupBy",
+        ),
+    ],
+)
+def test_pin_groupby_in_place(groupby_operation):
+    """Test that groupby objects can be pinned with inplace=True."""
+    modin_df = pd.DataFrame(
+        {
+            "col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+            "col1": list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)),
+        }
+    )
+
+    groupby_object = groupby_operation(modin_df)
+    assert not groupby_object.is_backend_pinned()
+
+    groupby_object.pin_backend(inplace=True)
+    assert groupby_object.is_backend_pinned()
+
+    groupby_object.unpin_backend(inplace=True)
+    assert not groupby_object.is_backend_pinned()
+
+
+@pytest.mark.parametrize(
+    "groupby_operation",
+    [
+        param(
+            lambda df: df.groupby("col0"),
+            id="DataFrameGroupBy",
+        ),
+        param(
+            lambda df: df.groupby("col0")["col1"],
+            id="SeriesGroupBy",
+        ),
+    ],
+)
+@pytest.mark.parametrize("method", ["pin_backend", "unpin_backend"])
+@pytest.mark.xfail(
+    strict=True, raises=NotImplementedError, reason="Only inplace=True is supported"
+)
+def test_pin_or_unpin_groupby_not_in_place(groupby_operation, method):
+    """Test that groupby pinning and unpinning with inplace=False."""
+    modin_df = pd.DataFrame(
+        {
+            "col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+            "col1": list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)),
+        }
+    )
+
+    groupby_obj = groupby_operation(modin_df)
+
+    getattr(groupby_obj, method)(inplace=False)
+
+
+@pytest.mark.parametrize(
+    "data_type,data_factory,groupby_factory",
+    [
+        param(
+            "DataFrame",
+            lambda: pd.DataFrame(
+                {
+                    "col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+                    "col1": list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)),
+                }
+            ),
+            lambda obj: obj.groupby("col0"),
+            id="DataFrame",
+        ),
+        param(
+            "Series",
+            lambda: pd.Series(list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)), name="data"),
+            lambda obj: obj.groupby([0] * (BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+            id="Series",
+        ),
+    ],
+)
+def test_groupby_pinning_reflects_parent_object_pin_status(
+    data_type, data_factory, groupby_factory
+):
+    """Test that groupby pinning inherits from parent object (DataFrame/Series) pin status but can be modified independently."""
+    modin_obj = data_factory()
+
+    old_groupby_obj = groupby_factory(modin_obj)
+
+    # Initially not pinned
+    assert not old_groupby_obj.is_backend_pinned()
+    assert not modin_obj.is_backend_pinned()
+
+    # Pin the parent object - new groupby objects should inherit this
+    modin_obj.pin_backend(inplace=True)
+
+    # Create a new groupby object after pinning parent object
+    new_groupby_obj = groupby_factory(modin_obj)
+
+    # New groupby should inherit the pinned status
+    assert new_groupby_obj.is_backend_pinned()
+    assert modin_obj.is_backend_pinned()
+
+    # But we can still modify groupby pinning independently
+    new_groupby_obj.unpin_backend(inplace=True)
+
+    # Parent object should remain pinned, groupby should be unpinned
+    assert not new_groupby_obj.is_backend_pinned()
+    assert modin_obj.is_backend_pinned()
+
+    assert not old_groupby_obj.is_backend_pinned()
+    old_groupby_obj.pin_backend(inplace=True)
+    assert old_groupby_obj.is_backend_pinned()
 
 
 def test_second_init_only_calls_from_pandas_once_github_issue_7559():

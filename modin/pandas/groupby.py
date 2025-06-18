@@ -126,6 +126,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         group_keys,
         idx_name,
         drop,
+        backend_pinned: bool,
         **kwargs,
     ):
         self._axis = axis
@@ -141,6 +142,8 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         self._return_tuple_when_iterating = kwargs.pop(
             "return_tuple_when_iterating", False
         )
+        # Whether the backend of this groupby object has been pinned.
+        self._backend_pinned = backend_pinned
 
         if (
             level is None
@@ -199,15 +202,26 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 
     @_inherit_docstrings(QueryCompilerCaster.is_backend_pinned)
     def is_backend_pinned(self) -> bool:
-        return False
+        return self._backend_pinned
 
     @_inherit_docstrings(QueryCompilerCaster._set_backend_pinned)
     def _set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:
-        ErrorMessage.not_implemented()
+        if not inplace:
+            ErrorMessage.not_implemented(
+                "Only inplace=True is supported for groupby pinning"
+            )
+
+        self._backend_pinned = pinned
+        return None
 
     @_inherit_docstrings(QueryCompilerCaster.pin_backend)
     def pin_backend(self, inplace: bool = False) -> Optional[Self]:
-        ErrorMessage.not_implemented()
+        if not inplace:
+            ErrorMessage.not_implemented(
+                "Only inplace=True is supported for groupby pinning"
+            )
+
+        return self._set_backend_pinned(True, inplace=True)
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
@@ -237,6 +251,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             axis=self._axis,
             idx_name=self._idx_name,
             drop=self._drop,
+            backend_pinned=self._backend_pinned,
             **self._kwargs,
         )
         new_kw.update(kwargs)
@@ -925,6 +940,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             return DataFrameGroupBy(
                 self._df[key],
                 drop=self._drop,
+                backend_pinned=self._backend_pinned,
                 **kwargs,
             )
         if (
@@ -939,6 +955,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         return SeriesGroupBy(
             self._df[key],
             drop=False,
+            backend_pinned=self._backend_pinned,
             **kwargs,
         )
 
@@ -1223,6 +1240,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
+                backend_pinned=self._backend_pinned,
                 **self._kwargs,
             ).size()
         result = self._wrap_aggregation(
@@ -1422,6 +1440,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
             axis=self._axis,
             idx_name=self._idx_name,
             drop=self._drop,
+            backend_pinned=self._backend_pinned,
             **new_groupby_kwargs,
         )
         return work_object._wrap_aggregation(
