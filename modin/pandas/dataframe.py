@@ -614,6 +614,7 @@ class DataFrame(BasePandasDataset):
             drop=drop,
             dropna=dropna,
             return_tuple_when_iterating=return_tuple_when_iterating,
+            backend_pinned=self.is_backend_pinned(),
         )
 
     def keys(self) -> pandas.Index:  # noqa: RT01, D200

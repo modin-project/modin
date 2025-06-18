@@ -1554,39 +1554,57 @@ def test_pin_or_unpin_groupby_not_in_place(groupby_operation, method):
     getattr(groupby_obj, method)(inplace=False)
 
 
-def test_groupby_pinning_reflects_dataframe_pin_status():
-    """Test that groupby pinning inherits from DataFrame pin status but can be modified independently."""
-    modin_df = pd.DataFrame(
-        {
-            "col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
-            "col1": list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)),
-        }
-    )
+@pytest.mark.parametrize(
+    "data_type,data_factory,groupby_factory",
+    [
+        param(
+            "DataFrame",
+            lambda: pd.DataFrame(
+                {
+                    "col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+                    "col1": list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)),
+                }
+            ),
+            lambda obj: obj.groupby("col0"),
+            id="DataFrame",
+        ),
+        param(
+            "Series",
+            lambda: pd.Series(list(range(1, BIG_DATA_CLOUD_MIN_NUM_ROWS)), name="data"),
+            lambda obj: obj.groupby([0] * (BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)),
+            id="Series",
+        ),
+    ],
+)
+def test_groupby_pinning_reflects_parent_object_pin_status(
+    data_type, data_factory, groupby_factory
+):
+    """Test that groupby pinning inherits from parent object (DataFrame/Series) pin status but can be modified independently."""
+    modin_obj = data_factory()
 
-    old_groupby_obj = modin_df.groupby("col0")
+    old_groupby_obj = groupby_factory(modin_obj)
 
     # Initially not pinned
     assert not old_groupby_obj.is_backend_pinned()
-    assert not modin_df.is_backend_pinned()
+    assert not modin_obj.is_backend_pinned()
 
-    # Pin the dataframe - new groupby objects should inherit this
-    modin_df.pin_backend(inplace=True)
+    # Pin the parent object - new groupby objects should inherit this
+    modin_obj.pin_backend(inplace=True)
 
-    # Create a new groupby object after pinning DataFrame
-    new_groupby_obj = modin_df.groupby("col0")
+    # Create a new groupby object after pinning parent object
+    new_groupby_obj = groupby_factory(modin_obj)
 
     # New groupby should inherit the pinned status
     assert new_groupby_obj.is_backend_pinned()
-    assert modin_df.is_backend_pinned()
+    assert modin_obj.is_backend_pinned()
 
     # But we can still modify groupby pinning independently
     new_groupby_obj.unpin_backend(inplace=True)
 
-    # DataFrame should remain pinned, groupby should be unpinned
+    # Parent object should remain pinned, groupby should be unpinned
     assert not new_groupby_obj.is_backend_pinned()
-    assert modin_df.is_backend_pinned()
+    assert modin_obj.is_backend_pinned()
 
-    # And we can pin groupby objects independently
     assert not old_groupby_obj.is_backend_pinned()
     old_groupby_obj.pin_backend(inplace=True)
     assert old_groupby_obj.is_backend_pinned()
