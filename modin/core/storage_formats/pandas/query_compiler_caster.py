@@ -47,6 +47,32 @@ from modin.utils import sentinel
 
 Fn = TypeVar("Fn", bound=Any)
 
+# Constant for the default class name when class_of_wrapped_fn is None
+# (represents functions in the modin.pandas module)
+MODIN_PANDAS_MODULE_NAME = "modin.pandas"
+
+
+def _normalize_class_name(class_of_wrapped_fn: Optional[str]) -> str:
+    """
+    Normalize class name for logging and operation tracking.
+
+    Parameters
+    ----------
+    class_of_wrapped_fn : Optional[str]
+        The name of the class that the function belongs to. `None` for functions
+        in the modin.pandas module.
+
+    Returns
+    -------
+    str
+        The normalized class name. Returns "modin.pandas" if input is None.
+    """
+    return (
+        class_of_wrapped_fn
+        if class_of_wrapped_fn is not None
+        else MODIN_PANDAS_MODULE_NAME
+    )
+
 
 # This type describes a defaultdict that maps backend name (or `None` for
 # method implementation and not bound to any one extension) to the dictionary of
@@ -603,13 +629,10 @@ def _maybe_switch_backend_pre_op(
             and arg.get_backend() != result_backend
         ):
             return arg
-        class_name_str = (
-            class_of_wrapped_fn if class_of_wrapped_fn is not None else "modin.pandas"
-        )
         arg.set_backend(
             result_backend,
             inplace=True,
-            switch_operation=f"{class_name_str}.{function_name}",
+            switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{function_name}",
         )
         return arg
 
@@ -679,9 +702,6 @@ def _maybe_switch_backend_post_op(
         and isinstance(result, QueryCompilerCaster)
         and (input_qc := result._get_query_compiler()) is not None
     ):
-        class_name_str = (
-            class_of_wrapped_fn if class_of_wrapped_fn is not None else "modin.pandas"
-        )
         return result.move_to(
             _get_backend_for_auto_switch(
                 input_qc=input_qc,
@@ -689,7 +709,7 @@ def _maybe_switch_backend_post_op(
                 function_name=function_name,
                 arguments=arguments,
             ),
-            switch_operation=f"{class_name_str}.{function_name}",
+            switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{function_name}",
         )
     return result
 
@@ -817,13 +837,8 @@ def _get_backend_for_auto_switch(
                 move_stay_delta,
             )
 
-            class_name_str = (
-                class_of_wrapped_fn
-                if class_of_wrapped_fn is not None
-                else "modin.pandas"
-            )
             get_logger().info(
-                f"After {class_name_str} function {function_name}, "
+                f"After {_normalize_class_name(class_of_wrapped_fn)} function {function_name}, "
                 + f"considered moving to backend {backend} with "
                 + f"(transfer_cost {move_to_cost} + other_execution_cost {other_execute_cost}) "
                 + f", stay_cost {stay_cost}, and move-stay delta "
@@ -1081,13 +1096,9 @@ def wrap_function_in_argument_caster(
                     and arg.get_backend() != result_backend
                 ):
                     return arg
-                class_name_str = (
-                    class_of_wrapped_fn
-                    if class_of_wrapped_fn is not None
-                    else "modin.pandas"
-                )
                 cast = arg.set_backend(
-                    result_backend, switch_operation=f"{class_name_str}.{name}"
+                    result_backend,
+                    switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{name}",
                 )
                 inplace_update_trackers.append(
                     InplaceUpdateTracker(
