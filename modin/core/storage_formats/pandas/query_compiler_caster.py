@@ -603,10 +603,13 @@ def _maybe_switch_backend_pre_op(
             and arg.get_backend() != result_backend
         ):
             return arg
+        class_name_str = (
+            class_of_wrapped_fn if class_of_wrapped_fn is not None else "modin.pandas"
+        )
         arg.set_backend(
             result_backend,
             inplace=True,
-            switch_operation=f"{class_of_wrapped_fn}.{function_name}",
+            switch_operation=f"{class_name_str}.{function_name}",
         )
         return arg
 
@@ -676,6 +679,9 @@ def _maybe_switch_backend_post_op(
         and isinstance(result, QueryCompilerCaster)
         and (input_qc := result._get_query_compiler()) is not None
     ):
+        class_name_str = (
+            class_of_wrapped_fn if class_of_wrapped_fn is not None else "modin.pandas"
+        )
         return result.move_to(
             _get_backend_for_auto_switch(
                 input_qc=input_qc,
@@ -683,7 +689,7 @@ def _maybe_switch_backend_post_op(
                 function_name=function_name,
                 arguments=arguments,
             ),
-            switch_operation=f"{class_of_wrapped_fn}.{function_name}",
+            switch_operation=f"{class_name_str}.{function_name}",
         )
     return result
 
@@ -1075,8 +1081,13 @@ def wrap_function_in_argument_caster(
                     and arg.get_backend() != result_backend
                 ):
                     return arg
+                class_name_str = (
+                    class_of_wrapped_fn
+                    if class_of_wrapped_fn is not None
+                    else "modin.pandas"
+                )
                 cast = arg.set_backend(
-                    result_backend, switch_operation=f"{class_of_wrapped_fn}.{name}"
+                    result_backend, switch_operation=f"{class_name_str}.{name}"
                 )
                 inplace_update_trackers.append(
                     InplaceUpdateTracker(
