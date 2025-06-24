@@ -772,7 +772,7 @@ class TestSwitchBackendPostOpDependingOnDataSize:
         assert log_records[0].name == DEFAULT_LOGGER_NAME
         assert log_records[0].levelno == logging.INFO
         assert log_records[0].message.startswith(
-            "After None function read_json, considered moving to backend Small_Data_Local with"
+            "After modin.pandas function read_json, considered moving to backend Small_Data_Local with"
         )
 
         assert log_records[1].name == DEFAULT_LOGGER_NAME
@@ -804,7 +804,7 @@ class TestSwitchBackendPostOpDependingOnDataSize:
         assert log_records[0].name == DEFAULT_LOGGER_NAME
         assert log_records[0].levelno == logging.INFO
         assert log_records[0].message.startswith(
-            "After None function read_json, considered moving to backend Small_Data_Local with"
+            "After modin.pandas function read_json, considered moving to backend Small_Data_Local with"
         )
 
         assert log_records[1].name == DEFAULT_LOGGER_NAME

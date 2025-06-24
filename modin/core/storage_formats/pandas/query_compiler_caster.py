@@ -811,8 +811,13 @@ def _get_backend_for_auto_switch(
                 move_stay_delta,
             )
 
+            class_name_str = (
+                class_of_wrapped_fn
+                if class_of_wrapped_fn is not None
+                else "modin.pandas"
+            )
             get_logger().info(
-                f"After {class_of_wrapped_fn} function {function_name}, "
+                f"After {class_name_str} function {function_name}, "
                 + f"considered moving to backend {backend} with "
                 + f"(transfer_cost {move_to_cost} + other_execution_cost {other_execute_cost}) "
                 + f", stay_cost {stay_cost}, and move-stay delta "
