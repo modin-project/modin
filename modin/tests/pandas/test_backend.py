@@ -205,3 +205,36 @@ def test_set_backend_docstrings(setter_method):
     assert dataframe_method.__doc__ == series_method.__doc__.replace(
         "Series", "DataFrame"
     )
+
+
+def test_progress_bar_shows_switch_operation_correctly():
+    """Test that progress bar messages show the correct switch_operation instead of None."""
+    with patch.object(tqdm.auto, "trange", return_value=range(2)) as mock_trange:
+        df = pd.DataFrame([1])
+
+        # Test with explicit switch_operation parameter
+        df.set_backend("pandas", switch_operation="modin.pandas.read_json")
+
+        # Verify that trange was called
+        mock_trange.assert_called_once()
+        call_args = mock_trange.call_args
+        desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
+
+        # The description should contain the switch_operation
+        assert "modin.pandas.read_json" in desc
+        assert "None.read_json" not in desc
+
+        # Reset mock for second test
+        mock_trange.reset_mock()
+
+        # Test without switch_operation (should not contain function name)
+        df2 = pd.DataFrame([2])
+        df2.set_backend("pandas")
+
+        mock_trange.assert_called_once()
+        call_args = mock_trange.call_args
+        desc = call_args[1]["desc"]
+
+        # Should not contain any function name when switch_operation is None
+        assert "modin.pandas" not in desc
+        assert "None." not in desc
