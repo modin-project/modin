@@ -41,13 +41,14 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
 )
 from modin.core.storage_formats.pandas.native_query_compiler import NativeQueryCompiler
 from modin.core.storage_formats.pandas.query_compiler_caster import (
+    _GENERAL_EXTENSIONS,
     register_function_for_post_op_switch,
     register_function_for_pre_op_switch,
 )
 from modin.logging import DEFAULT_LOGGER_NAME
 from modin.logging.metrics import add_metric_handler, clear_metric_handler
 from modin.pandas.api.extensions import register_pd_accessor
-from modin.tests.pandas.utils import create_test_dfs, df_equals
+from modin.tests.pandas.utils import create_test_dfs, df_equals, eval_general
 
 BIG_DATA_CLOUD_MIN_NUM_ROWS = 10
 SMALL_DATA_NUM_ROWS = 5
@@ -812,40 +813,6 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             "Chose not to switch backends after operation read_json"
         )
 
-    @backend_test_context(
-        test_backend="Big_Data_Cloud",
-        choices=("Big_Data_Cloud", "Small_Data_Local"),
-    )
-    def test_progress_bar_shows_modin_pandas_not_none(self):
-        """Test that progress bar messages show 'modin.pandas' instead of 'None' for module-level functions."""
-        from unittest.mock import patch
-
-        import tqdm.auto
-
-        # Register a post-op switch for read_json (module-level function)
-        register_function_for_post_op_switch(
-            class_name=None, backend="Big_Data_Cloud", method="read_json"
-        )
-
-        with patch.object(tqdm.auto, "trange", return_value=range(2)) as mock_trange:
-            # Create a small dataset that will trigger backend switch
-            json_input = json.dumps(
-                {"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1))}
-            )
-
-            # This should trigger a backend switch and show progress bar
-            result_df = pd.read_json(StringIO(json_input))
-            assert result_df.get_backend() == "Small_Data_Local"
-
-            # Verify that trange was called with a description containing "modin.pandas"
-            mock_trange.assert_called_once()
-            call_args = mock_trange.call_args
-            desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
-
-            # The description should contain "modin.pandas.read_json" not "None.read_json"
-            assert "modin.pandas.read_json" in desc
-            assert "None.read_json" not in desc
-
     def test_agg(self):
         with backend_test_context(
             test_backend="Big_Data_Cloud",
@@ -1115,101 +1082,340 @@ class TestSwitchBackendPostOpDependingOnDataSize:
         df_equals(modin_result, pandas_result)
         assert modin_result.get_backend() == "Big_Data_Cloud"
 
-    @backend_test_context(
-        test_backend="Big_Data_Cloud",
-        choices=("Big_Data_Cloud", "Small_Data_Local"),
-    )
-    def test_progress_bar_shows_modin_pandas_not_none_for_module_functions(self):
-        """Test that progress bar messages show 'modin.pandas' instead of 'None' for module-level functions."""
-        with mock.patch("tqdm.auto.trange") as mock_trange:
-            mock_trange.return_value = range(2)
 
-            # Test with read_json which is a module-level function (class_name=None)
-            register_function_for_post_op_switch(
+class TestSwitchBackendPreOp:
+    @pytest.mark.parametrize(
+        "data_size, expected_backend",
+        [
+            param(
+                BIG_DATA_CLOUD_MIN_NUM_ROWS - 1,
+                "Small_Data_Local",
+                id="small_data_should_move_to_small_engine",
+            ),
+            param(
+                BIG_DATA_CLOUD_MIN_NUM_ROWS,
+                "Big_Data_Cloud",
+                id="big_data_should_stay_in_cloud",
+            ),
+        ],
+    )
+    def test_describe_switches_depending_on_data_size(
+        self, data_size, expected_backend
+    ):
+        # Mock the default describe() implementation so that we can check that we
+        # are calling it with the correct backend as an input. We can't just inspect
+        # the mock's call_args_list because call_args_list keeps a reference to the
+        # input dataframe, whose backend may change in place.
+        mock_describe = mock.Mock(
+            wraps=pd.DataFrame._extensions[None]["describe"],
+            side_effect=(
+                # 1) Record the input backend
+                lambda self, *args, **kwargs: setattr(
+                    mock_describe, "_last_input_backend", self.get_backend()
+                )
+                # 2) Return mock.DEFAULT so that we fall back to the original
+                #    describe() implementation
+                or mock.DEFAULT
+            ),
+        )
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            df = pd.DataFrame(list(range(data_size)))
+            with mock.patch.dict(
+                pd.DataFrame._extensions[None], {"describe": mock_describe}
+            ):
+                # Before we register the post-op switch, the describe() method
+                # should not trigger auto-switch.
+                assert df.get_backend() == "Big_Data_Cloud"
+                describe_result = df.describe()
+                df_equals(describe_result, df._to_pandas().describe())
+                assert describe_result.get_backend() == "Big_Data_Cloud"
+                assert df.get_backend() == "Big_Data_Cloud"
+                mock_describe.assert_called_once()
+                assert mock_describe._last_input_backend == "Big_Data_Cloud"
+
+                mock_describe.reset_mock()
+
+                register_function_for_pre_op_switch(
+                    class_name="DataFrame", backend="Big_Data_Cloud", method="describe"
+                )
+
+                # Now that we've registered the pre-op switch, the describe() call
+                # should trigger auto-switch.
+                assert df.get_backend() == "Big_Data_Cloud"
+                describe_result = df.describe()
+                df_equals(describe_result, df._to_pandas().describe())
+                assert describe_result.get_backend() == expected_backend
+                assert df.get_backend() == expected_backend
+                mock_describe.assert_called_once()
+                assert mock_describe._last_input_backend == expected_backend
+
+    def test_read_json_with_extensions(self):
+        json_input = json.dumps({"col0": [1]})
+        # Mock the read_json implementation for each backend so that we can check
+        # that we are calling the correct implementation. Also, we have to make
+        # the extension methods produce dataframes with the correct backends.
+        pandas_read_json = mock.Mock(
+            wraps=(
+                lambda *args, **kwargs: _GENERAL_EXTENSIONS[None]["read_json"](
+                    *args, **kwargs
+                ).move_to("Small_Data_Local")
+            )
+        )
+        pandas_read_json.__name__ = "read_json"
+        cloud_read_json = mock.Mock(
+            wraps=(
+                lambda *args, **kwargs: _GENERAL_EXTENSIONS[None]["read_json"](
+                    *args, **kwargs
+                ).move_to("Big_Data_Cloud")
+            )
+        )
+        cloud_read_json.__name__ = "read_json"
+
+        register_pd_accessor("read_json", backend="Small_Data_Local")(pandas_read_json)
+        register_pd_accessor("read_json", backend="Big_Data_Cloud")(cloud_read_json)
+
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            df = pd.read_json(StringIO(json_input))
+            assert df.get_backend() == "Big_Data_Cloud"
+            pandas_read_json.assert_not_called()
+            cloud_read_json.assert_called_once()
+
+            register_function_for_pre_op_switch(
                 class_name=None, backend="Big_Data_Cloud", method="read_json"
             )
 
-            # Create a small dataset that will trigger backend switch
-            json_input = json.dumps(
-                {"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1))}
+            pandas_read_json.reset_mock()
+            cloud_read_json.reset_mock()
+
+            df = pd.read_json(StringIO(json_input))
+
+            assert df.get_backend() == "Small_Data_Local"
+            pandas_read_json.assert_called_once()
+            cloud_read_json.assert_not_called()
+
+    def test_read_json_without_extensions(self):
+        json_input = json.dumps({"col0": [1]})
+
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            df = pd.read_json(StringIO(json_input))
+            assert df.get_backend() == "Big_Data_Cloud"
+
+            register_function_for_pre_op_switch(
+                class_name=None, backend="Big_Data_Cloud", method="read_json"
             )
 
-            # This should trigger a backend switch and show progress bar
-            result_df = pd.read_json(StringIO(json_input))
-            assert result_df.get_backend() == "Small_Data_Local"
+            df = pd.read_json(StringIO(json_input))
 
-            # Verify that trange was called with a description containing "modin.pandas"
-            mock_trange.assert_called_once()
-            call_args = mock_trange.call_args
-            desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
+            assert df.get_backend() == "Small_Data_Local"
 
-            # The description should contain "modin.pandas.read_json" not "None.read_json"
-            assert "modin.pandas.read_json" in desc
-            assert "None.read_json" not in desc
-
-    @backend_test_context(
-        test_backend="Big_Data_Cloud",
-        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    @pytest.mark.parametrize(
+        "data_size, expected_backend",
+        [
+            param(
+                BIG_DATA_CLOUD_MIN_NUM_ROWS - 1,
+                "Small_Data_Local",
+                id="small_data_should_move_to_small_engine",
+            ),
+            param(
+                BIG_DATA_CLOUD_MIN_NUM_ROWS,
+                "Big_Data_Cloud",
+                id="big_data_should_stay_in_cloud",
+            ),
+        ],
     )
-    def test_progress_bar_shows_modin_pandas_for_pre_op_switch(self):
-        """Test that progress bar messages show 'modin.pandas' for pre-operation switches."""
-        with mock.patch("tqdm.auto.trange") as mock_trange:
-            mock_trange.return_value = range(2)
+    def test_iloc_setitem_switches_depending_on_data_size(
+        self, data_size, expected_backend
+    ):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            md_df, pd_df = create_test_dfs(list(range(data_size)))
+            assert md_df.get_backend() == "Big_Data_Cloud"
+            eval_general(
+                md_df,
+                pd_df,
+                lambda df: df.iloc.__setitem__((0, 0), -1),
+                __inplace__=True,
+            )
+            assert md_df.get_backend() == "Big_Data_Cloud"
 
-            # Register a pre-op switch for iloc setitem
             register_function_for_pre_op_switch(
                 class_name="_iLocIndexer",
                 backend="Big_Data_Cloud",
                 method="__setitem__",
             )
+            eval_general(
+                md_df,
+                pd_df,
+                lambda df: df.iloc.__setitem__((0, 0), 0),
+                __inplace__=True,
+            )
+            assert md_df.get_backend() == expected_backend
 
-            # Create a small dataset that will trigger pre-op backend switch
-            df = pd.DataFrame(list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1)))
+    def test_iloc_pinned(self):
+        # The operation in test_iloc would naturally cause an automatic switch, but the
+        # absence of AutoSwitchBackend or the presence of a pin on the frame prevent this
+        # switch from happening.
+        data_size = BIG_DATA_CLOUD_MIN_NUM_ROWS - 1
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            register_function_for_pre_op_switch(
+                class_name="_iLocIndexer",
+                backend="Big_Data_Cloud",
+                method="__setitem__",
+            )
+            # No pin or config, should switch
+            df = pd.DataFrame(list(range(data_size)))
             assert df.get_backend() == "Big_Data_Cloud"
-
-            # This should trigger a pre-op backend switch and show progress bar
-            df.iloc[0, 0] = -1
+            df.iloc[(0, 0)] = -1
+            assert df.get_backend() == "Small_Data_Local"
+            # config set to false, should not switch
+            with config_context(AutoSwitchBackend=False):
+                df = pd.DataFrame(list(range(data_size)))
+                assert df.get_backend() == "Big_Data_Cloud"
+                df.iloc[(0, 0)] = -2
+                assert df.get_backend() == "Big_Data_Cloud"
+            # no config, but data is pinned
+            df = pd.DataFrame(list(range(data_size))).pin_backend()
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -3
+            assert df.get_backend() == "Big_Data_Cloud"
+            # a frame-level pin remains valid across a transformation
+            df_copy = df + 1
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            df_copy.iloc[(0, 0)] = -4
+            assert df_copy.get_backend() == "Big_Data_Cloud"
+            # unpinning df allows a switch again
+            df.unpin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -5
+            assert df.get_backend() == "Small_Data_Local"
+            # An in-place set_backend operation clears the pin
+            df.move_to("Big_Data_Cloud", inplace=True)
+            # check in-place pin/unpin operations
+            df.pin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -6
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.unpin_backend(inplace=True)
+            assert df.get_backend() == "Big_Data_Cloud"
+            df.iloc[(0, 0)] = -7
             assert df.get_backend() == "Small_Data_Local"
 
-            # Verify that trange was called with a description containing the correct class name
-            mock_trange.assert_called_once()
-            call_args = mock_trange.call_args
-            desc = call_args[1]["desc"]
-
-            # The description should contain "_iLocIndexer.__setitem__" not "None.__setitem__"
-            assert "_iLocIndexer.__setitem__" in desc
-            assert "None.__setitem__" not in desc
-
-    @backend_test_context(
-        test_backend="Big_Data_Cloud",
-        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    @pytest.mark.parametrize(
+        "args, kwargs, expected_backend",
+        (
+            param((), {}, "Small_Data_Local", id="no_args_or_kwargs"),
+            param(([1],), {}, "Small_Data_Local", id="small_list_data_in_arg"),
+            param(
+                (list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS)),),
+                {},
+                "Small_Data_Local",
+                id="big_list_data_in_arg",
+            ),
+            param((), {"data": [1]}, "Small_Data_Local", id="list_data_in_kwarg"),
+            param(
+                (),
+                {"data": pandas.Series([1])},
+                "Small_Data_Local",
+                id="series_data_in_kwarg",
+            ),
+            param(
+                (),
+                {"query_compiler": CloudForBigDataQC(pandas.DataFrame([0, 1, 2]))},
+                "Big_Data_Cloud",
+                id="cloud_query_compiler_in_kwarg",
+            ),
+            param(
+                (),
+                {"query_compiler": LocalForSmallDataQC(pandas.DataFrame([0, 1, 2]))},
+                "Small_Data_Local",
+                id="small_query_compiler_in_kwarg",
+            ),
+        ),
     )
-    def test_progress_bar_shows_class_name_for_method_functions(self):
-        """Test that progress bar messages show proper class names for method functions."""
-        with mock.patch("tqdm.auto.trange") as mock_trange:
-            mock_trange.return_value = range(2)
+    @pytest.mark.parametrize("data_class", [pd.DataFrame, pd.Series])
+    def test___init___with_in_memory_data_uses_native_query_compiler(
+        self, args, kwargs, expected_backend, data_class
+    ):
+        register_function_for_pre_op_switch(
+            class_name=data_class.__name__,
+            method="__init__",
+            backend="Big_Data_Cloud",
+        )
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            assert data_class(*args, **kwargs).get_backend() == expected_backend
 
-            # Register a post-op switch for DataFrame.sum
-            register_function_for_post_op_switch(
-                class_name="DataFrame", backend="Big_Data_Cloud", method="sum"
+    @pytest.mark.parametrize(
+        "num_input_rows, expected_backend",
+        [
+            param(
+                BIG_DATA_CLOUD_MIN_NUM_ROWS - 1,
+                "Small_Data_Local",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    raises=NotImplementedError,
+                    reason="https://github.com/modin-project/modin/issues/7542",
+                ),
+            ),
+            (BIG_DATA_CLOUD_MIN_NUM_ROWS, "Big_Data_Cloud"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "groupby_class,operation",
+        [
+            param(
+                "DataFrameGroupBy",
+                lambda df: df.groupby("col0").apply(lambda x: x + 1),
+                id="DataFrameGroupBy",
+            ),
+            param(
+                "SeriesGroupBy",
+                lambda df: df.groupby("col0")["col1"].apply(lambda x: x + 1),
+                id="SeriesGroupBy",
+            ),
+        ],
+    )
+    def test_groupby_apply_switches_for_small_input(
+        self, num_input_rows, expected_backend, operation, groupby_class
+    ):
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            modin_df, pandas_df = create_test_dfs(
+                {
+                    "col0": list(range(num_input_rows)),
+                    "col1": list(range(1, num_input_rows + 1)),
+                }
+            )
+            assert modin_df.get_backend() == "Big_Data_Cloud"
+            assert operation(modin_df).get_backend() == "Big_Data_Cloud"
+
+            register_function_for_pre_op_switch(
+                class_name=groupby_class, backend="Big_Data_Cloud", method="apply"
             )
 
-            # Create a small dataset that will trigger backend switch
-            df = pd.DataFrame([[1, 2], [3, 4]])
-            assert df.get_backend() == "Big_Data_Cloud"
-
-            # This should trigger a backend switch and show progress bar
-            result = df.sum()
-            assert result.get_backend() == "Small_Data_Local"
-
-            # Verify that trange was called with a description containing "DataFrame.sum"
-            mock_trange.assert_called_once()
-            call_args = mock_trange.call_args
-            desc = call_args[1]["desc"]
-
-            # The description should contain "DataFrame.sum" not "None.sum"
-            assert "DataFrame.sum" in desc
-            assert "None.sum" not in desc
+            modin_result = operation(modin_df)
+            pandas_result = operation(pandas_df)
+            df_equals(modin_result, pandas_result)
+            assert modin_result.get_backend() == expected_backend
+            assert modin_df.get_backend() == expected_backend
 
 
 def test_move_to_clears_pin():
