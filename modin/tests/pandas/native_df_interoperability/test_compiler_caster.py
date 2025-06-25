@@ -841,9 +841,9 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             call_args = mock_trange.call_args
             desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
 
-            # The description should contain "modin.pandas.read_json" not "None.read_json"
-            assert "modin.pandas.read_json" in desc
-            assert "None.read_json" not in desc
+            assert desc.startswith(
+                "Transferring data from Big_Data_Cloud to Small_Data_Local for 'modin.pandas.read_json'"
+            )
 
     def test_agg(self):
         with backend_test_context(
