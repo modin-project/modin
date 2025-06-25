@@ -207,34 +207,35 @@ def test_set_backend_docstrings(setter_method):
     )
 
 
-def test_progress_bar_shows_switch_operation_correctly():
-    """Test that progress bar messages show the correct switch_operation instead of None."""
+@pytest.mark.parametrize(
+    "switch_operation,expected_desc",
+    [
+        (
+            "modin.pandas.read_json",
+            "Transferring data from Ray to Pandas for 'modin.pandas.read_json' with max estimated shape 1x1",
+        ),
+        (
+            "DataFrame.sum",
+            "Transferring data from Ray to Pandas for 'DataFrame.sum' with max estimated shape 1x1",
+        ),
+        (None, "Transferring data from Ray to Pandas with max estimated shape 1x1"),
+    ],
+)
+def test_progress_bar_message(switch_operation, expected_desc):
+    """Test that progress bar messages show the correct format with switch_operation parameter."""
     with patch.object(tqdm.auto, "trange", return_value=range(2)) as mock_trange:
         df = pd.DataFrame([1])
 
-        # Test with explicit switch_operation parameter
-        df.set_backend("pandas", switch_operation="modin.pandas.read_json")
+        # Test with the given switch_operation parameter
+        if switch_operation is None:
+            df.set_backend("pandas")
+        else:
+            df.set_backend("pandas", switch_operation=switch_operation)
 
         # Verify that trange was called
         mock_trange.assert_called_once()
         call_args = mock_trange.call_args
         desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
 
-        # The description should contain the switch_operation
-        assert "modin.pandas.read_json" in desc
-        assert "None.read_json" not in desc
-
-        # Reset mock for second test
-        mock_trange.reset_mock()
-
-        # Test without switch_operation (should not contain function name)
-        df2 = pd.DataFrame([2])
-        df2.set_backend("pandas")
-
-        mock_trange.assert_called_once()
-        call_args = mock_trange.call_args
-        desc = call_args[1]["desc"]
-
-        # Should not contain any function name when switch_operation is None
-        assert "modin.pandas" not in desc
-        assert "None." not in desc
+        # Check that the complete message matches expected format
+        assert desc == expected_desc
