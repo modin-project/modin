@@ -772,7 +772,7 @@ class TestSwitchBackendPostOpDependingOnDataSize:
         assert log_records[0].name == DEFAULT_LOGGER_NAME
         assert log_records[0].levelno == logging.INFO
         assert log_records[0].message.startswith(
-            "After None function read_json, considered moving to backend Small_Data_Local with"
+            "After modin.pandas function read_json, considered moving to backend Small_Data_Local with"
         )
 
         assert log_records[1].name == DEFAULT_LOGGER_NAME
@@ -804,7 +804,7 @@ class TestSwitchBackendPostOpDependingOnDataSize:
         assert log_records[0].name == DEFAULT_LOGGER_NAME
         assert log_records[0].levelno == logging.INFO
         assert log_records[0].message.startswith(
-            "After None function read_json, considered moving to backend Small_Data_Local with"
+            "After modin.pandas function read_json, considered moving to backend Small_Data_Local with"
         )
 
         assert log_records[1].name == DEFAULT_LOGGER_NAME
@@ -812,6 +812,38 @@ class TestSwitchBackendPostOpDependingOnDataSize:
         assert log_records[1].message.startswith(
             "Chose not to switch backends after operation read_json"
         )
+
+    @backend_test_context(
+        test_backend="Big_Data_Cloud",
+        choices=("Big_Data_Cloud", "Small_Data_Local"),
+    )
+    def test_progress_bar_shows_modin_pandas_for_general_functions(self):
+        """Test that progress bar messages show 'modin.pandas.read_json' instead of 'None.read_json' for general functions."""
+        with mock.patch("tqdm.auto.trange") as mock_trange:
+            mock_trange.return_value = range(2)
+
+            # Register a post-op switch for read_json (general function with class_name=None)
+            register_function_for_post_op_switch(
+                class_name=None, backend="Big_Data_Cloud", method="read_json"
+            )
+
+            # Create a small dataset that will trigger backend switch and show progress bar
+            json_input = json.dumps(
+                {"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1))}
+            )
+
+            # This should trigger a backend switch and show progress bar
+            result_df = pd.read_json(StringIO(json_input))
+            assert result_df.get_backend() == "Small_Data_Local"
+
+            # Verify that trange was called with correct progress bar message
+            mock_trange.assert_called_once()
+            call_args = mock_trange.call_args
+            desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
+
+            assert desc.startswith(
+                "Transferring data from Big_Data_Cloud to Small_Data_Local for 'modin.pandas.read_json'"
+            )
 
     def test_agg(self):
         with backend_test_context(
