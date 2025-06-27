@@ -4393,6 +4393,44 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             self, ufunc, method, *inputs, **kwargs
         )
 
+    def __array_function__(
+        self,
+        func: np.func,
+        types: tuple,
+        args: tuple,
+        kwargs: dict,
+    ) -> DataFrame | Series | Any:
+        """
+        Apply `func` to the `BasePandasDataset`.
+
+        This function implements NEP18-style dispatch for certain numpy functions:
+        https://numpy.org/neps/nep-0018-array-function-protocol.html#nep18
+
+        By default, this function will transparently call __array__, followed by __array_function__
+        on the returned numpy array. We implement this function to prevent bugs with the extension
+        system when another backend overrides this method.
+
+        Parameters
+        ----------
+        func : np.func
+            The NumPy func to apply.
+        types : tuple
+            The types of the args.
+        args : tuple
+            The args to the func.
+        kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        DataFrame | Series | Any
+            The result of applying the function to this dataset. By default, it will return
+            a numpy array.
+        """
+        return self._query_compiler.do_array_function_implementation(
+            self, func, types, args, kwargs
+        )
+
     # namespace for additional Modin functions that are not available in Pandas
     modin: ModinAPI = CachedAccessor("modin", ModinAPI)
 

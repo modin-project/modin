@@ -879,6 +879,53 @@ class BaseQueryCompiler(
         # ufuncs are required to be one-to-one mappings, so this branch should never be hit
         return pandas_result  # pragma: no cover
 
+    def do_array_function_implementation(
+        self,
+        frame: BasePandasDataset,
+        func: np.func,
+        types: tuple,
+        args: tuple,
+        kwargs: dict,
+    ) -> Union["DataFrame", "Series", Any]:
+        """
+        Apply the provided NumPy array function to the underlying data.
+
+        This method is called by the ``__array_function__`` dispatcher on BasePandasDataset.
+
+        Unlike other query compiler methods, this function directly operates on the input DataFrame/Series
+        to allow for easier argument processing. The default implementation defaults to pandas, but
+        a query compiler sub-class may override this method to provide a distributed implementation.
+
+        See NumPy docs: https://numpy.org/neps/nep-0018-array-function-protocol.html#nep18
+
+        Parameters
+        ----------
+        frame : BasePandasDataset
+            The DataFrame or Series on which the ufunc was called. Its query compiler must match ``self``.
+        func : np.func
+            The NumPy func to apply.
+        types : tuple
+            The types of the args.
+        args : tuple
+            The args to the func.
+        kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        DataFrame | Series | Any
+            The result of applying the function to this dataset. By default, it will return
+            a numpy array.
+        """
+        assert (
+            self is frame._query_compiler
+        ), "__array_function__ called with mismatched query compiler and input frame"
+        # Replace each modin type with numpy ndarray, since we convert modin frames to np ndarrays.
+        new_types = (
+            np.ndarray if issubclass(tpe, BasePandasDataset) else tpe for tpe in types
+        )
+        return frame.__array__().__array_function__(func, new_types, args, kwargs)
+
     # Dataframe exchange protocol
 
     @abc.abstractmethod
