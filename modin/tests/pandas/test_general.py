@@ -990,3 +990,10 @@ def test_df_immutability():
     src_data.iloc[0, 0] = 100
 
     assert md_df._to_pandas().iloc[0, 0] == 1
+
+
+def test_np_array_function():
+    # first argument is a numpy array, second argument is modin frame
+    assert_array_equal(np.where(np.array([1, 0]), pd.Series([9, 9]), [-1, -1]), np.array([9, -1]))
+    # multiple arguments are modin objects
+    assert_array_equal(np.where(pd.DataFrame([[1, 0]]), pd.Series([9, 9]), [-1, -1]), np.array([[9, -1]]))
