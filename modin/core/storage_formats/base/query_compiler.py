@@ -882,7 +882,7 @@ class BaseQueryCompiler(
     def do_array_function_implementation(
         self,
         frame: BasePandasDataset,
-        func: np.func,
+        func: callable,
         types: tuple,
         args: tuple,
         kwargs: dict,
