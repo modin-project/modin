@@ -4403,11 +4403,11 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         """
         Apply `func` to the `BasePandasDataset`.
 
-        This function implements NEP18-style dispatch for certain numpy functions:
+        This function implements NEP18-style dispatch for certain NumPy functions:
         https://numpy.org/neps/nep-0018-array-function-protocol.html#nep18
 
         By default, this function will transparently call __array__, followed by __array_function__
-        on the returned numpy array. We implement this function to prevent bugs with the extension
+        on the returned NumPy array. We implement this function to prevent bugs with the extension
         system when another backend overrides this method.
 
         Parameters
@@ -4425,7 +4425,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         -------
         DataFrame | Series | Any
             The result of applying the function to this dataset. By default, it will return
-            a numpy array.
+            a NumPy array.
         """
         return self._query_compiler.do_array_function_implementation(
             self, func, types, args, kwargs
