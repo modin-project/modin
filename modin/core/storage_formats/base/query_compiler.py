@@ -918,6 +918,7 @@ class BaseQueryCompiler(
             a numpy array.
         """
         from modin.pandas.base import BasePandasDataset
+
         assert (
             self is frame._query_compiler
         ), "__array_function__ called with mismatched query compiler and input frame"
