@@ -915,7 +915,7 @@ class BaseQueryCompiler(
         -------
         DataFrame | Series | Any
             The result of applying the function to this dataset. By default, it will return
-            a numpy array.
+            a NumPy array.
         """
         from modin.pandas.base import BasePandasDataset
 
