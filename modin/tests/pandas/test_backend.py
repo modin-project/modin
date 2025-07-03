@@ -223,7 +223,7 @@ def test_set_backend_docstrings(setter_method):
 def test_fallback_progress_printing(
     mock_trange, capsys, switch_operation, expected_output
 ):
-    """Test that fallback progress printing works when tqdm is not available and BackendSwitchProgress is enabled."""
+    """Test that fallback progress printing works when tqdm is not available and ShowBackendSwitchProgress is enabled."""
     df = pd.DataFrame([1, 2, 3])
 
     df.set_backend("pandas", switch_operation=switch_operation)
@@ -236,11 +236,11 @@ def test_fallback_progress_printing(
 @patch("tqdm.auto.trange", side_effect=ImportError("tqdm not available"))
 @config_context(Backend="python_test")
 def test_fallback_progress_printing_silent_when_disabled(mock_trange, capsys):
-    """Test that fallback progress printing is silent when BackendSwitchProgress is disabled."""
+    """Test that fallback progress printing is silent when ShowBackendSwitchProgress is disabled."""
 
     df = pd.DataFrame([1, 2, 3])
 
-    with config_context(BackendSwitchProgress=False):
+    with config_context(ShowBackendSwitchProgress=False):
         df.set_backend("pandas")
 
     captured = capsys.readouterr()
@@ -250,10 +250,10 @@ def test_fallback_progress_printing_silent_when_disabled(mock_trange, capsys):
 
 @config_context(Backend="python_test")
 def test_tqdm_progress_bar_disabled_when_backend_switch_progress_false(capsys):
-    """Test that tqdm progress bar doesn't appear when BackendSwitchProgress is disabled."""
+    """Test that tqdm progress bar doesn't appear when ShowBackendSwitchProgress is disabled."""
     df = pd.DataFrame([1, 2, 3])
 
-    with config_context(BackendSwitchProgress=False), patch(
+    with config_context(ShowBackendSwitchProgress=False), patch(
         "tqdm.auto.trange"
     ) as mock_trange:
         df.set_backend("pandas")

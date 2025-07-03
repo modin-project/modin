@@ -647,7 +647,7 @@ class AutoSwitchBackend(EnvironmentVariable, type=bool):
         cls.put(False)
 
 
-class BackendSwitchProgress(EnvironmentVariable, type=bool):
+class ShowBackendSwitchProgress(EnvironmentVariable, type=bool):
     """
     Whether to show progress when switching between backends.
 

@@ -76,7 +76,7 @@ from pandas.util._validators import (
 )
 
 from modin import pandas as pd
-from modin.config import Backend, BackendSwitchProgress
+from modin.config import Backend, ShowBackendSwitchProgress
 from modin.core.storage_formats.pandas.query_compiler_caster import (
     EXTENSION_NO_LOOKUP,
     QueryCompilerCaster,
@@ -4516,21 +4516,19 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                     + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
                 )
 
-            # Check if backend switch progress is enabled before showing any progress
-            if BackendSwitchProgress.get():
+            if ShowBackendSwitchProgress.get():
                 try:
                     from tqdm.auto import trange
 
                     progress_iter = iter(trange(progress_split_count, desc=desc))
                 except ImportError:
-                    # Fallback to simple print statement when tqdm is not available
-                    # Print to stderr to match tqdm's behavior
+                    # Fallback to simple print statement when tqdm is not available.
+                    # Print to stderr to match tqdm's behavior.
 
                     print(desc, file=sys.stderr)  # noqa: T201
-                    # Use a dummy iterator with no side effects when tqdm is not
-                    # available.
             else:
-                # Silent operation - no progress display at all
+                # Use a dummy progress iterator with no side effects if we do
+                # not want to show the progress.
                 progress_iter = iter(range(progress_split_count))
         else:
             return None if inplace else self
