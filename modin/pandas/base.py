@@ -4503,27 +4503,32 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         self_backend = self.get_backend()
         normalized_backend = Backend.normalize(backend)
         if normalized_backend != self_backend:
+            max_rows, max_cols = self._query_compiler._max_shape()
+            if switch_operation is None:
+                desc = (
+                    f"Transferring data from {self_backend} to {normalized_backend}"
+                    + f" with max estimated shape {max_rows}x{max_cols}"
+                )
+            else:
+                desc = (
+                    f"Transferring data from {self_backend} to {normalized_backend} for"
+                    + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
+                )
+
             try:
                 from tqdm.auto import trange
 
-                max_rows, max_cols = self._query_compiler._max_shape()
-                if switch_operation is None:
-                    desc = (
-                        f"Transferring data from {self_backend} to {normalized_backend}"
-                        + f" with max estimated shape {max_rows}x{max_cols}"
-                    )
-                else:
-                    desc = (
-                        f"Transferring data from {self_backend} to {normalized_backend} for"
-                        + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
-                    )
                 progress_iter = iter(trange(progress_split_count, desc=desc))
             except ImportError:
-                # Iterate over blank range(2) if tqdm is not installed
-                pass
+                # Fallback to simple print statement when tqdm is not available
+                print(desc)  # noqa: T201
+                # Use a dummy iterator with no side effects when tqdm is not
+                # available.
+                progress_iter = iter(range(progress_split_count))
         else:
             return None if inplace else self
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
+        # Otherwise, use fallback print statements.
         next(progress_iter)
         pandas_self = self._query_compiler.to_pandas()
         next(progress_iter)

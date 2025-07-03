@@ -205,3 +205,30 @@ def test_set_backend_docstrings(setter_method):
     assert dataframe_method.__doc__ == series_method.__doc__.replace(
         "Series", "DataFrame"
     )
+
+
+# Tests for fallback progress printing when tqdm is not available
+@pytest.mark.parametrize(
+    "switch_operation,expected_output",
+    [
+        (None, "Transferring data from Python_Test to Pandas with max estimated shape"),
+        (
+            "test_operation",
+            "Transferring data from Python_Test to Pandas for 'test_operation' with max estimated shape",
+        ),
+    ],
+)
+@patch("tqdm.auto.trange", side_effect=ImportError("tqdm not available"))
+@config_context(Backend="python_test")
+def test_fallback_progress_printing(
+    mock_trange, capsys, switch_operation, expected_output
+):
+    """Test that fallback progress printing works when tqdm is not available."""
+    df = pd.DataFrame([1, 2, 3])
+
+    # Execute the backend switch
+    df.set_backend("pandas", switch_operation=switch_operation)
+
+    # Capture and verify the fallback output
+    captured = capsys.readouterr()
+    assert expected_output in captured.out
