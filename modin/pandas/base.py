@@ -18,6 +18,7 @@ from __future__ import annotations
 import abc
 import pickle as pkl
 import re
+import sys
 import warnings
 from functools import cached_property
 from typing import (
@@ -75,7 +76,7 @@ from pandas.util._validators import (
 )
 
 from modin import pandas as pd
-from modin.config import Backend
+from modin.config import Backend, ShowBackendSwitchProgress
 from modin.core.storage_formats.pandas.query_compiler_caster import (
     EXTENSION_NO_LOOKUP,
     QueryCompilerCaster,
@@ -4503,27 +4504,36 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         self_backend = self.get_backend()
         normalized_backend = Backend.normalize(backend)
         if normalized_backend != self_backend:
-            try:
-                from tqdm.auto import trange
+            max_rows, max_cols = self._query_compiler._max_shape()
+            if switch_operation is None:
+                desc = (
+                    f"Transferring data from {self_backend} to {normalized_backend}"
+                    + f" with max estimated shape {max_rows}x{max_cols}"
+                )
+            else:
+                desc = (
+                    f"Transferring data from {self_backend} to {normalized_backend} for"
+                    + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
+                )
 
-                max_rows, max_cols = self._query_compiler._max_shape()
-                if switch_operation is None:
-                    desc = (
-                        f"Transferring data from {self_backend} to {normalized_backend}"
-                        + f" with max estimated shape {max_rows}x{max_cols}"
-                    )
-                else:
-                    desc = (
-                        f"Transferring data from {self_backend} to {normalized_backend} for"
-                        + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
-                    )
-                progress_iter = iter(trange(progress_split_count, desc=desc))
-            except ImportError:
-                # Iterate over blank range(2) if tqdm is not installed
-                pass
+            if ShowBackendSwitchProgress.get():
+                try:
+                    from tqdm.auto import trange
+
+                    progress_iter = iter(trange(progress_split_count, desc=desc))
+                except ImportError:
+                    # Fallback to simple print statement when tqdm is not available.
+                    # Print to stderr to match tqdm's behavior.
+
+                    print(desc, file=sys.stderr)  # noqa: T201
+            else:
+                # Use a dummy progress iterator with no side effects if we do
+                # not want to show the progress.
+                progress_iter = iter(range(progress_split_count))
         else:
             return None if inplace else self
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
+        # Otherwise, use fallback print statements.
         next(progress_iter)
         pandas_self = self._query_compiler.to_pandas()
         next(progress_iter)
