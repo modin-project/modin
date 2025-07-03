@@ -43,7 +43,7 @@ from modin.core.storage_formats.base.query_compiler_calculator import (
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging, get_logger
 from modin.logging.metrics import emit_metric
-from modin.utils import sentinel
+from modin.utils import _inherit_docstrings, sentinel
 
 Fn = TypeVar("Fn", bound=Any)
 
@@ -270,7 +270,11 @@ class QueryCompilerCaster(ABC):
 
     @abstractmethod
     def set_backend(
-        self, backend: str, inplace: bool, *, switch_operation: Optional[str] = None
+        self,
+        backend: str,
+        inplace: bool = False,
+        *,
+        switch_operation: Optional[str] = None,
     ) -> Optional[Self]:
         """
         Set the backend of this object.
@@ -293,6 +297,18 @@ class QueryCompilerCaster(ABC):
             The object with the new backend, if `inplace` is False. Otherwise, None.
         """
         pass
+
+    @_inherit_docstrings(set_backend)
+    def move_to(
+        self,
+        backend: str,
+        inplace: bool = False,
+        *,
+        switch_operation: Optional[str] = None,
+    ) -> Optional[Self]:
+        return self.set_backend(
+            backend=backend, inplace=inplace, switch_operation=switch_operation
+        )
 
     @abstractmethod
     def _copy_into(self, other: Self) -> None:
