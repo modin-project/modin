@@ -43,6 +43,7 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     EXTENSION_DICT_TYPE,
     EXTENSION_NO_LOOKUP,
     QueryCompilerCaster,
+    visit_nested_args,
 )
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
@@ -195,10 +196,57 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         *,
         switch_operation: Optional[str] = None,
     ) -> Optional[Self]:
-        # TODO(https://github.com/modin-project/modin/issues/7544): implement
-        # this method to support automatic pre-operation backend switch for
-        # groupby methods.
-        ErrorMessage.not_implemented()
+
+        def set_instance_variable_backend(arg: Any) -> Any:
+            # groupby object _by and _df fields may include both
+            # QueryCompilerCaster objects and BaseQueryCompiler objects,
+            # so we have to be able to set the backend on both of those.
+
+            if isinstance(arg, QueryCompilerCaster):
+                result = arg.set_backend(
+                    backend=backend, inplace=inplace, switch_operation=switch_operation
+                )
+                return arg if inplace else result
+            if isinstance(arg, BaseQueryCompiler):
+                # Use a cyclic import here because query compilers themselves
+                # do not implement set_backend().
+                from modin.pandas import DataFrame
+
+                return (
+                    DataFrame(query_compiler=arg)
+                    .set_backend(backend=backend, inplace=False)
+                    ._query_compiler
+                )
+            return arg
+
+        new_by = visit_nested_args([self._by], set_instance_variable_backend)[0]
+        new_df = visit_nested_args([self._df], set_instance_variable_backend)[0]
+
+        if inplace:
+            self._df = new_df
+            self._query_compiler = new_df._query_compiler
+            self._by = new_by
+            return None
+        return type(self)(
+            df=new_df,
+            by=new_by,
+            axis=self._axis,
+            level=self._level,
+            as_index=self._as_index,
+            sort=self._sort,
+            group_keys=self._kwargs["group_keys"],
+            idx_name=self._idx_name,
+            drop=self._drop,
+            backend_pinned=self._backend_pinned,
+            # We have added as_index, sort, group_keys, and level to the kwargs
+            # dictionary, so we need to remove them from the keyword arguments
+            # that we pass to the new DataFrameGroupBy object.
+            **{
+                k: v
+                for k, v in self._kwargs.items()
+                if k not in ["as_index", "sort", "group_keys", "level"]
+            },
+        )
 
     @_inherit_docstrings(QueryCompilerCaster.is_backend_pinned)
     def is_backend_pinned(self) -> bool:
