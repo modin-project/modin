@@ -202,7 +202,7 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         ----------
         backend : str
             The name of the backend to switch to.
-        inplace : bool, default False
+        inplace : bool, default: False
             Whether to perform the operation in-place.
         switch_operation : str, optional
             The operation being performed that triggered the backend switch.
