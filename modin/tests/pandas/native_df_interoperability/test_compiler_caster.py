@@ -1399,11 +1399,6 @@ class TestSwitchBackendPreOp:
             param(
                 BIG_DATA_CLOUD_MIN_NUM_ROWS - 1,
                 "Small_Data_Local",
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=NotImplementedError,
-                    reason="https://github.com/modin-project/modin/issues/7542",
-                ),
             ),
             (BIG_DATA_CLOUD_MIN_NUM_ROWS, "Big_Data_Cloud"),
         ],
