@@ -19,6 +19,7 @@ from modin.config.envvars import (
     AsyncReadMode,
     AutoSwitchBackend,
     Backend,
+    BackendSwitchProgress,
     BenchmarkMode,
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
@@ -78,6 +79,7 @@ __all__ = [
     "Backend",
     "Execution",
     "AutoSwitchBackend",
+    "BackendSwitchProgress",
     # Ray specific
     "IsRayCluster",
     "RayRedisAddress",

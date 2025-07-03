@@ -18,6 +18,7 @@ from __future__ import annotations
 import abc
 import pickle as pkl
 import re
+import sys
 import warnings
 from functools import cached_property
 from typing import (
@@ -75,7 +76,7 @@ from pandas.util._validators import (
 )
 
 from modin import pandas as pd
-from modin.config import Backend
+from modin.config import Backend, BackendSwitchProgress
 from modin.core.storage_formats.pandas.query_compiler_caster import (
     EXTENSION_NO_LOOKUP,
     QueryCompilerCaster,
@@ -4515,15 +4516,21 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                     + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
                 )
 
-            try:
-                from tqdm.auto import trange
+            # Check if backend switch progress is enabled before showing any progress
+            if BackendSwitchProgress.get():
+                try:
+                    from tqdm.auto import trange
 
-                progress_iter = iter(trange(progress_split_count, desc=desc))
-            except ImportError:
-                # Fallback to simple print statement when tqdm is not available
-                print(desc)  # noqa: T201
-                # Use a dummy iterator with no side effects when tqdm is not
-                # available.
+                    progress_iter = iter(trange(progress_split_count, desc=desc))
+                except ImportError:
+                    # Fallback to simple print statement when tqdm is not available
+                    # Print to stderr to match tqdm's behavior
+
+                    print(desc, file=sys.stderr)  # noqa: T201
+                    # Use a dummy iterator with no side effects when tqdm is not
+                    # available.
+            else:
+                # Silent operation - no progress display at all
                 progress_iter = iter(range(progress_split_count))
         else:
             return None if inplace else self
