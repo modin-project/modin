@@ -206,22 +206,16 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 
     @_inherit_docstrings(QueryCompilerCaster._set_backend_pinned)
     def _set_backend_pinned(self, pinned: bool, inplace: bool) -> Optional[Self]:
-        if not inplace:
-            ErrorMessage.not_implemented(
-                "Only inplace=True is supported for groupby pinning"
-            )
-
-        self._backend_pinned = pinned
-        return None
-
-    @_inherit_docstrings(QueryCompilerCaster.pin_backend)
-    def pin_backend(self, inplace: bool = False) -> Optional[Self]:
-        if not inplace:
-            ErrorMessage.not_implemented(
-                "Only inplace=True is supported for groupby pinning"
-            )
-
-        return self._set_backend_pinned(True, inplace=True)
+        if inplace:
+            self._backend_pinned = pinned
+            return None
+        else:
+            # Create a new groupby object with the updated pinned status
+            new_obj = self._override(backend_pinned=pinned)
+            # Force the correct pinned status since the automatic pinning logic
+            # in query_compiler_caster.py might override it
+            new_obj._backend_pinned = pinned
+            return new_obj
 
     @disable_logging
     @_inherit_docstrings(QueryCompilerCaster._get_query_compiler)
