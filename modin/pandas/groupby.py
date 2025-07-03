@@ -188,7 +188,6 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         return self._df.get_backend()
 
     @disable_logging
-    @_inherit_docstrings(QueryCompilerCaster.set_backend)
     def set_backend(
         self,
         backend: str,
@@ -196,6 +195,33 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
         *,
         switch_operation: Optional[str] = None,
     ) -> Optional[Self]:
+        """
+        Move the data in this groupby object to a different backend.
+
+        Parameters
+        ----------
+        backend : str
+            The name of the backend to switch to.
+        inplace : bool, default False
+            Whether to perform the operation in-place.
+        switch_operation : str, optional
+            The operation being performed that triggered the backend switch.
+
+        Returns
+        -------
+        DataFrameGroupBy or None
+            If inplace=False, returns a new groupby object with the specified backend.
+            If inplace=True, returns None and changes the backend of the current object.
+
+        Notes
+        -----
+        When `inplace=True`, this method will move the data between backends
+        for all parent objects (the DataFrame/Series used to create this
+        groupby, and any DataFrames/Series in the `by` list). When
+        `inplace=False`, new copies of the parent objects are created with their
+        data in the target backend for the returned groupby object, leaving the
+        original parent objects unchanged.
+        """
 
         def set_instance_variable_backend(arg: Any) -> Any:
             # groupby object _by and _df fields may include both
