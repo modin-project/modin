@@ -15,13 +15,18 @@ import platform
 import re
 from unittest.mock import patch
 
+import pandas
 import pytest
 import tqdm.auto
 
 import modin.pandas as pd
 from modin.config import Backend
 from modin.config import context as config_context
-from modin.tests.pandas.utils import df_equals
+from modin.tests.pandas.utils import (
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+)
 
 WINDOWS_RAY_SKIP_MARK = pytest.mark.skipif(
     platform.system() == "Windows",
@@ -31,6 +36,10 @@ WINDOWS_RAY_SKIP_MARK = pytest.mark.skipif(
         + "https://github.com/modin-project/modin/issues/7387"
     ),
 )
+
+# Some modin methods warn about defaulting to pandas at the API layer. That's
+# expected and not an error as it would be normally.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_new_dataframe_uses_default_backend():
@@ -205,6 +214,208 @@ def test_set_backend_docstrings(setter_method):
     assert dataframe_method.__doc__ == series_method.__doc__.replace(
         "Series", "DataFrame"
     )
+
+
+class TestGroupbySetBackend:
+    @pytest.mark.parametrize("setter_method", ["set_backend", "move_to"])
+    @pytest.mark.parametrize(
+        "inplace_kwargs",
+        [
+            pytest.param({"inplace": True}, id="inplace"),
+            pytest.param({"inplace": False}, id="not_inplace"),
+            pytest.param({}, id="no_inplace_kwargs"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "starting_backend, new_backend",
+        [
+            pytest.param(Backend.get(), "Pandas", id="current_to_pandas"),
+            pytest.param("Pandas", Backend.get(), id="pandas_to_current"),
+            pytest.param(Backend.get(), "Python_Test", id="current_to_python"),
+            pytest.param("Python_Test", Backend.get(), id="python_to_current"),
+            pytest.param("Python_Test", "Pandas", id="python_to_pandas"),
+            pytest.param("Pandas", "Python_Test", id="pandas_to_python"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "by_level_factory",
+        [
+            pytest.param(lambda df: ("C", None), id="by_string_column"),
+            pytest.param(lambda df: (["C", "D"], None), id="by_list_of_strings"),
+            pytest.param(lambda df: (df["C"], None), id="by_series"),
+            pytest.param(lambda df: (["C", df["D"]], None), id="by_list_mixed"),
+            pytest.param(lambda df: (pandas.Grouper(key="C"), None), id="by_grouper"),
+            pytest.param(lambda df: (None, 0), id="level_scalar"),
+            pytest.param(lambda df: (None, [0, 1]), id="level_list"),
+            pytest.param(
+                lambda df: (["C", df["D"]], None), id="by_mixed_string_series"
+            ),
+        ],
+    )
+    def test_dataframe(
+        self,
+        setter_method,
+        inplace_kwargs,
+        starting_backend,
+        new_backend,
+        by_level_factory,
+    ):
+        """Test set_backend functionality for DataFrame groupby objects with various 'by' and 'level' combinations."""
+        with config_context(Backend=starting_backend):
+
+            def do_groupby(df):
+                by, level = by_level_factory(df)
+                return df.groupby(by=by, level=level)
+
+            inplace = inplace_kwargs.get("inplace", False)
+            original_modin_df, original_pandas_df = create_test_dfs(
+                pandas.DataFrame(
+                    data={
+                        "A": [1, 2, 3, 4, 5, 6],
+                        "B": [10, 20, 30, 40, 50, 60],
+                        "C": ["x", "y", "x", "y", "x", "y"],
+                        "D": ["p", "p", "q", "q", "r", "r"],
+                    },
+                    index=pd.MultiIndex.from_tuples(
+                        [
+                            ("foo", 1),
+                            ("foo", 2),
+                            ("bar", 1),
+                            ("bar", 2),
+                            ("baz", 1),
+                            ("baz", 2),
+                        ],
+                        names=["first", "second"],
+                    ),
+                )
+            )
+
+            # Create DataFrame groupby object
+            original_groupby = do_groupby(original_modin_df)
+
+            setter_result = getattr(original_groupby, setter_method)(
+                new_backend, **inplace_kwargs
+            )
+
+            if inplace:
+                assert setter_result is None
+                result_groupby = original_groupby
+                # Verify that the underlying DataFrame's backend was also changed
+                assert original_groupby._df.get_backend() == new_backend
+            else:
+                assert setter_result is not original_groupby
+                result_groupby = setter_result
+                # Verify original DataFrame's backend was not changed
+                assert original_groupby._df.get_backend() == starting_backend
+
+            # Verify backend was changed
+            assert result_groupby.get_backend() == new_backend
+
+            # Verify that groupby still works correctly after backend switch
+            # Create a fresh groupby for comparison to avoid mixed backend states
+            pandas_groupby_sum = do_groupby(original_pandas_df).sum()
+            df_equals(
+                result_groupby.sum(),
+                pandas_groupby_sum,
+            )
+            if not inplace:
+                df_equals(
+                    original_groupby.sum(),
+                    pandas_groupby_sum,
+                )
+
+    @pytest.mark.parametrize("setter_method", ["set_backend", "move_to"])
+    @pytest.mark.parametrize(
+        "inplace_kwargs",
+        [
+            pytest.param({"inplace": True}, id="inplace"),
+            pytest.param({"inplace": False}, id="not_inplace"),
+            pytest.param({}, id="no_inplace_kwargs"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "starting_backend, new_backend",
+        [
+            pytest.param(Backend.get(), "Pandas", id="current_to_pandas"),
+            pytest.param("Pandas", Backend.get(), id="pandas_to_current"),
+            pytest.param(Backend.get(), "Python_Test", id="current_to_python"),
+            pytest.param("Python_Test", Backend.get(), id="python_to_current"),
+            pytest.param("Python_Test", "Pandas", id="python_to_pandas"),
+            pytest.param("Pandas", "Python_Test", id="pandas_to_python"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "by_level_factory",
+        [
+            pytest.param(lambda series: (None, 0), id="by_index_level_0"),
+            pytest.param(
+                lambda series: (None, [0, 1]),
+                id="by_index_levels_list",
+            ),
+            pytest.param(
+                lambda series: (pandas.Grouper(level=0), None),
+                id="by_grouper_level",
+            ),
+            pytest.param(lambda series: (None, 0), id="level_scalar"),
+            pytest.param(lambda series: (None, [0, 1]), id="level_list"),
+            pytest.param(lambda series: (series, None), id="by_self"),
+            pytest.param(lambda series: (series % 2, None), id="by_self_modulo_2"),
+        ],
+    )
+    def test_series(
+        self,
+        setter_method,
+        inplace_kwargs,
+        starting_backend,
+        new_backend,
+        by_level_factory,
+    ):
+        """Test set_backend functionality for Series groupby objects with various 'by' and 'level' combinations."""
+        with config_context(Backend=starting_backend):
+            inplace = inplace_kwargs.get("inplace", False)
+            # Create test data with MultiIndex to support level-based grouping
+            idx = pd.MultiIndex.from_tuples(
+                [
+                    ("foo", 1),
+                    ("foo", 2),
+                    ("bar", 1),
+                    ("bar", 2),
+                    ("baz", 1),
+                    ("baz", 2),
+                ],
+                names=["first", "second"],
+            )
+            original_pandas_series = pandas.Series([1, 2, 1, 3, 4, 5], index=idx)
+            original_modin_series = pd.Series([1, 2, 1, 3, 4, 5], index=idx)
+
+            def do_groupby(series):
+                by, level = by_level_factory(series)
+                return series.groupby(by=by, level=level)
+
+            # Create Series groupby object
+            original_groupby = do_groupby(original_modin_series)
+
+            setter_result = getattr(original_groupby, setter_method)(
+                new_backend, **inplace_kwargs
+            )
+
+            if inplace:
+                assert setter_result is None
+                result_groupby = original_groupby
+                # Verify that the underlying Series's backend was also changed
+                assert original_groupby._df.get_backend() == new_backend
+            else:
+                assert setter_result is not original_groupby
+                result_groupby = setter_result
+                # Verify original Series's backend was not changed
+                assert original_groupby._df.get_backend() == starting_backend
+
+            assert result_groupby.get_backend() == new_backend
+
+            pandas_groupby_sum = do_groupby(original_pandas_series).sum()
+            df_equals(result_groupby.sum(), pandas_groupby_sum)
+            if not inplace:
+                df_equals(original_groupby.sum(), pandas_groupby_sum)
 
 
 # Tests for fallback progress printing when tqdm is not available
