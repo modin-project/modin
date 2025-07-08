@@ -416,3 +416,60 @@ class TestGroupbySetBackend:
             df_equals(result_groupby.sum(), pandas_groupby_sum)
             if not inplace:
                 df_equals(original_groupby.sum(), pandas_groupby_sum)
+
+
+# Tests for fallback progress printing when tqdm is not available
+@pytest.mark.parametrize(
+    "switch_operation,expected_output",
+    [
+        (None, "Transferring data from Python_Test to Pandas with max estimated shape"),
+        (
+            "test_operation",
+            "Transferring data from Python_Test to Pandas for 'test_operation' with max estimated shape",
+        ),
+    ],
+)
+@patch("tqdm.auto.trange", side_effect=ImportError("tqdm not available"))
+@config_context(Backend="python_test")
+def test_fallback_progress_printing(
+    mock_trange, capsys, switch_operation, expected_output
+):
+    """Test that fallback progress printing works when tqdm is not available and ShowBackendSwitchProgress is enabled."""
+    df = pd.DataFrame([1, 2, 3])
+
+    df.set_backend("pandas", switch_operation=switch_operation)
+
+    captured = capsys.readouterr()
+    assert expected_output in captured.err
+    assert captured.out == ""  # Nothing should go to stdout
+
+
+@patch("tqdm.auto.trange", side_effect=ImportError("tqdm not available"))
+@config_context(Backend="python_test")
+def test_fallback_progress_printing_silent_when_disabled(mock_trange, capsys):
+    """Test that fallback progress printing is silent when ShowBackendSwitchProgress is disabled."""
+
+    df = pd.DataFrame([1, 2, 3])
+
+    with config_context(ShowBackendSwitchProgress=False):
+        df.set_backend("pandas")
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+
+
+@config_context(Backend="python_test")
+def test_tqdm_progress_bar_disabled_when_backend_switch_progress_false(capsys):
+    """Test that tqdm progress bar doesn't appear when ShowBackendSwitchProgress is disabled."""
+    df = pd.DataFrame([1, 2, 3])
+
+    with config_context(ShowBackendSwitchProgress=False), patch(
+        "tqdm.auto.trange"
+    ) as mock_trange:
+        df.set_backend("pandas")
+
+    mock_trange.assert_not_called()
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""

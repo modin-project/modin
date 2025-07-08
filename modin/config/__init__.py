@@ -55,6 +55,7 @@ from modin.config.envvars import (
     RayRedisPassword,
     RayTaskCustomResources,
     ReadSqlEngine,
+    ShowBackendSwitchProgress,
     StorageFormat,
     TestDatasetSize,
     TestReadFromPostgres,
@@ -78,6 +79,7 @@ __all__ = [
     "Backend",
     "Execution",
     "AutoSwitchBackend",
+    "ShowBackendSwitchProgress",
     # Ray specific
     "IsRayCluster",
     "RayRedisAddress",
