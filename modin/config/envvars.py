@@ -647,6 +647,28 @@ class AutoSwitchBackend(EnvironmentVariable, type=bool):
         cls.put(False)
 
 
+class ShowBackendSwitchProgress(EnvironmentVariable, type=bool):
+    """
+    Whether to show progress when switching between backends.
+
+    When enabled, progress messages are displayed during backend switches to inform users
+    about data transfer operations. When disabled, backend switches occur silently.
+    """
+
+    varname = "MODIN_BACKEND_SWITCH_PROGRESS"
+    default = True
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable backend switch progress display."""
+        cls.put(True)
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable backend switch progress display."""
+        cls.put(False)
+
+
 class IsExperimental(EnvironmentVariable, type=bool):
     """Whether to Turn on experimental features."""
 
