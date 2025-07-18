@@ -721,6 +721,48 @@ class BaseQueryCompiler(
 
     # END Data Management Methods
 
+    # Data Movement Methods
+    @abc.abstractmethod
+    def _move_to(self, target_backend: str, **kwargs) -> Union[BaseQueryCompiler, Any]:
+        """
+        Move this query compiler to the specified backend.
+
+        Parameters
+        ----------
+        target_backend : str
+            The backend to move to.
+
+        Returns
+        -------
+        BaseQueryCompiler or Any
+            The new query compiler with the source data, or a sentinel `NotImplemented`
+            value if efficient transfer is not implemented.
+        """
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def _move_from(
+        cls, source_qc: BaseQueryCompiler, **kwargs
+    ) -> Union[BaseQueryCompiler, Any]:
+        """
+        Move the source query compiler to the current backend.
+
+        Parameters
+        ----------
+        source_qc : BaseQueryCompiler
+            The source query compiler to move data from.
+
+        Returns
+        -------
+        BaseQueryCompiler or Any
+            A new query compiler with the source data, or a sentinel `NotImplemented`
+            value if efficient transfer is not implemented.
+        """
+        pass
+
+    # END Data Movement Methods
+
     # To/From Pandas
     @abc.abstractmethod
     def to_pandas(self):
