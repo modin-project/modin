@@ -4499,6 +4499,34 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             FactoryDispatcher,
         )
 
+        def transfer_data() -> BaseQueryCompiler:
+            def fallback_transfer():
+                # Avoid an additional data copy if possible
+                if self.get_backend() == "Pandas":
+                    pandas_self = self._query_compiler._modin_frame
+                else:
+                    pandas_self = self._query_compiler.to_pandas()
+                query_compiler = FactoryDispatcher.from_pandas(
+                    df=pandas_self, backend=backend
+                )
+                return query_compiler
+
+            next(progress_iter)
+
+            query_compiler = self._query_compiler._move_to(backend)
+            if query_compiler is NotImplemented:
+                query_compiler = FactoryDispatcher._get_prepared_factory_for_backend(
+                    backend
+                ).io_cls.query_compiler_cls._move_from(
+                    self._query_compiler,
+                )
+            if query_compiler is NotImplemented:
+                query_compiler = fallback_transfer()
+
+            next(progress_iter)
+
+            return query_compiler
+
         progress_split_count = 2
         progress_iter = iter(range(progress_split_count))
         self_backend = self.get_backend()
@@ -4534,10 +4562,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             return None if inplace else self
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
         # Otherwise, use fallback print statements.
-        next(progress_iter)
-        pandas_self = self._query_compiler.to_pandas()
-        next(progress_iter)
-        query_compiler = FactoryDispatcher.from_pandas(df=pandas_self, backend=backend)
+        query_compiler = transfer_data()
         try:
             next(progress_iter)
         except StopIteration:

@@ -721,6 +721,18 @@ class BaseQueryCompiler(
 
     # END Data Management Methods
 
+    # Data Movement Methods
+    def _move_to(self, target_backend: str, **kwargs) -> Optional[BaseQueryCompiler]:
+        pass
+
+    @classmethod
+    def _move_from(
+        cls, source_qc: BaseQueryCompiler, **kwargs
+    ) -> Optional[BaseQueryCompiler]:
+        pass
+
+    # END Data Movement Methods
+
     # To/From Pandas
     @abc.abstractmethod
     def to_pandas(self):

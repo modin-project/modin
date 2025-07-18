@@ -510,6 +510,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Data Management Methods
 
+    # Data Movement Methods
+    def _move_to(self, target_backend: str, **kwargs) -> Optional[BaseQueryCompiler]:
+        return NotImplemented
+
+    @classmethod
+    def _move_from(
+        cls, source_qc: BaseQueryCompiler, **kwargs
+    ) -> Optional[BaseQueryCompiler]:
+        return NotImplemented
+
+    # END Data Movement Methods
+
     # To NumPy
     def to_numpy(self, **kwargs):
         return self._modin_frame.to_numpy(**kwargs)
