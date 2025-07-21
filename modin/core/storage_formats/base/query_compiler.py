@@ -722,8 +722,7 @@ class BaseQueryCompiler(
     # END Data Management Methods
 
     # Data Movement Methods
-    @abc.abstractmethod
-    def _move_to(self, target_backend: str, **kwargs) -> Union[BaseQueryCompiler, Any]:
+    def move_to(self, target_backend: str) -> Union[BaseQueryCompiler, Any]:
         """
         Move this query compiler to the specified backend.
 
@@ -736,15 +735,12 @@ class BaseQueryCompiler(
         -------
         BaseQueryCompiler or Any
             The new query compiler with the source data, or a sentinel `NotImplemented`
-            value if efficient transfer is not implemented.
+            value if transfer is not implemented.
         """
-        pass
+        return NotImplemented
 
     @classmethod
-    @abc.abstractmethod
-    def _move_from(
-        cls, source_qc: BaseQueryCompiler, **kwargs
-    ) -> Union[BaseQueryCompiler, Any]:
+    def move_from(cls, source_qc: BaseQueryCompiler) -> Union[BaseQueryCompiler, Any]:
         """
         Move the source query compiler to the current backend.
 
@@ -757,9 +753,9 @@ class BaseQueryCompiler(
         -------
         BaseQueryCompiler or Any
             A new query compiler with the source data, or a sentinel `NotImplemented`
-            value if efficient transfer is not implemented.
+            value if transfer is not implemented.
         """
-        pass
+        return NotImplemented
 
     # END Data Movement Methods
 

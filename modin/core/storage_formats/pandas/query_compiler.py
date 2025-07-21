@@ -511,13 +511,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Data Management Methods
 
     # Data Movement Methods
-    def _move_to(self, target_backend: str, **kwargs) -> Union[BaseQueryCompiler, Any]:
+    def move_to(self, target_backend: str) -> Union[BaseQueryCompiler, Any]:
         return NotImplemented
 
     @classmethod
-    def _move_from(
-        cls, source_qc: BaseQueryCompiler, **kwargs
-    ) -> Union[BaseQueryCompiler, Any]:
+    def move_from(cls, source_qc: BaseQueryCompiler) -> Union[BaseQueryCompiler, Any]:
         return NotImplemented
 
     # END Data Movement Methods

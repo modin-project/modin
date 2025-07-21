@@ -4502,27 +4502,22 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         def transfer_data() -> BaseQueryCompiler:
             """
             Attempts to transfer data based on this preference order:
-            1. The `self._query_compiler._move_to()`, if implemented.
-            2. Otherwise, tries the other `query_compiler`'s `_move_from()` method.
+            1. The `self._query_compiler.move_to()`, if implemented.
+            2. Otherwise, tries the other `query_compiler`'s `move_from()` method.
             3. If both methods return `NotImplemented`, it falls back to materializing
                as a pandas DataFrame, and then creates a new `query_compiler` on the
                specified backend using `from_pandas`.
             """
-            query_compiler = self._query_compiler._move_to(backend)
+            query_compiler = self._query_compiler.move_to(backend)
             if query_compiler is NotImplemented:
                 query_compiler = FactoryDispatcher._get_prepared_factory_for_backend(
                     backend
-                ).io_cls.query_compiler_cls._move_from(
+                ).io_cls.query_compiler_cls.move_from(
                     self._query_compiler,
                 )
             if query_compiler is NotImplemented:
-                # Avoid an additional data copy if possible
-                if self.get_backend() == "Pandas":
-                    pandas_self = self._query_compiler._modin_frame
-                else:
-                    pandas_self = self._query_compiler.to_pandas()
                 query_compiler = FactoryDispatcher.from_pandas(
-                    df=pandas_self, backend=backend
+                    df=self._query_compiler.to_pandas(), backend=backend
                 )
             return query_compiler
 
