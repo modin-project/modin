@@ -4501,7 +4501,8 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
 
         def transfer_data() -> BaseQueryCompiler:
             """
-            Attempts to transfer data based on this preference order:
+            Attempt to transfer data based on the following preference order.
+
             1. The `self._query_compiler.move_to()`, if implemented.
             2. Otherwise, tries the other `query_compiler`'s `move_from()` method.
             3. If both methods return `NotImplemented`, it falls back to materializing
