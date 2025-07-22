@@ -114,7 +114,7 @@ def enable_logging(
                         )(attr_value)
 
                     setattr(obj, attr_name, wrapped)
-            return obj  # type: ignore [return-value]
+            return obj
         elif isinstance(obj, classmethod):
             return classmethod(decorator(obj.__func__))  # type: ignore [return-value, arg-type]
         elif isinstance(obj, staticmethod):
