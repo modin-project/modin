@@ -4499,29 +4499,6 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             FactoryDispatcher,
         )
 
-        def transfer_data() -> BaseQueryCompiler:
-            """
-            Attempt to transfer data based on the following preference order.
-
-            1. The `self._query_compiler.move_to()`, if implemented.
-            2. Otherwise, tries the other `query_compiler`'s `move_from()` method.
-            3. If both methods return `NotImplemented`, it falls back to materializing
-               as a pandas DataFrame, and then creates a new `query_compiler` on the
-               specified backend using `from_pandas`.
-            """
-            query_compiler = self._query_compiler.move_to(backend)
-            if query_compiler is NotImplemented:
-                query_compiler = FactoryDispatcher._get_prepared_factory_for_backend(
-                    backend
-                ).io_cls.query_compiler_cls.move_from(
-                    self._query_compiler,
-                )
-            if query_compiler is NotImplemented:
-                query_compiler = FactoryDispatcher.from_pandas(
-                    df=self._query_compiler.to_pandas(), backend=backend
-                )
-            return query_compiler
-
         progress_split_count = 2
         progress_iter = iter(range(progress_split_count))
         self_backend = self.get_backend()
@@ -4558,7 +4535,25 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         # If tqdm is imported and a conversion is necessary, then display a progress bar.
         # Otherwise, use fallback print statements.
         next(progress_iter)
-        query_compiler = transfer_data()
+
+        # Attempt to transfer data based on the following preference order.
+        # 1. The `self._query_compiler.move_to()`, if implemented.
+        # 2. Otherwise, tries the other `query_compiler`'s `move_from()` method.
+        # 3. If both methods return `NotImplemented`, it falls back to materializing
+        #    as a pandas DataFrame, and then creates a new `query_compiler` on the
+        #    specified backend using `from_pandas`.
+        query_compiler = self._query_compiler.move_to(backend)
+        if query_compiler is NotImplemented:
+            query_compiler = FactoryDispatcher._get_prepared_factory_for_backend(
+                backend
+            ).io_cls.query_compiler_cls.move_from(
+                self._query_compiler,
+            )
+        if query_compiler is NotImplemented:
+            query_compiler = FactoryDispatcher.from_pandas(
+                df=self._query_compiler.to_pandas(), backend=backend
+            )
+
         next(progress_iter)
         try:
             next(progress_iter)
