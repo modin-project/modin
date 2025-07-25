@@ -76,7 +76,9 @@ Returns
 
 Notes
 -----
-This method will
+This method will attempt to use the starting and new backend's move_from or move_to
+methods if the backends implement them. Otherwise, it will
+
     1) convert the data in this ``{class_name}`` to a pandas DataFrame in this
        Python process
     2) load the data from pandas to the new backend.

@@ -214,6 +214,13 @@ class NativeQueryCompiler(BaseQueryCompiler):
     def finalize(self):
         return
 
+    def move_to(self, target_backend: str) -> Union[BaseQueryCompiler, Any]:
+        return NotImplemented
+
+    @classmethod
+    def move_from(cls, source_qc: BaseQueryCompiler) -> Union[BaseQueryCompiler, Any]:
+        return NotImplemented
+
     @classmethod
     def _engine_max_size(cls):
         # do not return the custom configuration for sub-classes

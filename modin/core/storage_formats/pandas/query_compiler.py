@@ -25,7 +25,7 @@ import hashlib
 import re
 import warnings
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Hashable, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, Hashable, List, Literal, Optional, Union
 
 import numpy as np
 import pandas
@@ -509,6 +509,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return
 
     # END Data Management Methods
+
+    # Data Movement Methods
+    def move_to(self, target_backend: str) -> Union[BaseQueryCompiler, Any]:
+        return NotImplemented
+
+    @classmethod
+    def move_from(cls, source_qc: BaseQueryCompiler) -> Union[BaseQueryCompiler, Any]:
+        return NotImplemented
+
+    # END Data Movement Methods
 
     # To NumPy
     def to_numpy(self, **kwargs):
