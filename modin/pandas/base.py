@@ -4550,11 +4550,13 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 self._query_compiler,
             )
         if query_compiler is NotImplemented:
+            pandas_self = self._query_compiler.to_pandas()
+            next(progress_iter)
             query_compiler = FactoryDispatcher.from_pandas(
-                df=self._query_compiler.to_pandas(), backend=backend
+                df=pandas_self, backend=backend
             )
-
-        next(progress_iter)
+        else:
+            next(progress_iter)
         try:
             next(progress_iter)
         except StopIteration:
