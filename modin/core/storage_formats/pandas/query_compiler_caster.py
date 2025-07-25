@@ -768,7 +768,7 @@ def _get_backend_for_auto_switch(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     # Does not need to be secure, should not use system entropy
-    metrics_group = 1 #"%04x" % random.randrange(16**4)
+    metrics_group = "%04x" % random.randrange(16**4)
     starting_backend = input_qc.get_backend()
 
     min_move_stay_delta = None
@@ -779,23 +779,23 @@ def _get_backend_for_auto_switch(
         operation=function_name,
         arguments=arguments,
     )
-    #data_max_shape = input_qc._max_shape()
-    #emit_metric(
-    #    f"hybrid.auto.api.{class_of_wrapped_fn}.{function_name}.group.{metrics_group}",
-    #    1,
-    #)
-    #emit_metric(
-    #    f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.stay_cost",
-    #    stay_cost,
-    #)
-    #emit_metric(
-    #    f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.rows",
-    #    data_max_shape[0],
-    #)
-    #emit_metric(
-    #    f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.cols",
-    #    data_max_shape[1],
-    #)
+    data_max_shape = input_qc._max_shape()
+    emit_metric(
+        f"hybrid.auto.api.{class_of_wrapped_fn}.{function_name}.group.{metrics_group}",
+        1,
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.stay_cost",
+        stay_cost,
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.rows",
+        data_max_shape[0],
+    )
+    emit_metric(
+        f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.cols",
+        data_max_shape[1],
+    )
     for backend in Backend.get_active_backends():
         if backend in ("Ray", "Unidist", "Dask"):
             # Disable automatically switching to these engines for now, because
@@ -840,36 +840,35 @@ def _get_backend_for_auto_switch(
             ):
                 min_move_stay_delta = move_stay_delta
                 best_backend = backend
-            #emit_metric(
-            #    f"hybrid.auto.candidate.{backend}.group.{metrics_group}.move_to_cost",
-            #    move_to_cost,
-            #)
-            #emit_metric(
-            #    f"hybrid.auto.candidate.{backend}.group.{metrics_group}.other_execute_cost",
-            #    other_execute_cost,
-            #)
-            #emit_metric(
-            #    f"hybrid.auto.candidate.{backend}.group.{metrics_group}.delta",
-            #    move_stay_delta,
-            #)
+            emit_metric(
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.move_to_cost",
+                move_to_cost,
+            )
+            emit_metric(
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.other_execute_cost",
+                other_execute_cost,
+            )
+            emit_metric(
+                f"hybrid.auto.candidate.{backend}.group.{metrics_group}.delta",
+                move_stay_delta,
+            )
 
-            #get_logger().info(
-            #    f"After {_normalize_class_name(class_of_wrapped_fn)} function {function_name}, "
-            #    + f"considered moving to backend {backend} with "
-            #    + f"(transfer_cost {move_to_cost} + other_execution_cost {other_execute_cost}) "
-            #    + f", stay_cost {stay_cost}, and move-stay delta "
-            #    + f"{move_stay_delta}"
-            #)
+            get_logger().info(
+                f"After {_normalize_class_name(class_of_wrapped_fn)} function {function_name}, "
+                + f"considered moving to backend {backend} with "
+                + f"(transfer_cost {move_to_cost} + other_execution_cost {other_execute_cost}) "
+                + f", stay_cost {stay_cost}, and move-stay delta "
+                + f"{move_stay_delta}"
+            )
 
     if best_backend == starting_backend:
-        pass
-        #emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 0)
-        #get_logger().info(
-        #    f"Chose not to switch backends after operation {function_name}"
-        #)
+        emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 0)
+        get_logger().info(
+            f"Chose not to switch backends after operation {function_name}"
+        )
     else:
         emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 1)
-        #get_logger().info(f"Chose to move to backend {best_backend}")
+        get_logger().info(f"Chose to move to backend {best_backend}")
     return best_backend
 
 
