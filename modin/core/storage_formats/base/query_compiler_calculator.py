@@ -162,22 +162,22 @@ class BackendCostCalculator:
                 f"BackendCostCalculator Results: {self._calc_result_log(self._result_backend)}"
             )
             # Does not need to be secure, should not use system entropy
-            metrics_group = "%04x" % random.randrange(16**4)
-            for qc in self._qc_list:
-                max_shape = qc._max_shape()
-                backend = qc.get_backend()
-                emit_metric(
-                    f"hybrid.merge.candidate.{backend}.group.{metrics_group}.rows",
-                    max_shape[0],
-                )
-                emit_metric(
-                    f"hybrid.merge.candidate.{backend}.group.{metrics_group}.cols",
-                    max_shape[1],
-                )
-            for k, v in self._backend_data.items():
-                emit_metric(
-                    f"hybrid.merge.candidate.{k}.group.{metrics_group}.cost", v.cost
-                )
+            metrics_group = 1 #"%04x" % random.randrange(16**4)
+            #for qc in self._qc_list:
+            #    max_shape = qc._max_shape()
+            #    backend = qc.get_backend()
+            #    emit_metric(
+            #        f"hybrid.merge.candidate.{backend}.group.{metrics_group}.rows",
+            #        max_shape[0],
+            #    )
+            #    emit_metric(
+            #        f"hybrid.merge.candidate.{backend}.group.{metrics_group}.cols",
+            #        max_shape[1],
+            #    )
+            #for k, v in self._backend_data.items():
+            #    emit_metric(
+            #        f"hybrid.merge.candidate.{k}.group.{metrics_group}.cost", v.cost
+            #    )
             emit_metric(
                 f"hybrid.merge.decision.{self._result_backend}.group.{metrics_group}",
                 1,

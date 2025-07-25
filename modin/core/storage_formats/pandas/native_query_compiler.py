@@ -102,7 +102,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     _modin_frame: pandas.DataFrame
     _should_warn_on_default_to_pandas: bool = False
 
-    def __init__(self, pandas_frame):
+    def __init__(self, pandas_frame, in_place=False):
         if hasattr(pandas_frame, "_to_pandas"):
             pandas_frame = pandas_frame._to_pandas()
         if is_scalar(pandas_frame):
@@ -112,10 +112,10 @@ class NativeQueryCompiler(BaseQueryCompiler):
             # so that we don't modify it.
             # TODO(https://github.com/modin-project/modin/issues/7435): Look
             # into avoiding this copy.
-            pandas_frame = pandas_frame.copy()
+            if not in_place:
+                pandas_frame = pandas_frame.copy()
         else:
             pandas_frame = pandas.DataFrame(pandas_frame)
-
         self._modin_frame = pandas_frame
 
     storage_format = property(
@@ -125,6 +125,11 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
     def execute(self):
         pass
+
+
+    def default_to_pandas(self, pandas_op, *args, **kwargs):
+        #print("new default to pandas")
+        return type(self)(pandas_op(self._modin_frame, *args, **kwargs), in_place=True)
 
     @property
     def frame_has_materialized_dtypes(self) -> bool:
@@ -202,7 +207,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_pandas(cls, df, data_cls):
-        return cls(df)
+        return cls(df, in_place=True)
 
     @classmethod
     def from_arrow(cls, at, data_cls):
