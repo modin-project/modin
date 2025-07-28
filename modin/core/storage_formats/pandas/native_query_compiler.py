@@ -108,11 +108,15 @@ class NativeQueryCompiler(BaseQueryCompiler):
         if is_scalar(pandas_frame):
             pandas_frame = pandas.DataFrame([pandas_frame])
         elif isinstance(pandas_frame, pandas.DataFrame):
-            # NOTE we have to make a deep copy of the input pandas dataframe
-            # so that we don't modify it.
-            # TODO(https://github.com/modin-project/modin/issues/7435): Look
-            # into avoiding this copy.
-            pandas_frame = pandas_frame.copy()
+            # For performance purposes, we create "shallow" copies with CoW enabled.
+            # Per pandas documentation, mutations on the `pandas_frame` will _not_ be reflected
+            # on the original input frame.
+            # pandas frames remember whether they were created with CoW even if the option is
+            # later disabled. For some reason, CoW seems not to apply for deep copies with the
+            # default numpy backend.
+            # TODO: check if the context manager actually matters (i think it does not)
+            with pandas.option_context("mode.copy_on_write", True):
+                pandas_frame = pandas_frame.copy(deep=False)
         else:
             pandas_frame = pandas.DataFrame(pandas_frame)
 
@@ -193,12 +197,15 @@ class NativeQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame)
 
     def to_pandas(self):
-        # NOTE we have to make a deep copy of the input pandas dataframe
-        # so that the user doesn't modify it.
-        # TODO(https://github.com/modin-project/modin/issues/7435): Look
-        # into avoiding this copy when we default to pandas to execute each
-        # method.
-        return self._modin_frame.copy()
+        # For performance purposes, we create "shallow" copies with CoW enabled.
+        # Per pandas documentation, mutations on the returned frame will _not_ be reflected
+        # on the original `_modin_frame` field.
+        # pandas frames remember whether they were created with CoW even if the option is
+        # later disabled. For some reason, CoW seems not to apply for deep copies with the
+        # default numpy backend.
+        # TODO: check if the context manager actually matters (i think it does not)
+        with pandas.option_context("mode.copy_on_write", True):
+            return self._modin_frame.copy(deep=False)
 
     @classmethod
     def from_pandas(cls, df, data_cls):
