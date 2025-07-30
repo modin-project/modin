@@ -24,7 +24,11 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_scalar
 
-from modin.config.envvars import NativePandasMaxRows, NativePandasTransferThreshold
+from modin.config.envvars import (
+    NativePandasMaxRows,
+    NativePandasTransferThreshold,
+    NativePandasDeepCopy,
+)
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
@@ -115,8 +119,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
             # later disabled. For some reason, CoW seems not to apply for deep copies with the
             # default numpy backend.
             # TODO: check if the context manager actually matters (i think it does not)
-            with pandas.option_context("mode.copy_on_write", True):
-                pandas_frame = pandas_frame.copy(deep=False)
+            pandas_frame = pandas_frame.copy(deep=NativePandasDeepCopy.get())
         else:
             pandas_frame = pandas.DataFrame(pandas_frame)
 
@@ -204,8 +207,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
         # later disabled. For some reason, CoW seems not to apply for deep copies with the
         # default numpy backend.
         # TODO: check if the context manager actually matters (i think it does not)
-        with pandas.option_context("mode.copy_on_write", True):
-            return self._modin_frame.copy(deep=False)
+        return self._modin_frame.copy(deep=NativePandasDeepCopy.get())
 
     @classmethod
     def from_pandas(cls, df, data_cls):

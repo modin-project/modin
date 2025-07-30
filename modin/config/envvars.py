@@ -1346,6 +1346,43 @@ class NativePandasTransferThreshold(EnvironmentVariable, type=int):
     default = 10_000_000
 
 
+class NativePandasDeepCopy(EnvironmentVariable, type=bool):
+    """
+    Whether the native pandas backend performs a deep copy of the wrapped pandas DataFrame when
+    constructing a modin frame from a native pandas object, or when creating a native pandas
+    frame from a modin one via `df.modin.to_pandas()`.
+
+    Disabling this flag produces significant performance improvements by reducing the number of
+    copy operations performed. However, it may create unexpected results if the user mutates
+    the modin frame or native pandas frame in-place while pandas's copy-on-write option is disabled:
+
+    >>> import pandas  # doctest: +SKIP
+    >>> import modin.pandas as pd  # doctest: +SKIP
+    >>> from modin.config import Backend  # doctest: + SKIP
+    >>> Backend.put("Pandas")  # doctest: +SKIP
+    >>> pandas.set_option("mode.copy_on_write", False)  # doctest: +SKIP
+    >>> native_df = pandas.DataFrame([0])  # doctest: +SKIP
+    >>> modin_df = pd.DataFrame(native_df)  # doctest: +SKIP
+    >>> native_df.loc[0, 0] = -1  # doctest: +SKIP
+    >>> modin_df  # doctest: +SKIP
+       0
+    0 -1
+    """
+
+    varname = "MODIN_NATIVE_DEEP_COPY"
+    default = False
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable deep copy on frames with the native pandas backend."""
+        cls.put(True)
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable deep copy on frames with the native pandas backend."""
+        cls.put(False)
+
+
 class DynamicPartitioning(EnvironmentVariable, type=bool):
     """
     Set to true to use Modin's dynamic-partitioning implementation where possible.
