@@ -20,10 +20,9 @@ __min_pandas_version__ = "2.2"
 __max_pandas_version__ = "2.4"
 
 pandas_version = version.parse(pandas.__version__)
-if (
-    pandas_version < version.parse(__min_pandas_version__)
-    or pandas_version >= version.parse(__max_pandas_version__)
-):
+if pandas_version < version.parse(
+    __min_pandas_version__
+) or pandas_version >= version.parse(__max_pandas_version__):
     warnings.warn(
         f"The pandas version installed ({pandas.__version__}) is outside the supported range in Modin"
         + f" ({__min_pandas_version__} to {__max_pandas_version__}). This may cause undesired side effects!"

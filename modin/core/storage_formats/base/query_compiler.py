@@ -6614,10 +6614,13 @@ class BaseQueryCompiler(
         refer_to="decode",
         params="""
                 encoding : str,
-                errors : str, default = 'strict'""",
+                errors : str, default = 'strict'
+                dtype : str or dtype, optional""",
     )
     def str_decode(self, encoding, errors, dtype):
-        return StrDefault.register(pandas.Series.str.decode)(self, encoding, errors, dtype)
+        return StrDefault.register(pandas.Series.str.decode)(
+            self, encoding, errors, dtype
+        )
 
     @doc_utils.doc_str_method(
         refer_to="cat",
