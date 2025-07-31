@@ -419,6 +419,9 @@ when automatic switching occurs:
     backend="Pandas",
   )
 
+  # Enable automatic switching globally (use .disable() to turn off)
+  AutoSwitchBackend.enable()
+
   df = pd.DataFrame([[1, 2, 3]])
   # "pin" a single DataFrame/Series, preventing it from
   # automatically switching backends
@@ -426,10 +429,6 @@ when automatic switching occurs:
   # "unpin" it to re-enable automatic switching
   df.unpin_backend(inplace=True)
 
-  # To disable automatic backend switching, use AutoSwitchBackend,
-  # a configuration variable that is on by default:
-
-  AutoSwitchBackend.put(False)
 
 Operation-specific optimizations
 """"""""""""""""""""""""""""""""
