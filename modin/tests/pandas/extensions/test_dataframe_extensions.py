@@ -18,7 +18,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Backend
+from modin.config import AutoSwitchBackend, Backend
 from modin.config import context as config_context
 from modin.pandas.api.extensions import register_dataframe_accessor
 
@@ -322,11 +322,13 @@ def test_correct_backend_with_pin(Backend1):
     # frame, as an earlier implementation used the wrong extension method while preserving the
     # correct backend.
 
+    assert not AutoSwitchBackend.get()
+
     @register_dataframe_accessor(name="__repr__", backend=Backend1)
     def my_repr(self):
         return "fake_repr"
 
-    with config_context(AutoSwitchBackend=False, Backend="Python_Test"):
+    with config_context(Backend="Python_Test"):
         df = pd.DataFrame([1])
         assert df.get_backend() == "Python_Test"
         assert repr(df) == repr(pandas.DataFrame([1]))
@@ -339,7 +341,8 @@ def test_correct_backend_with_pin(Backend1):
 def test_get_extension_from_dataframe_that_is_on_non_default_backend_when_auto_switch_is_false(
     Backend1,
 ):
-    with config_context(AutoSwitchBackend=False, Backend=Backend1):
+    assert not AutoSwitchBackend.get()
+    with config_context(Backend=Backend1):
         pandas_df = pd.DataFrame([1, 2]).move_to("Pandas")
         register_dataframe_accessor("sum", backend="Pandas")(
             lambda df: "small_sum_result"

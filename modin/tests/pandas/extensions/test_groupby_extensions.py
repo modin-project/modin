@@ -16,7 +16,7 @@ from functools import cached_property
 import pytest
 
 import modin.pandas as pd
-from modin.config import Backend
+from modin.config import AutoSwitchBackend, Backend
 from modin.config import context as config_context
 from modin.pandas.api.extensions import (
     register_dataframe_groupby_accessor,
@@ -271,9 +271,9 @@ def test_deleting_extension_that_is_not_property_raises_attribute_error():
 
 @pytest.mark.skipif(Backend.get() == "Pandas", reason="already on pandas backend")
 def test_get_extension_from_dataframe_that_is_on_non_default_backend_when_auto_switch_is_false():
-    with config_context(AutoSwitchBackend=False):
-        pandas_df = pd.DataFrame([1, 2]).move_to("Pandas")
-        register_dataframe_groupby_accessor("sum", backend="Pandas")(
-            lambda df: "small_sum_result"
-        )
-        assert pandas_df.groupby(0).sum() == "small_sum_result"
+    assert not AutoSwitchBackend.get()
+    pandas_df = pd.DataFrame([1, 2]).move_to("Pandas")
+    register_dataframe_groupby_accessor("sum", backend="Pandas")(
+        lambda df: "small_sum_result"
+    )
+    assert pandas_df.groupby(0).sum() == "small_sum_result"
