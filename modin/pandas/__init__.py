@@ -29,7 +29,7 @@ if pandas_version < version.parse(
     )
 
 # to not pollute namespace
-del version
+del version, pandas_version, __min_pandas_version__, __max_pandas_version__
 
 
 with warnings.catch_warnings():
