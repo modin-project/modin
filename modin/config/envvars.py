@@ -634,7 +634,7 @@ class AutoSwitchBackend(EnvironmentVariable, type=bool):
     """
 
     varname = "MODIN_AUTO_SWITCH_BACKENDS"
-    default = True
+    default = False
 
     @classmethod
     def enable(cls) -> None:

@@ -349,6 +349,12 @@ register_backend("Big_Data_Cloud", CloudForBigDataQC)
 register_backend("Small_Data_Local", LocalForSmallDataQC)
 
 
+@pytest.fixture(autouse=True)
+def turn_on_auto_switch_backend():
+    with config_context(AutoSwitchBackend=True):
+        yield
+
+
 @pytest.fixture()
 def cloud_df():
     return pd.DataFrame(query_compiler=CloudQC(pandas.DataFrame([0, 1, 2])))

@@ -1006,6 +1006,8 @@ def wrap_function_in_argument_caster(
 
         pin_target_backend = None
 
+        input_backends: set[str] = set()
+
         def register_query_compilers(arg):
             nonlocal pin_target_backend
             if (
@@ -1013,6 +1015,7 @@ def wrap_function_in_argument_caster(
                 and (qc := arg._get_query_compiler()) is not None
             ):
                 arg_backend = arg.get_backend()
+                input_backends.add(arg_backend)
                 if pin_target_backend is not None:
                     if arg.is_backend_pinned() and arg_backend != pin_target_backend:
                         raise ValueError(
@@ -1047,10 +1050,12 @@ def wrap_function_in_argument_caster(
             input_qc_for_pre_op_switch = input_query_compilers[0]
             input_backend = input_qc_for_pre_op_switch.get_backend()
 
-        inputs_pinned = (
-            len(input_query_compilers) < 2 and pin_target_backend is not None
-        )
-        if not AutoSwitchBackend.get() or inputs_pinned:
+        # Skip the casting code if there's only one input backend and either
+        # auto-switching is disabled or the inputs are pinned to the input
+        # backend.
+        if len(input_backends) == 1 and (
+            not AutoSwitchBackend.get() or pin_target_backend is not None
+        ):
             f_to_apply = _get_extension_for_method(
                 name=name,
                 extensions=extensions,
@@ -1063,7 +1068,10 @@ def wrap_function_in_argument_caster(
                 wrapping_function_type=wrapping_function_type,
             )
             result = f_to_apply(*args, **kwargs)
-            if isinstance(result, QueryCompilerCaster) and inputs_pinned:
+            if (
+                isinstance(result, QueryCompilerCaster)
+                and pin_target_backend is not None
+            ):
                 result._set_backend_pinned(True, inplace=True)
             return result
 
