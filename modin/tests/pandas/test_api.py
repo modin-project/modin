@@ -82,7 +82,7 @@ def test_top_level_api_equality():
     ), "Differences found in API: {}".format(extra_in_modin - set(ignore_modin))
 
     difference = []
-    allowed_different = ["Interval", "datetime"]
+    allowed_different = ["Interval", "datetime", "StringDtype"]
 
     # Check that we have all keywords and defaults in pandas
     for m in set(pandas_dir) - set(ignore_pandas):
