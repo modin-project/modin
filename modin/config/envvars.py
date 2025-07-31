@@ -1349,12 +1349,12 @@ class NativePandasTransferThreshold(EnvironmentVariable, type=int):
 class NativePandasDeepCopy(EnvironmentVariable, type=bool):
     """
     Whether the native pandas backend performs a deep copy of the wrapped pandas DataFrame when
-    constructing a modin frame from a native pandas object, or when creating a native pandas
-    frame from a modin one via `df.modin.to_pandas()`.
+    constructing a Modin frame from a native pandas object, or when creating a native pandas
+    frame from a Modin one via `df.modin.to_pandas()`.
 
     Disabling this flag produces significant performance improvements by reducing the number of
     copy operations performed. However, it may create unexpected results if the user mutates
-    the modin frame or native pandas frame in-place while pandas's copy-on-write option is disabled:
+    the Modin frame or native pandas frame in-place while pandas's copy-on-write option is disabled:
 
     >>> import pandas  # doctest: +SKIP
     >>> import modin.pandas as pd  # doctest: +SKIP

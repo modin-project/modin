@@ -25,9 +25,9 @@ import pandas
 from pandas.core.dtypes.common import is_scalar
 
 from modin.config.envvars import (
+    NativePandasDeepCopy,
     NativePandasMaxRows,
     NativePandasTransferThreshold,
-    NativePandasDeepCopy,
 )
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
