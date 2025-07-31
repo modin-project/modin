@@ -112,13 +112,10 @@ class NativeQueryCompiler(BaseQueryCompiler):
         if is_scalar(pandas_frame):
             pandas_frame = pandas.DataFrame([pandas_frame])
         elif isinstance(pandas_frame, pandas.DataFrame):
-            # For performance purposes, we create "shallow" copies with CoW enabled.
-            # Per pandas documentation, mutations on the `pandas_frame` will _not_ be reflected
-            # on the original input frame.
-            # pandas frames remember whether they were created with CoW even if the option is
-            # later disabled. For some reason, CoW seems not to apply for deep copies with the
-            # default numpy backend.
-            # TODO: check if the context manager actually matters (i think it does not)
+            # For performance purposes, we create "shallow" copies when NativePandasDeepCopy
+            # is disabled (the default value). This may cause unexpected behavior if the
+            # parent native frame is mutated, but creates a very significant performance
+            # improvement on large data.
             pandas_frame = pandas_frame.copy(deep=NativePandasDeepCopy.get())
         else:
             pandas_frame = pandas.DataFrame(pandas_frame)
@@ -136,7 +133,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     @property
     def frame_has_materialized_dtypes(self) -> bool:
         """
-        Check if the undelying dataframe has materialized dtypes.
+        Check if the underlying dataframe has materialized dtypes.
 
         Returns
         -------
@@ -200,13 +197,10 @@ class NativeQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame)
 
     def to_pandas(self):
-        # For performance purposes, we create "shallow" copies with CoW enabled.
-        # Per pandas documentation, mutations on the returned frame will _not_ be reflected
-        # on the original `_modin_frame` field.
-        # pandas frames remember whether they were created with CoW even if the option is
-        # later disabled. For some reason, CoW seems not to apply for deep copies with the
-        # default numpy backend.
-        # TODO: check if the context manager actually matters (i think it does not)
+        # For performance purposes, we create "shallow" copies when NativePandasDeepCopy
+        # is disabled (the default value). This may cause unexpected behavior if the
+        # parent native frame is mutated, but creates a very significant performance
+        # improvement on large data.
         return self._modin_frame.copy(deep=NativePandasDeepCopy.get())
 
     @classmethod

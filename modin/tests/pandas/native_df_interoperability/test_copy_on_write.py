@@ -11,14 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# Tests interactions between a modin frame and a parent or child native pandas frame when one
+# object's metadata or data is modified.
+# Only valid on the native pandas backend.
 
 import functools
+
 import pandas
-from pandas import option_context
 import pytest
 
-from modin.config import Backend, context as config_context
 import modin.pandas as pd
+from modin.config import Backend
+from modin.config import context as config_context
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -33,9 +37,9 @@ def mutation_cow_test():
 @pytest.fixture(scope="function")
 def copy_on_write(request):
     # Indirect fixture for toggling copy-on-write when tests are run
-    with config_context(Backend="Pandas", NativePandasDeepCopy=False), option_context(
-        "mode.copy_on_write", request.param
-    ):
+    with config_context(
+        Backend="Pandas", NativePandasDeepCopy=False
+    ), pandas.option_context("mode.copy_on_write", request.param):
         yield request.param
 
 
@@ -53,22 +57,12 @@ def get_mutation_fixtures(data, **kwargs):
             modin_input = pd.DataFrame(data, **kwargs)
             return modin_input, modin_input.modin.to_pandas()
 
-        # def native_both():
-        #     native_input = pandas.DataFrame(data, **kwargs)
-        #     return native_input, pandas.DataFrame(native_input)
-        # def modin_both():
-        #     modin_input = pd.DataFrame(data, **kwargs)
-        #     return modin_input, pd.DataFrame(modin_input)
         @pytest.mark.parametrize("df_factory", [native_first, modin_first])
         @pytest.mark.parametrize(
             "copy_on_write",
             [pytest.param(True, id="CoW"), pytest.param(False, id="no_CoW")],
             indirect=True,
         )
-        # UNCOMMENT THESE FOR TESTING SPECIFIC CONFIGURATIONS
-        # @pytest.mark.parametrize("df_factory", [modin_both])
-        # @pytest.mark.parametrize("copy_on_write", [pytest.param(True, id="CoW")], indirect=True)
-        # @pytest.mark.parametrize("copy_on_write", [pytest.param(False, id="no_CoW")], indirect=True)
         @functools.wraps(f)
         def test_runner(*args, **kwargs):
             return f(*args, **kwargs)
