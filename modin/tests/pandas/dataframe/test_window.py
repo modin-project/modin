@@ -29,6 +29,7 @@ from modin.tests.pandas.utils import (
     eval_general,
     int_arg_keys,
     int_arg_values,
+    is_native_shallow_copy,
     name_contains,
     no_numeric_dfs,
     quantiles_keys,
@@ -239,6 +240,11 @@ def test_fillna_4660():
     )
 
 
+@pytest.mark.xfail(
+    condition=is_native_shallow_copy(),
+    reason="native pandas backend does not deep copy inputs by default",
+    strict=True,
+)
 def test_fillna_inplace():
     frame_data = random_state.randn(10, 4)
     df = pandas.DataFrame(frame_data)

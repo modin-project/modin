@@ -33,6 +33,7 @@ from .utils import (
     create_test_dfs,
     df_equals,
     eval_general,
+    is_native_shallow_copy,
     sort_if_range_partitioning,
     sort_index_for_equal_values,
     test_data_keys,
@@ -980,6 +981,11 @@ def test_get(key):
     eval_general(modin_df, pandas_df, lambda df: df.get(key))
 
 
+@pytest.mark.xfail(
+    condition=is_native_shallow_copy(),
+    reason="native pandas backend does not deep copy inputs by default",
+    strict=True,
+)
 def test_df_immutability():
     """
     Verify that modifications of the source data doesn't propagate to Modin's DataFrame objects.

@@ -42,9 +42,11 @@ from pandas.core.dtypes.common import (
 import modin.pandas as pd
 from modin import set_execution
 from modin.config import (
+    Backend,
     Engine,
     MinColumnPartitionSize,
     MinRowPartitionSize,
+    NativePandasDeepCopy,
     NPartitions,
     RangePartitioning,
     StorageFormat,
@@ -1694,3 +1696,12 @@ def switch_execution(engine: str, storage_format: str):
         yield
     finally:
         set_execution(old_engine, old_storage)
+
+
+def is_native_shallow_copy() -> bool:
+    """Return if the current configuration uses native pandas execution and performs shallow copies."""
+    return (
+        Backend.get() == "Pandas"
+        and not NativePandasDeepCopy.get()
+        and not pandas.get_option("mode.copy_on_write")
+    )
