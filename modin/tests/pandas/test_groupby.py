@@ -124,7 +124,7 @@ pytestmark = [
         "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:(DataFrameGroupBy|SeriesGroupBy)\.apply operated on the grouping columns:FutureWarning"
+        "ignore:(DataFrameGroupBy|SeriesGroupBy).apply operated on the grouping columns:FutureWarning"
     ),
 ]
 
