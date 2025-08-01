@@ -206,7 +206,8 @@ class BaseQueryCompiler(
     _shape_hint: Optional[str]
     _should_warn_on_default_to_pandas: bool = True
 
-    def _maybe_warn_on_default(self, *, message: str = "", reason: str = "") -> None:
+    @classmethod
+    def _maybe_warn_on_default(cls, *, message: str = "", reason: str = "") -> None:
         """
         If this class is configured to warn on default to pandas, warn.
 
@@ -217,7 +218,7 @@ class BaseQueryCompiler(
         reason : str, default: ""
             Reason for default.
         """
-        if self._should_warn_on_default_to_pandas:
+        if cls._should_warn_on_default_to_pandas:
             ErrorMessage.default_to_pandas(message=message, reason=reason)
 
     @disable_logging

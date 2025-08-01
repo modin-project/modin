@@ -561,8 +561,8 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             Result of operation.
         """
         empty_self_str = "" if not self.empty else " for empty DataFrame"
-        ErrorMessage.default_to_pandas(
-            "`{}.{}`{}".format(
+        self._query_compiler._maybe_warn_on_default(
+            message="`{}.{}`{}".format(
                 type(self).__name__,
                 op if isinstance(op, str) else op.__name__,
                 empty_self_str,
