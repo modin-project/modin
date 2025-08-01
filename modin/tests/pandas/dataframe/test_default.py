@@ -24,7 +24,7 @@ from numpy.testing import assert_array_equal
 from packaging.version import Version
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import Backend, Engine, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     axis_keys,
@@ -1464,7 +1464,9 @@ def test___array__(data, copy_kwargs, get_array, get_array_name):
 
 
 @pytest.mark.xfail(
-    raises=AssertionError, reason="https://github.com/modin-project/modin/issues/4650"
+    condition=Backend.get() != "Pandas",
+    raises=AssertionError,
+    reason="https://github.com/modin-project/modin/issues/4650",
 )
 def test___array__copy_false_creates_view():
     def do_in_place_update_via_copy(df):

@@ -168,3 +168,16 @@ def test_column_reassign(copy_on_write, df_factory):
     df2["B"] = df2["B"] + 1
     assert df1["B"].tolist() == [2, 3]
     assert df2["B"].tolist() == [3, 4]
+
+
+@pytest.mark.parametrize("always_deep", [True, False])
+def test_explicit_copy(always_deep):
+    # Test that making an explicit copy with deep=True actually makes a deep copy.
+    with config_context(NativePandasDeepCopy=always_deep):
+        df = pd.DataFrame([[0]])
+        # We don't really care about behavior with shallow copy, since modin semantics don't line up
+        # perfectly with native pandas.
+        df_copy = df.copy(deep=True)
+        df.loc[0, 0] = -1
+        assert df.loc[0, 0] == -1
+        assert df_copy.loc[0, 0] == 0

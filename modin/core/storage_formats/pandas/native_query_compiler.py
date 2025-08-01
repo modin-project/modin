@@ -194,7 +194,13 @@ class NativeQueryCompiler(BaseQueryCompiler):
         return True
 
     def copy(self):
-        return self.__constructor__(self._modin_frame)
+        # If NativePandasDeepCopy is enabled, no need to perform an explicit copy here since the
+        # constructor will perform one anyway.
+        # If it is disabled, then we need to perform a deep copy.
+        if NativePandasDeepCopy.get():
+            return self.__constructor__(self._modin_frame)
+        else:
+            return self.__constructor__(self._modin_frame.copy(deep=True))
 
     def to_pandas(self):
         # For performance purposes, we create "shallow" copies when NativePandasDeepCopy
