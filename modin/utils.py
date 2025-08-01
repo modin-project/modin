@@ -959,6 +959,27 @@ class ModinAssumptionError(Exception):
     pass
 
 
+def _maybe_warn_on_default(message: str = "", *, reason: str = "") -> None:
+    """
+    Raise a warning on an operation that defaults to pandas if necessary.
+
+    This checks the query compiler used by the current configured active backend, and prints
+    a warning message about defaulting to pandas if needed.
+
+    Parameters
+    ----------
+    message : str
+        The message to show.
+    reason : str
+        The reason for defaulting.
+    """
+    # Prevent circular import
+    from modin.core.execution.dispatching.factories.dispatcher import (
+        FactoryDispatcher,
+    )
+    FactoryDispatcher.get_factory().io_cls.query_compiler_cls._maybe_warn_on_default(message=message, reason=reason)
+
+
 class classproperty:
     """
     Decorator that allows creating read-only class properties.

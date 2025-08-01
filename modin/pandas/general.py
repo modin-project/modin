@@ -31,7 +31,7 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
 from modin.error_message import ErrorMessage
 from modin.logging import enable_logging
 from modin.pandas.io import to_pandas
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, _maybe_warn_on_default
 
 from .base import BasePandasDataset
 from .dataframe import DataFrame
@@ -193,7 +193,7 @@ def merge_asof(
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
         )
-    ErrorMessage.default_to_pandas("`merge_asof`")
+    left._maybe_warn_on_default("`merge_asof`")
 
     # As of Pandas 1.2 these should raise an error; before that it did
     # something likely random:
@@ -345,7 +345,7 @@ def cut(
     if isinstance(x, DataFrame):
         raise ValueError("Input array must be 1 dimensional")
     if not isinstance(x, Series):
-        ErrorMessage.default_to_pandas(
+        _maybe_warn_on_default(
             reason=f"pd.cut is not supported on objects of type {type(x)}"
         )
         import pandas
@@ -656,7 +656,7 @@ def get_dummies(
             + "github.com/modin-project/modin."
         )
     if not isinstance(data, DataFrame):
-        ErrorMessage.default_to_pandas("`get_dummies` on non-DataFrame")
+        _maybe_warn_on_default("`get_dummies` on non-DataFrame")
         if isinstance(data, Series):
             data = data._to_pandas()
         return DataFrame(
@@ -726,7 +726,7 @@ def crosstab(
     """
     Compute a simple cross tabulation of two (or more) factors.
     """
-    ErrorMessage.default_to_pandas("`crosstab`")
+    _maybe_warn_on_default("`crosstab`")
     pandas_crosstab = pandas.crosstab(
         index,
         columns,
@@ -769,7 +769,7 @@ def lreshape(data: DataFrame, groups, dropna=True) -> DataFrame:
     """
     if not isinstance(data, DataFrame):
         raise ValueError("can not lreshape with instance of type {}".format(type(data)))
-    ErrorMessage.default_to_pandas("`lreshape`")
+    data._maybe_warn_on_default("`lreshape`")
     return DataFrame(pandas.lreshape(to_pandas(data), groups, dropna=dropna))
 
 
