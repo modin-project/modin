@@ -973,7 +973,7 @@ def _maybe_warn_on_default(message: str = "", *, reason: str = "") -> None:
     reason : str
         The reason for defaulting.
     """
-    # Prevent circular import
+    # Avoids a module-level circular import
     from modin.core.execution.dispatching.factories.dispatcher import (
         FactoryDispatcher,
     )
