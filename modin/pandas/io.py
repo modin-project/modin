@@ -78,6 +78,7 @@ from modin.utils import (
     SupportsPublicToNumPy,
     SupportsPublicToPandas,
     _inherit_docstrings,
+    _maybe_warn_on_default,
     classproperty,
     expanduser_path_arg,
 )
@@ -156,7 +157,7 @@ def read_xml(
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame:
-    ErrorMessage.default_to_pandas("read_xml")
+    _maybe_warn_on_default("read_xml")
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return ModinObjects.DataFrame(pandas.read_xml(**kwargs))
 
@@ -658,7 +659,7 @@ def read_sql(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if kwargs.get("chunksize") is not None:
-        ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
+        _maybe_warn_on_default("Parameters provided [chunksize]")
         df_gen = pandas.read_sql(**kwargs)
         return (
             ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
@@ -818,7 +819,7 @@ def json_normalize(
     """
     Normalize semi-structured JSON data into a flat table.
     """
-    ErrorMessage.default_to_pandas("json_normalize")
+    _maybe_warn_on_default("json_normalize")
     return ModinObjects.DataFrame(
         pandas.json_normalize(
             data, record_path, meta, meta_prefix, record_prefix, errors, sep, max_level
@@ -840,7 +841,7 @@ def read_orc(
     """
     Load an ORC object from the file path, returning a DataFrame.
     """
-    ErrorMessage.default_to_pandas("read_orc")
+    _maybe_warn_on_default("read_orc")
     return ModinObjects.DataFrame(
         pandas.read_orc(
             path,
@@ -886,7 +887,7 @@ class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
                     # We don't want to constantly be giving this error message for
                     # internal methods.
                     if item[0] != "_":
-                        ErrorMessage.default_to_pandas("`{}`".format(item))
+                        _maybe_warn_on_default("`{}`".format(item))
                     args = [
                         (
                             to_pandas(arg)
@@ -952,7 +953,7 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
                     # We don't want to constantly be giving this error message for
                     # internal methods.
                     if item[0] != "_":
-                        ErrorMessage.default_to_pandas("`{}`".format(item))
+                        _maybe_warn_on_default("`{}`".format(item))
                     args = [
                         (
                             to_pandas(arg)
