@@ -44,6 +44,7 @@ from modin.config.envvars import (
     MinPartitionSize,
     MinRowPartitionSize,
     ModinNumpy,
+    NativePandasDeepCopy,
     NativePandasMaxRows,
     NativePandasTransferThreshold,
     NPartitions,
@@ -92,6 +93,7 @@ __all__ = [
     # Native Pandas Specific
     "NativePandasMaxRows",
     "NativePandasTransferThreshold",
+    "NativePandasDeepCopy",
     # Partitioning
     "NPartitions",
     "MinPartitionSize",

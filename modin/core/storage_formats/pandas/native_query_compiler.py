@@ -24,7 +24,11 @@ import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_scalar
 
-from modin.config.envvars import NativePandasMaxRows, NativePandasTransferThreshold
+from modin.config.envvars import (
+    NativePandasDeepCopy,
+    NativePandasMaxRows,
+    NativePandasTransferThreshold,
+)
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
@@ -108,11 +112,11 @@ class NativeQueryCompiler(BaseQueryCompiler):
         if is_scalar(pandas_frame):
             pandas_frame = pandas.DataFrame([pandas_frame])
         elif isinstance(pandas_frame, pandas.DataFrame):
-            # NOTE we have to make a deep copy of the input pandas dataframe
-            # so that we don't modify it.
-            # TODO(https://github.com/modin-project/modin/issues/7435): Look
-            # into avoiding this copy.
-            pandas_frame = pandas_frame.copy()
+            # For performance purposes, we create "shallow" copies when NativePandasDeepCopy
+            # is disabled (the default value). This may cause unexpected behavior if the
+            # parent native frame is mutated, but creates a very significant performance
+            # improvement on large data.
+            pandas_frame = pandas_frame.copy(deep=NativePandasDeepCopy.get())
         else:
             pandas_frame = pandas.DataFrame(pandas_frame)
 
@@ -129,7 +133,7 @@ class NativeQueryCompiler(BaseQueryCompiler):
     @property
     def frame_has_materialized_dtypes(self) -> bool:
         """
-        Check if the undelying dataframe has materialized dtypes.
+        Check if the underlying dataframe has materialized dtypes.
 
         Returns
         -------
@@ -190,15 +194,20 @@ class NativeQueryCompiler(BaseQueryCompiler):
         return True
 
     def copy(self):
-        return self.__constructor__(self._modin_frame)
+        # If NativePandasDeepCopy is enabled, no need to perform an explicit copy here since the
+        # constructor will perform one anyway.
+        # If it is disabled, then we need to perform a deep copy.
+        if NativePandasDeepCopy.get():
+            return self.__constructor__(self._modin_frame)
+        else:
+            return self.__constructor__(self._modin_frame.copy(deep=True))
 
     def to_pandas(self):
-        # NOTE we have to make a deep copy of the input pandas dataframe
-        # so that the user doesn't modify it.
-        # TODO(https://github.com/modin-project/modin/issues/7435): Look
-        # into avoiding this copy when we default to pandas to execute each
-        # method.
-        return self._modin_frame.copy()
+        # For performance purposes, we create "shallow" copies when NativePandasDeepCopy
+        # is disabled (the default value). This may cause unexpected behavior if the
+        # parent native frame is mutated, but creates a very significant performance
+        # improvement on large data.
+        return self._modin_frame.copy(deep=NativePandasDeepCopy.get())
 
     @classmethod
     def from_pandas(cls, df, data_cls):
