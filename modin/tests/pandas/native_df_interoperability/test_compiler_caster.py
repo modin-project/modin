@@ -1416,6 +1416,28 @@ class TestSwitchBackendPreOp:
         ):
             assert data_class(*args, **kwargs).get_backend() == expected_backend
 
+    @pytest.mark.parametrize("data_class", [pd.DataFrame, pd.Series])
+    @backend_test_context(
+        test_backend="Big_Data_Cloud", choices=("Big_Data_Cloud", "Small_Data_Local")
+    )
+    @pytest.mark.parametrize(
+        "auto_switch_backend,expected_backend",
+        [
+            (True, "Small_Data_Local"),
+            (False, "Big_Data_Cloud"),
+        ],
+    )
+    def test_auto_switch_backend_disabled_prevents___init__auto_switch(
+        self, auto_switch_backend, expected_backend, data_class
+    ):
+        register_function_for_pre_op_switch(
+            class_name=data_class.__name__,
+            method="__init__",
+            backend="Big_Data_Cloud",
+        )
+        with config_context(AutoSwitchBackend=auto_switch_backend):
+            assert data_class([1, 2, 3]).get_backend() == expected_backend
+
     @pytest.mark.parametrize(
         "num_input_rows, expected_backend",
         [
