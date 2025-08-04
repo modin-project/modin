@@ -1050,10 +1050,10 @@ def wrap_function_in_argument_caster(
             input_qc_for_pre_op_switch = input_query_compilers[0]
             input_backend = input_qc_for_pre_op_switch.get_backend()
 
-        # Skip the casting code if there's only one input backend and either
+        # Skip the casting code if there are < 2 input backends and either
         # auto-switching is disabled or the inputs are pinned to the input
         # backend.
-        if len(input_backends) == 1 and (
+        if len(input_backends) < 2 and (
             not AutoSwitchBackend.get() or pin_target_backend is not None
         ):
             f_to_apply = _get_extension_for_method(
