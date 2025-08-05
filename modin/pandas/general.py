@@ -28,7 +28,6 @@ from modin.core.storage_formats import BaseQueryCompiler
 from modin.core.storage_formats.pandas.query_compiler_caster import (
     wrap_free_function_in_argument_caster,
 )
-from modin.error_message import ErrorMessage
 from modin.logging import enable_logging
 from modin.pandas.io import to_pandas
 from modin.utils import _inherit_docstrings, _maybe_warn_on_default

@@ -968,16 +968,19 @@ def _maybe_warn_on_default(message: str = "", *, reason: str = "") -> None:
 
     Parameters
     ----------
-    message : str
+    message : str, default: ""
         The message to show.
-    reason : str
+    reason : str, default: ""
         The reason for defaulting.
     """
     # Avoids a module-level circular import
     from modin.core.execution.dispatching.factories.dispatcher import (
         FactoryDispatcher,
     )
-    FactoryDispatcher.get_factory().io_cls.query_compiler_cls._maybe_warn_on_default(message=message, reason=reason)
+
+    FactoryDispatcher.get_factory().io_cls.query_compiler_cls._maybe_warn_on_default(
+        message=message, reason=reason
+    )
 
 
 class classproperty:

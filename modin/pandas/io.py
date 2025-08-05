@@ -71,7 +71,6 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.core.storage_formats.pandas.query_compiler_caster import (
     wrap_free_function_in_argument_caster,
 )
-from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
     SupportsPrivateToNumPy,
