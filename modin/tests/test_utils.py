@@ -271,11 +271,10 @@ def warns_that_defaulting_to_pandas_if(
     Returns
     -------
     pytest.recwarn.WarningsChecker or contextlib.nullcontext
-        If Modin is not operating in ``NativeDataframeMode``, a ``WarningsChecker``
-        is returned, which will check for a ``UserWarning`` indicating that Modin
-        is defaulting to Pandas. If ``NativeDataframeMode`` is set, a
-        ``nullcontext`` is returned to avoid the warning about defaulting to Pandas,
-        as this occurs due to user setting of ``NativeDataframeMode``.
+        If ``condition`` is True, ``WarningsChecker`` is returned, which will check for a
+        ``UserWarning`` indicating that Modin is defaulting to Pandas.
+        If it is False, a ``nullcontext`` is returned to avoid checking for the warning about
+        defaulting to Pandas.
     """
     assert isinstance(condition, bool)
     return (

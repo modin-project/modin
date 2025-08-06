@@ -974,9 +974,7 @@ def _maybe_warn_on_default(message: str = "", *, reason: str = "") -> None:
         The reason for defaulting.
     """
     # Avoids a module-level circular import
-    from modin.core.execution.dispatching.factories.dispatcher import (
-        FactoryDispatcher,
-    )
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     FactoryDispatcher.get_factory().io_cls.query_compiler_cls._maybe_warn_on_default(
         message=message, reason=reason

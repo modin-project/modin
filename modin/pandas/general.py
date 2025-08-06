@@ -192,7 +192,7 @@ def merge_asof(
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
         )
-    left._maybe_warn_on_default("`merge_asof`")
+    left._query_compiler._maybe_warn_on_default(message="`merge_asof`")
 
     # As of Pandas 1.2 these should raise an error; before that it did
     # something likely random:
@@ -768,7 +768,7 @@ def lreshape(data: DataFrame, groups, dropna=True) -> DataFrame:
     """
     if not isinstance(data, DataFrame):
         raise ValueError("can not lreshape with instance of type {}".format(type(data)))
-    data._maybe_warn_on_default("`lreshape`")
+    data._query_compiler._maybe_warn_on_default(message="`lreshape`")
     return DataFrame(pandas.lreshape(to_pandas(data), groups, dropna=dropna))
 
 

@@ -185,26 +185,26 @@ def test_merge_asof(right_index):
         {"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]}, index=right_index
     )
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a")
         assert isinstance(df, pd.DataFrame)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a", allow_exact_matches=False)
         assert isinstance(df, pd.DataFrame)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a", direction="forward")
         assert isinstance(df, pd.DataFrame)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a", direction="nearest")
         assert isinstance(df, pd.DataFrame)
 
     left = pd.DataFrame({"left_val": ["a", "b", "c"]}, index=[1, 5, 10])
     right = pd.DataFrame({"right_val": [1, 2, 3, 6, 7]}, index=[1, 2, 3, 6, 7])
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, left_index=True, right_index=True)
         assert isinstance(df, pd.DataFrame)
 
@@ -239,7 +239,7 @@ def test_merge_asof_on_variations():
         {"left_index": True, "right_index": True},
     ]:
         pandas_merged = pandas.merge_asof(pandas_left, pandas_right, **on_arguments)
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
         df_equals(pandas_merged, modin_merged)
 
@@ -258,7 +258,7 @@ def test_merge_asof_suffixes():
             right_index=True,
             suffixes=suffixes,
         )
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             modin_merged = pd.merge_asof(
                 modin_left,
                 modin_right,
