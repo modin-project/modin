@@ -130,7 +130,7 @@ def test_aggregate_error_checking():
         modin_df.aggregate({modin_df.columns[0]: "sum", modin_df.columns[1]: "mean"})
 
     with warns_that_defaulting_to_pandas():
-        modin_df.aggregate("cumprod")
+        modin_df.aggregate("arcsin")
 
 
 @pytest.mark.parametrize(
