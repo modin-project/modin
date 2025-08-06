@@ -35,7 +35,6 @@ from modin.tests.pandas.utils import (
 )
 from modin.tests.test_utils import (
     current_execution_is_native,
-    warns_that_defaulting_to_pandas,
     warns_that_defaulting_to_pandas_if,
 )
 
