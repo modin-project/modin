@@ -24,7 +24,10 @@ from modin.pandas.api.extensions import (
 )
 from modin.pandas.groupby import DataFrameGroupBy, SeriesGroupBy
 from modin.tests.pandas.utils import default_to_pandas_ignore_string, df_equals
-from modin.tests.test_utils import warns_that_defaulting_to_pandas
+from modin.tests.test_utils import (
+    current_execution_is_native,
+    warns_that_defaulting_to_pandas_if,
+)
 
 
 @pytest.mark.parametrize(
@@ -150,10 +153,7 @@ class TestProperty:
         # Check that the accessor doesn't work on the Python_Test backend.
         python_test_df = pandas_df.move_to("Python_Test")
         groupby = get_groupby(python_test_df)
-        # groupby.ngroups defaults to pandas at the API layer,
-        # where it warns that it's doing so, even for dataframes using the
-        # Pandas backend.
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             assert groupby.ngroups == 3
 
     def test_add_ngroups_setter_and_deleter_for_one_backend(
@@ -179,7 +179,7 @@ class TestProperty:
 
         python_test_groupby = get_groupby(python_test_df)
 
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             assert python_test_groupby.ngroups == 3
 
         with pytest.raises(AttributeError):

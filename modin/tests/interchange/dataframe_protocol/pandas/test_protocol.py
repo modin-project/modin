@@ -20,7 +20,6 @@ from modin.pandas.io import from_dataframe
 from modin.tests.pandas.utils import df_equals, test_data
 from modin.tests.test_utils import (
     df_or_series_using_native_execution,
-    warns_that_defaulting_to_pandas,
     warns_that_defaulting_to_pandas_if,
 )
 
@@ -66,7 +65,9 @@ def test_categorical_from_dataframe():
 
 def test_from_dataframe_with_empty_dataframe():
     modin_df = pd.DataFrame({"foo_col": pd.Series([], dtype="int64")})
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(
+        not df_or_series_using_native_execution(modin_df)
+    ):
         eval_df_protocol(modin_df)
 
 
