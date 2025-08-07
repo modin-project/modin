@@ -105,10 +105,12 @@ def join_columns(
             left_on = []
             right_on = []
         # in other cases, we can simply add the index name to columns and proceed as normal
+        # on python 3.9 with pandas-stubs 2.2, these lines will warn about insert being an untyped call,
+        # but this error is no longer present on higher versions
         elif left_on[0] not in left:
-            left = left.insert(loc=0, item=left_on[0])  # type: ignore
+            left = left.insert(loc=0, item=left_on[0])  # type: ignore[no-untyped-call, unused-ignore]
         elif right_on[0] not in right:
-            right = right.insert(loc=0, item=right_on[0])  # type: ignore
+            right = right.insert(loc=0, item=right_on[0])  # type: ignore[no-untyped-call, unused-ignore]
 
     if any(col not in left for col in left_on) or any(
         col not in right for col in right_on
