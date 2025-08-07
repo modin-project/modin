@@ -35,7 +35,6 @@ from modin.tests.pandas.utils import (
 )
 from modin.tests.test_utils import (
     current_execution_is_native,
-    warns_that_defaulting_to_pandas,
     warns_that_defaulting_to_pandas_if,
 )
 
@@ -147,7 +146,7 @@ def test_display_options_for___repr__(max_rows_columns, expand_frame_repr, frame
 def test___finalize__():
     data = test_data_values[0]
     # NOTE: __finalize__() defaults to pandas at the API layer.
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.DataFrame(data).__finalize__(None)
 
 

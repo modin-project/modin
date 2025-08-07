@@ -29,7 +29,7 @@ from modin.tests.pandas.utils import (
     time_parsing_csv_path,
 )
 from modin.tests.test_utils import (
-    warns_that_defaulting_to_pandas,
+    current_execution_is_native,
     warns_that_defaulting_to_pandas_if,
 )
 from modin.utils import try_cast_to_pandas
@@ -129,7 +129,7 @@ class TestCsvGlob:
 
     def test_read_csv_without_glob(self):
         with pytest.raises(FileNotFoundError):
-            with warns_that_defaulting_to_pandas():
+            with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
                 pd.read_csv_glob(
                     "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-",
                     storage_options={"anon": True},

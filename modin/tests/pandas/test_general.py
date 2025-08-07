@@ -22,7 +22,6 @@ from modin.pandas.testing import assert_frame_equal
 from modin.tests.test_utils import (
     current_execution_is_native,
     df_or_series_using_native_execution,
-    warns_that_defaulting_to_pandas,
     warns_that_defaulting_to_pandas_if,
 )
 from modin.utils import get_current_execution
@@ -185,26 +184,26 @@ def test_merge_asof(right_index):
         {"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]}, index=right_index
     )
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a")
         assert isinstance(df, pd.DataFrame)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a", allow_exact_matches=False)
         assert isinstance(df, pd.DataFrame)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a", direction="forward")
         assert isinstance(df, pd.DataFrame)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, on="a", direction="nearest")
         assert isinstance(df, pd.DataFrame)
 
     left = pd.DataFrame({"left_val": ["a", "b", "c"]}, index=[1, 5, 10])
     right = pd.DataFrame({"right_val": [1, 2, 3, 6, 7]}, index=[1, 2, 3, 6, 7])
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.merge_asof(left, right, left_index=True, right_index=True)
         assert isinstance(df, pd.DataFrame)
 
@@ -239,7 +238,7 @@ def test_merge_asof_on_variations():
         {"left_index": True, "right_index": True},
     ]:
         pandas_merged = pandas.merge_asof(pandas_left, pandas_right, **on_arguments)
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
         df_equals(pandas_merged, modin_merged)
 
@@ -258,7 +257,7 @@ def test_merge_asof_suffixes():
             right_index=True,
             suffixes=suffixes,
         )
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
             modin_merged = pd.merge_asof(
                 modin_left,
                 modin_right,
@@ -276,7 +275,9 @@ def test_merge_asof_suffixes():
             right_index=True,
             suffixes=(False, False),
         )
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(
             modin_left,
             modin_right,
@@ -297,7 +298,9 @@ def test_merge_asof_bad_arguments():
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", by="b", left_by="can't do with by"
         )
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(
             modin_left, modin_right, on="a", by="b", left_by="can't do with by"
         )
@@ -305,7 +308,9 @@ def test_merge_asof_bad_arguments():
         pandas.merge_asof(
             pandas_left, pandas_right, by="b", on="a", right_by="can't do with by"
         )
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(
             modin_left, modin_right, by="b", on="a", right_by="can't do with by"
         )
@@ -313,25 +318,37 @@ def test_merge_asof_bad_arguments():
     # Can't mix on with left_on/right_on
     with pytest.raises(ValueError):
         pandas.merge_asof(pandas_left, pandas_right, on="a", left_on="can't do with by")
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(modin_left, modin_right, on="a", left_on="can't do with by")
     with pytest.raises(ValueError):
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", right_on="can't do with by"
         )
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(modin_left, modin_right, on="a", right_on="can't do with by")
 
     # Can't mix left_index with left_on or on, similarly for right.
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(modin_left, modin_right, on="a", right_index=True)
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(
             modin_left, modin_right, left_on="a", right_on="a", right_index=True
         )
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(modin_left, modin_right, on="a", left_index=True)
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(
             modin_left, modin_right, left_on="a", right_on="a", left_index=True
         )
@@ -339,15 +356,21 @@ def test_merge_asof_bad_arguments():
     # Need both left and right
     with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
         pandas.merge_asof(pandas_left, pandas_right, left_on="a")
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(modin_left, modin_right, left_on="a")
     with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
         pandas.merge_asof(pandas_left, pandas_right, right_on="a")
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(modin_left, modin_right, right_on="a")
     with pytest.raises(ValueError):
         pandas.merge_asof(pandas_left, pandas_right)
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas_if(
+        not current_execution_is_native()
+    ):
         pd.merge_asof(modin_left, modin_right)
 
 
@@ -386,7 +409,7 @@ def test_merge_asof_merge_options():
     pandas_quotes, pandas_trades = to_pandas(modin_quotes), to_pandas(modin_trades)
 
     # left_by + right_by
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = pd.merge_asof(
             modin_quotes,
             modin_trades,
@@ -408,7 +431,7 @@ def test_merge_asof_merge_options():
     # Just by:
     pandas_trades["ticker"] = pandas_trades["ticker2"]
     modin_trades["ticker"] = modin_trades["ticker2"]
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = pd.merge_asof(
             modin_quotes,
             modin_trades,
@@ -426,7 +449,7 @@ def test_merge_asof_merge_options():
     )
 
     # Tolerance
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = pd.merge_asof(
             modin_quotes,
             modin_trades,
@@ -446,7 +469,7 @@ def test_merge_asof_merge_options():
     )
 
     # Direction
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = pd.merge_asof(
             modin_quotes,
             modin_trades,
@@ -466,7 +489,7 @@ def test_merge_asof_merge_options():
     )
 
     # Allow exact matches
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = pd.merge_asof(
             modin_quotes,
             modin_trades,
@@ -643,7 +666,7 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, bins=bins, ascending=False), False
         )
@@ -720,7 +743,7 @@ def test_qcut(retbins):
     modin_series = pd.Series(range(10))
     pandas_result = pandas.qcut(pandas_series, 4, retbins=retbins)
     # NOTE that qcut() defaults to pandas at the API layer.
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = pd.qcut(modin_series, 4, retbins=retbins)
     if retbins:
         df_equals(modin_result[0], pandas_result[0])
@@ -812,7 +835,7 @@ def test_cut_fallback():
     pandas_result = pandas.cut(range(5), 4)
     # note that we default to pandas at the API layer here, so we warn
     # regardless of whether we are on native execution.
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         modin_result = pd.cut(range(5), 4)
     df_equals(modin_result, pandas_result)
 
@@ -930,7 +953,7 @@ def test_default_to_pandas_warning_message(func, regex):
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
     # NOTE that we default to pandas at the API layer.
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df[(df.a == 1) & (df.b == 2)]
 
 

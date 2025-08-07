@@ -20,8 +20,8 @@ import pytest
 import modin.pandas as pd
 from modin.config import StorageFormat
 from modin.tests.test_utils import (
+    current_execution_is_native,
     df_or_series_using_native_execution,
-    warns_that_defaulting_to_pandas,
     warns_that_defaulting_to_pandas_if,
 )
 
@@ -30,14 +30,14 @@ from .utils import df_equals, test_data_values
 
 def test_get_dummies():
     s = pd.Series(list("abca"))
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.get_dummies(s)
 
     s1 = ["a", "b", np.nan]
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.get_dummies(s1)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.get_dummies(s1, dummy_na=True)
 
     data = {"A": ["a", "b", "a"], "B": ["b", "a", "c"], "C": [1, 2, 3]}
@@ -61,16 +61,16 @@ def test_get_dummies():
     with pytest.raises(NotImplementedError):
         pd.get_dummies(modin_df, prefix=["col1", "col2"], sparse=True)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.get_dummies(pd.Series(list("abcaa")))
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.get_dummies(pd.Series(list("abcaa")), drop_first=True)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.get_dummies(pd.Series(list("abc")), dtype=float)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         pd.get_dummies(1)
 
     # test from #5184
@@ -120,18 +120,18 @@ def test_crosstab():
         dtype=object,
     )
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.crosstab(a, [b, c], rownames=["a"], colnames=["b", "c"])
         assert isinstance(df, pd.DataFrame)
 
     foo = pd.Categorical(["a", "b"], categories=["a", "b", "c"])
     bar = pd.Categorical(["d", "e"], categories=["d", "e", "f"])
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.crosstab(foo, bar)
         assert isinstance(df, pd.DataFrame)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.crosstab(foo, bar, dropna=False)
         assert isinstance(df, pd.DataFrame)
 
@@ -147,7 +147,7 @@ def test_lreshape():
         }
     )
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas_if(not current_execution_is_native()):
         df = pd.lreshape(data, {"year": ["year1", "year2"], "hr": ["hr1", "hr2"]})
         assert isinstance(df, pd.DataFrame)
 
