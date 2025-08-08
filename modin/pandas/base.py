@@ -4522,7 +4522,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 try:
                     from tqdm.auto import trange
 
-                    progress_iter = iter(trange(progress_split_count, desc=desc))
+                    progress_iter = iter(trange(progress_split_count, desc=desc, bar_format='{desc} [{bar}]'))
                 except ImportError:
                     # Fallback to simple print statement when tqdm is not available.
                     # Print to stderr to match tqdm's behavior.
