@@ -424,11 +424,11 @@ class TestGroupbySetBackend:
     [
         (
             None,
-            "Transferring: Python_Tes → Pandas      |            | est. max shape (3,1)     ",
+            "Transfer: Python_... → Pandas      |                 ≃ (3, 1)    ",
         ),
         (
             "test_operation",
-            "Transferring: Python_Tes → Pandas      | test_opera | est. max shape (3,1)     ",
+            "Transfer: Python_... → Pandas      | test_operation  ≃ (3, 1)    ",
         ),
     ],
 )
