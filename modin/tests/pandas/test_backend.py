@@ -422,10 +422,10 @@ class TestGroupbySetBackend:
 @pytest.mark.parametrize(
     "switch_operation,expected_output",
     [
-        (None, "Transferring data from Python_Test to Pandas with max estimated shape"),
+        (None, "Transferring: Python_Tes => Pandas      |            | ~(  3  ,  1  )"),
         (
             "test_operation",
-            "Transferring data from Python_Test to Pandas for 'test_operation' with max estimated shape",
+            "Transferring: Python_Tes => Pandas      | test_opera | ~(  3  ,  1  )",
         ),
     ],
 )

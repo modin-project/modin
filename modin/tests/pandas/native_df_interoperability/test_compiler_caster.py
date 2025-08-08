@@ -857,7 +857,7 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
 
             assert desc.startswith(
-                "Transferring data from Big_Data_Cloud to Small_Data_Local for 'modin.pandas.read_json'"
+                "Transferring: Big_Data_C => Small_Data  | read_json  | ~(  9  ,  1  )"
             )
 
     def test_agg(self):

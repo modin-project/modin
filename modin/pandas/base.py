@@ -4505,16 +4505,18 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         normalized_backend = Backend.normalize(backend)
         if normalized_backend != self_backend:
             max_rows, max_cols = self._query_compiler._max_shape()
+            # Format the transfer string to be relatively short, but informative. Each
+            # backend is given an allowable width of 10 and the shape integers use the
+            # general format to use scientific notation when needed.
+            operation_str = switch_operation
             if switch_operation is None:
-                desc = (
-                    f"Transferring data from {self_backend} to {normalized_backend}"
-                    + f" with max estimated shape {max_rows}x{max_cols}"
-                )
-            else:
-                desc = (
-                    f"Transferring data from {self_backend} to {normalized_backend} for"
-                    + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
-                )
+                operation_str = ""
+            # Provide the switch_operation; and specifically only the method, so
+            # DataFrame.merge would become "merge"
+            desc = (
+                f"Transferring: {self_backend:>10.10} => {normalized_backend:<10.10} "
+                + f" | {operation_str.split('.')[-1]:^10.10} | ~({max_rows:^5g},{max_cols:^5g})"
+            )
 
             if ShowBackendSwitchProgress.get():
                 try:
