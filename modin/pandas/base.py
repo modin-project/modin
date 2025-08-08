@@ -4516,7 +4516,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             max_shape_str = f"({max_rows:.0g},{max_cols:.0g})"
             desc = (
                 f"Transferring: {self_backend:>10.10} → {normalized_backend:<10.10} "
-                + f" | {operation_str.split('.')[-1]:^10.10} | est. max shape {max_shape_str:<10.10}"
+                + f" | {operation_str.split('.')[-1]:^10.10} | est. max shape {max_shape_str:<13.13}"
             )
 
             if ShowBackendSwitchProgress.get():
