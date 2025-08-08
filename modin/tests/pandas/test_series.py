@@ -46,6 +46,7 @@ from modin.utils import get_current_execution, try_cast_to_pandas
 from .utils import (
     RAND_HIGH,
     RAND_LOW,
+    UNIVERSAL_UNARY_NUMPY_FUNCTIONS_FOR_FLOATS,
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
     agg_func_except_keys,
@@ -5144,14 +5145,19 @@ def test_apply_return_df(data):
 
 
 @pytest.mark.parametrize(
-    "function",
-    [
-        np.abs,
-        np.sin,
-    ],
+    "apply_function",
+    (
+        lambda series, function: function(series),
+        lambda series, function: series.apply(function),
+        lambda series, function: series.map(function),
+    ),
 )
-def test_unary_numpy_universal_function_issue_6483(function):
-    eval_general(*create_test_series(test_data["float_nan_data"]), function)
+@pytest.mark.parametrize("function", UNIVERSAL_UNARY_NUMPY_FUNCTIONS_FOR_FLOATS)
+def test_unary_numpy_universal_function_issue_6483_and_7645(function, apply_function):
+    eval_general(
+        *create_test_series(test_data["float_nan_data"]),
+        lambda series: apply_function(series, function),
+    )
 
 
 def test_binary_numpy_universal_function_issue_6483():

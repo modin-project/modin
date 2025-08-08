@@ -101,10 +101,10 @@ def cast_function_modin2pandas(func):
     -------
     object
     """
-    if callable(func):
-        if func.__module__ == "modin.pandas.series":
+    if callable(func) and (module := getattr(func, "__module__", None)) is not None:
+        if module == "modin.pandas.series":
             func = getattr(pandas.Series, func.__name__)
-        elif func.__module__ in ("modin.pandas.dataframe", "modin.pandas.base"):
+        elif module in ("modin.pandas.dataframe", "modin.pandas.base"):
             # FIXME: when the method is defined in `modin.pandas.base` file, then the
             # type cannot be determined, in general there may be an error, but at the
             # moment it is better.
