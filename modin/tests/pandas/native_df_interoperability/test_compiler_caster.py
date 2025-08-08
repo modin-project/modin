@@ -857,7 +857,7 @@ class TestSwitchBackendPostOpDependingOnDataSize:
             desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
 
             assert desc.startswith(
-                "Transferring: Big_Data_C => Small_Data  | read_json  | ~(  9  ,  1  )"
+                "Transferring: Big_Data_C → Small_Data  | read_json  | est. max shape (  9  ,  1  )"
             )
 
     def test_agg(self):
