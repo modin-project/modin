@@ -23,6 +23,7 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     _assert_casting_functions_wrap_same_implementation,
 )
 from modin.tests.pandas.utils import (
+    UNIVERSAL_UNARY_NUMPY_FUNCTIONS_FOR_FLOATS,
     agg_func_except_keys,
     agg_func_except_values,
     agg_func_keys,
@@ -315,6 +316,22 @@ def test_apply_modin_func_4635():
     df_equals(
         modin_df.groupby("a", group_keys=False).apply(pd.DataFrame.sample, n=1),
         pandas_df.groupby("a", group_keys=False).apply(pandas.DataFrame.sample, n=1),
+    )
+
+
+@pytest.mark.parametrize(
+    "apply_function",
+    (
+        lambda df, function: function(df),
+        lambda df, function: df.apply(function, axis=0),
+        lambda df, function: df.apply(function, axis=1),
+    ),
+)
+@pytest.mark.parametrize("function", UNIVERSAL_UNARY_NUMPY_FUNCTIONS_FOR_FLOATS)
+def test_apply_unary_numpy_universal_function_issue_7645(function, apply_function):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: apply_function(df, function),
     )
 
 
