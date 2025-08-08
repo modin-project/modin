@@ -4513,9 +4513,10 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
                 operation_str = ""
             # Provide the switch_operation; and specifically only the method, so
             # DataFrame.merge would become "merge"
+            max_shape_str = f"({max_rows:.0g},{max_cols:.0g})"
             desc = (
                 f"Transferring: {self_backend:>10.10} → {normalized_backend:<10.10} "
-                + f" | {operation_str.split('.')[-1]:^10.10} | est. max shape ({max_rows:^5g},{max_cols:^5g})"
+                + f" | {operation_str.split('.')[-1]:^10.10} | est. max shape {max_shape_str:<10.10}"
             )
 
             if ShowBackendSwitchProgress.get():
