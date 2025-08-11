@@ -4505,22 +4505,44 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         normalized_backend = Backend.normalize(backend)
         if normalized_backend != self_backend:
             max_rows, max_cols = self._query_compiler._max_shape()
+            # Format the transfer string to be relatively short, but informative. Each
+            # backend is given an allowable width of 10 and the shape integers use the
+            # general format to use scientific notation when needed.
+            std_field_length = 10
+            operation_str = switch_operation
+            self_backend_str = self_backend
+            normalized_backend_str = normalized_backend
             if switch_operation is None:
-                desc = (
-                    f"Transferring data from {self_backend} to {normalized_backend}"
-                    + f" with max estimated shape {max_rows}x{max_cols}"
+                operation_str = ""
+            # Provide the switch_operation; and specifically only the method, so
+            # DataFrame.merge would become "merge"
+            operation_str = operation_str.split(".")[-1]
+            # truncate all strings to the field length if needed
+            if len(operation_str) > 15:
+                operation_str = operation_str[: 15 - 3] + "..."
+            if len(self_backend_str) > std_field_length:
+                self_backend_str = self_backend_str[: std_field_length - 3] + "..."
+            if len(normalized_backend_str) > std_field_length:
+                normalized_backend_str = (
+                    normalized_backend_str[: std_field_length - 3] + "..."
                 )
-            else:
-                desc = (
-                    f"Transferring data from {self_backend} to {normalized_backend} for"
-                    + f" '{switch_operation}' with max estimated shape {max_rows}x{max_cols}"
-                )
+
+            # format the estimated max shape
+            max_shape_str = f"({max_rows:.0g}, {max_cols:.0g})"
+            desc = (
+                f"Transfer: {self_backend_str:>10.10} → {normalized_backend_str:<10.10} "
+                + f" | {operation_str:^15.15} ≃ {max_shape_str:<10.10}"
+            )
 
             if ShowBackendSwitchProgress.get():
                 try:
                     from tqdm.auto import trange
 
-                    progress_iter = iter(trange(progress_split_count, desc=desc))
+                    progress_iter = iter(
+                        trange(
+                            progress_split_count, desc=desc, bar_format="{desc} [{bar}]"
+                        )
+                    )
                 except ImportError:
                     # Fallback to simple print statement when tqdm is not available.
                     # Print to stderr to match tqdm's behavior.
