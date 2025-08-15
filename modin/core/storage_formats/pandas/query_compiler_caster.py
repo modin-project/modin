@@ -1120,10 +1120,12 @@ def wrap_function_in_argument_caster(
                     and arg.get_backend() != result_backend
                 ):
                     return arg
-                cast = arg.set_backend(
+                arg.set_backend(
                     result_backend,
                     switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{name}",
+                    inplace=True,
                 )
+                cast = arg
                 inplace_update_trackers.append(
                     InplaceUpdateTracker(
                         input_castable=arg,
@@ -1156,8 +1158,8 @@ def wrap_function_in_argument_caster(
             new_castable,
         ) in inplace_update_trackers:
             new_qc = new_castable._get_query_compiler()
-            if original_qc is not new_qc:
-                new_castable._copy_into(original_castable)
+            #if original_qc is not new_qc:
+            new_castable._copy_into(original_castable)
 
         return _maybe_switch_backend_post_op(
             result,
