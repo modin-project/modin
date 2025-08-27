@@ -2273,7 +2273,12 @@ class Series(BasePandasDataset):
         """
         return self
 
-    T: Series = property(transpose)
+    # To enable dynamic backend switching, we must use a `def` so the lookup of `self.transpose`
+    # is performed dynamically, whereas declaring `T = property(transpose)` makes it always use
+    # the originally-defined version without the switching wrapper.
+    @property
+    def T(self) -> Series:
+        return self.transpose()
 
     def truediv(
         self, other, level=None, fill_value=None, axis=0

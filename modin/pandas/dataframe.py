@@ -633,7 +633,12 @@ class DataFrame(BasePandasDataset):
             query_compiler=self._query_compiler.transpose(*args)
         )
 
-    T: DataFrame = property(transpose)
+    # To enable dynamic backend switching, we must use a `def` so the lookup of `self.transpose`
+    # is performed dynamically, whereas declaring `T = property(transpose)` makes it always use
+    # the originally-defined version without the switching wrapper.
+    @property
+    def T(self) -> DataFrame:
+        return self.transpose()
 
     def add(
         self, other, axis="columns", level=None, fill_value=None
