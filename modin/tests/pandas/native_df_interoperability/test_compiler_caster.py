@@ -1489,6 +1489,25 @@ class TestSwitchBackendPreOp:
             assert modin_result.get_backend() == expected_backend
             assert modin_df.get_backend() == expected_backend
 
+    def test_T_switches(self):
+        # Ensure that calling df.T triggers a switch (GH#7653)
+        with backend_test_context(
+            test_backend="Big_Data_Cloud",
+            choices=("Big_Data_Cloud", "Small_Data_Local"),
+        ):
+            modin_df, pandas_df = create_test_dfs(
+                {"col0": list(range(BIG_DATA_CLOUD_MIN_NUM_ROWS - 1))}
+            )
+            assert modin_df.get_backend() == "Big_Data_Cloud"
+            # Registering transpose should be sufficient to cause T to trigger a switch.
+            register_function_for_pre_op_switch(
+                class_name="DataFrame", backend="Big_Data_Cloud", method="transpose"
+            )
+            modin_result = modin_df.T
+            pandas_result = pandas_df.T
+            df_equals(modin_result, pandas_result)
+            assert modin_result.get_backend() == "Small_Data_Local"
+
 
 def test_move_to_clears_pin():
     # Pin status is reset to false after a set_backend call
