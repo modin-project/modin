@@ -59,8 +59,6 @@ from pandas.util._decorators import doc
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
-from modin.core.computation.eval import _check_engine
-from modin.core.computation.parsing import clean_column_name
 from modin.core.storage_formats.pandas.query_compiler_caster import (
     EXTENSION_DICT_TYPE,
     EXTENSION_NO_LOOKUP,
@@ -902,6 +900,8 @@ class DataFrame(BasePandasDataset):
         """
         Evaluate a string describing operations on ``DataFrame`` columns.
         """
+        from modin.core.computation.eval import _check_engine
+
         self._update_var_dicts_in_kwargs(expr, kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
 
@@ -1758,6 +1758,8 @@ class DataFrame(BasePandasDataset):
         -----
         Copied from pandas.
         """
+        from modin.core.computation.parsing import clean_column_name
+
         return {
             clean_column_name(k): v for k, v in self.items() if not isinstance(k, int)
         }
