@@ -29,8 +29,6 @@ from modin.core.computation.ops import (
     BOOL_OPS_SYMS,
     CMP_OPS_SYMS,
     LOCAL_TAG,
-    MATHOPS,
-    REDUCTIONS,
     UNARY_OPS_SYMS,
     BinOp,
     Constant,
@@ -196,13 +194,8 @@ def _filter_nodes(superclass, all_nodes=_all_nodes):
 _all_node_names = frozenset(x.__name__ for x in _all_nodes)
 _mod_nodes = _filter_nodes(ast.mod)
 _stmt_nodes = _filter_nodes(ast.stmt)
-_expr_nodes = _filter_nodes(ast.expr)
 _expr_context_nodes = _filter_nodes(ast.expr_context)
 _boolop_nodes = _filter_nodes(ast.boolop)
-_operator_nodes = _filter_nodes(ast.operator)
-_unary_op_nodes = _filter_nodes(ast.unaryop)
-_cmp_op_nodes = _filter_nodes(ast.cmpop)
-_comprehension_nodes = _filter_nodes(ast.comprehension)
 _handler_nodes = _filter_nodes(ast.excepthandler)
 _arguments_nodes = _filter_nodes(ast.arguments)
 _keyword_nodes = _filter_nodes(ast.keyword)
@@ -741,7 +734,6 @@ class BaseExprVisitor(ast.NodeVisitor):
 
 
 _python_not_supported = frozenset(["Dict", "BoolOp", "In", "NotIn"])
-_numexpr_supported_calls = frozenset(REDUCTIONS + MATHOPS)
 
 
 @disallow(

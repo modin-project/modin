@@ -309,6 +309,8 @@ class Scope:
         try:
             self._get_vars(stack[:sl], scopes=["locals"])
         finally:
+            # explcitly delete the stack according to the advice here:
+            # https://docs.python.org/3/library/inspect.html#inspect.Traceback
             del stack[:], stack
 
     def add_tmp(self, value) -> str:

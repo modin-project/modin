@@ -404,5 +404,4 @@ def eval(
             first_expr = False
 
     # We want to exclude `inplace=None` as being False.
-    if inplace is False:
-        return target if target_modified else ret
+    return (target if target_modified else ret) if inplace is False else None
