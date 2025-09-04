@@ -29,6 +29,7 @@ from typing import (
 import numpy as np
 import pandas
 import pandas.core.common as com
+from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
     is_list_like,
     is_scalar,
@@ -155,14 +156,16 @@ class Term:
 
     @property
     def type(self):
-        # NOTE this is different from pandas so we don't do .values
-        # https://github.com/pandas-dev/pandas/blob/a158a74e421264103692a1a64536ef0a34273663/pandas/core/computation/ops.py#L150
         try:
-            # ndarray
-            return self._value.dtype
+            # potentially very slow for large, mixed dtype frames
+            return find_common_type(self._value.dtypes.values)
         except AttributeError:
-            # scalar
-            return type(self._value)
+            try:
+                # ndarray
+                return self._value.dtype
+            except AttributeError:
+                # scalar
+                return type(self._value)
 
     return_type = type
 

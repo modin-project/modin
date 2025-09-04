@@ -21,6 +21,8 @@ from functools import reduce
 
 import numpy as np
 from pandas._config import get_option
+from pandas.core.dtypes.cast import find_common_type
+from pandas.core.dtypes.common import is_extension_array_dtype
 
 
 def ensure_decoded(s) -> str:
@@ -43,9 +45,6 @@ def result_type_many(*arrays_and_dtypes):
         # we have > NPY_MAXARGS terms in our expression
         return reduce(np.result_type, arrays_and_dtypes)
     except TypeError:
-        from pandas.core.dtypes.cast import find_common_type
-        from pandas.core.dtypes.common import is_extension_array_dtype
-
         arr_and_dtypes = list(arrays_and_dtypes)
         ea_dtypes, non_ea_dtypes = [], []
         for arr_or_dtype in arr_and_dtypes:
