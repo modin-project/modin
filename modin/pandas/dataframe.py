@@ -47,7 +47,6 @@ from pandas._typing import (
     WriteBuffer,
 )
 from pandas.core.common import apply_if_callable, get_cython_func
-from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_dict_like,
@@ -901,7 +900,11 @@ class DataFrame(BasePandasDataset):
         """
         Evaluate a string describing operations on ``DataFrame`` columns.
         """
+        from modin.core.computation.eval import _check_engine
+
         self._update_var_dicts_in_kwargs(expr, kwargs)
+        inplace = validate_bool_kwarg(inplace, "inplace")
+
         if _check_engine(kwargs.get("engine", None)) == "numexpr":
             # on numexpr engine, pandas.eval returns np.array if input is not of pandas
             # type, so we can't use pandas eval [1]. Even if we could, pandas eval seems
@@ -912,7 +915,18 @@ class DataFrame(BasePandasDataset):
             return self._default_to_pandas(
                 pandas.DataFrame.eval, expr, inplace=inplace, **kwargs
             )
-        return pandas.DataFrame.eval(self, expr, inplace=inplace, **kwargs)
+
+        from modin.core.computation.eval import eval as _eval
+
+        kwargs["level"] = kwargs.pop("level", 0) + 1
+        index_resolvers = self._get_index_resolvers()
+        column_resolvers = self._get_cleaned_column_resolvers()
+        resolvers = column_resolvers, index_resolvers
+        if "target" not in kwargs:
+            kwargs["target"] = self
+        kwargs["resolvers"] = tuple(kwargs.get("resolvers", ())) + resolvers
+
+        return _eval(expr, inplace=inplace, **kwargs)
 
     def fillna(
         self,
@@ -1744,7 +1758,7 @@ class DataFrame(BasePandasDataset):
         -----
         Copied from pandas.
         """
-        from pandas.core.computation.parsing import clean_column_name
+        from modin.core.computation.parsing import clean_column_name
 
         return {
             clean_column_name(k): v for k, v in self.items() if not isinstance(k, int)
@@ -1759,6 +1773,9 @@ class DataFrame(BasePandasDataset):
         self._update_var_dicts_in_kwargs(expr, kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
+        if not isinstance(expr, str):
+            msg = f"expr must be a string to be evaluated, {type(expr)} given"
+            raise ValueError(msg)
         # HACK: this condition kind of breaks the idea of backend agnostic API as all queries
         # _should_ work fine for all of the engines using `pandas.DataFrame.query(...)` approach.
         # However, at this point we know that we can execute simple queries way more efficiently
@@ -1770,10 +1787,22 @@ class DataFrame(BasePandasDataset):
         try:
             new_query_compiler = self._query_compiler.rowwise_query(expr, **kwargs)
         except NotImplementedError:
-            # a non row-wise query was passed, falling back to pandas implementation
-            new_query_compiler = pandas.DataFrame.query(
-                self, expr, inplace=False, **kwargs
-            )._query_compiler
+            # a non row-wise query was passed, falling back to the
+            # implementation forked from pandas.DataFrame.query. This
+            # implementation will effectively evaluate the condition at the
+            # modin.pandas API level, so that e.g. we interpret
+            # df.query("col > 0") as df.loc[df.col > 0]
+            kwargs["target"] = None
+            res = self.eval(expr, **kwargs)
+
+            try:
+                result = self.loc[res]
+            except ValueError:
+                # when res is multi-dimensional loc raises, but this is
+                # sometimes a valid query.
+                result = self[res]
+
+            new_query_compiler = result._query_compiler
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def rename(
