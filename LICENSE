@@ -202,8 +202,8 @@
 
 
 # Certain code used and distributed in this package is forked from pandas
-# (https://github.com/pandas-dev/pandas/tree/main). The pandas LICENSE
-# below applies to this project as well:
+# (https://github.com/pandas-dev/pandas). The pandas LICENSE
+# below applies to those certain forked components in this project:
 
 BSD 3-Clause License
 
