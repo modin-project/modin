@@ -40,6 +40,10 @@ pytestmark = [
     pytest.mark.filterwarnings(default_to_pandas_ignore_string),
     # TO MAKE SURE ALL FUTUREWARNINGS ARE CONSIDERED
     pytest.mark.filterwarnings("error::FutureWarning"),
+    # ... except for this expected Ray warning due to https://github.com/ray-project/ray/issues/54868
+    pytest.mark.filterwarnings(
+        "ignore:.*In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None:FutureWarning"
+    ),
     # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
     pytest.mark.filterwarnings(
         "ignore:Support for axis=1 in DataFrame.rolling is deprecated:FutureWarning"

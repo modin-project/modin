@@ -1,8 +1,6 @@
 name: push-to-main
 on:
-  push:
-    branches:
-      - main
+  push
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
