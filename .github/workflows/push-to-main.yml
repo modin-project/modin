@@ -39,35 +39,39 @@ jobs:
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Run Modin tests
-        run: |
-          python -m pytest modin/tests/pandas/dataframe/test_binary.py
-          python -m pytest modin/tests/pandas/dataframe/test_default.py
-          python -m pytest modin/tests/pandas/dataframe/test_indexing.py
-          python -m pytest modin/tests/pandas/dataframe/test_iter.py
-          python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
-          python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
-          python -m pytest modin/tests/pandas/dataframe/test_reduce.py
-          python -m pytest modin/tests/pandas/dataframe/test_udf.py
-          python -m pytest modin/tests/pandas/dataframe/test_window.py
-          python -m pytest modin/tests/pandas/test_series.py
-          python -m pytest modin/tests/numpy/test_array.py
-          python -m pytest modin/tests/numpy/test_array_creation.py
-          python -m pytest modin/tests/numpy/test_array_arithmetic.py
-          python -m pytest modin/tests/numpy/test_array_axis_functions.py
-          python -m pytest modin/tests/numpy/test_array_logic.py
-          python -m pytest modin/tests/numpy/test_array_linalg.py
-          python -m pytest modin/tests/numpy/test_array_indexing.py
-          python -m pytest modin/tests/numpy/test_array_math.py
-          python -m pytest modin/tests/numpy/test_array_shaping.py
-          python -m pytest modin/tests/pandas/test_rolling.py
-          python -m pytest modin/tests/pandas/test_expanding.py
-          python -m pytest modin/tests/pandas/test_concat.py
-          python -m pytest modin/tests/pandas/test_groupby.py
-          python -m pytest modin/tests/pandas/test_reshape.py
-          python -m pytest modin/tests/pandas/test_general.py
-          python -m pytest modin/tests/pandas/test_io.py
-          python -m pytest modin/tests/experimental/test_io_exp.py
+      - name: Run parallelizable Modin Tests
+        run: >
+          python -m pytest -n 2
+          modin/tests/pandas/dataframe/test_binary.py
+          modin/tests/pandas/dataframe/test_default.py
+          modin/tests/pandas/dataframe/test_indexing.py
+          modin/tests/pandas/dataframe/test_iter.py
+          modin/tests/pandas/dataframe/test_join_sort.py
+          modin/tests/pandas/dataframe/test_map_metadata.py
+          modin/tests/pandas/dataframe/test_reduce.py
+          modin/tests/pandas/dataframe/test_udf.py
+          modin/tests/pandas/dataframe/test_window.py
+          modin/tests/pandas/test_series.py
+          modin/tests/numpy/test_array.py
+          modin/tests/numpy/test_array_creation.py
+          modin/tests/numpy/test_array_arithmetic.py
+          modin/tests/numpy/test_array_axis_functions.py
+          modin/tests/numpy/test_array_logic.py
+          modin/tests/numpy/test_array_linalg.py
+          modin/tests/numpy/test_array_indexing.py
+          modin/tests/numpy/test_array_math.py
+          modin/tests/numpy/test_array_shaping.py
+          modin/tests/pandas/test_rolling.py
+          modin/tests/pandas/test_expanding.py
+          modin/tests/pandas/test_concat.py
+          modin/tests/pandas/test_groupby.py
+          modin/tests/pandas/test_reshape.py
+          modin/tests/pandas/test_general.py
+      - name: Run non-parallelizable Modin Tests
+        run: >
+          python -m pytest
+          modin/tests/pandas/test_io.py
+          modin/tests/experimental/test_io_exp.py
 
   test-docs:
     runs-on: ubuntu-latest
