@@ -56,6 +56,7 @@ setup(
         "numpy>=1.22.4",
         "fsspec>=2022.11.0",
         "psutil>=5.8.0",
+        "typing-extensions",
     ],
     extras_require={
         # can be installed by pip install modin[dask]
