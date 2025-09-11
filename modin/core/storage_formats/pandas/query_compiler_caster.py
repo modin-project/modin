@@ -1157,8 +1157,6 @@ def wrap_function_in_argument_caster(
             original_qc,
             new_castable,
         ) in inplace_update_trackers:
-            new_qc = new_castable._get_query_compiler()
-            #if original_qc is not new_qc:
             new_castable._copy_into(original_castable)
 
         return _maybe_switch_backend_post_op(
