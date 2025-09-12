@@ -664,9 +664,13 @@ def test_merge_in_place(default_df, lazy_df, cloud_df):
     # Both arguments now have the same qc type
     assert type(lazy_df) is type(default_df)
 
-    df = cloud_df.merge(lazy_df)
-    assert type(df) is type(cloud_df)
-    assert type(lazy_df) is type(cloud_df)
+    with config_context(BackendMergeCastInPlace=False):
+        lazy_df = lazy_df.move_to("Lazy")
+        cloud_df = cloud_df.move_to("Cloud")
+        df = cloud_df.merge(lazy_df)
+        assert type(df) is type(cloud_df)
+        assert lazy_df.get_backend() == "Lazy"
+        assert cloud_df.get_backend() == "Cloud"
 
 
 def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
