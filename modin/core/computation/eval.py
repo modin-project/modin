@@ -381,7 +381,7 @@ def eval(
                 try:
                     target = env.target
                     if isinstance(target, BasePandasDataset):
-                        target = target.copy(deep=None)
+                        target = target.copy(deep=True)
                     else:
                         target = target.copy()
                 except AttributeError as err:
