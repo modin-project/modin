@@ -385,6 +385,17 @@ def test_eval_scalar():
     assert df.eval("1") == 1
 
 
+@pytest.mark.parametrize("engine", ("numexpr", "python"))
+def test_eval_not_inplace_does_not_change_input_dataframe(engine):
+    snow_df, pandas_df = create_test_dfs({"a": [1, 2, 3]})
+    original_pandas = pandas_df.copy()
+    snow_result = snow_df.eval("b = a + 1", inplace=False, engine=engine)
+    pandas_result = pandas_df.eval("b = a + 1", inplace=False, engine=engine)
+    df_equals(snow_df, original_pandas)
+    df_equals(pandas_df, original_pandas)
+    df_equals(snow_result, pandas_result)
+
+
 TEST_VAR = 2
 
 
