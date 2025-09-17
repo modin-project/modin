@@ -45,7 +45,9 @@ def create_test_df_in_defined_mode(
         raise ValueError("`native` should be True or False.")
 
     with switch_to_native_execution() if native else nullcontext():
-        modin_df, pandas_df = create_test_dfs(*args, post_fn=post_fn, backend=backend, **kwargs)
+        modin_df, pandas_df = create_test_dfs(
+            *args, post_fn=post_fn, backend=backend, **kwargs
+        )
         # pin the backend for interop tests explicitly
         if native and pin_backend:
             modin_df = modin_df.move_to("Pandas").pin_backend()
@@ -61,7 +63,9 @@ def create_test_series_in_defined_mode(
         raise ValueError("`native` should be True or False.")
 
     with switch_to_native_execution() if native else nullcontext():
-        modin_ser, pandas_ser = create_test_series(vals, sort=sort, backend=backend, **kwargs)
+        modin_ser, pandas_ser = create_test_series(
+            vals, sort=sort, backend=backend, **kwargs
+        )
         # pin the backend for interop tests explicitly
         if native and pin_backend:
             modin_ser = modin_ser.move_to("Pandas").pin_backend()
