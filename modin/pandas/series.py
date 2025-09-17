@@ -2717,6 +2717,8 @@ class Series(BasePandasDataset):
                 self._parent.loc[self.name] = self
             else:
                 self._parent[self.name] = self
+        super(Series, self)._update_inplace(new_query_compiler=new_query_compiler)
+        assert self.get_backend() == new_query_compiler.get_backend()
 
     def _create_or_update_from_compiler(
         self, new_query_compiler, inplace=False

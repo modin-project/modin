@@ -4585,9 +4585,12 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             # Last call to next informs tqdm that the operation is done
             pass
         if inplace:
+            assert query_compiler.get_backend() == backend
             self._update_inplace(query_compiler)
             # Always unpin after an explicit set_backend operation
             self._pinned = False
+            assert self._query_compiler.get_backend() == backend
+            assert self.get_backend() == backend
             return None
         else:
             return self.__constructor__(query_compiler=query_compiler)

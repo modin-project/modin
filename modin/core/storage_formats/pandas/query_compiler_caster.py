@@ -98,6 +98,7 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "_query_compiler",
     "_get_query_compiler",
     "_copy_into",
+    "_update_inplace",
     "is_backend_pinned",
     "_set_backend_pinned",
     "pin_backend",
@@ -121,6 +122,7 @@ EXTENSION_NO_LOOKUP = {
     "_set_backend_pinned",
     "pin_backend",
     "unpin_backend",
+    "_update_inplace",
 }
 
 
@@ -1126,11 +1128,13 @@ def wrap_function_in_argument_caster(
                         switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{name}",
                         inplace=True,
                     )
+                    assert arg.get_backend() == result_backend
                     cast = arg
                 else:
                     cast = arg.set_backend(
                         result_backend,
                         switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{name}",
+                        inplace=False,
                     )
                 inplace_update_trackers.append(
                     InplaceUpdateTracker(

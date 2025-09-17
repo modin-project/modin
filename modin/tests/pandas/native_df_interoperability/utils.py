@@ -37,7 +37,7 @@ def switch_to_native_execution():
 
 
 def create_test_df_in_defined_mode(
-    *args, post_fn=None, backend=None, native=None, **kwargs
+    *args, post_fn=None, backend=None, native=None, pin_backend=False, **kwargs
 ):
     assert not current_execution_is_native(), "already in native dataframe mode."
 
@@ -45,11 +45,15 @@ def create_test_df_in_defined_mode(
         raise ValueError("`native` should be True or False.")
 
     with switch_to_native_execution() if native else nullcontext():
-        return create_test_dfs(*args, post_fn=post_fn, backend=backend, **kwargs)
+        modin_df, pandas_df = create_test_dfs(*args, post_fn=post_fn, backend=backend, **kwargs)
+        # pin the backend for interop tests explicitly
+        if native and pin_backend:
+            modin_df = modin_df.move_to("Pandas").pin_backend()
+        return modin_df, pandas_df
 
 
 def create_test_series_in_defined_mode(
-    vals, sort=False, backend=None, native=None, **kwargs
+    vals, sort=False, backend=None, native=None, pin_backend=False, **kwargs
 ):
     assert not current_execution_is_native(), "already in native dataframe mode."
 
@@ -57,7 +61,11 @@ def create_test_series_in_defined_mode(
         raise ValueError("`native` should be True or False.")
 
     with switch_to_native_execution() if native else nullcontext():
-        return create_test_series(vals, sort=sort, backend=backend, **kwargs)
+        modin_ser, pandas_ser = create_test_series(vals, sort=sort, backend=backend, **kwargs)
+        # pin the backend for interop tests explicitly
+        if native and pin_backend:
+            modin_ser = modin_ser.move_to("Pandas").pin_backend()
+        return modin_ser, pandas_ser
 
 
 def eval_general_interop(
@@ -71,14 +79,15 @@ def eval_general_interop(
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
+    pin_backend=False,
     **kwargs,
 ):
     df1_native, df2_native = df_mode_pair
     modin_df1, pandas_df1 = create_test_df_in_defined_mode(
-        data, backend=backend, native=df1_native
+        data, backend=backend, native=df1_native, pin_backend=pin_backend
     )
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
-        data, backend=backend, native=df2_native
+        data, backend=backend, native=df2_native, pin_backend=pin_backend
     )
     md_kwargs, pd_kwargs = {}, {}
 
