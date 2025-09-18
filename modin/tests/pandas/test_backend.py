@@ -447,6 +447,20 @@ def test_fallback_progress_printing(
     assert captured.out == ""  # Nothing should go to stdout
 
 
+@config_context(Backend="python_test")
+def test_bigger_df_progress_message():
+    # Insiginificant digits in the size get truncated
+    df = pd.DataFrame([[1] * 144] * 121)
+    with patch.object(tqdm.auto, "trange", return_value=range(2)) as mock_trange:
+        df.set_backend("pandas")
+        mock_trange.assert_called_once()
+        call_args = mock_trange.call_args
+        desc = call_args[1]["desc"]  # Get the 'desc' keyword argument
+        assert desc.startswith(
+            "Transfer: Python_... → Pandas      |                 ≃ (1e+02, 1e+02)"
+        )
+
+
 @patch("tqdm.auto.trange", side_effect=ImportError("tqdm not available"))
 @config_context(Backend="python_test")
 def test_fallback_progress_printing_silent_when_disabled(mock_trange, capsys):

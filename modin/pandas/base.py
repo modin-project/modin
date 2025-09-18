@@ -4531,7 +4531,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             max_shape_str = f"({max_rows:.0g}, {max_cols:.0g})"
             desc = (
                 f"Transfer: {self_backend_str:>10.10} → {normalized_backend_str:<10.10} "
-                + f" | {operation_str:^15.15} ≃ {max_shape_str:<10.10}"
+                + f" | {operation_str:^15.15} ≃ {max_shape_str}"
             )
 
             if ShowBackendSwitchProgress.get():
