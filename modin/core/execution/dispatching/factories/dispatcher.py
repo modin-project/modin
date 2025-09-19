@@ -401,6 +401,11 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_json(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_json)
+    def to_json_series(cls, *args, **kwargs):
+        return cls.get_factory()._to_json_series(*args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_xml)
     def to_xml(cls, *args, **kwargs):
         return cls.get_factory()._to_xml(*args, **kwargs)

@@ -22,7 +22,7 @@ from typing import IO, TYPE_CHECKING, Any, Hashable, Iterable, Optional, Union
 import numpy as np
 import pandas
 from pandas._libs import lib
-from pandas._typing import ArrayLike, Axis, DtypeObj, IndexKeyFunc, Scalar, Sequence
+from pandas._typing import ArrayLike, Axis, DtypeObj, IndexKeyFunc, Scalar, Sequence, StorageOptions
 from pandas.api.types import is_integer
 from pandas.core.arrays import ExtensionArray
 from pandas.core.common import apply_if_callable, is_bool_indexer
@@ -2188,6 +2188,44 @@ class Series(BasePandasDataset):
             self_cp.name = name
 
         return DataFrame(self_cp)
+
+    def to_json(
+        self,
+        path_or_buf=None,
+        orient=None,
+        date_format=None,
+        double_precision=10,
+        force_ascii=True,
+        date_unit="ms",
+        default_handler=None,
+        lines=False,
+        compression="infer",
+        index=None,
+        indent=None,
+        storage_options: StorageOptions = None,
+        mode="w",
+    ) -> str | None:
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_json_series(
+            self._query_compiler,
+            path_or_buf,
+            orient=orient,
+            date_format=date_format,
+            double_precision=double_precision,
+            force_ascii=force_ascii,
+            date_unit=date_unit,
+            default_handler=default_handler,
+            lines=lines,
+            compression=compression,
+            index=index,
+            indent=indent,
+            storage_options=storage_options,
+            mode=mode,
+        )
+
 
     def to_list(self) -> list:  # noqa: RT01, D200
         """
