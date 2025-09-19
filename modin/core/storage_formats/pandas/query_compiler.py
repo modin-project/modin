@@ -2717,6 +2717,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         full_axis = method is not None or limit is not None
         new_dtypes = None
         if isinstance(value, BaseQueryCompiler):
+            # This code assumes that the operation occurs with the same query compiler
+            assert isinstance(value, PandasQueryCompiler)
             if squeeze_self:
                 # Self is a Series type object
                 if full_axis:

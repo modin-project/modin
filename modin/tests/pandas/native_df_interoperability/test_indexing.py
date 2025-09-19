@@ -182,6 +182,7 @@ def test_loc_insert_row(left, right, df_mode_pair):
         _test_loc_rows,
         expected_exception=expected_exception,
         df_mode_pair=df_mode_pair,
+        pin_backend=True,
     )
 
 
