@@ -474,6 +474,20 @@ class BaseFactory(object):
         return cls.io_cls.to_json(*args, **kwargs)
 
     @classmethod
+    def _to_json_series(cls, *args, **kwargs):
+        """
+        Write query compiler content of a Series to a JSON file.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        return cls.io_cls.to_json_series(*args, **kwargs)
+
+    @classmethod
     def _to_xml(cls, *args, **kwargs):
         """
         Write query compiler content to a XML file.

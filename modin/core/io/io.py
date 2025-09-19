@@ -758,6 +758,20 @@ class BaseIO:
         return obj.to_json(path, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(pandas.Series.to_json, apilink="pandas.Series.to_json")
+    def to_json_series(cls, obj, path, **kwargs):  # noqa: PR01
+        """
+        Convert the object to a JSON string.
+
+        For parameters description please refer to pandas API.
+        """
+        cls._maybe_warn_on_default(message="`to_json`")
+        if isinstance(obj, BaseQueryCompiler):
+            obj = obj.to_pandas().squeeze(axis=1)
+
+        return obj.to_json(path, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_xml, apilink="pandas.DataFrame.to_xml")
     def to_xml(cls, obj, path_or_buffer, **kwargs):  # noqa: PR01
         """

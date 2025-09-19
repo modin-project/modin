@@ -263,6 +263,15 @@ def test_to_list(data):
     assert np.array_equal(pd_res, md_res, equal_nan=True)
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_json(data):
+    modin_series, pandas_series = create_test_series(data)
+    pd_res = pandas_series.to_json()
+    md_res = modin_series.to_json()
+    assert type(pd_res) is type(md_res)
+    assert pd_res == md_res
+
+
 def test_accessing_index_element_as_property():
     s = pd.Series([10, 20, 30], index=["a", "b", "c"])
     assert s.b == 20
