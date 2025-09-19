@@ -22,7 +22,15 @@ from typing import IO, TYPE_CHECKING, Any, Hashable, Iterable, Optional, Union
 import numpy as np
 import pandas
 from pandas._libs import lib
-from pandas._typing import ArrayLike, Axis, DtypeObj, IndexKeyFunc, Scalar, Sequence, StorageOptions
+from pandas._typing import (
+    ArrayLike,
+    Axis,
+    DtypeObj,
+    IndexKeyFunc,
+    Scalar,
+    Sequence,
+    StorageOptions,
+)
 from pandas.api.types import is_integer
 from pandas.core.arrays import ExtensionArray
 from pandas.core.common import apply_if_callable, is_bool_indexer
@@ -2225,7 +2233,6 @@ class Series(BasePandasDataset):
             storage_options=storage_options,
             mode=mode,
         )
-
 
     def to_list(self) -> list:  # noqa: RT01, D200
         """

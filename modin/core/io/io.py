@@ -759,7 +759,7 @@ class BaseIO:
 
     @classmethod
     @_inherit_docstrings(pandas.Series.to_json, apilink="pandas.Series.to_json")
-    def to_json_series(cls, obj, path, **kwargs):
+    def to_json_series(cls, obj, path, **kwargs):  # noqa: PR01
         """
         Convert the object to a JSON string.
 
