@@ -1831,7 +1831,7 @@ class DataFrame(BasePandasDataset):
         kwargs["inplace"] = False
         if axis is not None:
             axis = self._get_axis_number(axis)
-        if index is not None or (mapper is not None and axis == 0):
+        if index is not None or (mapper is not None and axis in [0, None]):
             new_index = pandas.DataFrame(index=self.index).rename(**kwargs).index
         else:
             new_index = None
