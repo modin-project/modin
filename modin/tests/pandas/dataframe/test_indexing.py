@@ -1150,9 +1150,7 @@ def test_rename_sanity():
         modin_df.rename(str.upper, axis=1).columns,
         df.rename(str.upper, axis=1).columns,
     )
-    assert_index_equal(
-        modin_df.rename(str.upper).index, df.rename(str.upper).index
-    )
+    assert_index_equal(modin_df.rename(str.upper).index, df.rename(str.upper).index)
 
     # have to pass something
     with pytest.raises(TypeError):
