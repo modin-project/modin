@@ -453,7 +453,9 @@ def test_moving_pico_to_cluster_in_place_calls_set_backend_only_once_github_issu
 
 def test_cast_to_second_backend_with___init__(pico_df, cluster_df):
     df3 = pd.DataFrame({"pico": pico_df.iloc[:, 0], "cluster": cluster_df.iloc[:, 0]})
-    assert pico_df.get_backend() == "Cluster"  # pico_df was cast inplace
+    assert (
+        pico_df.get_backend() == "Pico"
+    )  # pico stays despite in-place casting because of iloc
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
@@ -472,7 +474,7 @@ def test_cast_to_first_backend_with_concat_uses_first_backend_api_override(
         lambda *args, **kwargs: "custom_concat_result"
     )
     assert pd.concat([cluster_df, pico_df], axis=1) == "custom_concat_result"
-    assert pico_df.get_backend() == "Cluster"  # pico was cast inplace to cluster
+    assert pico_df.get_backend() == "Cluster"  # pico was cast in place
     assert cluster_df.get_backend() == "Cluster"
 
 
@@ -483,7 +485,7 @@ def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
             "pico": pico_df.iloc[:, 0],
         }
     )
-    assert pico_df.get_backend() == "Cluster"  # cluster was cast in place
+    assert pico_df.get_backend() == "Pico"  # Pico not cast in place because of iloc
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
@@ -1509,7 +1511,11 @@ class TestSwitchBackendPreOp:
             pandas_result = operation(pandas_df)
             df_equals(modin_result, pandas_result)
             assert modin_result.get_backend() == expected_backend
-            assert modin_df.get_backend() == expected_backend
+            if groupby_class == "DataFrameGroupBy":
+                assert modin_df.get_backend() == expected_backend
+            # The original dataframe does not move with the SeriesGroupBy
+            if groupby_class == "SeriesGroupBy":
+                assert modin_df.get_backend() == "Big_Data_Cloud"
 
     def test_T_switches(self):
         # Ensure that calling df.T triggers a switch (GH#7653)
