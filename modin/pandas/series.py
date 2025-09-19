@@ -2925,6 +2925,11 @@ class Series(BasePandasDataset):
         *,
         switch_operation: Optional[str] = None,
     ) -> Optional[Self]:
+        # A series which is moved, potentially without its parent needs to
+        # have it's parent reset. This is aligned with CoW chained assigment
+        # semantics as well, but it is a little different from existing modin
+        # semantics. This is why we only do this for hybrid and inplace
+        # modification.
         if inplace and self._parent is not None:
             if backend != self._parent.get_backend():
                 self._parent = None
