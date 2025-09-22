@@ -1393,7 +1393,6 @@ class BackendMergeCastInPlace(EnvironmentVariable, type=bool):
     than one type of query compiler. If enabled the actual cast will be performed in-place
     and the input DataFrame will have a new backend. If disabled the original DataFrame
     will remain on the same underlying engine.
-
     """
 
     varname = "MODIN_BACKEND_MERGE_CAST_IN_PLACE"
