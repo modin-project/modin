@@ -23,6 +23,7 @@ from modin.tests.pandas.utils import (
 )
 from modin.tests.test_utils import current_execution_is_native
 from modin.utils import try_cast_to_pandas
+from modin.config import context as config_context
 
 
 @contextmanager
@@ -37,38 +38,35 @@ def switch_to_native_execution():
 
 
 def create_test_df_in_defined_mode(
-    *args, post_fn=None, backend=None, native=None, pin_backend=False, **kwargs
+    *args, post_fn=None, backend=None, native=None, **kwargs
 ):
     assert not current_execution_is_native(), "already in native dataframe mode."
 
     if not isinstance(native, bool):
         raise ValueError("`native` should be True or False.")
-
+    hybrid_backend = "Pandas" if native else "Ray"
     with switch_to_native_execution() if native else nullcontext():
-        modin_df, pandas_df = create_test_dfs(
-            *args, post_fn=post_fn, backend=backend, **kwargs
-        )
-        # pin the backend for interop tests explicitly
-        if native and pin_backend:
-            modin_df = modin_df.move_to("Pandas").pin_backend()
-        return modin_df, pandas_df
+        with config_context(AutoSwitchBackend=False, Backend=hybrid_backend):
+            modin_df, pandas_df = create_test_dfs(
+                *args, post_fn=post_fn, backend=backend, **kwargs
+            )
+            return modin_df, pandas_df
 
 
 def create_test_series_in_defined_mode(
-    vals, sort=False, backend=None, native=None, pin_backend=False, **kwargs
+    vals, sort=False, backend=None, native=None, **kwargs
 ):
     assert not current_execution_is_native(), "already in native dataframe mode."
 
     if not isinstance(native, bool):
         raise ValueError("`native` should be True or False.")
 
+    hybrid_backend = "Pandas" if native else "Ray"
     with switch_to_native_execution() if native else nullcontext():
-        modin_ser, pandas_ser = create_test_series(
-            vals, sort=sort, backend=backend, **kwargs
-        )
-        # pin the backend for interop tests explicitly
-        if native and pin_backend:
-            modin_ser = modin_ser.move_to("Pandas").pin_backend()
+        with config_context(AutoSwitchBackend=False, Backend=hybrid_backend):
+            modin_ser, pandas_ser = create_test_series(
+                vals, sort=sort, backend=backend, **kwargs
+            )
         return modin_ser, pandas_ser
 
 
@@ -83,15 +81,14 @@ def eval_general_interop(
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
-    pin_backend=False,
     **kwargs,
 ):
     df1_native, df2_native = df_mode_pair
     modin_df1, pandas_df1 = create_test_df_in_defined_mode(
-        data, backend=backend, native=df1_native, pin_backend=pin_backend
+        data, backend=backend, native=df1_native
     )
     modin_df2, pandas_df2 = create_test_df_in_defined_mode(
-        data, backend=backend, native=df2_native, pin_backend=pin_backend
+        data, backend=backend, native=df2_native
     )
     md_kwargs, pd_kwargs = {}, {}
 

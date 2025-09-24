@@ -85,8 +85,7 @@ def test_math_functions(other, axis, op, backend, df_mode_pair):
         data,
         backend,
         lambda df1, df2: getattr(df1, op)(other(df2, axis), axis=axis),
-        df_mode_pair,
-        pin_backend=True,
+        df_mode_pair
     )
 
 
