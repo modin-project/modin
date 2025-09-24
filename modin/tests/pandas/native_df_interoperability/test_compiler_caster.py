@@ -662,9 +662,9 @@ def test_qc_mixed_loc(pico_df, cloud_df):
 def test_merge_in_place(default_df, lazy_df, cloud_df):
     # lazy_df tries to pawn off work on other engines
     df = default_df.merge(lazy_df)
-    assert type(df) is type(default_df)
+    assert df.get_backend() is default_df.get_backend()
     # Both arguments now have the same qc type
-    assert type(lazy_df) is type(default_df)
+    assert lazy_df.get_backend() is default_df.get_backend()
 
     with config_context(BackendMergeCastInPlace=False):
         lazy_df = lazy_df.move_to("Lazy")
