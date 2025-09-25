@@ -581,7 +581,7 @@ def test_two_two_qc_types_default_lhs(default_df, cluster_df):
 def test_two_two_qc_types_default_2_rhs(default_df, cloud_df):
     # cloud knows a bit about costing; so we prefer moving to there
     df3 = pd.concat([default_df, cloud_df], axis=1)
-    assert default_df.get_backend() == "Cloud"  # inplace cast to Cloud
+    assert default_df.get_backend() == "Cloud"  # inplace cast to Cloud by concat
     assert cloud_df.get_backend() == "Cloud"
     assert df3.get_backend() == cloud_df.get_backend()  # should move to cloud
 
