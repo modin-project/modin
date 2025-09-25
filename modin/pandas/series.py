@@ -2930,7 +2930,11 @@ class Series(BasePandasDataset):
         # semantics as well, but it is a little different from existing modin
         # semantics. This is why we only do this for hybrid and inplace
         # modification.
-        if inplace and self._parent is not None and backend != self._parent.get_backend():
+        if (
+            inplace
+            and self._parent is not None
+            and backend != self._parent.get_backend()
+        ):
             self._parent = None
         return super().set_backend(
             backend=backend, inplace=inplace, switch_operation=switch_operation
