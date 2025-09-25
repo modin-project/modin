@@ -516,7 +516,8 @@ class BaseQueryCompiler(
         return cls._TRANSFER_THRESHOLD
 
     @disable_logging
-    def max_cost(self) -> int:
+    @classmethod
+    def max_cost(cls) -> int:
         """
         Return the max cost allowed by this engine.
 

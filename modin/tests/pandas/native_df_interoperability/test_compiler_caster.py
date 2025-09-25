@@ -16,7 +16,7 @@ import json
 import logging
 from io import StringIO
 from types import MappingProxyType
-from typing import Iterator
+from typing import Iterator, Optional
 from unittest import mock
 
 import pandas
@@ -91,7 +91,8 @@ class CloudQC(CalculatorTestQc):
     def get_backend(self):
         return "Cloud"
 
-    def max_cost(self):
+    @classmethod
+    def max_cost(cls):
         return QCCoercionCost.COST_IMPOSSIBLE
 
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
@@ -113,7 +114,7 @@ class CloudQC(CalculatorTestQc):
             PicoQC: QCCoercionCost.COST_IMPOSSIBLE,
             OmniscientEagerQC: None,
             OmniscientLazyQC: None,
-        }[other_qc_cls]
+        }.get(other_qc_cls)
 
     def stay_cost(self, api_cls_name, op, arguments):
         return QCCoercionCost.COST_ZERO
@@ -133,7 +134,8 @@ class ClusterQC(CalculatorTestQc):
     def get_backend(self):
         return "Cluster"
 
-    def max_cost(self):
+    @classmethod
+    def max_cost(cls):
         return QCCoercionCost.COST_HIGH
 
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
@@ -144,16 +146,17 @@ class ClusterQC(CalculatorTestQc):
             DefaultQC: None,  # cluster qc knows nothing about default qc
             LocalMachineQC: QCCoercionCost.COST_MEDIUM,
             PicoQC: QCCoercionCost.COST_HIGH,
-        }[other_qc_cls]
+        }.get(other_qc_cls)
 
 
 class LocalMachineQC(CalculatorTestQc):
     "Represents a local machine query compiler"
 
     def get_backend(self):
-        return "Local_machine"
+        return "Local_Machine"
 
-    def max_cost(self):
+    @classmethod
+    def max_cost(cls):
         return QCCoercionCost.COST_MEDIUM
 
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
@@ -163,7 +166,7 @@ class LocalMachineQC(CalculatorTestQc):
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_ZERO,
             PicoQC: QCCoercionCost.COST_MEDIUM,
-        }[other_qc_cls]
+        }.get(other_qc_cls)
 
 
 class PicoQC(CalculatorTestQc):
@@ -172,7 +175,8 @@ class PicoQC(CalculatorTestQc):
     def get_backend(self):
         return "Pico"
 
-    def max_cost(self):
+    @classmethod
+    def max_cost(cls):
         return QCCoercionCost.COST_LOW
 
     def move_to_cost(self, other_qc_cls, api_cls_name, op, arguments):
@@ -182,7 +186,7 @@ class PicoQC(CalculatorTestQc):
             ClusterQC: QCCoercionCost.COST_LOW,
             LocalMachineQC: QCCoercionCost.COST_LOW,
             PicoQC: QCCoercionCost.COST_ZERO,
-        }[other_qc_cls]
+        }.get(other_qc_cls)
 
 
 class AdversarialQC(CalculatorTestQc):
@@ -197,7 +201,7 @@ class AdversarialQC(CalculatorTestQc):
             CloudQCHighSelf: -1000,
             ClusterQC: 10000,
             AdversarialQC: QCCoercionCost.COST_ZERO,
-        }[other_qc_cls]
+        }.get(other_qc_cls)
 
 
 class OmniscientEagerQC(CalculatorTestQc):
@@ -240,14 +244,14 @@ class DefaultQC(CalculatorTestQc):
     "Represents a query compiler with no costing information"
 
     def get_backend(self):
-        return "Test_casting_default"
+        return "Test_Casting_Default"
 
 
 class DefaultQC2(CalculatorTestQc):
     "Represents a query compiler with no costing information, but different."
 
     def get_backend(self):
-        return "Test_casting_default_2"
+        return "Test_Casting_Default_2"
 
 
 class BaseTestAutoMover(NativeQueryCompiler):
@@ -277,7 +281,8 @@ class CloudForBigDataQC(BaseTestAutoMover):
     def get_backend(self) -> str:
         return "Big_Data_Cloud"
 
-    def max_cost(self):
+    @classmethod
+    def max_cost(cls):
         return QCCoercionCost.COST_IMPOSSIBLE * 10
 
     @classmethod
@@ -295,9 +300,7 @@ class CloudForBigDataQC(BaseTestAutoMover):
             else:
                 # Moving the in-memory __init__ inputs to the cloud is expensive.
                 return QCCoercionCost.COST_HIGH
-        return super().move_to_me_cost(
-            cls, other_qc, api_cls_name, operation, arguments
-        )
+        return super().move_to_me_cost(other_qc, api_cls_name, operation, arguments)
 
 
 class LocalForSmallDataQC(BaseTestAutoMover):
@@ -313,7 +316,8 @@ class LocalForSmallDataQC(BaseTestAutoMover):
     def get_backend(self) -> str:
         return "Small_Data_Local"
 
-    def max_cost(self):
+    @classmethod
+    def max_cost(cls):
         return QCCoercionCost.COST_IMPOSSIBLE * 10
 
 
@@ -335,24 +339,61 @@ def register_backend(name, qc):
     Backend.register_backend(name, Execution(name, "Native"))
 
 
-register_backend("Pico", PicoQC)
-register_backend("Cluster", ClusterQC)
-register_backend("Cloud", CloudQC)
-register_backend("Cloud_High_Self", CloudQCHighSelf)
-register_backend("Local_Machine", LocalMachineQC)
-register_backend("Adversarial", AdversarialQC)
-register_backend("Eager", OmniscientEagerQC)
-register_backend("Lazy", OmniscientLazyQC)
-register_backend("Test_Casting_Default", DefaultQC)
-register_backend("Test_Casting_Default_2", DefaultQC2)
-register_backend("Big_Data_Cloud", CloudForBigDataQC)
-register_backend("Small_Data_Local", LocalForSmallDataQC)
+ALL_BACKENDS = {
+    "Pico": PicoQC,
+    "Cluster": ClusterQC,
+    "Cloud": CloudQC,
+    "Cloud_High_Self": CloudQCHighSelf,
+    "Local_Machine": LocalMachineQC,
+    "Adversarial": AdversarialQC,
+    "Eager": OmniscientEagerQC,
+    "Lazy": OmniscientLazyQC,
+    "Test_Casting_Default": DefaultQC,
+    "Test_Casting_Default_2": DefaultQC2,
+    "Big_Data_Cloud": CloudForBigDataQC,
+    "Small_Data_Local": LocalForSmallDataQC,
+}
+
+
+for backend, qc in ALL_BACKENDS.items():
+    register_backend(backend, qc)
 
 
 @pytest.fixture(autouse=True)
 def turn_on_auto_switch_backend():
     with config_context(AutoSwitchBackend=True):
         yield
+
+
+@contextlib.contextmanager
+def backend_test_context(
+    *, test_backend: Optional[str] = None, choices: Optional[tuple] = None
+) -> Iterator[None]:
+    if choices is None:
+        # Consider only a select set custom-defined test backends by default for easier testing.
+        # This is necessary because n-ary operations consider _all_ possible active backends, so
+        # we may observe unexpected behavior if too many backends are activated at once.
+        # If a QC is explicitly created for an inactive backend, the QC calculator should still
+        # be able to accept it.
+        choices = (
+            "Pico",
+            "Cluster",
+            "Cloud",
+            "Cloud_High_Self",
+            "Local_Machine",
+            "Lazy",
+        )
+    if test_backend is None:
+        test_backend = choices[0]
+    old_default_backend = Backend.get()
+    old_backend_choices = Backend.get_active_backends()
+    try:
+        Backend.set_active_backends(choices)
+        Backend.put(test_backend)
+        yield
+    finally:
+        Backend.set_active_backends(old_backend_choices)
+        Backend.put(old_default_backend)
 
 
 @pytest.fixture()
@@ -405,12 +446,14 @@ def default2_df():
     return pd.DataFrame(query_compiler=DefaultQC2(pandas.DataFrame([0, 1, 2])))
 
 
+@backend_test_context()
 def test_two_same_backend(pico_df):
     df3 = pd.concat([pico_df, pico_df], axis=1)
     assert pico_df.get_backend() == "Pico"
     assert df3.get_backend() == "Pico"
 
 
+@backend_test_context()
 def test_cast_to_second_backend_with_concat(pico_df, cluster_df, caplog):
     with caplog.at_level(level=logging.INFO, logger=DEFAULT_LOGGER_NAME):
         df3 = pd.concat([pico_df, cluster_df], axis=1)
@@ -425,6 +468,7 @@ def test_cast_to_second_backend_with_concat(pico_df, cluster_df, caplog):
     assert log_records[0].message.startswith("BackendCostCalculator Results: ")
 
 
+@backend_test_context()
 def test_cast_to_second_backend_with_concat_uses_second_backend_api_override(
     pico_df, cluster_df
 ):
@@ -436,6 +480,7 @@ def test_cast_to_second_backend_with_concat_uses_second_backend_api_override(
     assert cluster_df.get_backend() == "Cluster"
 
 
+@backend_test_context()
 def test_moving_pico_to_cluster_in_place_calls_set_backend_only_once_github_issue_7490(
     pico_df, cluster_df
 ):
@@ -447,6 +492,7 @@ def test_moving_pico_to_cluster_in_place_calls_set_backend_only_once_github_issu
     mock_set_backend.assert_called_once_with("Cluster", inplace=True)
 
 
+@backend_test_context()
 def test_cast_to_second_backend_with___init__(pico_df, cluster_df):
     df3 = pd.DataFrame({"pico": pico_df.iloc[:, 0], "cluster": cluster_df.iloc[:, 0]})
     assert pico_df.get_backend() == "Pico"
@@ -454,6 +500,7 @@ def test_cast_to_second_backend_with___init__(pico_df, cluster_df):
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
 
+@backend_test_context()
 def test_cast_to_first_backend(pico_df, cluster_df):
     df3 = pd.concat([cluster_df, pico_df], axis=1)
     assert pico_df.get_backend() == "Pico"
@@ -461,6 +508,7 @@ def test_cast_to_first_backend(pico_df, cluster_df):
     assert df3.get_backend() == cluster_df.get_backend()  # result should be on cluster
 
 
+@backend_test_context()
 def test_cast_to_first_backend_with_concat_uses_first_backend_api_override(
     pico_df, cluster_df
 ):
@@ -472,6 +520,7 @@ def test_cast_to_first_backend_with_concat_uses_first_backend_api_override(
     assert cluster_df.get_backend() == "Cluster"
 
 
+@backend_test_context()
 def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
     df3 = pd.DataFrame(
         {
@@ -484,11 +533,13 @@ def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
 
+@backend_test_context()
 def test_no_solution(pico_df, local_df, cluster_df, cloud_df):
     with pytest.raises(ValueError, match=r"Pico,Local_machine,Cluster,Cloud"):
         pd.concat(axis=1, objs=[pico_df, local_df, cluster_df, cloud_df])
 
 
+@backend_test_context()
 def test_self_cost_causes_move(cloud_high_self_df, cluster_df):
     """
     Test that ``self_cost`` is being properly considered.
@@ -529,6 +580,7 @@ def test_self_cost_causes_move(cloud_high_self_df, cluster_df):
         ("pico_df", "pico_df", "local_df", "cloud_df", "Cloud"),
     ],
 )
+@backend_test_context()
 def test_mixed_dfs(df1, df2, df3, df4, expected_result_backend, request):
     df1 = request.getfixturevalue(df1)
     df2 = request.getfixturevalue(df2)
@@ -542,50 +594,57 @@ def test_mixed_dfs(df1, df2, df3, df4, expected_result_backend, request):
         assert result.get_backend() == expected_result_backend
 
 
+@backend_test_context(choices=("Adversarial", "Cluster"))
 def test_adversarial_high(adversarial_df, cluster_df):
     with pytest.raises(ValueError):
         pd.concat([adversarial_df, cluster_df], axis=1)
 
 
+@backend_test_context(choices=("Adversarial", "Cloud"))
 def test_adversarial_low(adversarial_df, cloud_df):
     with pytest.raises(ValueError):
         pd.concat([adversarial_df, cloud_df], axis=1)
 
 
+@backend_test_context(choices=("Test_Casting_Default", "Cluster"))
 def test_two_two_qc_types_default_rhs(default_df, cluster_df):
     # none of the query compilers know about each other here
     # so we default to the caller
     df3 = pd.concat([default_df, cluster_df], axis=1)
-    assert default_df.get_backend() == "Test_casting_default"
+    assert default_df.get_backend() == "Test_Casting_Default"
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == default_df.get_backend()  # should move to default
 
 
+@backend_test_context(choices=("Test_Casting_Default", "Cluster"))
 def test_two_two_qc_types_default_lhs(default_df, cluster_df):
     # none of the query compilers know about each other here
     # so we default to the caller
     df3 = pd.concat([cluster_df, default_df], axis=1)
-    assert default_df.get_backend() == "Test_casting_default"
+    assert default_df.get_backend() == "Test_Casting_Default"
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == cluster_df.get_backend()  # should move to cluster
 
 
+@backend_test_context(choices=("Test_Casting_Default", "Cloud"))
 def test_two_two_qc_types_default_2_rhs(default_df, cloud_df):
     # cloud knows a bit about costing; so we prefer moving to there
     df3 = pd.concat([default_df, cloud_df], axis=1)
-    assert default_df.get_backend() == "Test_casting_default"
+    assert default_df.get_backend() == "Test_Casting_Default"
     assert cloud_df.get_backend() == "Cloud"
     assert df3.get_backend() == cloud_df.get_backend()  # should move to cloud
 
 
+@backend_test_context(choices=("Test_Casting_Default", "Cloud"))
 def test_two_two_qc_types_default_2_lhs(default_df, cloud_df):
     # cloud knows a bit about costing; so we prefer moving to there
     df3 = pd.concat([cloud_df, default_df], axis=1)
-    assert default_df.get_backend() == "Test_casting_default"
+    assert default_df.get_backend() == "Test_Casting_Default"
     assert cloud_df.get_backend() == "Cloud"
     assert df3.get_backend() == cloud_df.get_backend()  # should move to cloud
 
 
+@backend_test_context(choices=("Test_Casting_Default", "Test_Casting_Default_2"))
 def test_default_to_caller(default_df, default2_df):
     # No qc knows anything; default to caller
 
@@ -599,6 +658,7 @@ def test_default_to_caller(default_df, default2_df):
     assert df3.get_backend() == default_df.get_backend()  # no change
 
 
+@backend_test_context()
 def test_no_qc_to_calculate():
     calculator = BackendCostCalculator(
         operation_arguments=MappingProxyType({}),
@@ -609,6 +669,7 @@ def test_no_qc_to_calculate():
         calculator.calculate()
 
 
+@backend_test_context()
 def test_qc_default_self_cost(default_df, default2_df):
     assert (
         default_df._query_compiler.move_to_cost(
@@ -630,6 +691,7 @@ def test_qc_default_self_cost(default_df, default2_df):
     )
 
 
+@backend_test_context()
 def test_qc_casting_changed_operation(pico_df, cloud_df):
     pico_df1 = pico_df
     cloud_df1 = cloud_df
@@ -643,6 +705,7 @@ def test_qc_casting_changed_operation(pico_df, cloud_df):
     assert df_cast_to_lhs._to_pandas().equals(expected)
 
 
+@backend_test_context()
 def test_qc_mixed_loc(pico_df, cloud_df):
     pico_df1 = pico_df
     cloud_df1 = cloud_df
@@ -651,6 +714,7 @@ def test_qc_mixed_loc(pico_df, cloud_df):
     assert cloud_df1[pico_df1[0][0]][pico_df1[0][1]] == 1
 
 
+@backend_test_context(choices=("Test_Casting_Default", "Cloud", "Eager", "Lazy"))
 def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
     # normally, the default query compiler should be chosen
     # here, but since eager knows about default, but not
@@ -668,6 +732,7 @@ def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
     assert type(df) is type(cloud_df)
 
 
+@backend_test_context()
 def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
     local_df.iloc[1, 0] = cloud_df.iloc[1, 0] + local_df.iloc[1, 0]
     # compute happens in cloud, but we have to make sure that we propagate the
@@ -687,6 +752,7 @@ def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
 
 
 @pytest.mark.parametrize("pin_local", [True, False], ids=["pinned", "unpinned"])
+@backend_test_context()
 def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_local):
     if pin_local:
         local_df = local_df.pin_backend()
@@ -697,6 +763,9 @@ def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_loc
     assert local_df.get_backend() == "Local_machine" if pin_local else "Cloud"
 
 
+@backend_test_context(
+    choices=("Cloud_High_Self", "Test_Casting_Default", "Test_Casting_Default")
+)
 def test_stay_or_move_evaluation(cloud_high_self_df, default_df):
     default_cls = type(default_df._get_query_compiler())
     cloud_cls = type(cloud_high_self_df._get_query_compiler())
@@ -709,7 +778,7 @@ def test_stay_or_move_evaluation(cloud_high_self_df, default_df):
         default_cls, "Series", "myop", arguments=empty_arguments
     )
     if stay_cost > move_cost:
-        df = cloud_high_self_df.move_to("Test_casting_default")
+        df = cloud_high_self_df.move_to("Test_Casting_Default")
     else:
         assert False
 
@@ -726,20 +795,6 @@ def test_stay_or_move_evaluation(cloud_high_self_df, default_df):
 def test_max_shape(cloud_df):
     # default implementation matches df.shape
     assert cloud_df.shape == cloud_df._query_compiler._max_shape()
-
-
-@contextlib.contextmanager
-def backend_test_context(test_backend: str, choices: set) -> Iterator[None]:
-
-    old_default_backend = Backend.get()
-    old_backend_choices = Backend.get_active_backends()
-    try:
-        Backend.set_active_backends(choices)
-        Backend.put(test_backend)
-        yield
-    finally:
-        Backend.set_active_backends(old_backend_choices)
-        Backend.put(old_default_backend)
 
 
 class TestSwitchBackendPostOpDependingOnDataSize:
@@ -1760,6 +1815,7 @@ def test_native_config():
     assert qc._transfer_threshold() == oldthresh
 
 
+@backend_test_context(choices=("Pico", "Cluster"))
 def test_cast_metrics(pico_df, cluster_df):
     try:
         count = 0

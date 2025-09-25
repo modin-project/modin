@@ -515,6 +515,22 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         cls.choices = new_choices
 
     @classmethod
+    def activate(cls, backend: str) -> None:
+        """
+        Activate a backend that was previously registered.
+
+        This is a no-op if the backend is already active.
+
+        Raises
+        ------
+        ValueError
+            Raises a ValueError if backend was not previously registered.
+        """
+        if backend not in cls._BACKEND_TO_EXECUTION:
+            raise ValueError(f"Unknown backend '{backend}' is not registered.")
+        cls.choices = (*cls.choices, backend)
+
+    @classmethod
     def get_active_backends(cls) -> tuple[str, ...]:
         """
         Get the active backends available for manual and automatic switching.
@@ -570,6 +586,10 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
             )
         normalized_value = cls.normalize(backend)
         if normalized_value not in cls.choices:
+            if normalized_value in cls._BACKEND_TO_EXECUTION:
+                raise ValueError(
+                    f"Backend '{backend}' is not currently active. Activate it first with Backend.activate('{backend})'."
+                )
             backend_choice_string = ", ".join(f"'{choice}'" for choice in cls.choices)
             raise ValueError(
                 f"Unknown backend '{backend}'. Available backends are: "

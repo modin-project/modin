@@ -39,6 +39,7 @@ from modin.core.storage_formats.base.query_compiler import (
 )
 from modin.core.storage_formats.base.query_compiler_calculator import (
     BackendCostCalculator,
+    all_switchable_backends,
 )
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging, get_logger
@@ -796,14 +797,7 @@ def _get_backend_for_auto_switch(
         f"hybrid.auto.current.{starting_backend}.group.{metrics_group}.cols",
         data_max_shape[1],
     )
-    for backend in Backend.get_active_backends():
-        if backend in ("Ray", "Unidist", "Dask"):
-            # Disable automatically switching to these engines for now, because
-            # 1) _get_prepared_factory_for_backend() currently calls
-            # _initialize_engine(), which starts up the ray/dask/unidist
-            #  processes
-            # 2) we can't decide to switch to unidist in the middle of execution.
-            continue
+    for backend in all_switchable_backends():
         if backend == starting_backend:
             continue
         move_to_class = FactoryDispatcher._get_prepared_factory_for_backend(
