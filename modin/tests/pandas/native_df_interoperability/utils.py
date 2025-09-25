@@ -15,6 +15,7 @@ from contextlib import contextmanager, nullcontext
 
 from modin import set_execution
 from modin.config import Engine, StorageFormat
+from modin.config import context as config_context
 from modin.tests.pandas.utils import (
     NoModinException,
     create_test_dfs,
@@ -23,7 +24,6 @@ from modin.tests.pandas.utils import (
 )
 from modin.tests.test_utils import current_execution_is_native
 from modin.utils import try_cast_to_pandas
-from modin.config import context as config_context
 
 
 @contextmanager
