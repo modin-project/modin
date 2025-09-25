@@ -573,7 +573,7 @@ def test_two_two_qc_types_default_lhs(default_df, cluster_df):
     # none of the query compilers know about each other here
     # so we default to the caller
     df3 = pd.concat([cluster_df, default_df], axis=1)
-    assert default_df.get_backend() == "Cluster"  # in place cast to Cluster
+    assert default_df.get_backend() == "Cluster"  # in place cast to Cluster by concat
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == cluster_df.get_backend()  # should move to cluster
 
