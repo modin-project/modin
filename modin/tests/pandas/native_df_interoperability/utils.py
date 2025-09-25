@@ -120,7 +120,7 @@ def eval_general_interop(
                     assert (
                         type(md_e) is type(expected_exception)
                         and md_e.args == expected_exception.args
-                    ), f"not acceptable Modin's exception: [{repr(md_e)}]"
+                    ), f"not acceptable Modin's exception: [{repr(md_e)}] expected {expected_exception}"
                     assert (
                         pd_e.args == expected_exception.args
                     ), f"not acceptable Pandas' exception: [{repr(pd_e)}]"
