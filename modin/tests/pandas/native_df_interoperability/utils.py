@@ -16,6 +16,7 @@ from contextlib import contextmanager, nullcontext
 from modin import set_execution
 from modin.config import Engine, StorageFormat
 from modin.config import context as config_context
+from modin.config.envvars import Backend
 from modin.tests.pandas.utils import (
     NoModinException,
     create_test_dfs,
