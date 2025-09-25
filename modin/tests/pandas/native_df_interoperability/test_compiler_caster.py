@@ -485,7 +485,7 @@ def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
             "pico": pico_df.iloc[:, 0],
         }
     )
-    assert pico_df.get_backend() == "Pico"  # Pico not cast in place because of iloc
+    assert pico_df.get_backend() == "Pico"  # Pico not cast in place by iloc
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
