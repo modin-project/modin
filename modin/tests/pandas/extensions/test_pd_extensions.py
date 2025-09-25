@@ -164,10 +164,8 @@ class TestRegisterForOneBackend:
         )
 
         # With inplace casting we need to reset the original dataframes
-        with config_context(Backend="Pandas"):
-            modin_on_pandas_df = pd.DataFrame({"a": [1, 2, 3]})
-        with config_context(Backend="Python_Test"):
-            modin_on_python_df = pd.DataFrame({"a": [4, 5, 6]})
+        modin_on_pandas_df.move_to("Pandas", inplace=True)
+        modin_on_python_df.move_to("Python_Test", inplace=True)
 
         assert (
             pd.concat([modin_on_python_df, modin_on_pandas_df])
