@@ -474,7 +474,7 @@ def test_cast_to_first_backend_with_concat_uses_first_backend_api_override(
         lambda *args, **kwargs: "custom_concat_result"
     )
     assert pd.concat([cluster_df, pico_df], axis=1) == "custom_concat_result"
-    assert pico_df.get_backend() == "Cluster"  # pico was cast in place
+    assert pico_df.get_backend() == "Cluster"  # pico was cast in place by concat
     assert cluster_df.get_backend() == "Cluster"
 
 
