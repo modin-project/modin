@@ -770,7 +770,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
     env:
       # Test interoperability between PandasOnPython dataframes/series and
       # native dataframes/series.
