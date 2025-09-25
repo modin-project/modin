@@ -462,7 +462,7 @@ def test_cast_to_second_backend_with___init__(pico_df, cluster_df):
 
 def test_cast_to_first_backend(pico_df, cluster_df):
     df3 = pd.concat([cluster_df, pico_df], axis=1)
-    assert pico_df.get_backend() == "Cluster"  # pico_df was cast in place
+    assert pico_df.get_backend() == "Cluster"  # pico_df was cast in place by concat
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == cluster_df.get_backend()  # result should be on cluster
 
