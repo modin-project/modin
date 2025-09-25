@@ -565,7 +565,7 @@ def test_two_two_qc_types_default_rhs(default_df, cluster_df):
     assert default_df.get_backend() == "Test_casting_default"
     assert (
         cluster_df.get_backend() == "Test_casting_default"
-    )  # in place cast to default
+    )  # in place cast to default by concat
     assert df3.get_backend() == default_df.get_backend()  # should move to default
 
 
