@@ -27,7 +27,7 @@ the :py:class:`~modin.core.execution.ray.implementations.pandas_on_ray.dataframe
 generic functionality from the ``GenericRayDataframe`` and the :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe`.
 
 ..
-  TODO: insert a link to ``GenericRayDataframe`` once we add an implementatiton of the class
+  TODO: insert a link to ``GenericRayDataframe`` once we add an implementation of the class
 
 PandasOnRay Dataframe implementation
 ------------------------------------

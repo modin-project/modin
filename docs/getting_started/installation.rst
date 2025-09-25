@@ -17,7 +17,7 @@ Installing with pip
 Stable version
 """"""""""""""
 
-Modin can be installed with ``pip`` on Linux, Windows and MacOS. 
+Modin can be installed with ``pip`` on Linux, Windows and macOS. 
 To install the most recent stable release run the following:
 
 .. code-block:: bash
@@ -96,7 +96,7 @@ Modin can be used with Google Colab_ via the ``pip`` command, by running the fol
 
   !pip install "modin[all]"
 
-Since Colab preloads several of Modin's dependencies by default, we need to restart the Colab environment once Modin is installed by either clicking on the :code:`"RESTART RUNTIME"` button in the installation output or by run the following code:
+Since Colab preloads several of Modin's dependencies by default, we need to restart the Colab environment once Modin is installed by either clicking on the :code:`"RESTART RUNTIME"` button in the installation output or by running the following code:
 
 .. code-block:: python
 
@@ -120,13 +120,13 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 +---------------------------------+---------------------------+-----------------------------+
 | **Package name in conda-forge** | **Engine(s)**             | **Supported OSs**           |
 +---------------------------------+---------------------------+-----------------------------+
-| modin                           | Dask_                     |   Linux, Windows, MacOS     |
+| modin                           | Dask_                     |   Linux, Windows, macOS     |
 +---------------------------------+---------------------------+-----------------------------+
-| modin-dask                      | Dask                      |   Linux, Windows, MacOS     |
+| modin-dask                      | Dask                      |   Linux, Windows, macOS     |
 +---------------------------------+---------------------------+-----------------------------+
 | modin-ray                       | Ray_                      |       Linux, Windows        |
 +---------------------------------+---------------------------+-----------------------------+
-| modin-mpi                       | MPI_ through unidist_     |   Linux, Windows, MacOS     |
+| modin-mpi                       | MPI_ through unidist_     |   Linux, Windows, macOS     |
 +---------------------------------+---------------------------+-----------------------------+
 | modin-all                       | Dask, Ray, Unidist        |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
@@ -156,7 +156,7 @@ or explicitly:
 Refer to `Installing with conda`_ section of the unidist documentation
 for more details on how to install a specific MPI implementation to run on.
 
-``conda`` may be slow installing ``modin-all`` or combitations of execution engines so we currently recommend using libmamba solver for the installation process.
+``conda`` may be slow installing ``modin-all`` or combinations of execution engines, so we currently recommend using the libmamba solver for the installation process.
 To do this install it in a base environment:
 
 .. code-block:: bash
@@ -167,7 +167,7 @@ Then it can be used during installation either like
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin- --experimental-solver=libmamba
+  conda install -c conda-forge modin-ray modin-dask modin-mpi --experimental-solver=libmamba
 
 or starting from conda 22.11 and libmamba solver 22.12 versions
 
