@@ -1570,6 +1570,32 @@ class TestSwitchBackendPreOp:
             df_equals(modin_result, pandas_result)
             assert modin_result.get_backend() == "Small_Data_Local"
 
+    def test_concat_switch_point(self, pico_df, cloud_df, cloud_high_self_df):
+        # When concat is a switch point, backends other than those present in arguments should be considered.
+        with backend_test_context(
+            test_backend="Cloud", choices=(*DEFAULT_TEST_BACKENDS, "Eager")
+        ):
+            register_function_for_pre_op_switch(
+                class_name=None, backend="Cloud", method="concat"
+            )
+            result = pd.concat([cloud_df, pico_df])
+            # concat causes in-place switching
+            # the Eager backend will always steal everything
+            assert pico_df.get_backend() == "Eager"
+            assert cloud_df.get_backend() == "Eager"
+            assert result.get_backend() == "Eager"
+            pico_df.move_to("Pico", inplace=True)
+            cloud_df.move_to("Cloud", inplace=True)
+        with backend_test_context(
+            test_backend="Cloud_High_Self", choices=("Cloud_High_Self", "Cloud")
+        ):
+            register_function_for_pre_op_switch(
+                class_name=None, backend="Cloud_High_Self", method="concat"
+            )
+            result = pd.concat([cloud_high_self_df, cloud_high_self_df])
+            assert cloud_df.get_backend() == "Cloud"
+            assert result.get_backend() == "Cloud"
+
 
 def test_move_to_clears_pin():
     # Pin status is reset to false after a set_backend call

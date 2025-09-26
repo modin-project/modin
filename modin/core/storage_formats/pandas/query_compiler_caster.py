@@ -1096,7 +1096,7 @@ def wrap_function_in_argument_caster(
         else:
             preop_switch = (
                 name
-                in _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS[
+                in _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS[
                     BackendAndClassName(
                         backend=input_backend,
                         class_name=class_of_wrapped_fn,
