@@ -46,7 +46,7 @@ def create_test_df_in_defined_mode(
     if not isinstance(native, bool):
         raise ValueError("`native` should be True or False.")
 
-     # Use the default backend unless native
+    # Use the default backend unless native
     hybrid_backend = "Pandas" if native else Backend.get()
     with switch_to_native_execution() if native else nullcontext():
         with config_context(AutoSwitchBackend=False, Backend=hybrid_backend):
