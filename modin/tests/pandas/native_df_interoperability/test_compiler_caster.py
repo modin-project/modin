@@ -1593,7 +1593,7 @@ class TestSwitchBackendPreOp:
                 class_name=None, backend="Cloud_High_Self", method="concat"
             )
             result = pd.concat([cloud_high_self_df, cloud_high_self_df])
-            assert cloud_df.get_backend() == "Cloud"
+            assert cloud_high_self_df.get_backend() == "Cloud"
             assert result.get_backend() == "Cloud"
 
 
