@@ -62,7 +62,7 @@ def create_test_series_in_defined_mode(
     if not isinstance(native, bool):
         raise ValueError("`native` should be True or False.")
 
-    hybrid_backend = "Pandas" if native else "Ray"
+    hybrid_backend = "Pandas" if native else Backend.get()
     with switch_to_native_execution() if native else nullcontext():
         with config_context(AutoSwitchBackend=False, Backend=hybrid_backend):
             modin_ser, pandas_ser = create_test_series(
