@@ -33,6 +33,14 @@ from modin.logging.metrics import emit_metric
 
 
 def all_switchable_backends() -> list[str]:
+    """
+    Return a list of all currently active backends that are candidates for switching.
+
+    Returns
+    -------
+    list
+        A list of valid backends.
+    """
     return list(
         filter(
             # Disable automatically switching to these engines for now, because
@@ -54,7 +62,8 @@ class AggregatedBackendData:
     ----------
     backend : str
         String representing the backend name.
-    query_compiler : QueryCompiler
+    qc_cls : type[QueryCompiler]
+        The query compiler sub-class for this backend.
     """
 
     def __init__(self, backend: str, qc_cls: type[BaseQueryCompiler]):
@@ -81,6 +90,8 @@ class BackendCostCalculator:
         Representing the class name of the function being called.
     operation : str representing the operation being performed
     query_compilers : list of query compiler arguments
+    preop_switch : bool
+        True if the operation is a pre-operation switch point.
     """
 
     def __init__(

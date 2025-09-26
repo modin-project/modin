@@ -1848,7 +1848,6 @@ def test_native_config():
     assert qc._transfer_threshold() == oldthresh
 
 
-@backend_test_context(choices=("Pico", "Cluster"))
 def test_cast_metrics(pico_df, cluster_df):
     try:
         count = 0

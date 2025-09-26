@@ -521,6 +521,11 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
 
         This is a no-op if the backend is already active.
 
+        Parameters
+        ----------
+        backend : str
+            Backend to activate.
+
         Raises
         ------
         ValueError
