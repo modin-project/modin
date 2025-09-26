@@ -456,7 +456,8 @@ def test_two_same_backend(pico_df):
 @backend_test_context()
 def test_cast_to_second_backend_with_concat(pico_df, cluster_df, caplog):
     with caplog.at_level(level=logging.INFO, logger=DEFAULT_LOGGER_NAME):
-        df3 = pd.concat([pico_df, cluster_df], axis=1)
+        # We have to copy the input dataframes because of inplace merging
+        df3 = pd.concat([pico_df.copy(), cluster_df.copy()], axis=1)
     assert pico_df.get_backend() == "Pico"
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
@@ -475,7 +476,10 @@ def test_cast_to_second_backend_with_concat_uses_second_backend_api_override(
     register_pd_accessor(name="concat", backend="Cluster")(
         lambda *args, **kwargs: "custom_concat_result"
     )
-    assert pd.concat([pico_df, cluster_df], axis=1) == "custom_concat_result"
+    # copy dataframes for concat to allow for in-place merging
+    assert (
+        pd.concat([pico_df.copy(), cluster_df.copy()], axis=1) == "custom_concat_result"
+    )
     assert pico_df.get_backend() == "Pico"
     assert cluster_df.get_backend() == "Cluster"
 
@@ -495,7 +499,9 @@ def test_moving_pico_to_cluster_in_place_calls_set_backend_only_once_github_issu
 @backend_test_context()
 def test_cast_to_second_backend_with___init__(pico_df, cluster_df):
     df3 = pd.DataFrame({"pico": pico_df.iloc[:, 0], "cluster": cluster_df.iloc[:, 0]})
-    assert pico_df.get_backend() == "Pico"
+    assert (
+        pico_df.get_backend() == "Pico"
+    )  # pico stays despite in-place casting by iloc
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
@@ -503,7 +509,7 @@ def test_cast_to_second_backend_with___init__(pico_df, cluster_df):
 @backend_test_context()
 def test_cast_to_first_backend(pico_df, cluster_df):
     df3 = pd.concat([cluster_df, pico_df], axis=1)
-    assert pico_df.get_backend() == "Pico"
+    assert pico_df.get_backend() == "Cluster"  # pico_df was cast in place by concat
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == cluster_df.get_backend()  # result should be on cluster
 
@@ -516,7 +522,7 @@ def test_cast_to_first_backend_with_concat_uses_first_backend_api_override(
         lambda *args, **kwargs: "custom_concat_result"
     )
     assert pd.concat([cluster_df, pico_df], axis=1) == "custom_concat_result"
-    assert pico_df.get_backend() == "Pico"
+    assert pico_df.get_backend() == "Cluster"  # pico was cast in place by concat
     assert cluster_df.get_backend() == "Cluster"
 
 
@@ -528,7 +534,7 @@ def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
             "pico": pico_df.iloc[:, 0],
         }
     )
-    assert pico_df.get_backend() == "Pico"
+    assert pico_df.get_backend() == "Pico"  # Pico not cast in place by iloc
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
@@ -611,8 +617,10 @@ def test_two_two_qc_types_default_rhs(default_df, cluster_df):
     # none of the query compilers know about each other here
     # so we default to the caller
     df3 = pd.concat([default_df, cluster_df], axis=1)
-    assert default_df.get_backend() == "Test_Casting_Default"
-    assert cluster_df.get_backend() == "Cluster"
+    assert default_df.get_backend() == "Test_Casting_default"
+    assert (
+        cluster_df.get_backend() == "Test_Casting_default"
+    )  # in place cast to default by concat
     assert df3.get_backend() == default_df.get_backend()  # should move to default
 
 
@@ -621,7 +629,7 @@ def test_two_two_qc_types_default_lhs(default_df, cluster_df):
     # none of the query compilers know about each other here
     # so we default to the caller
     df3 = pd.concat([cluster_df, default_df], axis=1)
-    assert default_df.get_backend() == "Test_Casting_Default"
+    assert default_df.get_backend() == "Cluster"  # in place cast to Cluster by concat
     assert cluster_df.get_backend() == "Cluster"
     assert df3.get_backend() == cluster_df.get_backend()  # should move to cluster
 
@@ -630,7 +638,7 @@ def test_two_two_qc_types_default_lhs(default_df, cluster_df):
 def test_two_two_qc_types_default_2_rhs(default_df, cloud_df):
     # cloud knows a bit about costing; so we prefer moving to there
     df3 = pd.concat([default_df, cloud_df], axis=1)
-    assert default_df.get_backend() == "Test_Casting_Default"
+    assert default_df.get_backend() == "Cloud"  # inplace cast to Cloud by concat
     assert cloud_df.get_backend() == "Cloud"
     assert df3.get_backend() == cloud_df.get_backend()  # should move to cloud
 
@@ -639,7 +647,7 @@ def test_two_two_qc_types_default_2_rhs(default_df, cloud_df):
 def test_two_two_qc_types_default_2_lhs(default_df, cloud_df):
     # cloud knows a bit about costing; so we prefer moving to there
     df3 = pd.concat([cloud_df, default_df], axis=1)
-    assert default_df.get_backend() == "Test_Casting_Default"
+    assert default_df.get_backend() == "Cloud"  # inplace cast to Cloud by concat
     assert cloud_df.get_backend() == "Cloud"
     assert df3.get_backend() == cloud_df.get_backend()  # should move to cloud
 
@@ -712,6 +720,23 @@ def test_qc_mixed_loc(pico_df, cloud_df):
     assert pico_df1[pico_df1[0][0]][cloud_df1[0][1]] == 1
     assert pico_df1[cloud_df1[0][0]][pico_df1[0][1]] == 1
     assert cloud_df1[pico_df1[0][0]][pico_df1[0][1]] == 1
+
+
+@backend_test_context(choices=("Test_Casting_Default", "Cloud", "Lazy"))
+def test_merge_in_place(default_df, lazy_df, cloud_df):
+    # lazy_df tries to pawn off work on other engines
+    df = default_df.merge(lazy_df)
+    assert df.get_backend() is default_df.get_backend()
+    # Both arguments now have the same qc type
+    assert lazy_df.get_backend() is default_df.get_backend()
+
+    with config_context(BackendMergeCastInPlace=False):
+        lazy_df = lazy_df.move_to("Lazy")
+        cloud_df = cloud_df.move_to("Cloud")
+        df = cloud_df.merge(lazy_df)
+        assert type(df) is type(cloud_df)
+        assert lazy_df.get_backend() == "Lazy"
+        assert cloud_df.get_backend() == "Cloud"
 
 
 @backend_test_context(choices=("Test_Casting_Default", "Cloud", "Eager", "Lazy"))
@@ -1542,7 +1567,11 @@ class TestSwitchBackendPreOp:
             pandas_result = operation(pandas_df)
             df_equals(modin_result, pandas_result)
             assert modin_result.get_backend() == expected_backend
-            assert modin_df.get_backend() == expected_backend
+            if groupby_class == "DataFrameGroupBy":
+                assert modin_df.get_backend() == expected_backend
+            # The original dataframe does not move with the SeriesGroupBy
+            if groupby_class == "SeriesGroupBy":
+                assert modin_df.get_backend() == "Big_Data_Cloud"
 
     def test_T_switches(self):
         # Ensure that calling df.T triggers a switch (GH#7653)

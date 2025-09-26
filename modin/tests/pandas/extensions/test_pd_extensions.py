@@ -163,6 +163,10 @@ class TestRegisterForOneBackend:
             == "pandas_concat_result"
         )
 
+        # With inplace casting we need to reset the original dataframes
+        modin_on_pandas_df.move_to("Pandas", inplace=True)
+        modin_on_python_df.move_to("Python_Test", inplace=True)
+
         assert (
             pd.concat([modin_on_python_df, modin_on_pandas_df])
             == "python_concat_result"

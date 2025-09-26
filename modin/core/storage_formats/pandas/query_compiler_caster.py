@@ -31,7 +31,7 @@ import pandas
 from pandas.core.indexes.frozen import FrozenList
 from typing_extensions import Self
 
-from modin.config import AutoSwitchBackend, Backend
+from modin.config import AutoSwitchBackend, Backend, BackendMergeCastInPlace
 from modin.config import context as config_context
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
@@ -93,12 +93,12 @@ _NON_EXTENDABLE_ATTRIBUTES = {
     "_getattr__from_extension_impl",
     "get_backend",
     "move_to",
-    "_update_inplace",
     "set_backend",
     "_get_extension",
     "_query_compiler",
     "_get_query_compiler",
     "_copy_into",
+    "_update_inplace",
     "is_backend_pinned",
     "_set_backend_pinned",
     "pin_backend",
@@ -122,6 +122,7 @@ EXTENSION_NO_LOOKUP = {
     "_set_backend_pinned",
     "pin_backend",
     "unpin_backend",
+    "_update_inplace",
 }
 
 
@@ -1114,10 +1115,20 @@ def wrap_function_in_argument_caster(
                     and arg.get_backend() != result_backend
                 ):
                     return arg
-                cast = arg.set_backend(
-                    result_backend,
-                    switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{name}",
-                )
+                if BackendMergeCastInPlace.get():
+                    arg.set_backend(
+                        result_backend,
+                        switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{name}",
+                        inplace=True,
+                    )
+                    assert arg.get_backend() == result_backend
+                    cast = arg
+                else:
+                    cast = arg.set_backend(
+                        result_backend,
+                        switch_operation=f"{_normalize_class_name(class_of_wrapped_fn)}.{name}",
+                        inplace=False,
+                    )
                 inplace_update_trackers.append(
                     InplaceUpdateTracker(
                         input_castable=arg,
@@ -1150,7 +1161,7 @@ def wrap_function_in_argument_caster(
             new_castable,
         ) in inplace_update_trackers:
             new_qc = new_castable._get_query_compiler()
-            if original_qc is not new_qc:
+            if BackendMergeCastInPlace.get() or original_qc is not new_qc:
                 new_castable._copy_into(original_castable)
 
         return _maybe_switch_backend_post_op(
