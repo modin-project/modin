@@ -15,6 +15,8 @@ from contextlib import contextmanager, nullcontext
 
 from modin import set_execution
 from modin.config import Engine, StorageFormat
+from modin.config import context as config_context
+from modin.config.envvars import Backend
 from modin.tests.pandas.utils import (
     NoModinException,
     create_test_dfs,
@@ -43,9 +45,13 @@ def create_test_df_in_defined_mode(
 
     if not isinstance(native, bool):
         raise ValueError("`native` should be True or False.")
-
+    hybrid_backend = "Pandas" if native else Backend.get()
     with switch_to_native_execution() if native else nullcontext():
-        return create_test_dfs(*args, post_fn=post_fn, backend=backend, **kwargs)
+        with config_context(AutoSwitchBackend=False, Backend=hybrid_backend):
+            modin_df, pandas_df = create_test_dfs(
+                *args, post_fn=post_fn, backend=backend, **kwargs
+            )
+            return modin_df, pandas_df
 
 
 def create_test_series_in_defined_mode(
@@ -56,8 +62,13 @@ def create_test_series_in_defined_mode(
     if not isinstance(native, bool):
         raise ValueError("`native` should be True or False.")
 
+    hybrid_backend = "Pandas" if native else "Ray"
     with switch_to_native_execution() if native else nullcontext():
-        return create_test_series(vals, sort=sort, backend=backend, **kwargs)
+        with config_context(AutoSwitchBackend=False, Backend=hybrid_backend):
+            modin_ser, pandas_ser = create_test_series(
+                vals, sort=sort, backend=backend, **kwargs
+            )
+        return modin_ser, pandas_ser
 
 
 def eval_general_interop(
@@ -110,7 +121,7 @@ def eval_general_interop(
                     assert (
                         type(md_e) is type(expected_exception)
                         and md_e.args == expected_exception.args
-                    ), f"not acceptable Modin's exception: [{repr(md_e)}]"
+                    ), f"not acceptable Modin's exception: [{repr(md_e)}] expected {expected_exception}"
                     assert (
                         pd_e.args == expected_exception.args
                     ), f"not acceptable Pandas' exception: [{repr(pd_e)}]"

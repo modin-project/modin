@@ -1385,6 +1385,30 @@ class NativePandasDeepCopy(EnvironmentVariable, type=bool):
         cls.put(False)
 
 
+class BackendMergeCastInPlace(EnvironmentVariable, type=bool):
+    """
+    Whether to cast a DataFrame in-place when performing a merge when using hybrid mode.
+
+    This flag modifies the behavior of a cast performed on operations involving more
+    than one type of query compiler. If enabled the actual cast will be performed in-place
+    and the input DataFrame will have a new backend. If disabled the original DataFrame
+    will remain on the same underlying engine.
+    """
+
+    varname = "MODIN_BACKEND_MERGE_CAST_IN_PLACE"
+    default = True
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable casting in place when performing a merge operation betwen two different compilers."""
+        cls.put(True)
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable casting in place when performing a merge operation betwen two different compilers."""
+        cls.put(False)
+
+
 class DynamicPartitioning(EnvironmentVariable, type=bool):
     """
     Set to true to use Modin's dynamic-partitioning implementation where possible.
