@@ -327,7 +327,7 @@ class BaseQueryCompiler(
         api_cls_name: Optional[str],
         operation: str,
         arguments: MappingProxyType[str, Any],
-    ) -> int:
+    ) -> Optional[int]:
         """
         Return the coercion costs of this qc to other_qc type.
 
@@ -353,7 +353,7 @@ class BaseQueryCompiler(
 
         Returns
         -------
-        int
+        Optional[int]
             Cost of migrating the data from this qc to the other_qc or
             None if the cost cannot be determined.
         """

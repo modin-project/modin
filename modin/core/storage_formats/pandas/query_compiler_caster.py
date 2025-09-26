@@ -1094,14 +1094,22 @@ def wrap_function_in_argument_caster(
                 arguments=args_dict,
             )
         else:
+            preop_switch = (
+                name
+                in _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS[
+                    BackendAndClassName(
+                        backend=input_backend,
+                        class_name=class_of_wrapped_fn,
+                    )
+                ]
+            )
             calculator: BackendCostCalculator = BackendCostCalculator(
                 operation_arguments=args_dict,
                 api_cls_name=class_of_wrapped_fn,
                 operation=name,
+                query_compilers=input_query_compilers,
+                preop_switch=preop_switch,
             )
-
-            for qc in input_query_compilers:
-                calculator.add_query_compiler(qc)
 
             if pin_target_backend is None:
                 result_backend = calculator.calculate()

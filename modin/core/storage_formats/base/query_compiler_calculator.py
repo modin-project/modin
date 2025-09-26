@@ -80,56 +80,52 @@ class BackendCostCalculator:
     api_cls_name : str or None
         Representing the class name of the function being called.
     operation : str representing the operation being performed
+    query_compilers : list of query compiler arguments
     """
 
     def __init__(
         self,
+        *,
         operation_arguments: MappingProxyType[str, Any],
         api_cls_name: Optional[str],
         operation: str,
+        query_compilers: list[BaseQueryCompiler],
+        preop_switch: bool,
     ):
         from modin.core.execution.dispatching.factories.dispatcher import (
             FactoryDispatcher,
         )
 
-        self._backend_data: dict[str, AggregatedBackendData] = {
-            backend: AggregatedBackendData(
-                backend,
-                FactoryDispatcher._get_prepared_factory_for_backend(
-                    backend=backend
-                ).io_cls.query_compiler_cls,
-            )
-            for backend in all_switchable_backends()
-        }
         self._qc_list: list[BaseQueryCompiler] = []
         self._result_backend = None
         self._api_cls_name = api_cls_name
         self._op = operation
         self._operation_arguments = operation_arguments
-        self._unswitchable_backends: set[str] = set()
-
-    def add_query_compiler(self, query_compiler: BaseQueryCompiler):
-        """
-        Add a query compiler to be considered for casting.
-
-        Parameters
-        ----------
-        query_compiler : QueryCompiler
-        """
-        from modin.core.execution.dispatching.factories.dispatcher import (
-            FactoryDispatcher,
-        )
-
-        self._qc_list.append(query_compiler)
-        # If a QC's backend was not configured as active, we need to create an entry for it here.
-        backend = query_compiler.get_backend()
-        if backend not in self._backend_data:
-            self._backend_data[backend] = AggregatedBackendData(
-                backend,
-                FactoryDispatcher._get_prepared_factory_for_backend(
-                    backend=backend
-                ).io_cls.query_compiler_cls,
-            )
+        self._backend_data = {}
+        self._qc_list = query_compilers[:]
+        for query_compiler in query_compilers:
+            # If a QC's backend was not configured as active, we need to create an entry for it here.
+            backend = query_compiler.get_backend()
+            if backend not in self._backend_data:
+                self._backend_data[backend] = AggregatedBackendData(
+                    backend,
+                    FactoryDispatcher._get_prepared_factory_for_backend(
+                        backend=backend
+                    ).io_cls.query_compiler_cls,
+                )
+        if preop_switch:
+            # Initialize backend data for any backends not found among query compiler arguments.
+            # Because we default to the first query compiler's backend if no cost information is available,
+            # this initialization must occur after iterating over query compiler arguments to ensure
+            # correct ordering in dictionary arguments.
+            for backend in all_switchable_backends():
+                if backend not in self._backend_data:
+                    self._backend_data[backend] = AggregatedBackendData(
+                        backend,
+                        FactoryDispatcher._get_prepared_factory_for_backend(
+                            backend=backend
+                        ).io_cls.query_compiler_cls,
+                    )
 
     def calculate(self) -> str:
         """
@@ -145,9 +141,16 @@ class BackendCostCalculator:
             (all stay costs for data already on that backend)
             + (cost of moving all other query compilers to this backend)
 
+        If the operation is a registered pre-operation switch point, then the list of target backends
+        is ALL active backends. Otherwise, only backends found among the arguments are considered.
+        Post-operation switch points are not yet supported.
+
         If the arguments contain no query compilers for a particular backend, then there are no stay
         costs. In this scenario, we expect the move_to cost for this backend to outweigh the corresponding
         stay costs for each query compiler's original backend.
+
+        If no argument QCs have cost information for each other (that is, move_to_cost and move_to_me_cost
+        returns None), then we attempt to move all data to the backend of the first QC.
 
         We considered a few alternative algorithms for switching calculation:
 
@@ -172,6 +175,11 @@ class BackendCostCalculator:
         -------
         str
             A string representing a backend.
+
+        Raises
+        ------
+        ValueError
+            Raises ValueError when the reported transfer cost for every backend exceeds its maximum cost.
         """
         if self._result_backend is not None:
             return self._result_backend
@@ -213,14 +221,10 @@ class BackendCostCalculator:
                     )
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
-                    else:
-                        # If move_to_me_cost and move_to_cost both returned none, then we cannot switch
-                        # to this backend.
-                        self._unswitchable_backends.add(backend_to)
 
         min_value = None
         for k, v in self._backend_data.items():
-            if v.cost > v.max_cost or k in self._unswitchable_backends:
+            if v.cost > v.max_cost:
                 continue
             if min_value is None or min_value > v.cost:
                 min_value = v.cost
@@ -254,7 +258,7 @@ class BackendCostCalculator:
 
         if self._result_backend is None:
             raise ValueError(
-                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{','.join(self._backend_data.keys())}]"
+                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{', '.join(self._backend_data.keys())}]"
             )
         return self._result_backend
 
@@ -296,8 +300,7 @@ class BackendCostCalculator:
         str
             String representation of calculator state.
         """
-        return ",".join(
+        return ", ".join(
             f"{'*'+k if k is selected_backend else k}:{v.cost}/{v.max_cost}"
             for k, v in self._backend_data.items()
-            if k not in self._unswitchable_backends
         )
