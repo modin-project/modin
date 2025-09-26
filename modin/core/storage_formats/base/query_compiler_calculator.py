@@ -32,15 +32,17 @@ from modin.logging import get_logger
 from modin.logging.metrics import emit_metric
 
 
-def all_switchable_backends():
-    yield from filter(
-        # Disable automatically switching to these engines for now, because
-        # 1) _get_prepared_factory_for_backend() currently calls
-        # _initialize_engine(), which starts up the ray/dask/unidist
-        #  processes
-        # 2) we can't decide to switch to unidist in the middle of execution.
-        lambda backend: backend not in ("Ray", "Unidist", "Dask"),
-        Backend.get_active_backends(),
+def all_switchable_backends() -> list[str]:
+    return list(
+        filter(
+            # Disable automatically switching to these engines for now, because
+            # 1) _get_prepared_factory_for_backend() currently calls
+            # _initialize_engine(), which starts up the ray/dask/unidist
+            #  processes
+            # 2) we can't decide to switch to unidist in the middle of execution.
+            lambda backend: backend not in ("Ray", "Unidist", "Dask"),
+            Backend.get_active_backends(),
+        )
     )
 
 
@@ -154,7 +156,7 @@ class BackendCostCalculator:
         unrelated backends would outweigh any possible gains in computation speed. However, certain
         pathological cases that significantly changed the size of input or output data (e.g. cross join)
         would create situations where transferring data after the computation became prohibitively
-        expensive, so we chose to instead. --------------------
+        expensive, so we chose to allow switching to unrelated backends.
         Additionally, the original implementation had a bug where stay_cost was only computed for the
         _first_ query compiler of each backend, thus under-reporting the cost of computation for any
         backend with multiple QCs present. In practice this very rarely affected the chosen result.
@@ -226,7 +228,7 @@ class BackendCostCalculator:
 
         if len(self._backend_data) > 1:
             get_logger().info(
-                f"BackendCostCalculator results for {'pd' if self._api_cls_name else self._api_cls_name}.{self._op}: {self._calc_result_log(self._result_backend)}"
+                f"BackendCostCalculator results for {'pd' if self._api_cls_name is None else self._api_cls_name}.{self._op}: {self._calc_result_log(self._result_backend)}"
             )
             # Does not need to be secure, should not use system entropy
             metrics_group = "%04x" % random.randrange(16**4)
