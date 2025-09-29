@@ -1434,6 +1434,30 @@ class BackendMergeCastInPlace(EnvironmentVariable, type=bool):
         cls.put(False)
 
 
+class BackendJoinConsiderAllBackends(EnvironmentVariable, type=bool):
+    """
+    Whether to consider all active backends when performing a pre-operation switch for join operations.
+
+    Only used when AutoSwitchBackend is active.
+    By default, only backends already present in the arguments of a join operation are considered when
+    switching backends. Enabling this flag will allow join operations that are registered
+    as pre-op switches to consider backends other than those directly present in the arguments.
+    """
+
+    varname = "MODIN_BACKEND_JOIN_CONSIDER_ALL_BACKENDS"
+    default = True
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable casting in place when performing a merge operation betwen two different compilers."""
+        cls.put(True)
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable casting in place when performing a merge operation betwen two different compilers."""
+        cls.put(False)
+
+
 class DynamicPartitioning(EnvironmentVariable, type=bool):
     """
     Set to true to use Modin's dynamic-partitioning implementation where possible.

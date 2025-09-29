@@ -23,7 +23,7 @@ import random
 from types import MappingProxyType
 from typing import Any, Optional
 
-from modin.config import Backend
+from modin.config import Backend, BackendJoinConsiderAllBackends
 from modin.core.storage_formats.base.query_compiler import (
     BaseQueryCompiler,
     QCCoercionCost,
@@ -124,7 +124,7 @@ class BackendCostCalculator:
                         backend=backend
                     ).io_cls.query_compiler_cls,
                 )
-        if preop_switch:
+        if preop_switch and BackendJoinConsiderAllBackends.get():
             # Initialize backend data for any backends not found among query compiler arguments.
             # Because we default to the first query compiler's backend if no cost information is available,
             # this initialization must occur after iterating over query compiler arguments to ensure

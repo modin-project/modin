@@ -1596,6 +1596,29 @@ class TestSwitchBackendPreOp:
             assert cloud_high_self_df.get_backend() == "Cloud"
             assert result.get_backend() == "Cloud"
 
+    @pytest.mark.parametrize("consider_all_backends", [True, False])
+    def test_consider_all_backends_flag(
+        self, pico_df, cloud_df, cloud_high_self_df, consider_all_backends
+    ):
+        # When concat is a switch point, backends other than those present in arguments should be considered
+        # if BackendJoinConsiderAllBackends is set.
+        with backend_test_context(
+            test_backend="Cloud", choices=(*DEFAULT_TEST_BACKENDS, "Eager")
+        ), config_context(BackendJoinConsiderAllBackends=consider_all_backends):
+            register_function_for_pre_op_switch(
+                class_name=None, backend="Cloud", method="concat"
+            )
+            result = pd.concat([cloud_df, pico_df])
+            # concat causes in-place switching
+            if consider_all_backends:
+                assert pico_df.get_backend() == "Eager"
+                assert cloud_df.get_backend() == "Eager"
+                assert result.get_backend() == "Eager"
+            else:
+                assert pico_df.get_backend() == "Cloud"
+                assert cloud_df.get_backend() == "Cloud"
+                assert result.get_backend() == "Cloud"
+
 
 def test_move_to_clears_pin():
     # Pin status is reset to false after a set_backend call
