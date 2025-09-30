@@ -801,12 +801,18 @@ def _get_backend_for_auto_switch(
 
     min_move_stay_delta = None
     best_backend = starting_backend
-
+    all_backends_impossible = True
+    
     stay_cost = input_qc.stay_cost(
         api_cls_name=class_of_wrapped_fn,
         operation=function_name,
         arguments=arguments,
     )
+    
+    # Check if the current backend can handle the workload
+    if stay_cost is not None and stay_cost < QCCoercionCost.COST_IMPOSSIBLE:
+        all_backends_impossible = False
+    
     data_max_shape = input_qc._max_shape()
     emit_metric(
         f"hybrid.auto.api.{class_of_wrapped_fn}.{function_name}.group.{metrics_group}",
@@ -863,6 +869,12 @@ def _get_backend_for_auto_switch(
                 # We can execute this workload if we need to, consider
                 # move_to_cost/transfer time in our decision
                 move_stay_delta = (move_to_cost + other_execute_cost) - stay_cost
+
+            # Check if this backend can handle the workload (both execution and transfer must be possible)
+            if (other_execute_cost < QCCoercionCost.COST_IMPOSSIBLE and 
+                move_to_cost < QCCoercionCost.COST_IMPOSSIBLE):
+                all_backends_impossible = False
+            
             if move_stay_delta < 0 and (
                 min_move_stay_delta is None or move_stay_delta < min_move_stay_delta
             ):
@@ -888,6 +900,19 @@ def _get_backend_for_auto_switch(
                 + f", stay_cost {stay_cost}, and move-stay delta "
                 + f"{move_stay_delta}"
             )
+
+    # Check if all backends are impossible and raise exception
+    if all_backends_impossible:
+        get_logger().error(
+            f"All backends impossible for {class_of_wrapped_fn}.{function_name}: "
+            f"starting_backend={starting_backend}, stay_cost={stay_cost}"
+        )
+        ErrorMessage.not_implemented(
+            f"No available backend can handle the workload for operation "
+            f"{class_of_wrapped_fn}.{function_name}. All backends returned COST_IMPOSSIBLE. "
+            f"Current backend: {starting_backend}, stay_cost: {stay_cost}. "
+            f"This operation cannot be executed due to memory or capability constraints across all backends."
+        )
 
     if best_backend == starting_backend:
         emit_metric(f"hybrid.auto.decision.{best_backend}.group.{metrics_group}", 0)
