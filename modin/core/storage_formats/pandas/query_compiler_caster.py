@@ -903,6 +903,7 @@ def _get_backend_for_auto_switch(
 
     # Check if all backends are impossible and raise exception
     if all_backends_impossible:
+        emit_metric(f"hybrid.auto.decision.impossible.group.{metrics_group}", 1)
         get_logger().error(
             f"All backends impossible for {class_of_wrapped_fn}.{function_name}: "
             f"starting_backend={starting_backend}, stay_cost={stay_cost}"
