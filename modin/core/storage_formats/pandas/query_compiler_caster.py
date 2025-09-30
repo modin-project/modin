@@ -128,12 +128,16 @@ BackendAndClassName = namedtuple("BackendAndClassName", ["backend", "class_name"
 
 _AUTO_SWITCH_CLASS = defaultdict[BackendAndClassName, set[str]]
 
+# For pre-op switch methods, we store method_name -> is_conditional mapping
+# where is_conditional=True means switch only if parameters are unsupported
+_AUTO_SWITCH_PRE_OP_CLASS = defaultdict[BackendAndClassName, dict[str, bool]]
+
 _CLASS_AND_BACKEND_TO_POST_OP_SWITCH_METHODS: _AUTO_SWITCH_CLASS = _AUTO_SWITCH_CLASS(
     set
 )
 
-_CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS: _AUTO_SWITCH_CLASS = _AUTO_SWITCH_CLASS(
-    set
+_CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS: _AUTO_SWITCH_PRE_OP_CLASS = _AUTO_SWITCH_PRE_OP_CLASS(
+    dict
 )
 
 
@@ -621,21 +625,45 @@ def _maybe_switch_backend_pre_op(
         to the new query compiler type.
     """
     input_backend = input_qc.get_backend()
-    if (
-        function_name
-        in _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS[
-            BackendAndClassName(
-                backend=input_qc.get_backend(), class_name=class_of_wrapped_fn
+    backend_class_key = BackendAndClassName(
+        backend=input_qc.get_backend(), class_name=class_of_wrapped_fn
+    )
+    
+    # Check if this function is registered for pre-op switch
+    registered_methods = _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS[backend_class_key]
+    
+    if function_name in registered_methods:
+        is_conditional = registered_methods[function_name]
+        
+        if is_conditional:
+            # Conditional switch: only switch if parameters are unsupported
+            stay_cost = input_qc.stay_cost(
+                api_cls_name=class_of_wrapped_fn,
+                operation=function_name,
+                arguments=arguments,
             )
-        ]
-    ):
-        result_backend = _get_backend_for_auto_switch(
-            input_qc=input_qc,
-            class_of_wrapped_fn=class_of_wrapped_fn,
-            function_name=function_name,
-            arguments=arguments,
-        )
+            
+            # Only trigger switch if parameters are unsupported (COST_IMPOSSIBLE)
+            if stay_cost is not None and stay_cost >= QCCoercionCost.COST_IMPOSSIBLE:
+                result_backend = _get_backend_for_auto_switch(
+                    input_qc=input_qc,
+                    class_of_wrapped_fn=class_of_wrapped_fn,
+                    function_name=function_name,
+                    arguments=arguments,
+                )
+            else:
+                # Parameters are supported, no need to switch
+                result_backend = input_backend
+        else:
+            # Unconditional switch: always consider switching
+            result_backend = _get_backend_for_auto_switch(
+                input_qc=input_qc,
+                class_of_wrapped_fn=class_of_wrapped_fn,
+                function_name=function_name,
+                arguments=arguments,
+            )
     else:
+        # No registration found, stay on current backend
         result_backend = input_backend
 
     def cast_to_qc(arg: Any) -> Any:
@@ -1228,7 +1256,7 @@ def register_function_for_post_op_switch(
 
 
 def register_function_for_pre_op_switch(
-    class_name: Optional[str], backend: str, method: str
+    class_name: Optional[str], backend: str, method: str, *, conditional: bool = False
 ) -> None:
     """
     Register a function for pre-operation backend switch.
@@ -1242,7 +1270,12 @@ def register_function_for_pre_op_switch(
         Only consider switching when the starting backend is this one.
     method : str
         The name of the method to register.
+    conditional : bool, default: False
+        If True, the switch will only be triggered if unsupported parameters are detected
+        for the operation, avoiding unnecessary backend switching when parameters
+        are supported. If False, the switch will always be considered (existing behavior).
     """
     _CLASS_AND_BACKEND_TO_PRE_OP_SWITCH_METHODS[
         BackendAndClassName(backend=backend, class_name=class_name)
-    ].add(method)
+    ][method] = conditional
+
