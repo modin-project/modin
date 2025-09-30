@@ -327,7 +327,7 @@ class BaseQueryCompiler(
         api_cls_name: Optional[str],
         operation: str,
         arguments: MappingProxyType[str, Any],
-    ) -> int:
+    ) -> Optional[int]:
         """
         Return the coercion costs of this qc to other_qc type.
 
@@ -353,7 +353,7 @@ class BaseQueryCompiler(
 
         Returns
         -------
-        int
+        Optional[int]
             Cost of migrating the data from this qc to the other_qc or
             None if the cost cannot be determined.
         """
@@ -516,7 +516,8 @@ class BaseQueryCompiler(
         return cls._TRANSFER_THRESHOLD
 
     @disable_logging
-    def max_cost(self) -> int:
+    @classmethod
+    def max_cost(cls) -> int:
         """
         Return the max cost allowed by this engine.
 

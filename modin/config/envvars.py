@@ -515,6 +515,27 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         cls.choices = new_choices
 
     @classmethod
+    def activate(cls, backend: str) -> None:
+        """
+        Activate a backend that was previously registered.
+
+        This is a no-op if the backend is already active.
+
+        Parameters
+        ----------
+        backend : str
+            Backend to activate.
+
+        Raises
+        ------
+        ValueError
+            Raises a ValueError if backend was not previously registered.
+        """
+        if backend not in cls._BACKEND_TO_EXECUTION:
+            raise ValueError(f"Unknown backend '{backend}' is not registered.")
+        cls.choices = (*cls.choices, backend)
+
+    @classmethod
     def get_active_backends(cls) -> tuple[str, ...]:
         """
         Get the active backends available for manual and automatic switching.
@@ -570,6 +591,10 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
             )
         normalized_value = cls.normalize(backend)
         if normalized_value not in cls.choices:
+            if normalized_value in cls._BACKEND_TO_EXECUTION:
+                raise ValueError(
+                    f"Backend '{backend}' is not currently active. Activate it first with Backend.activate('{backend})'."
+                )
             backend_choice_string = ", ".join(f"'{choice}'" for choice in cls.choices)
             raise ValueError(
                 f"Unknown backend '{backend}'. Available backends are: "
@@ -1396,6 +1421,30 @@ class BackendMergeCastInPlace(EnvironmentVariable, type=bool):
     """
 
     varname = "MODIN_BACKEND_MERGE_CAST_IN_PLACE"
+    default = True
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable casting in place when performing a merge operation betwen two different compilers."""
+        cls.put(True)
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable casting in place when performing a merge operation betwen two different compilers."""
+        cls.put(False)
+
+
+class BackendJoinConsiderAllBackends(EnvironmentVariable, type=bool):
+    """
+    Whether to consider all active backends when performing a pre-operation switch for join operations.
+
+    Only used when AutoSwitchBackend is active.
+    By default, only backends already present in the arguments of a join operation are considered when
+    switching backends. Enabling this flag will allow join operations that are registered
+    as pre-op switches to consider backends other than those directly present in the arguments.
+    """
+
+    varname = "MODIN_BACKEND_JOIN_CONSIDER_ALL_BACKENDS"
     default = True
 
     @classmethod
