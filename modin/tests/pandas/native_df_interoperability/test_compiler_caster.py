@@ -718,7 +718,7 @@ def test_merge_in_place(default_df, lazy_df, cloud_df):
         lazy_df = lazy_df.move_to("Lazy")
         cloud_df = cloud_df.move_to("Cloud")
         df = cloud_df.merge(lazy_df)
-        assert type(df) is type(cloud_df)
+        assert df.get_backend() == cloud_df.get_backend()
         assert lazy_df.get_backend() == "Lazy"
         assert cloud_df.get_backend() == "Cloud"
 
@@ -729,15 +729,15 @@ def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
     # the other way around, eager has a special ability to
     # control the directionality of the cast.
     df = default_df.merge(eager_df)
-    assert type(df) is type(eager_df)
+    assert df.get_backend() == eager_df.get_backend()
     df = cloud_df.merge(eager_df)
-    assert type(df) is type(eager_df)
+    assert df.get_backend() == eager_df.get_backend()
 
     # lazy_df tries to pawn off work on other engines
     df = default_df.merge(lazy_df)
-    assert type(df) is type(default_df)
+    assert df.get_backend() == default_df.get_backend()
     df = cloud_df.merge(lazy_df)
-    assert type(df) is type(cloud_df)
+    assert df.get_backend() == cloud_df.get_backend()
 
 
 def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
