@@ -534,13 +534,6 @@ def test_cast_to_first_backend_with___init__(pico_df, cluster_df):
     assert df3.get_backend() == "Cluster"  # result should be on cluster
 
 
-def test_no_solution(pico_df, local_df, cluster_df, cloud_df):
-    # Backends should appear in the order of arguments, followed by any active backends not present
-    # among the arguments.
-    with pytest.raises(ValueError, match=r"Pico, Local_Machine, Cluster, Cloud"):
-        pd.concat(axis=1, objs=[pico_df, local_df, cluster_df, cloud_df])
-
-
 def test_self_cost_causes_move(cloud_high_self_df, cluster_df):
     """
     Test that ``self_cost`` is being properly considered.
@@ -572,9 +565,9 @@ def test_self_cost_causes_move(cloud_high_self_df, cluster_df):
         ("cloud_df", "cloud_df", "cloud_df", "cloud_df", "Cloud"),
         # moving all dfs to cloud is 1250, moving to cluster is 1000
         # regardless of how they are ordered
-        ("pico_df", "local_df", "cluster_df", "cloud_df", None),
-        ("cloud_df", "local_df", "cluster_df", "pico_df", None),
-        ("cloud_df", "cluster_df", "local_df", "pico_df", None),
+        ("pico_df", "local_df", "cluster_df", "cloud_df", "Cluster"),
+        ("cloud_df", "local_df", "cluster_df", "pico_df", "Cluster"),
+        ("cloud_df", "cluster_df", "local_df", "pico_df", "Cluster"),
         ("cloud_df", "cloud_df", "local_df", "pico_df", "Cloud"),
         # Still move everything to cloud
         ("pico_df", "pico_df", "pico_df", "cloud_df", "Cloud"),
@@ -767,6 +760,16 @@ def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_loc
     expected_pandas.iloc[:, 0] = cloud_df._to_pandas().iloc[:, 0] + 1
     df_equals(local_df, expected_pandas)
     assert local_df.get_backend() == "Local_Machine" if pin_local else "Cloud"
+
+
+def test_single_backend_merge():
+    with backend_test_context(
+        test_backend="Pico",
+        choices=["Pico"],
+    ):
+        df1 = pd.DataFrame({"a": [1]})
+        df1["two"] = pd.to_datetime(df1["a"])
+        assert df1.get_backend() == "Pico"
 
 
 def test_stay_or_move_evaluation(cloud_high_self_df, default_df):

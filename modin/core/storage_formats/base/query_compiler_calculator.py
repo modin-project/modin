@@ -233,20 +233,31 @@ class BackendCostCalculator:
                     if cost is not None:
                         self._add_cost_data(backend_to, cost)
 
-        min_value = None
         self._result_backend = None
-        # Set a default backend to cast to
-        if len(self._backend_data) > 0:
-            self._result_backend = list(self._backend_data.keys())[0]
-        else:
-            raise ValueError("No backends are available to calculate costs.")
 
-        for k, v in self._backend_data.items():
-            if v.cost > v.max_cost:
-                continue
-            if min_value is None or min_value > v.cost:
-                min_value = v.cost
-                self._result_backend = k
+        def get_min_cost_backend(skip_exceeds_max_cost=True) -> str:
+            result = None
+            min_value = None
+            for k, v in self._backend_data.items():
+                if skip_exceeds_max_cost and v.cost > v.max_cost:
+                    continue
+                if min_value is None or min_value > v.cost:
+                    min_value = v.cost
+                    result = k
+            return result
+
+        # Get the best backend, skipping backends where we may exceed
+        # the total cost
+        self._result_backend = get_min_cost_backend(skip_exceeds_max_cost=True)
+
+        # If we still do not have a backend, pick the best backend while
+        # ignoring max_cost
+        if self._result_backend is None:
+            self._result_backend = get_min_cost_backend(skip_exceeds_max_cost=False)
+
+        # This should not happen
+        if self._result_backend is None:
+            raise ValueError("No backends are available to calculate costs.")
 
         if len(self._backend_data) > 1:
             get_logger().info(
