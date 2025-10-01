@@ -729,15 +729,15 @@ def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
     # the other way around, eager has a special ability to
     # control the directionality of the cast.
     df = default_df.merge(eager_df)
-    assert type(df) is type(eager_df)
+    assert df.get_backend() is eager_df.get_backend()
     df = cloud_df.merge(eager_df)
-    assert type(df) is type(eager_df)
+    assert df.get_backend() is eager_df.get_backend()
 
     # lazy_df tries to pawn off work on other engines
     df = default_df.merge(lazy_df)
-    assert type(df) is type(default_df)
+    assert df.get_backend() is default_df.get_backend()
     df = cloud_df.merge(lazy_df)
-    assert type(df) is type(cloud_df)
+    assert df.get_backend() is cloud_df.get_backend()
 
 
 def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
