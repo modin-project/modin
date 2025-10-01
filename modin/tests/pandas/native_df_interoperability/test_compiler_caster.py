@@ -762,14 +762,14 @@ def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_loc
     assert local_df.get_backend() == "Local_Machine" if pin_local else "Cloud"
 
 
-def test_single_backend_merge():
+def test_single_backend_merge_no_good_options():
     with backend_test_context(
-        test_backend="Pico",
-        choices=["Pico"],
+        test_backend="Small_Data_Local",
+        choices=["Small_Data_Local"],
     ):
-        df1 = pd.DataFrame({"a": [1]})
+        df1 = pd.DataFrame({"a": [1] * 100})
         df1["two"] = pd.to_datetime(df1["a"])
-        assert df1.get_backend() == "Pico"
+        assert df1.get_backend() == "Small_Data_Local"
 
 
 def test_stay_or_move_evaluation(cloud_high_self_df, default_df):
