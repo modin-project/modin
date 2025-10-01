@@ -8,7 +8,7 @@ Factories Module Description
 
 Brief description
 '''''''''''''''''
-Modin has several execution engines and storage formats, combining them together forms certain executions. 
+Modin has several execution engines and storage formats; combining them forms certain executions.
 Calling any :py:class:`~modin.pandas.dataframe.DataFrame` API function will end up in some execution-specific method. The responsibility of dispatching high-level API calls to
 execution-specific function belongs to the :ref:`QueryCompiler <query_compiler_def>`, which is determined at the time of the dataframe's creation by the factory of
 the corresponding execution. The mission of this module is to route IO function calls from

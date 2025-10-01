@@ -28,7 +28,7 @@ the :py:class:`~modin.core.execution.unidist.implementations.pandas_on_unidist.d
 generic functionality from the ``GenericUnidistDataframe`` and the :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe`.
 
 ..
-  TODO: insert a link to ``GenericUnidistDataframe`` once we add an implementatiton of the class
+  TODO: insert a link to ``GenericUnidistDataframe`` once we add an implementation of the class
 
 PandasOnUnidist Dataframe implementation
 ----------------------------------------
