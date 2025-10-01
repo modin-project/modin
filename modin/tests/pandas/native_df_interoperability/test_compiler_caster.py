@@ -737,7 +737,7 @@ def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
     df = default_df.merge(lazy_df)
     assert df.get_backend() == default_df.get_backend()
     df = cloud_df.merge(lazy_df)
-    assert df.get_backend() is cloud_df.get_backend()
+    assert df.get_backend() == cloud_df.get_backend()
 
 
 def test_setitem_in_place_with_self_switching_backend(cloud_df, local_df):
