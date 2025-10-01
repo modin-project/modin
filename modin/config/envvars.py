@@ -508,10 +508,12 @@ class Backend(EnvironmentVariableDisallowingExecutionAndBackendBothSet, type=str
         ValueError
             Raises a ValueError when the set of new_choices are not already registered
         """
-        if not all(i in cls._BACKEND_TO_EXECUTION for i in new_choices):
-            raise ValueError(
-                f"Active backend choices {new_choices} are not all registered."
-            )
+        registered_backends = cls._BACKEND_TO_EXECUTION
+        for i in new_choices:
+            if i not in registered_backends:
+                raise ValueError(
+                    f"Active backend choices {new_choices} are not all registered."
+                )
         cls.choices = new_choices
 
     @classmethod
