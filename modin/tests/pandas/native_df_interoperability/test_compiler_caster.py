@@ -735,7 +735,7 @@ def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
 
     # lazy_df tries to pawn off work on other engines
     df = default_df.merge(lazy_df)
-    assert df.get_backend() is default_df.get_backend()
+    assert df.get_backend() == default_df.get_backend()
     df = cloud_df.merge(lazy_df)
     assert df.get_backend() is cloud_df.get_backend()
 
