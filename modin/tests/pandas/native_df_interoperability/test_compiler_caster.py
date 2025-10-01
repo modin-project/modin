@@ -729,7 +729,7 @@ def test_information_asymmetry(default_df, cloud_df, eager_df, lazy_df):
     # the other way around, eager has a special ability to
     # control the directionality of the cast.
     df = default_df.merge(eager_df)
-    assert df.get_backend() is eager_df.get_backend()
+    assert df.get_backend() == eager_df.get_backend()
     df = cloud_df.merge(eager_df)
     assert df.get_backend() is eager_df.get_backend()
 
