@@ -761,6 +761,7 @@ def test_switch_local_to_cloud_with_iloc___setitem__(local_df, cloud_df, pin_loc
     df_equals(local_df, expected_pandas)
     assert local_df.get_backend() == "Local_Machine" if pin_local else "Cloud"
 
+
 # This test should force the creation of a dataframe which
 # is too large for the backend and verify that it stays there
 # because there are no other options
