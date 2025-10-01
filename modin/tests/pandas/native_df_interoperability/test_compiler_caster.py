@@ -718,7 +718,7 @@ def test_merge_in_place(default_df, lazy_df, cloud_df):
         lazy_df = lazy_df.move_to("Lazy")
         cloud_df = cloud_df.move_to("Cloud")
         df = cloud_df.merge(lazy_df)
-        assert type(df) is type(cloud_df)
+        assert df.get_backend() is cloud_df.get_backend()
         assert lazy_df.get_backend() == "Lazy"
         assert cloud_df.get_backend() == "Cloud"
 
