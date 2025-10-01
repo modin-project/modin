@@ -234,6 +234,13 @@ class BackendCostCalculator:
                         self._add_cost_data(backend_to, cost)
 
         min_value = None
+        self._result_backend = None
+        # Set a default backend to cast to
+        if len(self._backend_data) > 0:
+            self._result_backend = list(self._backend_data.keys())[0]
+        else:
+            raise ValueError("No backends are available to calculate costs.")
+
         for k, v in self._backend_data.items():
             if v.cost > v.max_cost:
                 continue
@@ -267,10 +274,6 @@ class BackendCostCalculator:
                 1,
             )
 
-        if self._result_backend is None:
-            raise ValueError(
-                f"Cannot cast to any of the available backends, as the estimated cost is too high. Tried these backends: [{', '.join(self._backend_data.keys())}]"
-            )
         return self._result_backend
 
     def _add_cost_data(self, backend, cost):
