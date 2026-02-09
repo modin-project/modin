@@ -104,7 +104,7 @@ def unwrap_partitions(
                     blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
-                ), f"Implementation assumes that partition contains a single block, but {len(blocks)} recieved."
+                ), f"Implementation assumes that partition contains a single block, but {len(blocks)} received."
                 return blocks[0]
 
             if get_ip:
