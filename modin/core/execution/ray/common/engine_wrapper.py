@@ -255,7 +255,7 @@ class SignalActor:  # pragma: no cover
 
     def send(self, event_idx: int):
         """
-        Indicate that event with `event_idx` has occured.
+        Indicate that event with `event_idx` has occurred.
 
         Parameters
         ----------
@@ -265,7 +265,7 @@ class SignalActor:  # pragma: no cover
 
     async def wait(self, event_idx: int):
         """
-        Wait until event with `event_idx` has occured.
+        Wait until event with `event_idx` has occurred.
 
         Parameters
         ----------
@@ -275,7 +275,7 @@ class SignalActor:  # pragma: no cover
 
     def is_set(self, event_idx: int) -> bool:
         """
-        Check that event with `event_idx` had occured or not.
+        Check that event with `event_idx` had occurred or not.
 
         Parameters
         ----------

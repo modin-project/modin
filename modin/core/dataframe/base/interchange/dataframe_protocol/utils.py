@@ -177,9 +177,9 @@ def raise_copy_alert(copy_reason: Optional[str] = None) -> None:
     ----------
     copy_reason : str, optional
         The reason of making a copy. Should fit to the following format:
-        'The copy occured due to {copy_reason}.'.
+        'The copy occurred due to {copy_reason}.'.
     """
     msg = "Copy required but 'allow_copy=False' is set."
     if copy_reason:
-        msg += f" The copy occured due to {copy_reason}."
+        msg += f" The copy occurred due to {copy_reason}."
     raise RuntimeError(msg)
