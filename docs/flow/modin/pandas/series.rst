@@ -12,9 +12,12 @@ into a representation that can be processed in parallel by the partitions. These
 results can be e.g., reduced to single output, identical to the single threaded
 pandas ``Series`` method output.
 
-..
-    TODO: add link to the docs with detailed description of queries compilation
-    and execution ater DOCS-#2996 is merged.
+.. note::
+    For a detailed description of how Modin compiles and executes queries, see:
+    
+    - :doc:`Core Dataframe Algebra </flow/modin/core/dataframe/algebra>` (operator patterns like Map/Reduce/Binary)
+    - :doc:`BaseQueryCompiler </flow/modin/core/storage_formats/base/query_compiler>` (common compiler interface)
+    - :doc:`PandasQueryCompiler </flow/modin/core/storage_formats/pandas/query_compiler>` (pandas storage format specifics)
 
 Public API
 ----------

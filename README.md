@@ -48,7 +48,7 @@ In the GIFs below, Modin (left) and pandas (right) perform *the same pandas oper
 </tbody>
 </table>
 
-The charts below show the speedup you get by replacing pandas with Modin based on the examples above. The example notebooks can be found [here](examples/jupyter). To learn more about the speedups you could get with Modin and try out some examples on your own, check out our [10-minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
+The charts below show the speedup you get by replacing pandas with Modin based on the examples above. The example notebooks can be found [here](examples/jupyter). To learn more about the speedups you could get with Modin and try out some examples on your own, check out our [10-minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html).
 
 <img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
@@ -56,7 +56,7 @@ The charts below show the speedup you get by replacing pandas with Modin based o
 
 #### From PyPI
 
-Modin can be installed with `pip` on Linux, Windows and MacOS:
+Modin can be installed with `pip` on Linux, Windows and macOS:
 
 ```bash
 pip install "modin[all]" # (Recommended) Install Modin with Ray and Dask engines.
@@ -84,7 +84,7 @@ Modin automatically detects which engine(s) you have installed and uses that for
 
 #### From conda-forge
 
-Installing from [conda forge](https://github.com/conda-forge/modin-feedstock) using `modin-all`
+Installing from [conda-forge](https://github.com/conda-forge/modin-feedstock) using `modin-all`
 will install Modin and three engines: [Ray](https://github.com/ray-project/ray), [Dask](https://github.com/dask/dask) and
 [MPI through unidist](https://github.com/modin-project/unidist).
 
@@ -114,7 +114,7 @@ To speed up conda installation we recommend using libmamba solver. To do this in
 conda install -n base conda-libmamba-solver
 ```
 
-and then use it during istallation either like:
+and then use it during installation either like:
 
 ```bash
 conda install -c conda-forge modin-ray --experimental-solver=libmamba
@@ -161,7 +161,7 @@ _Note: You should not change the engine after your first operation with Modin as
 
 #### Which engine should I use?
 
-On Linux, MacOS, and Windows you can install and use either Ray, Dask or MPI through unidist. There is no knowledge required
+On Linux, macOS, and Windows you can install and use either Ray, Dask or MPI through unidist. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
 

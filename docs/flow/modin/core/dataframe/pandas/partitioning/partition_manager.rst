@@ -23,11 +23,14 @@ Partition manager can apply user-passed (arbitrary) function in different modes:
 
 * along a full axis (apply a function to an entire column or row made up of block partitions when user function needs information about the whole axis)
 
-It can also broadcast partitions from `right` to `left` when executing certain operations making
-`right` partitions available for functions executed where `left` live.
+It can also broadcast partitions from `right` to `left` when executing certain operations,
+making `right` partitions available for functions executed where `left` live.
 
-..
-  TODO: insert more text explaining "broadcast" term
+In this context, "broadcast" means replicating and aligning the partitions of the `right`
+operand across the appropriate axis of the `left` operand so that a partition-wise function
+can be applied. If the two operands have different partitioning along the index/columns,
+Modin will align them first, which may require repartitioning and introduce extra cost.
+See also the discussion of the Binary operator in :doc:`Core Dataframe Algebra </flow/modin/core/dataframe/algebra>`.
 
 Partition manager also is used to create "logical" partitions, or :doc:`axis partitions <axis_partition>`
 by joining existing partitions along specified axis (either rows or labels),
