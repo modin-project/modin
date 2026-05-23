@@ -147,7 +147,7 @@ _DEFAULT_BEHAVIOUR = {
     "__constructor__",
     "_create_or_update_from_compiler",
     "_update_inplace",
-    # for persistance support;
+    # for persistence support;
     # see DataFrame methods docstrings for more
     "_inflate_light",
     "_inflate_full",

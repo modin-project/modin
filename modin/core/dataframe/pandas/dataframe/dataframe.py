@@ -2588,7 +2588,7 @@ class PandasDataframe(
         preserve_columns : bool, default: False
             If the columns cache should be preserved (specify this flag if `func` doesn't change column labels).
         data : PandasDataframe, optional
-            Dataframe to range-partition along with the `self` frame. If specified, the `func` will recieve
+            Dataframe to range-partition along with the `self` frame. If specified, the `func` will receive
             a dataframe with an additional MultiIndex level in columns that separates `self` and `data`:
             ``df["grouper"] # self`` and ``df["data"] # data``.
         data_key_columns : list of hashables, optional

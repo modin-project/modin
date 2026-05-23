@@ -1028,7 +1028,7 @@ def test_split_partitions_with_empty_pivots(col_name, ascending):
         ],
         ascending=ascending,
     )
-    # We're expecting to recieve a single split here
+    # We're expecting to receive a single split here
     assert isinstance(result, tuple)
     assert len(result) == 1
     assert result[0].equals(df)
