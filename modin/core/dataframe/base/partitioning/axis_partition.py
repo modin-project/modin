@@ -126,7 +126,7 @@ class BaseDataframeAxisPartition(
             extract_metadata = bool(self._PARTITIONS_METADATA_LEN)
 
         if extract_metadata:
-            # Here we recieve a 1D array of futures describing partitions and their metadata as:
+            # Here we receive a 1D array of futures describing partitions and their metadata as:
             # [object_id{partition_idx}, metadata{partition_idx}_{metadata_idx}, ...]
             # Here's an example of such array:
             # [
