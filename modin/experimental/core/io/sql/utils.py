@@ -13,9 +13,29 @@
 
 """Utilities for experimental SQL format type IO functions implementations."""
 
+import re
+
 import pandas
 import pandas._libs.lib as lib
 from sqlalchemy import MetaData, Table, create_engine, inspect, text
+
+# Regex for a valid SQL identifier (alphanumeric + underscore, no leading digit)
+_SQL_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def _validate_sql_identifier(name: str, field_name: str = "identifier") -> None:
+    """
+    Validate that ``name`` is a safe SQL identifier.
+
+    Raises ValueError if the name contains characters outside [a-zA-Z0-9_]
+    or starts with a digit.
+    """
+    if not _SQL_IDENTIFIER_RE.match(name):
+        raise ValueError(
+            f"Invalid SQL {field_name}: {name!r}. "
+            f"Only alphanumeric characters and underscores are allowed, "
+            f"and the first character must be a letter or underscore."
+        )
 
 from modin.core.storage_formats.pandas.parsers import _split_result_for_readers
 
@@ -131,6 +151,7 @@ def build_query_from_table(name):
     str
         Query string.
     """
+    _validate_sql_identifier(name, field_name="table name")
     return "SELECT * FROM {0}".format(name)
 
 
@@ -252,6 +273,7 @@ def query_put_bounders(query, partition_column, start, end):  # pragma: no cover
     str
         Query string with boundaries.
     """
+    _validate_sql_identifier(partition_column, field_name="partition_column")
     where = " WHERE TMP_TABLE.{0} >= {1} AND TMP_TABLE.{0} <= {2}".format(
         partition_column, start, end
     )
