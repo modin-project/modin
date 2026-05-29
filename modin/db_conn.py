@@ -23,6 +23,7 @@ make a db connection. It can make and provide a connection whenever the Modin
 driver or a worker wants one.
 """
 
+import re
 from typing import Any, Dict, Optional, Sequence
 
 _PSYCOPG_LIB_NAME = "psycopg2"
@@ -33,6 +34,34 @@ class UnsupportedDatabaseException(Exception):
     """Modin can't create a particular kind of database connection."""
 
     pass
+
+
+class InvalidQueryException(Exception):
+    """Raised when a SQL query fails security validation."""
+
+    pass
+
+
+# Regex for a simple SELECT query without comment markers or statement terminators
+_SELECT_QUERY_RE = re.compile(r"^\s*SELECT\s", re.IGNORECASE)
+_QUERY_FORBIDDEN_RE = re.compile(r"[;\-]|/\*|\*/|#", re.IGNORECASE)
+
+
+def _validate_select_query(query: str) -> None:
+    """
+    Validate that ``query`` looks like a single SELECT statement.
+
+    Raises InvalidQueryException if the query contains comment markers,
+    statement terminators, or does not start with SELECT.
+    """
+    if not _SELECT_QUERY_RE.match(query):
+        raise InvalidQueryException(
+            "Query must start with SELECT."
+        )
+    if _QUERY_FORBIDDEN_RE.search(query):
+        raise InvalidQueryException(
+            "Query contains forbidden characters (comment markers or statement terminators)."
+        )
 
 
 class ModinDatabaseConnection:
@@ -134,6 +163,7 @@ class ModinDatabaseConnection:
         -------
         str
         """
+        _validate_select_query(query)
         # This query looks odd, but it works in both PostgreSQL and Microsoft
         # SQL, which doesn't let you use a "limit" clause to select 0 rows.
         return f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY WHERE 1 = 0"
@@ -151,6 +181,7 @@ class ModinDatabaseConnection:
         -------
         str
         """
+        _validate_select_query(query)
         return f"SELECT COUNT(*) FROM ({query}) AS _MODIN_COUNT_QUERY"
 
     def partition_query(self, query: str, limit: int, offset: int) -> str:
@@ -170,6 +201,7 @@ class ModinDatabaseConnection:
         -------
         str
         """
+        _validate_select_query(query)
         return (
             (
                 f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY ORDER BY(SELECT NULL)"
