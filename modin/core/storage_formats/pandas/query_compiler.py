@@ -807,14 +807,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         allow_duplicates = kwargs.pop("allow_duplicates", lib.no_default)
         names = kwargs.pop("names", None)
-        if allow_duplicates not in (lib.no_default, False) or names is not None:
-            return self.default_to_pandas(
-                pandas.DataFrame.reset_index,
-                allow_duplicates=allow_duplicates,
-                names=names,
-                **kwargs,
-            )
-
         drop = kwargs.get("drop", False)
         level = kwargs.get("level", None)
         new_index = None
@@ -836,6 +828,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             uniq_sorted_level = list(range(self.index.nlevels))
 
         if not drop:
+            reset_index_columns = None
+            reset_index_level_names = None
+            if names is not None or allow_duplicates is not lib.no_default:
+                reset_index_kwargs = kwargs.copy()
+                if allow_duplicates is not lib.no_default:
+                    reset_index_kwargs["allow_duplicates"] = allow_duplicates
+                if names is not None:
+                    reset_index_kwargs["names"] = names
+                reset_index_columns = (
+                    pandas.DataFrame(index=self.index[:0], columns=self.columns)
+                    .reset_index(**reset_index_kwargs)
+                    .columns
+                )
+                reset_index_level_names = list(
+                    reset_index_columns[: len(uniq_sorted_level)]
+                )
+
             if len(uniq_sorted_level) < self.index.nlevels:
                 # These are the index levels that will remain after the reset_index
                 keep_levels = [
@@ -845,19 +854,32 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # Change the index to have only the levels that will be inserted
                 # into the data. We will replace the old levels later.
                 new_copy.index = self.index.droplevel(keep_levels)
-                new_copy.index.names = [
+                index_level_names = reset_index_level_names or [
                     (
                         "level_{}".format(level_value)
-                        if new_copy.index.names[level_index] is None
-                        else new_copy.index.names[level_index]
+                        if self.index.names[level_value] is None
+                        else self.index.names[level_value]
                     )
-                    for level_index, level_value in enumerate(uniq_sorted_level)
+                    for level_value in uniq_sorted_level
                 ]
+                new_copy.index = new_copy.index.rename(
+                    index_level_names[0]
+                    if new_copy.index.nlevels == 1
+                    else index_level_names
+                )
                 new_modin_frame = new_copy._modin_frame.from_labels()
                 # Replace the levels that will remain as a part of the index.
                 new_modin_frame.index = new_index
             else:
-                new_modin_frame = self._modin_frame.from_labels()
+                index_source = self
+                if reset_index_level_names is not None:
+                    index_source = self.copy()
+                    index_source.index = self.index.rename(
+                        reset_index_level_names[0]
+                        if self.index.nlevels == 1
+                        else reset_index_level_names
+                    )
+                new_modin_frame = index_source._modin_frame.from_labels()
             if isinstance(new_modin_frame.columns, pandas.MultiIndex):
                 # Fix col_level and col_fill in generated column names because from_labels works with assumption
                 # that col_level and col_fill are not specified but it expands tuples in level names.
@@ -907,6 +929,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_modin_frame.columns = pandas.MultiIndex.from_tuples(
                         columns_list, names=self.columns.names
                     )
+            if reset_index_columns is not None:
+                new_modin_frame.columns = reset_index_columns
             new_self = self.__constructor__(new_modin_frame)
         else:
             new_self = self.copy()
