@@ -13,6 +13,7 @@
 
 import os
 import sys
+import warnings
 
 import matplotlib
 import numpy as np
@@ -1510,6 +1511,44 @@ def test_reset_index_multiindex_groupby(data):
         pandas_df,
         lambda df: df.reset_index().groupby(list(df.columns[:2])).count(),
     )
+
+
+@pytest.mark.parametrize(
+    "data,index,kwargs",
+    [
+        (
+            {"value": [1, 2, 3]},
+            pandas.Index(["A", "B", "C"], name="original"),
+            {"names": "index"},
+        ),
+        (
+            {"value": [1, 2, 3, 4]},
+            pandas.MultiIndex.from_product(
+                [["A", "B"], [1, 2]], names=["outer", "inner"]
+            ),
+            {"level": [1, 0], "names": ["first", "second"]},
+        ),
+        (
+            {"duplicate": [1, 2, 3]},
+            pandas.Index(["A", "B", "C"], name="duplicate"),
+            {"allow_duplicates": True},
+        ),
+    ],
+)
+def test_reset_index_with_names_and_allow_duplicates_does_not_default_to_pandas(
+    data, index, kwargs
+):
+    modin_df = pd.DataFrame(data, index=index)
+    pandas_df = pandas.DataFrame(data, index=index)
+
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always", UserWarning)
+        modin_result = modin_df.reset_index(**kwargs)
+
+    assert not any(
+        "defaulting to pandas" in str(warning.message) for warning in recorded_warnings
+    )
+    df_equals(modin_result, pandas_df.reset_index(**kwargs))
 
 
 @pytest.mark.parametrize("test_async_reset_index", [False, True])
