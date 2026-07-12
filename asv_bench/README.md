@@ -66,7 +66,7 @@ Step 1: checking benchmarks for validity, runs in PRs CI.
 Step 2: running benchmarks with saving the results in [modin-bench@master](https://github.com/modin-project/modin-bench).
   The launch takes place on internal server using specific TeamCity configuration.
   The description of the server can be found in the ["Benchmark list"](https://modin.org/modin-bench/#summarylist?sort=0&dir=asc) tab,
-  on the left when you hover the mouse over the machine name. 
+  on the left when you hover the mouse over the machine name.
   This step starts as scheduled (now every half hour), subject to the presence of new commits in the Modin `main` branch.
   Command to run benchmarks: `asv run HASHFILE:hashfile.txt --show-stderr --machine xeon-e5 --launch-method=spawn`.
   In the file `hashfile.txt` is the last modin commit hash.

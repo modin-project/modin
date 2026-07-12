@@ -97,9 +97,9 @@ Automatic Engine Switching and Casting
 QueryCompilers which are derived from QueryCompilerCaster can participate in automatic casting when
 different query compilers, representing different underlying engines, are used together in a
 function. A relative "cost" of casting is used to determine which query compiler everything should
-be moved to. Each query compiler must implement the functions, `move_to_cost`, `move_to_me_cost`, 
+be moved to. Each query compiler must implement the functions, `move_to_cost`, `move_to_me_cost`,
 `max_cost` and `stay_cost` to provide information and query costs associated with different decision
-points in cost opimization. With the exception of `max_cost` these methods need to return a 
+points in cost opimization. With the exception of `max_cost` these methods need to return a
 QCCoercionCost in the range of 0-1000.
 
 These functions have precise meanings:
@@ -118,12 +118,12 @@ These functions have precise meanings:
   execution cost?"
 * `max_cost` is the maximum cost allowed by this query compiler across all data movements. This method
   sets a normalized upper bound for situations where multiple data frames from different engines all
-  need to move to the same engine. The value returned by this method can exceed 
+  need to move to the same engine. The value returned by this method can exceed
   QCCoercionCost.COST_IMPOSSIBLE
 
 There are generally two places where automatic casting is considered: When two or more DataFrames on
 different engines are participating in an operation ( such as pd.concat ) or at registered functions
-for particular engines through the `register_function_for_pre_op_switch` and 
+for particular engines through the `register_function_for_pre_op_switch` and
 `register_function_for_post_op_switch` methods.
 
 Core Modin Dataframe

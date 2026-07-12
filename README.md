@@ -31,7 +31,7 @@ By simply replacing the import statement, Modin offers users effortless speed an
 
 <img src="https://github.com/modin-project/modin/raw/main/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
-In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
+In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement.
 
 <table class="tg">
 <thead>
@@ -137,7 +137,7 @@ export MODIN_ENGINE=dask  # Modin will use Dask
 export MODIN_ENGINE=unidist # Modin will use Unidist
 ```
 
-If you want to choose the Unidist engine, you should set the additional environment 
+If you want to choose the Unidist engine, you should set the additional environment
 variable ``UNIDIST_BACKEND``. Currently, Modin only supports MPI through unidist:
 
 ```bash
@@ -172,7 +172,7 @@ free to pick either!
 | pandas Object     | Modin's Ray Engine Coverage                                                          | Modin's Dask Engine Coverage | Modin's Unidist Engine Coverage |
 |-------------------|:------------------------------------------------------------------------------------:|:---------------:|:---------------:|
 | `pd.DataFrame`    | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> |
-| `pd.Series`       | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> 
+| `pd.Series`       | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg>
 | `pd.read_csv`     | ✅                                               | ✅ | ✅ |
 | `pd.read_table`   | ✅                                               | ✅ | ✅ |
 | `pd.read_parquet` | ✅                                               | ✅ | ✅ |
@@ -220,7 +220,7 @@ import modin.pandas as pd
 df = pd.read_csv("my_dataset.csv")
 ```
 
-#### Modin can handle the datasets that pandas can't 
+#### Modin can handle the datasets that pandas can't
 
 Often data scientists have to switch between different tools
 for operating on datasets of different sizes. Processing large dataframes with pandas
