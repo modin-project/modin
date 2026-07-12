@@ -5,7 +5,7 @@
 you should reopen your terminal to find "(base)" next to your prompt: ![](conda_prompt.png)
 1. [Generate an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) for GitHub
 1. Fork the [modin repo](https://github.com/modin-project/modin) on GitHub
-1. Clone the forked repo in a local directory of your choice: 
+1. Clone the forked repo in a local directory of your choice:
     ```
     git clone ${PATH_TO_REPO}
     ```
@@ -19,7 +19,7 @@ you should reopen your terminal to find "(base)" next to your prompt: ![](conda_
     ```
     git fetch upstream
     ```
-1. Set the default remote branch for your local main branch. 
+1. Set the default remote branch for your local main branch.
     ```
      git branch --set-upstream-to=upstream/main main
     ```
@@ -31,7 +31,7 @@ you should reopen your terminal to find "(base)" next to your prompt: ![](conda_
     ```
     pip install ipython
     ```
-1. If you ever want to install modin at a release version (not the editable version from your machine): 
+1. If you ever want to install modin at a release version (not the editable version from your machine):
     ```
     pip install modin
     ```

@@ -119,7 +119,7 @@ to test that the wheels were uploaded correctly.
 
 Once the tag has been published, we need to make the release on GitHub. Go to the
 [Release page](https://github.com/modin-project/modin/releases), and click on `Draft a new release`.
-Choose the tag you made above from the dropdown menu, and copy paste the name of the release 
+Choose the tag you made above from the dropdown menu, and copy paste the name of the release
 in the `Release title` box. Next, copy paste the release notes from above into the box labelled
 `Describe this release`. This will ensure that the release notes on GitHub are Markdown formatted.
 
