@@ -43,7 +43,8 @@ pygit2>=1.9.2
 ## test dependencies
 asv==0.5.1
 coverage>=7.1.0
-fuzzydata>=0.0.11
+# fuzzydata is pinned as the next release of fuzzydata (0.1.0) will break the tests due to a change in the API.
+fuzzydata>=0.0.11,<0.1
 # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
 numpydoc==1.1.0
 moto>=4.1.0
