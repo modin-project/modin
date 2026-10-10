@@ -452,12 +452,13 @@ def visit_nested_args(arguments, fn: callable):
     tuple or dict
         Returns args and kwargs with all query compilers casted to current_qc.
     """
-    if isinstance(arguments, pandas.NamedAgg):
-        # NamedAgg needs special treatment because it's an immutable subclass
-        # of tuple that can't be constructed from another tuple.
-        return pandas.NamedAgg(
-            column=fn(arguments.column), aggfunc=fn(arguments.aggfunc)
-        )
+    if isinstance(arguments, tuple) and hasattr(type(arguments), "_make"):
+        # namedtuples (including pandas.NamedAgg) need special treatment
+        # because they are immutable subclasses of tuple whose constructors
+        # take each field as a separate argument, so they can't be constructed
+        # from another tuple. Use the generated ``_make`` classmethod to
+        # rebuild an object of the same type from the visited fields.
+        return type(arguments)._make(visit_nested_args(list(arguments), fn))
     immutable_types = (FrozenList, tuple, ValuesView)
     if isinstance(arguments, immutable_types):
         args_type = type(arguments)
