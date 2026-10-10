@@ -2629,7 +2629,7 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         axis: Axis = lib.no_default,
         closed: Optional[str] = None,
         label: Optional[str] = None,
-        convention: str = lib.no_default,
+        convention: str = "start",
         kind: Optional[str] = lib.no_default,
         on: Level = None,
         level: Level = None,
