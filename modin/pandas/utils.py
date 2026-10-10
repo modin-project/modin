@@ -393,10 +393,19 @@ def broadcast_item(
                 col_argsort, col_lookup = sort_index(col_lookup)
                 # Use np.ix_ to handle broadcasting errors
                 item = item[np.ix_(row_argsort, col_argsort)]
-        elif not avoid_row_lookup_sort:
-            # Item is 1D, so only sort row indexer
-            row_argsort, row_lookup = sort_index(row_lookup)
-            item = item[row_argsort]
+        elif new_col_len == 1 and len(item) == new_row_len:
+            # Item is 1D and aligned with the rows (it is going to be reshaped
+            # into a single column), so only sort row indexer
+            if not avoid_row_lookup_sort:
+                row_argsort, row_lookup = sort_index(row_lookup)
+                item = item[row_argsort]
+        elif len(item) == new_col_len:
+            # Item is 1D and aligned with the columns (it is a row that is
+            # written to every selected row), so only sort column indexer. The
+            # order of the rows does not matter since they all get the same values.
+            if not avoid_col_lookup_sort:
+                col_argsort, col_lookup = sort_index(col_lookup)
+                item = item[col_argsort]
         if dtypes is None:
             dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):
