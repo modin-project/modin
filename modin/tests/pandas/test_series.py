@@ -3204,6 +3204,24 @@ def test_reset_index(data, drop, name, inplace):
     )
 
 
+def test_reset_index_name_collision():
+    # GH#5635: Series.reset_index should raise ValueError when index name collides with series name
+    index = pandas.Index([10, 20], name="custom")
+    modin_s = pd.Series([1, 2], index=index, name="custom")
+    pandas_s = pandas.Series([1, 2], index=index, name="custom")
+    eval_general(
+        modin_s,
+        pandas_s,
+        lambda s: s.reset_index(),
+        expected_exception=ValueError("cannot insert custom, already exists"),
+    )
+
+    # Should succeed without collision
+    modin_s2 = pd.Series([1, 2], index=index, name="other")
+    pandas_s2 = pandas.Series([1, 2], index=index, name="other")
+    eval_general(modin_s2, pandas_s2, lambda s: s.reset_index())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_rfloordiv(data):
     modin_series, pandas_series = create_test_series(data)
