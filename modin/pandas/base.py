@@ -2689,19 +2689,73 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
         Reset the index, or a level of it.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
+        if allow_duplicates is not lib.no_default:
+            allow_duplicates = validate_bool_kwarg(allow_duplicates, "allow_duplicates")
         # Error checking for matching pandas. Pandas does not allow you to
-        # insert a dropped index into a DataFrame if these columns already
-        # exist.
+        # insert an index into DataFrame columns if these columns already exist.
         if (
             not drop
+            and (allow_duplicates is lib.no_default or not allow_duplicates)
             and not (
                 self._query_compiler.lazy_column_labels
                 or self._query_compiler.lazy_row_labels
             )
-            and not self._query_compiler.has_multiindex()
-            and all(n in self.columns for n in ["level_0", "index"])
         ):
-            raise ValueError("cannot insert level_0, already exists")
+            if level is not None:
+                if not isinstance(level, (tuple, list)):
+                    levels = [level]
+                else:
+                    levels = list(level)
+                levels = [self.index._get_level_number(lev) for lev in levels]
+            else:
+                levels = list(range(self.index.nlevels))
+
+            default_name = "index" if "index" not in self.columns else "level_0"
+            if hasattr(self.index, "_get_default_index_names"):
+                names_list = self.index._get_default_index_names(names, default_name)
+            elif names is not None:
+                if isinstance(names, (int, str)):
+                    names_list = [names]
+                elif not isinstance(names, list):
+                    names_list = list(names)
+                else:
+                    names_list = names
+            elif isinstance(self.index, pandas.MultiIndex):
+                names_list = [
+                    f"level_{i}" if n is None else n
+                    for i, n in enumerate(self.index.names)
+                ]
+            else:
+                names_list = (
+                    [default_name] if self.index.name is None else [self.index.name]
+                )
+
+            multi_col = isinstance(self.columns, pandas.MultiIndex)
+            new_cols = list(self.columns)
+
+            for i in reversed(range(self.index.nlevels)):
+                if i not in levels:
+                    continue
+                name = names_list[i]
+                if multi_col:
+                    col_name = list(name) if isinstance(name, tuple) else [name]
+                    fill = col_fill
+                    if fill is None:
+                        if len(col_name) not in (1, self.columns.nlevels):
+                            raise ValueError(
+                                "col_fill=None is incompatible "
+                                f"with incomplete column name {name}"
+                            )
+                        fill = col_name[0]
+                    lev_num = self.columns._get_level_number(col_level)
+                    name_lst = [fill] * lev_num + col_name
+                    missing = self.columns.nlevels - len(name_lst)
+                    name_lst += [fill] * missing
+                    name = tuple(name_lst)
+
+                if name in new_cols:
+                    raise ValueError(f"cannot insert {name}, already exists")
+                new_cols.insert(0, name)
         new_query_compiler = self._query_compiler.reset_index(
             drop=drop,
             level=level,

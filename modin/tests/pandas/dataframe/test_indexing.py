@@ -1835,6 +1835,43 @@ def test_reset_index_metadata_update(index, test_async_reset_index):
     eval_general(modin_df, pandas_df, lambda df: df.reset_index())
 
 
+@pytest.mark.parametrize("test_async_reset_index", [False, True])
+def test_reset_index_custom_name_collision(test_async_reset_index):
+    # GH#5635: reset_index should not raise ValueError when index has custom name
+    # even if columns contain 'level_0' and 'index'.
+    data = {"index": [1, 2], "level_0": [3, 4]}
+    index = pandas.Index([10, 20], name="custom")
+    modin_df, pandas_df = create_test_dfs(data, index=index)
+    if test_async_reset_index:
+        modin_df._query_compiler.set_frame_index_cache(None)
+    eval_general(modin_df, pandas_df, lambda df: df.reset_index())
+
+    # Should raise ValueError when custom name collides with existing column
+    modin_df_col, pandas_df_col = create_test_dfs({"custom": [1, 2]}, index=index)
+    eval_general(
+        modin_df_col,
+        pandas_df_col,
+        lambda df: df.reset_index(),
+        expected_exception=ValueError("cannot insert custom, already exists"),
+    )
+
+    # MultiIndex level name collision
+    midx = pandas.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["a", "b"])
+    modin_midx, pandas_midx = create_test_dfs({"a": [10, 20]}, index=midx)
+    eval_general(
+        modin_midx,
+        pandas_midx,
+        lambda df: df.reset_index(),
+        expected_exception=ValueError("cannot insert a, already exists"),
+    )
+
+    # allow_duplicates=True allows duplicate columns
+    modin_dup, pandas_dup = create_test_dfs({"custom": [1, 2]}, index=index)
+    eval_general(
+        modin_dup, pandas_dup, lambda df: df.reset_index(allow_duplicates=True)
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 def test_sample(data, axis):
