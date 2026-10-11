@@ -518,7 +518,17 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
             if hasattr(item, "_query_compiler"):
                 if isinstance(item, DataFrame):
                     item = item.squeeze(axis=0)
+                if (
+                    isinstance(item, Series)
+                    and isinstance(self.df, DataFrame)
+                    and not item.index.equals(self.qc.columns)
+                ):
+                    # pandas aligns a Series assigned to a row with the columns.
+                    item = item.reindex(index=self.qc.columns)
                 item = item._query_compiler
+            elif isinstance(item, pandas.Series) and isinstance(self.df, DataFrame):
+                # pandas aligns a Series assigned to a row with the columns.
+                item = item.reindex(index=self.qc.columns).to_numpy()
             assert len(row_lookup) == 1
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
@@ -570,7 +580,22 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
             for i, lookup in enumerate([row_lookup, col_lookup])
         ]
 
-        if col_lookup_len == 1 and row_lookup_len == 1:
+        if (
+            row_scalar
+            and not col_scalar
+            and row_lookup_len == 1
+            and col_lookup_len == len(self.qc.columns)
+            and isinstance(self.df, DataFrame)
+        ):
+            # Assignment to a whole row: `df.loc[row] = item`. This has to be
+            # a row assignment even if the frame has a single column, because
+            # pandas aligns a Series `item` with the columns in this case while
+            # the both-axes assignment would align it with the row label
+            # (https://github.com/modin-project/modin/issues/7484). A list-like
+            # row locator of length one is not a row assignment: pandas aligns a
+            # Series `item` with the row labels for `df.loc[[row]] = item`.
+            axis = 1
+        elif col_lookup_len == 1 and row_lookup_len == 1:
             axis = None
         elif (
             row_lookup_len == len(self.qc.index)
@@ -578,8 +603,6 @@ class _LocationIndexerBase(QueryCompilerCaster, ClassLogger):
             and isinstance(self.df, DataFrame)
         ):
             axis = 0
-        elif col_lookup_len == len(self.qc.columns) and row_lookup_len == 1:
-            axis = 1
         else:
             axis = None
         return axis
@@ -964,14 +987,22 @@ class _LocIndexer(_LocationIndexerBase):
             # of Series as it was before (`Series.__array_wrap__` is removed)
             # otherwise incompatible shapes are obtained
             item = item.take(row_lookup)
-        self._setitem_positional(
-            row_lookup,
-            col_lookup,
-            item,
-            axis=self._determine_setitem_axis(
-                row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
-            ),
+        axis = self._determine_setitem_axis(
+            row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
         )
+        if (
+            axis is None
+            and is_scalar(row_loc)
+            and not is_scalar(col_loc)
+            and isinstance(self.df, DataFrame)
+            and isinstance(item, (Series, pandas.Series))
+        ):
+            # A Series assigned to (a part of) a single row is aligned with the
+            # column labels by pandas, whereas the both-axes assignment below
+            # would align it with the row label. Align it here and write the
+            # values positionally.
+            item = item.reindex(index=self.qc.columns[col_lookup]).to_numpy()
+        self._setitem_positional(row_lookup, col_lookup, item, axis=axis)
 
     def _check_missing_loc(self, row_loc, col_loc):
         """
@@ -1159,6 +1190,10 @@ class _iLocIndexer(_LocationIndexerBase):
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
+        if isinstance(item, (Series, pandas.Series)):
+            # pandas does not align a Series assigned with `iloc` with the
+            # frame's labels, its values are written positionally.
+            item = item.to_numpy()
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         self._setitem_positional(
             row_lookup,

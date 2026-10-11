@@ -2782,3 +2782,162 @@ def test_iloc_set_negative_index():
     )
     # Finally, check the result of a loc/iloc read again.
     eval_general(md_df, pd_df, get_helper)
+
+
+def _series_like(df, *args, **kwargs):
+    """Create a Series from the same library (modin or pandas) as `df`."""
+    lib = pd if isinstance(df, (pd.DataFrame, pd.Series)) else pandas
+    return lib.Series(*args, **kwargs)
+
+
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize(
+    "pandas_item", [False, True], ids=["modin_item", "pandas_item"]
+)
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param([0, 1], id="one_column"),
+        pytest.param([0, 1, 2], id="one_column_three_rows"),
+        pytest.param([[0, 1], [2, 3]], id="two_columns"),
+    ],
+)
+@pytest.mark.parametrize(
+    "get_item_index",
+    [
+        pytest.param(lambda columns: None, id="default_index"),
+        pytest.param(lambda columns: columns[::-1], id="reversed_index"),
+        pytest.param(lambda columns: [f"x{c}" for c in columns], id="unknown_labels"),
+        # The label of the row that is written to, which is not a column label.
+        pytest.param(lambda columns: list(range(1, len(columns) + 1)), id="row_label"),
+    ],
+)
+def test_loc_iloc_set_row_with_series_7484(
+    locator_name, pandas_item, data, get_item_index
+):
+    # https://github.com/modin-project/modin/issues/7484
+    # `loc` aligns the Series with the columns, `iloc` writes its values positionally.
+    md_df, pd_df = create_test_dfs(data)
+    values = list(range(10, 10 + len(pd_df.columns)))
+    index = get_item_index(pd_df.columns)
+
+    def set_row(df, item):
+        getattr(df, locator_name)[1] = item
+
+    eval_general(
+        md_df,
+        pd_df,
+        set_row,
+        __inplace__=True,
+        item=lambda df: (
+            pandas.Series(values, index=index)
+            if pandas_item
+            else _series_like(df, values, index=index)
+        ),
+    )
+
+
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param([0, 1], id="one_column"),
+        pytest.param([[0, 1], [2, 3]], id="two_columns"),
+    ],
+)
+def test_loc_iloc_set_row_list_with_series_7484(locator_name, data):
+    # Unlike the scalar row locator, `loc` aligns the Series with the row labels
+    # here (so `df.loc[[1]] = pd.Series([2])` sets NaN in pandas as well), while
+    # `iloc` writes its values positionally.
+    md_df, pd_df = create_test_dfs(data)
+    values = list(range(10, 10 + len(pd_df.columns)))
+
+    def set_rows(df, item):
+        getattr(df, locator_name)[[1]] = item
+
+    eval_general(
+        md_df,
+        pd_df,
+        set_rows,
+        __inplace__=True,
+        item=lambda df: _series_like(df, values),
+    )
+
+
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize(
+    "col_loc",
+    [
+        pytest.param([0], id="one_column"),
+        pytest.param([0, 1], id="sorted_columns"),
+        pytest.param([2, 0], id="unsorted_columns"),
+    ],
+)
+@pytest.mark.parametrize("item_type", ["series", "series_reversed_index", "list"])
+def test_loc_iloc_set_part_of_row_7484(locator_name, col_loc, item_type):
+    md_df, pd_df = create_test_dfs([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    values = list(range(10, 10 + len(col_loc)))
+
+    def get_item(df):
+        if item_type == "list":
+            return values
+        index = col_loc[::-1] if item_type == "series_reversed_index" else None
+        return _series_like(df, values, index=index)
+
+    def set_part_of_row(df, item):
+        getattr(df, locator_name)[1, col_loc] = item
+
+    eval_general(md_df, pd_df, set_part_of_row, __inplace__=True, item=get_item)
+
+
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize(
+    "row_loc",
+    [
+        pytest.param([1], id="one_row"),
+        pytest.param([1, 0], id="unsorted_rows"),
+        pytest.param([2, 0, 1], id="all_rows_unsorted"),
+    ],
+)
+def test_loc_iloc_set_rows_with_1d_item_7484(locator_name, row_loc):
+    # A 1D item is a row that is written to every selected row.
+    md_df, pd_df = create_test_dfs([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+
+    def set_rows(df):
+        getattr(df, locator_name)[row_loc, [2, 0]] = [10, 11]
+
+    eval_general(md_df, pd_df, set_rows, __inplace__=True)
+
+
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+def test_loc_iloc_set_column_with_series_7484(locator_name):
+    # `loc` aligns the Series with the index, `iloc` writes its values positionally.
+    md_df, pd_df = create_test_dfs([[0, 1], [2, 3]])
+
+    def set_column(df, item):
+        getattr(df, locator_name)[:, 0] = item
+
+    eval_general(
+        md_df,
+        pd_df,
+        set_column,
+        __inplace__=True,
+        item=lambda df: _series_like(df, [10, 11], index=[1, 0]),
+    )
+
+
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize("item_index", [None, [1]], ids=["default_index", "row_label"])
+def test_series_loc_iloc_set_with_series_7484(locator_name, item_index):
+    md_ser, pd_ser = pd.Series([0, 1]), pandas.Series([0, 1])
+
+    def set_value(ser, item):
+        getattr(ser, locator_name)[1] = item
+
+    eval_general(
+        md_ser,
+        pd_ser,
+        set_value,
+        __inplace__=True,
+        item=lambda ser: _series_like(ser, [10], index=item_index),
+    )
