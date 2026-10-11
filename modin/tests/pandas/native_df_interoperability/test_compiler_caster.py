@@ -16,7 +16,7 @@ import json
 import logging
 from io import StringIO
 from types import MappingProxyType
-from typing import Iterator, Optional
+from typing import Iterator, NamedTuple, Optional
 from unittest import mock
 
 import pandas
@@ -44,10 +44,14 @@ from modin.core.storage_formats.pandas.query_compiler_caster import (
     _GENERAL_EXTENSIONS,
     register_function_for_post_op_switch,
     register_function_for_pre_op_switch,
+    visit_nested_args,
 )
 from modin.logging import DEFAULT_LOGGER_NAME
 from modin.logging.metrics import add_metric_handler, clear_metric_handler
-from modin.pandas.api.extensions import register_pd_accessor
+from modin.pandas.api.extensions import (
+    register_dataframe_accessor,
+    register_pd_accessor,
+)
 from modin.tests.pandas.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
@@ -1920,3 +1924,43 @@ def test_switch_metrics(pico_df, cluster_df):
             assert count == 8
         finally:
             clear_metric_handler(test_handler)
+
+
+class CustomTuple(NamedTuple):
+    a: str
+    b: int
+
+
+def test_namedtuple_argument_github_issue_7594():
+    @register_dataframe_accessor("custom_method_github_issue_7594")
+    def custom_method(self, custom_arg: CustomTuple):
+        return custom_arg
+
+    custom_arg = CustomTuple("a", 1)
+    result = pd.DataFrame().custom_method_github_issue_7594(custom_arg)
+    assert type(result) is CustomTuple
+    assert result == custom_arg
+
+
+def test_visit_nested_args_preserves_namedtuple_type(pico_df):
+    class TupleWithFrame(NamedTuple):
+        frame: pd.DataFrame
+        nested: tuple
+
+    visited_args = []
+
+    def visit(arg):
+        visited_args.append(arg)
+        return arg.set_backend("Cluster") if isinstance(arg, pd.DataFrame) else arg
+
+    result = visit_nested_args(
+        TupleWithFrame(pico_df, (CustomTuple("a", 1),)),
+        visit,
+    )
+    assert type(result) is TupleWithFrame
+    assert result.frame.get_backend() == "Cluster"
+    assert type(result.nested) is tuple
+    assert type(result.nested[0]) is CustomTuple
+    assert result.nested[0] == CustomTuple("a", 1)
+    assert visited_args[0] is pico_df
+    assert visited_args[1:] == ["a", 1]
