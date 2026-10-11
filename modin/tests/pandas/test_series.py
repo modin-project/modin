@@ -32,6 +32,7 @@ from pandas.errors import PerformanceWarning, SpecificationError
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import context as config_context
 from modin.core.storage_formats.pandas.query_compiler_caster import (
     _assert_casting_functions_wrap_same_implementation,
 )
@@ -3181,6 +3182,19 @@ def test_resample(closed, label, level):
         modin_resampler.aggregate(["sum", "mean", "max"]),
         pandas_resampler.aggregate(["sum", "mean", "max"]),
     )
+
+
+def test_resample_default_convention_github_issue_7697():
+    # pandas 2.3.3 (pandas-dev/pandas#62480) made "start" the default of
+    # `convention` again, and `TimeGrouper` rejects the `lib.no_default`
+    # that Modin used to forward as its own default.
+    index = pandas.date_range("1/1/2000", periods=9, freq="h")
+    pandas_result = pandas.Series(range(9), index=index).resample("2h").mean()
+    modin_series = pd.Series(range(9), index=index)
+    df_equals(modin_series.resample("2h").mean(), pandas_result)
+    with config_context(Backend="Pandas"):
+        modin_series = pd.Series(range(9), index=index)
+        df_equals(modin_series.resample("2h").mean(), pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
