@@ -1274,6 +1274,10 @@ class BasePandasDataset(QueryCompilerCaster, ClassLogger):
             lower = None
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
+        # Series list-like bounds align to the index. Leave axis=None as 0 so
+        # validation and the query compiler both match pandas.Series.clip.
+        if self.ndim == 1 and axis is None:
+            axis = 0
         if is_list_like(lower) or is_list_like(upper):
             lower = self._validate_other(lower, axis)
             upper = self._validate_other(upper, axis)

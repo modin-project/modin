@@ -3084,6 +3084,15 @@ def test_clip_4485():
     df_equals(modin_result, pandas_result)
 
 
+def test_clip_list_like_bounds_without_axis():
+    """List-like lower/upper must work with default axis (GH#7711)."""
+    data = [1.25, 2.5, 3.75, -0.5, None]
+    lower = [0, 1, 2, 3, 4]
+    modin_result = pd.Series(data).clip(lower=lower)
+    pandas_result = pandas.Series(data).clip(lower=lower)
+    df_equals(modin_result, pandas_result)
+
+
 def test_replace():
     modin_series = pd.Series([0, 1, 2, 3, 4])
     pandas_series = pandas.Series([0, 1, 2, 3, 4])
