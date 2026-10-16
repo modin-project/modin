@@ -4074,6 +4074,44 @@ class PandasDataframe(
                     else:
                         new_widths = None
 
+        # Empty frames contribute to the merged dtype cache via ModinDtypes.concat
+        # but are filtered out of partition concat in partition_manager.concat.
+        # Cast remaining partitions so materialised data matches the cached schema
+        # (e.g. empty float64 + int64 -> float64), matching pandas.
+        if (
+            axis == Axis.ROW_WISE
+            and new_dtypes is not None
+            and new_partitions.size != 0
+        ):
+            frames = [self, *others]
+            has_empty = any(frame._partitions.size == 0 for frame in frames)
+            has_non_empty = any(frame._partitions.size != 0 for frame in frames)
+            if has_empty and has_non_empty:
+                target_dtypes = (
+                    new_dtypes.get()
+                    if isinstance(new_dtypes, ModinDtypes)
+                    else new_dtypes
+                )
+                if isinstance(target_dtypes, pandas.Series) and len(target_dtypes):
+                    cast_map = {}
+                    for frame in frames:
+                        if frame._partitions.size == 0 or not frame.has_materialized_dtypes:
+                            continue
+                        src = frame.dtypes
+                        for col, tdtype in target_dtypes.items():
+                            if col in src.index and not is_dtype_equal(src[col], tdtype):
+                                cast_map[col] = tdtype
+                    if cast_map:
+
+                        def _astype_builder(df, _cast_map=cast_map):
+                            return df.astype(
+                                {k: v for k, v in _cast_map.items() if k in df}
+                            )
+
+                        new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                            new_partitions, _astype_builder
+                        )
+
         return self.__constructor__(
             new_partitions,
             new_index,

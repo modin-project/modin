@@ -217,6 +217,25 @@ def test_concat_6840():
     )
 
 
+def test_concat_empty_column_promotes_dtype_like_pandas():
+    """Empty float64 columns must promote int data on concat (GH#7712)."""
+    for modin_objs, pandas_objs in (
+        (
+            [pd.DataFrame({"a": []}), pd.DataFrame({"a": [1]})],
+            [pandas.DataFrame({"a": []}), pandas.DataFrame({"a": [1]})],
+        ),
+        (
+            [pd.DataFrame({"a": [1, 2]}), pd.DataFrame({"a": []})],
+            [pandas.DataFrame({"a": [1, 2]}), pandas.DataFrame({"a": []})],
+        ),
+    ):
+        modin_result = pd.concat(modin_objs, ignore_index=True)
+        pandas_result = pandas.concat(pandas_objs, ignore_index=True)
+        df_equals(modin_result, pandas_result)
+        assert modin_result.dtypes.equals(pandas_result.dtypes)
+        assert modin_result._to_pandas().dtypes.equals(pandas_result.dtypes)
+
+
 def test_concat_with_empty_frame():
     modin_empty_df = pd.DataFrame()
     pandas_empty_df = pandas.DataFrame()
