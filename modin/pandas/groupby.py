@@ -1117,6 +1117,19 @@ class DataFrameGroupBy(ClassLogger, QueryCompilerCaster):  # noqa: GL08
 
                 def do_relabel(obj_to_relabel):  # noqa: F811
                     # unwrap nested labels into one level tuple
+                    # A named aggregation with an explicit input column, `agg(out=(col, f))`,
+                    # yields one flat output column per entry labelled with the keyword. pandas
+                    # gives that back directly, so skip the tuple/rename reconstruction below,
+                    # which is built for `{col: [funcs]}` input and produced labels that never
+                    # matched, leaving the frame assembled from the wrong columns.
+                    if self._as_index and all(
+                        isinstance(v, tuple) and len(v) == 2 and callable(v[1])
+                        for v in old_kwargs.values()
+                    ):
+                        result = obj_to_relabel.copy()
+                        result.columns = pandas.Index(new_columns)
+                        return result
+
                     result_labels = [None] * len(old_kwargs)
                     for idx, labels in enumerate(old_kwargs.values()):
                         if is_scalar(labels) or callable(labels):
