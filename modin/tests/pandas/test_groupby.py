@@ -3305,6 +3305,25 @@ def test_groupby_named_aggregation():
     )
 
 
+def test_groupby_named_aggregation_with_callables():
+    """`agg(name=(col, func))` must aggregate `col`, not treat the tuple as the function.
+
+    The relabel path built its lookup labels from the tuple itself, so the lookup never matched
+    the result's columns and the frame was assembled from the wrong ones: the first output column
+    came back holding the second aggregation's value.
+    """
+    modin_df, pandas_df = create_test_dfs({"c0": [1]})
+    agg_kwargs = {
+        "constant": ("c0", lambda x: 111),
+        "order_expr": ("c0", lambda x: True),
+    }
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby("c0").agg(**agg_kwargs),
+    )
+
+
 def test_groupby_several_column_partitions():
     # see details in #6948
     columns = [
