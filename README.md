@@ -265,7 +265,7 @@ to be modular so we can plug in different components as they develop and improve
 - [Troubleshooting Guide](https://modin.readthedocs.io/en/latest/getting_started/troubleshooting.html)
 - [Development Guide](https://modin.readthedocs.io/en/latest/development/index.html)
 - Modin is built on many years of research and development at UC Berkeley. Check out these selected papers to learn more about how Modin works:
-  - [Flexible Rule-Based Decomposition and Metadata Independence in Modin](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf) (VLDB 2021)
+  - Flexible Rule-Based Decomposition and Metadata Independence in Modin (VLDB 2021)
   - [Dataframe Systems: Theory, Architecture, and Implementation](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2021/EECS-2021-193.pdf) (PhD Dissertation 2021)
   - [Towards Scalable Dataframe Systems](https://arxiv.org/pdf/2001.00888.pdf) (VLDB 2020)
 
