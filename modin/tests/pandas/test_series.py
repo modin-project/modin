@@ -4410,15 +4410,18 @@ def test_str_extract(data, expand, pat):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_str_extractall(data):
+@pytest.mark.parametrize("pat", [r"([ab])", r"([ab])(\d)"])
+def test_str_extractall(data, pat):
     modin_series, pandas_series = create_test_series(data)
 
     with warns_that_defaulting_to_pandas_if(
         not df_or_series_using_native_execution(modin_series)
     ):
-        # We are only testing that this defaults to pandas, so we will just check for
-        # the warning
-        modin_series.str.extractall(r"([ab])(\d)")
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda series: series.str.extractall(pat),
+        )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
