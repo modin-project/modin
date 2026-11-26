@@ -4410,7 +4410,7 @@ def test_str_extract(data, expand, pat):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("pat", [r"([ab])", r"([ab])(\d)"])
+@pytest.mark.parametrize("pat", [r"([ab])", r"([a-zA-Z])(\d)"])
 def test_str_extractall(data, pat):
     modin_series, pandas_series = create_test_series(data)
 
