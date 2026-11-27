@@ -780,7 +780,9 @@ class DataFrame(BasePandasDataset):
         if min_periods is not None and min_periods > len(cov_df):
             result = np.empty((cov_df.shape[1], cov_df.shape[1]))
             result.fill(np.nan)
-            return cov_df.__constructor__(result)
+            return cov_df.__constructor__(
+                result, index=cov_df.columns, columns=cov_df.columns
+            )
 
         return cov_df.__constructor__(
             query_compiler=cov_df._query_compiler.cov(
