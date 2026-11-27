@@ -385,6 +385,13 @@ def test_cov(min_periods, ddof, backend):
     )
 
 
+def test_cov_min_periods_greater_than_length():
+    eval_general(
+        *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5]}),
+        lambda df: df.cov(min_periods=4),
+    )
+
+
 @pytest.mark.parametrize("numeric_only", [True, False])
 def test_cov_numeric_only(numeric_only):
     if not numeric_only:
