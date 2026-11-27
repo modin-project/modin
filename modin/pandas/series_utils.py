@@ -422,9 +422,9 @@ class StringMethods(ClassLogger):
         )
 
     def extractall(self, pat, flags=0):
-        return self._Series(
-            query_compiler=self._query_compiler.str_extractall(pat, flags)
-        )
+        from .dataframe import DataFrame
+
+        return DataFrame(query_compiler=self._query_compiler.str_extractall(pat, flags))
 
     def len(self):
         return self._Series(query_compiler=self._query_compiler.str_len())
